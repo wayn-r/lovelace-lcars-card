@@ -282,14 +282,14 @@ export function generateEndcapPath(
     x: number = 0,
     y: number = 0
 ): string {
-    console.log(`[generateEndcapPath] Called with: w=${width}, h=${height}, dir=${direction}, x=${x}, y=${y}`);
+    
     let points: [number, number, number][];
      if (height <= 0 || width <= 0) {
          console.warn("[generateEndcapPath] Requires positive width and height.");
          points = [[x, y, 0], [x, y, 0], [x, y, 0]];
     } else {
         const cornerRadius = width >= height/2 ? height/2 : width;
-        console.log(`[generateEndcapPath] Calculated cornerRadius: ${cornerRadius}`);
+        
         if (direction === 'left') {
             points = [
                 [x, y, cornerRadius], // Top Left (Rounded)
@@ -305,10 +305,10 @@ export function generateEndcapPath(
                 [x, y + height, 0]        // Bottom Left (Sharp)
             ];
         }
-        console.log(`[generateEndcapPath] Generated points for ${direction}:`, JSON.stringify(points));
+        
     }
     const pathD = buildShape(points);
-    console.log(`[generateEndcapPath] Resulting path data: ${pathD}`);
+    
     return pathD;
 }
 

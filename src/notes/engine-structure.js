@@ -63,7 +63,7 @@ class LayoutEngine {
      * dependencies where one element's position depends on another's.
      */
     calculateBoundingBoxes() {
-        console.log("Calculating Bounding Boxes...");
+        
         const containerRect = this.container.getBoundingClientRect();
         const maxPasses = 10; // Limit passes to prevent infinite loops in case of circular dependencies
         let pass = 0;
@@ -76,7 +76,7 @@ class LayoutEngine {
         do {
             elementsCalculatedInPass = 0;
             pass++;
-            console.log(`Layout Pass ${pass}`);
+            
 
             this.elements.forEach(el => {
                 // Skip if already calculated in a previous pass
@@ -95,12 +95,12 @@ class LayoutEngine {
                     if (el.layout.calculated) {
                         elementsCalculatedInPass++;
                         totalCalculated++;
-                        console.log(` -> Calculated layout for: ${el.id}`);
+                        
                     }
                 }
             });
 
-            console.log(`Pass ${pass} calculated ${elementsCalculatedInPass} elements.`);
+            
 
         } while (elementsCalculatedInPass > 0 && totalCalculated < this.elements.size && pass < maxPasses);
 
@@ -112,7 +112,7 @@ class LayoutEngine {
                 }
             });
         }
-         console.log("Bounding Box Calculation Complete.");
+         
     }
 
 
@@ -123,7 +123,7 @@ class LayoutEngine {
         if (!this.needsLayoutUpdate || this.isCalculating) return;
 
         this.isCalculating = true;
-        console.log("Updating layout...");
+        
 
         // 1. Calculate all element positions and sizes
         this.calculateBoundingBoxes();
@@ -144,7 +144,7 @@ class LayoutEngine {
 
         this.needsLayoutUpdate = false;
         this.isCalculating = false;
-        console.log("Layout updated and rendered.");
+        
     }
 
     /**
@@ -154,7 +154,7 @@ class LayoutEngine {
          this.resizeObserver.disconnect();
          this.elements.clear();
          this.groups = [];
-         console.log("LayoutEngine destroyed.");
+         
     }
 }
 
@@ -254,7 +254,7 @@ class LayoutElement {
         if (anchorTo) {
             const targetElement = elementsMap.get(anchorTo);
             if (!targetElement || !targetElement.layout.calculated) {
-                //console.log(`Dependency check failed for ${this.id}: anchor target ${anchorTo} not calculated.`);
+                //
                 return false; // Anchor target not ready
             }
         }
@@ -263,14 +263,14 @@ class LayoutElement {
         if (stretchTo) {
             const targetElement = elementsMap.get(stretchTo);
             if (!targetElement || !targetElement.layout.calculated) {
-                 //console.log(`Dependency check failed for ${this.id}: stretch target ${stretchTo} not calculated.`);
+                 //
                 return false; // Stretch target not ready
             }
         }
 
         // Check if intrinsic size is known (important for elements sized by content)
         if (!this.intrinsicSize.calculated) {
-             //console.log(`Dependency check failed for ${this.id}: intrinsic size not calculated.`);
+             //
              return false;
         }
 
@@ -460,7 +460,7 @@ class LayoutElement {
      * @param {number} duration - Duration in seconds.
      */
     animate(property, value, duration) {
-        console.log(`Animating ${this.id}: ${property} to ${value} over ${duration}s`);
+        
         if (this.svgElement) {
             // Very basic example - replace with proper animation library
             this.svgElement.style.transition = `${property} ${duration}s ease-in-out`;
@@ -743,7 +743,7 @@ class ButtonElement extends LayoutElement {
             this.svgElement.addEventListener('click', (event) => {
                 event.stopPropagation(); // Prevent event bubbling if needed
                 this.onClick(this.id, this.props); // Pass ID and props to handler
-                console.log(`Button ${this.id} clicked.`);
+                
                  // Add visual feedback (optional)
                  this.svgElement.style.opacity = '0.7';
                  setTimeout(() => { this.svgElement.style.opacity = '1'; }, 150);
@@ -872,7 +872,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Make engine accessible globally for debugging (optional)
         window.lcarsEngine = engine;
-        console.log("LCARS Engine initialized. Access with 'lcarsEngine'.");
+        
 
     } else {
         console.error("SVG container element '#lcars-svg' not found.");

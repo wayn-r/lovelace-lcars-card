@@ -188,7 +188,6 @@ export class EndcapElement extends LayoutElement {
     this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 0; 
     
     this.intrinsicSize.calculated = true;
-    console.log(`[${this.id} - Endcap] Calculated Intrinsic Size:`, this.intrinsicSize);
   }
 
   /**
@@ -219,7 +218,6 @@ export class EndcapElement extends LayoutElement {
       const anchorElement = elementsMap.get(this.layoutConfig.anchorTo);
       // We know anchorElement is calculated because canCalculateLayout passed
       if (anchorElement) { 
-        console.log(`[${this.id} - Endcap] Adopting height from anchor target '${this.layoutConfig.anchorTo}': ${anchorElement.layout.height}`);
         // IMPORTANT: Modify the height used for this specific layout calculation
         // We store the calculated dimensions in this.layout, not this.intrinsicSize here
         // Let the base calculateLayout use this adopted height
@@ -234,7 +232,6 @@ export class EndcapElement extends LayoutElement {
     }
     
     // If height was defined explicitly or anchor logic didn't run, use standard calculation
-    console.log(`[${this.id} - Endcap] Using standard calculateLayout.`);
     super.calculateLayout(elementsMap, containerRect);
   }
 

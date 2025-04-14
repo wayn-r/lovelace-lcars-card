@@ -77,7 +77,6 @@ export class LayoutEngine {
    */
   calculateBoundingBoxes(containerRect: DOMRect): void {
     if (!containerRect) return;
-    console.log("Calculating Bounding Boxes...", containerRect);
     
     const maxPasses = 10;
     let pass = 0;
@@ -89,7 +88,6 @@ export class LayoutEngine {
     do {
       elementsCalculatedInPass = 0;
       pass++;
-      // console.log(`Layout Pass ${pass}`);
 
       this.elements.forEach(el => {
         if (el.layout.calculated) return;
@@ -105,12 +103,9 @@ export class LayoutEngine {
           if (el.layout.calculated) {
             elementsCalculatedInPass++;
             totalCalculated++;
-            // console.log(` -> Calculated layout for: ${el.id}`);
           }
         }
       });
-
-      // console.log(`Pass ${pass} calculated ${elementsCalculatedInPass} elements.`);
 
     } while (elementsCalculatedInPass > 0 && totalCalculated < this.elements.size && pass < maxPasses);
 
@@ -122,7 +117,6 @@ export class LayoutEngine {
         }
       });
     }
-    // console.log("Bounding Box Calculation Complete.");
   }
 
   /**
@@ -133,7 +127,6 @@ export class LayoutEngine {
       this.tempSvgContainer.parentNode.removeChild(this.tempSvgContainer);
     }
     this.clearLayout();
-    console.log("LayoutEngine destroyed.");
   }
 }
 
@@ -284,22 +277,21 @@ export abstract class LayoutElement {
 
     // --- Debugging Anchor Logic --- 
     if (this.layoutConfig.anchorTo) {
-      console.log(`[${this.id}] Attempting to anchor to: ${this.layoutConfig.anchorTo}`);
       const targetElement = elementsMap.get(this.layoutConfig.anchorTo);
       
       if (targetElement && targetElement.layout.calculated) { 
-        console.log(`[${this.id}] Target found and calculated:`, targetElement.id, targetElement.layout);
+        
         const anchorPoint = this.layoutConfig.anchorPoint || 'topLeft';
         const targetAnchorPoint = this.layoutConfig.targetAnchorPoint || 'topLeft';
-        console.log(`[${this.id}] Anchor Points: self=${anchorPoint}, target=${targetAnchorPoint}`);
+        
         
         const anchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
         const targetPos = targetElement._getRelativeAnchorPosition(targetAnchorPoint);
-        console.log(`[${this.id}] Relative Positions: selfAnchor=${JSON.stringify(anchorPos)}, targetAnchor=${JSON.stringify(targetPos)}`);
+        
         
         const initialX = targetElement.layout.x + targetPos.x - anchorPos.x;
         const initialY = targetElement.layout.y + targetPos.y - anchorPos.y;
-        console.log(`[${this.id}] Position BEFORE offset: x=${initialX.toFixed(2)}, y=${initialY.toFixed(2)}`);
+        
 
         x = initialX;
         y = initialY;
@@ -308,14 +300,14 @@ export abstract class LayoutElement {
         const offsetX = this._parseOffset(this.layoutConfig.offsetX, containerWidth);
         const offsetY = this._parseOffset(this.layoutConfig.offsetY, containerHeight);
         if (this.layoutConfig.offsetX !== undefined) {
-            console.log(`[${this.id}] Applying offsetX: ${offsetX}`);
+            
             x += offsetX;
         }
         if (this.layoutConfig.offsetY !== undefined) {
-            console.log(`[${this.id}] Applying offsetY: ${offsetY}`);
+            
             y += offsetY;
         }
-        console.log(`[${this.id}] Position AFTER offset: x=${x.toFixed(2)}, y=${y.toFixed(2)}`);
+        
 
       } else {
         console.warn(`[${this.id}] Anchor target '${this.layoutConfig.anchorTo}' not found or not calculated yet.`);
@@ -353,7 +345,7 @@ export abstract class LayoutElement {
     this.layout.width = elementWidth;
     this.layout.height = elementHeight;
     this.layout.calculated = true;
-    // console.log(`[${this.id}] Final Layout:`, JSON.stringify(this.layout));
+    // 
   }
 
   /**

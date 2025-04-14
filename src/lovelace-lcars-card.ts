@@ -80,7 +80,6 @@ export class LcarsCard extends LitElement {
       elements: config.elements || []
     };
     this._lastConfig = config;
-    console.log("[setConfig] New config processed.");
     
     // Mark for calculation and request update. Calculation will happen in `updated`.
     this._layoutCalculationPending = true;
@@ -89,7 +88,6 @@ export class LcarsCard extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
-    console.log("[connectedCallback]");
     if (!this._resizeObserver) {
        this._resizeObserver = new ResizeObserver(this._handleResize.bind(this));
     }
@@ -99,7 +97,6 @@ export class LcarsCard extends LitElement {
     const container = this.shadowRoot?.querySelector('.card-container');
     if (container && this._resizeObserver) {
       this._resizeObserver.observe(container);
-      console.log("[firstUpdated] Observer attached. Scheduling initial calculation check.");
       // Schedule the first check slightly later
       requestAnimationFrame(() => this._scheduleInitialCalculation());
     } else {
@@ -111,19 +108,16 @@ export class LcarsCard extends LitElement {
   
   disconnectedCallback(): void {
     this._resizeObserver?.disconnect();
-    console.log("[disconnectedCallback] Observer disconnected.");
     super.disconnectedCallback();
   }
   
   // New method to check initial dimensions and calculate
   private _scheduleInitialCalculation(): void {
-    console.log("[_scheduleInitialCalculation] Running check...");
     if (!this._containerRect) { // Only run if resize observer hasn't already provided rect
         const container = this.shadowRoot?.querySelector('.card-container');
         if (container) {
             const initialRect = container.getBoundingClientRect();
             if (initialRect.width > 0 && initialRect.height > 0) {
-                console.log("[_scheduleInitialCalculation] Got valid initial Rect:", initialRect);
                 this._containerRect = initialRect;
                 this._performLayoutCalculation(this._containerRect); // Calculate directly
             } else {
@@ -131,7 +125,6 @@ export class LcarsCard extends LitElement {
             }
         }
     } else {
-         console.log("[_scheduleInitialCalculation] Container rect already exists, skipping check.");
          // If rect exists, but calculation is pending (e.g. from setConfig before firstUpdated), trigger it via updated
          if(this._layoutCalculationPending){
             this.requestUpdate(); 
@@ -142,15 +135,11 @@ export class LcarsCard extends LitElement {
   // updated is called after render
   protected updated(changedProperties: Map<string | number | symbol, unknown>): void {
       super.updated(changedProperties);
-      console.log(`[updated] Start. Pending: ${this._layoutCalculationPending}, HasRect: ${!!this._containerRect}`);
       // Perform layout calculation *after* the DOM update cycle if needed
       if (this._layoutCalculationPending && this._containerRect && this._config) {
-          console.log("[updated] Performing pending layout calculation...");
           this._performLayoutCalculation(this._containerRect);
       } else if (this._layoutCalculationPending) {
-           console.log("[updated] Calculation pending, but no valid rect yet.");
       }
-      console.log("[updated] End.");
   }
   
   // Performs the calculation and updates state
@@ -160,7 +149,6 @@ export class LcarsCard extends LitElement {
         this._layoutCalculationPending = false; // Abort this attempt
         return;
     }
-    console.log("[_performLayoutCalculation] Updating engine and calculating for rect:", rect);
 
     this._layoutEngine.clearLayout();
     const groups = parseConfig(this._config, this.hass);
@@ -180,9 +168,7 @@ export class LcarsCard extends LitElement {
     if (JSON.stringify(newTemplates.map(t => t.strings)) !== JSON.stringify(this._layoutElementTemplates.map(t => t.strings)) || newViewBox !== this._viewBox) {
         this._layoutElementTemplates = newTemplates;
         this._viewBox = newViewBox;
-        console.log("[_performLayoutCalculation] State updated. Templates:", this._layoutElementTemplates.length);
     } else {
-        console.log("[_performLayoutCalculation] Calculation complete, no state change needed.");
     }
     
     this._layoutCalculationPending = false; // Calculation attempt finished
@@ -198,13 +184,11 @@ export class LcarsCard extends LitElement {
             Math.abs(this._containerRect.width - newRect.width) > 1 ||
             Math.abs(this._containerRect.height - newRect.height) > 1) 
         {
-            console.log("[_handleResize] Size changed significantly, storing new rect:", newRect);
             this._containerRect = newRect;
             this._layoutCalculationPending = true;
             this.requestUpdate();
         }
     } else {
-         console.log("[_handleResize] Received zero dimensions, ignoring.");
     }
   }
 
@@ -222,7 +206,6 @@ export class LcarsCard extends LitElement {
     if (!this._config || !this.hass) {
       return html``;
     }
-    // console.log(`[render] Rendering. Advanced: ${!!(this._config.elements && this._config.elements.length > 0)}. Templates: ${this._layoutElementTemplates.length}. Pending: ${this._layoutCalculationPending}`);
 
     let svgContent: SVGTemplateResult | SVGTemplateResult[] | TemplateResult | string = '';
 

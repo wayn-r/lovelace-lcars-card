@@ -1,173 +1,606 @@
-import { LitElement, html, css } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { LitElement, html, css, TemplateResult } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, fireEvent, LovelaceCardEditor } from 'custom-card-helpers';
-import { LcarsCardConfig } from './lovelace-lcars-card';
+// Make sure these components are loaded if not already globally available
+// import '@material/mwc-select';
+// import '@material/mwc-list/mwc-list-item';
+// import '@material/mwc-textfield';
+// import '@material/mwc-checkbox';
+// import '@material/mwc-formfield';
+// import '@material/mwc-icon-button';
+// import '@polymer/paper-input/paper-input'; // For color picker potentially
+
+import { LcarsCardConfig } from './lovelace-lcars-card.js';
 import { DEFAULT_FONT_SIZE, DEFAULT_TITLE, DEFAULT_TEXT } from './constants';
+
+// Available element types
+const ELEMENT_TYPES = ['rectangle', 'text', 'endcap'];
+const ANCHOR_POINTS = [
+    'topLeft', 'topCenter', 'topRight',
+    'centerLeft', 'center', 'centerRight',
+    'bottomLeft', 'bottomCenter', 'bottomRight'
+];
 
 @customElement('lcars-card-editor')
 export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   @property({ attribute: false }) public hass?: HomeAssistant;
   @property({ attribute: false }) private _config?: LcarsCardConfig;
-  @property({ attribute: false }) private _showAdvanced: boolean = false;
+  @state() private _collapsedElements: boolean[] = [];
+  @state() private _collapsedSections: { [key: number]: { props: boolean; layout: boolean } } = {};
+  @state() private _advancedTextOptions: { [key: number]: boolean } = {}; // Track advanced text options per element
 
-  // Define the styles for the editor
   static styles = css`
-    .form-container {
-      padding: 8px;
+    /* Basic styles */
+    .form-container { padding: 8px; }
+    .form-field { display: flex; flex-direction: column; margin-bottom: 12px; }
+    .form-field label, .section-label { margin-bottom: 4px; font-weight: bold; }
+    .elements-section { margin-top: 20px; padding-top: 10px; border-top: 1px solid var(--divider-color); }
+    .add-element { margin-top: 16px; text-align: right; }
+
+    /* Element editor card */
+    .element-editor {
+      border: 1px solid var(--divider-color);
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 16px;
+      background-color: var(--secondary-background-color);
     }
-    .form-field {
+    .element-header {
       display: flex;
-      flex-direction: column;
-      margin-bottom: 12px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
     }
-    .form-field label {
-      margin-bottom: 4px;
-    }
-    .advanced-section {
-      border-top: 1px solid #ccc;
-      margin-top: 12px;
-      padding-top: 12px;
-    }
-    .advanced-toggle {
-      cursor: pointer;
+    .element-header .element-header-summary {
+      font-weight: bold;
       display: flex;
       align-items: center;
+    }
+    .element-header .element-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+    }
+
+    /* Grid layout for fields */
+    .grid-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Wider columns */
+        gap: 12px;
+        margin-bottom: 10px; /* Space below grid */
+    }
+    .section-label { /* Label for Props/Layout sections */
+        grid-column: 1 / -1; /* Span full width */
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed var(--divider-color);
+    }
+
+    /* Inputs */
+    ha-select, ha-textfield, ha-color-picker { display: block; width: 100%; box-sizing: border-box; }
+    ha-formfield { display: block; margin-top: 8px;} /* Better checkbox spacing */
+    ha-color-picker { margin-bottom: 8px;}
+
+    /* Anchor grid styles */
+    .anchor-grid-label {
+      font-weight: bold;
+      margin-bottom: 4px;
+      display: block;
+    }
+    .anchor-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 28px);
+      grid-template-rows: repeat(3, 28px);
+      gap: 4px;
       margin-bottom: 8px;
+      justify-content: start;
     }
-    .advanced-toggle ha-icon {
-      margin-right: 8px;
+    .anchor-grid-btn {
+      width: 28px;
+      height: 28px;
+      border: 1.5px solid var(--divider-color, #888);
+      background: var(--card-background-color, #222);
+      border-radius: 6px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
     }
-    .yaml-editor {
-      font-family: monospace;
-      height: 300px;
+    .anchor-grid-btn.selected {
+      border-color: var(--primary-color, #ff9800);
+      background: var(--primary-color, #ff9800);
+      color: #fff;
     }
   `;
 
   public setConfig(config: LcarsCardConfig): void {
-    this._config = config;
+    this._config = { ...config, elements: config.elements || [] };
+    // Only re-initialize collapse state arrays if the number of elements changes
+    const numElements = config.elements?.length || 0;
+    if (this._collapsedElements.length !== numElements) {
+      // Try to preserve previous state for existing elements
+      const prevCollapsed = this._collapsedElements || [];
+      this._collapsedElements = Array(numElements).fill(false).map((_, i) => prevCollapsed[i] ?? false);
+    }
+    if (Object.keys(this._collapsedSections).length !== numElements) {
+      const prevSections = this._collapsedSections || {};
+      this._collapsedSections = {};
+      for (let i = 0; i < numElements; i++) {
+        this._collapsedSections[i] = prevSections[i] || { props: false, layout: false };
+      }
+    }
   }
 
-  // Handle changes to the configuration
-  private _valueChanged(ev: CustomEvent): void {
-    if (!this._config || !this.hass) {
-      return;
-    }
+  // --- Event Handlers --- 
 
+  // Handle changes in basic fields (Title, Text, Font Size)
+  private _handleBasicChange(ev: CustomEvent): void {
+    if (!this._config) return;
     const target = ev.target as HTMLInputElement;
-    const value = target.value;
-    const configValue = target.configValue as keyof LcarsCardConfig;
-    
-    // Convert fontSize to number
-    if (configValue === 'fontSize' && value !== '') {
-      this._config = {
-        ...this._config,
-        [configValue]: parseInt(value, 10),
-      };
-    } else {
-      this._config = {
-        ...this._config,
-        [configValue]: value,
-      };
+    const key = target.name as keyof LcarsCardConfig;
+    let value: string | number = target.value;
+
+    if (key === 'fontSize') {
+      value = Number(value);
     }
 
-    // Fire the config-changed event
+    this._config = { ...this._config, [key]: value };
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
-  // Toggle the advanced section
-  private _toggleAdvanced(): void {
-    this._showAdvanced = !this._showAdvanced;
-  }
+  // Handle changes within an element's configuration
+  private _handleElementChange(ev: Event, index: number, key: string, section?: 'props' | 'layout'): void {
+    if (!this._config || !this._config.elements) return;
 
-  // Handle YAML input changes
-  private _yamlChanged(ev: CustomEvent): void {
-    if (!this._config || !this.hass) {
-      return;
+    const target = ev.target as any; // Use any for simplicity with different component types
+    let value: string | number | boolean;
+
+    // Extract value based on target type
+    if (target.tagName === 'HA-COLOR-PICKER') {
+        value = target.value || ''; // Assuming .value holds the color string
+    } else if (target.tagName === 'HA-CHECKBOX') {
+        value = target.checked;
+    } else { // Textfield, Select, etc.
+        value = target.value;
+        // Attempt number conversion only if target.type suggests it
+        if (target.type === 'number' && value !== '') {
+             try {
+                 value = Number(value);
+                 if (isNaN(value)) { // Handle case where input is not a valid number
+                     value = target.value; // Keep original string if conversion fails
+                 }
+             } catch { value = target.value; }
+        }
     }
 
-    const target = ev.target as HTMLTextAreaElement;
-    const value = target.value;
-    
-    try {
-      // Parse YAML to get elements array
-      const elements = JSON.parse(value);
-      
-      this._config = {
-        ...this._config,
-        elements,
-      };
-      
-      // Fire the config-changed event
-      fireEvent(this, 'config-changed', { config: this._config });
-    } catch (e) {
-      console.error('Error parsing YAML:', e);
+    console.log(`Handling change: Index=${index}, Section=${section}, Key=${key}, Value=${value} (Type: ${typeof value})`);
+
+    const newElements = this._config.elements.map((el, i) => {
+      if (i === index) {
+        const updatedElement = { ...el };
+        if (section) { // Update nested 'props' or 'layout'
+          // Ensure the section object exists
+          const currentSection = updatedElement[section] || {};
+          updatedElement[section] = { ...currentSection, [key]: value };
+        } else { // Update top-level key ('type', 'group', or 'id')
+          (updatedElement as any)[key] = value;
+        }
+        return updatedElement;
+      }
+      return el;
+    });
+
+    this._config = { ...this._config, elements: newElements };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  // Add a new, default element placeholder
+  private _addElement(): void {
+    if (!this._config) return;
+
+    const newElement = {
+      id: `element-${Date.now()}`,
+      type: 'rectangle', // Default to rectangle, user can change
+      group: 'default',
+      props: { fill: '#FF9900' }, // Add a default fill
+      layout: { width: 100, height: 30 } // Add some default size
+    };
+
+    const elements = [...(this._config.elements || []), newElement];
+    this._config = { ...this._config, elements };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  // Remove an element at a given index
+  private _removeElement(index: number): void {
+    if (!this._config || !this._config.elements) return;
+
+    const elements = this._config.elements.filter((_, i) => i !== index);
+    this._config = { ...this._config, elements };
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  // --- Render Helpers --- 
+
+  // Helper to render required labels
+  private _renderLabel(label: string, required: boolean, valid: boolean): TemplateResult {
+    return html`<span style="color:${required && !valid ? 'red' : 'inherit'};">${label}${required ? html`<span style="color:red;">*</span>` : ''}</span>`;
+  }
+
+  // Helper to render a 3x3 anchor grid for single selection
+  private _renderAnchorGrid({
+    label,
+    value,
+    onSelect,
+    disabled = false,
+    labelCenter = false
+  }: {
+    label: string;
+    value: string;
+    onSelect: (val: string) => void;
+    disabled?: boolean;
+    labelCenter?: boolean;
+  }) {
+    const points = [
+      ['topLeft', 'topCenter', 'topRight'],
+      ['centerLeft', 'center', 'centerRight'],
+      ['bottomLeft', 'bottomCenter', 'bottomRight']
+    ];
+    return html`
+      <span class="anchor-grid-label" style="${labelCenter ? 'text-align:center;display:block;width:100%;' : ''}">${label}</span>
+      <div class="anchor-grid">
+        ${points.flat().map((pt, i) => html`
+          <button
+            class="anchor-grid-btn${value === pt ? ' selected' : ''}"
+            title=${pt}
+            ?disabled=${disabled}
+            @click=${() => !disabled && onSelect(pt)}
+            type="button"
+          >
+            ${value === pt ? html`<ha-icon icon="mdi:circle" style="font-size:18px;"></ha-icon>` : ''}
+          </button>
+        `)}
+      </div>
+    `;
+  }
+
+  // Helper to render a 3x3 anchor grid for multi-selection (for anchorTop, anchorBottom, anchorLeft, anchorRight)
+  private _renderAnchorMultiGrid({
+    label,
+    anchorTop,
+    anchorBottom,
+    anchorLeft,
+    anchorRight,
+    onToggle
+  }: {
+    label: string;
+    anchorTop: boolean;
+    anchorBottom: boolean;
+    anchorLeft: boolean;
+    anchorRight: boolean;
+    onToggle: (anchor: 'anchorTop' | 'anchorBottom' | 'anchorLeft' | 'anchorRight') => void;
+  }) {
+    // Map grid positions to anchor names
+    const grid = [
+      ['anchorTopLeft', 'anchorTop', 'anchorTopRight'],
+      ['anchorLeft', 'center', 'anchorRight'],
+      ['anchorBottomLeft', 'anchorBottom', 'anchorBottomRight']
+    ];
+    // Only the four edge/corner cells are interactive
+    const isActive = (cell: string) => {
+      switch (cell) {
+        case 'anchorTop': return anchorTop;
+        case 'anchorBottom': return anchorBottom;
+        case 'anchorLeft': return anchorLeft;
+        case 'anchorRight': return anchorRight;
+        default: return false;
+      }
+    };
+    const isToggleCell = (cell: string) => ['anchorTop', 'anchorBottom', 'anchorLeft', 'anchorRight'].includes(cell);
+    const anchorLabel = {
+      anchorTop: 'Top',
+      anchorBottom: 'Bottom',
+      anchorLeft: 'Left',
+      anchorRight: 'Right'
+    };
+    return html`
+      <span class="anchor-grid-label">${label}</span>
+      <div class="anchor-grid">
+        ${grid.flat().map((cell, i) => isToggleCell(cell)
+          ? html`<button
+              class="anchor-grid-btn${isActive(cell) ? ' selected' : ''}"
+              title=${anchorLabel[cell as keyof typeof anchorLabel]}
+              @click=${() => onToggle(cell as any)}
+              type="button"
+            >
+              ${isActive(cell) ? html`<ha-icon icon="mdi:circle" style="font-size:18px;"></ha-icon>` : ''}
+            </button>`
+          : html`<button class="anchor-grid-btn" disabled style="opacity:0.3;"></button>`
+        )}
+      </div>
+    `;
+  }
+
+  // Renders the editor for a single element
+  private _renderElementEditor(element: any, index: number): TemplateResult {
+    const collapsed = this._collapsedElements[index];
+    return html`
+      <div class="element-editor">
+        <div class="element-header">
+          ${collapsed
+            ? html`
+                <span class="element-header-summary">
+                  ${element.id ?? '(no id)'} <span style="color:var(--secondary-text-color); margin-left: 6px;">(${element.type ?? 'unknown'})</span>
+                </span>
+                <span class="element-header-actions">
+                  <ha-icon-button @click=${() => this._toggleElementCollapse(index)} title="Expand">
+                    <ha-icon icon="mdi:chevron-down"></ha-icon>
+                  </ha-icon-button>
+                  <ha-icon-button @click=${() => this._removeElement(index)} title="Delete Element">
+                    <ha-icon icon="mdi:delete"></ha-icon>
+                  </ha-icon-button>
+                </span>
+              `
+            : html`
+                <ha-select
+                  label="Element Type"
+                  .value=${element.type ?? ''}
+                  @selected=${(e: Event) => this._handleElementChange(e, index, 'type')}
+                  @closed=${(ev: Event) => ev.stopPropagation()}
+                >
+                  ${ELEMENT_TYPES.map(type => html`<ha-list-item .value=${type}>${type}</ha-list-item>`)}
+                </ha-select>
+                <span class="element-header-actions">
+                  <ha-icon-button @click=${() => this._toggleElementCollapse(index)} title="Collapse">
+                    <ha-icon icon="mdi:chevron-up"></ha-icon>
+                  </ha-icon-button>
+                  <ha-icon-button @click=${() => this._removeElement(index)} title="Delete Element">
+                    <ha-icon icon="mdi:delete"></ha-icon>
+                  </ha-icon-button>
+                </span>
+              `}
+        </div>
+        ${collapsed
+          ? html``
+          : html`
+              <div class="grid-container">
+                <!-- Top group: Element Type, ID, Group ID -->
+                <div style="grid-column: 1 / -1; height: 8px;"></div>
+                <ha-textfield
+                  label="Element ID"
+                  name="id"
+                  required
+                  .value=${element.id ?? ''}
+                  @input=${(e: Event) => this._handleElementChange(e, index, 'id')}
+                ></ha-textfield>
+                <ha-textfield
+                  label="Group ID"
+                  name="group"
+                  .value=${element.group ?? ''}
+                  @input=${(e: Event) => this._handleElementChange(e, index, 'group')}
+                ></ha-textfield>
+                <div style="grid-column: 1 / -1; height: 8px;"></div>
+                ${this._renderPropsFields(element, index)}
+                <div style="grid-column: 1 / -1; height: 8px;"></div>
+                ${this._renderLayoutFields(element, index)}
+              </div>
+            `}
+      </div>
+    `;
+  }
+
+  // Renders specific prop fields based on element type
+  private _renderPropsFields(element: any, index: number): TemplateResult | TemplateResult[] {
+    const props = element.props || {};
+    const fillValue = props.fill ?? '';
+    const fontSizeValue = props.fontSize ?? '';
+    const fontWeightValue = props.fontWeight ?? '';
+    const letterSpacingValue = props.letterSpacing ?? '';
+    const textAnchorValue = props.textAnchor ?? '';
+    const dominantBaselineValue = props.dominantBaseline ?? '';
+    const textTransformValue = props.textTransform ?? '';
+    const fontFamilyValue = props.fontFamily ?? '';
+    const textValue = props.text ?? '';
+    const rxValue = props.rx ?? '';
+    const ryValue = props.ry ?? '';
+    const directionValue = props.direction ?? '';
+    // For advanced text options
+    const isAdvancedOpen = !!this._advancedTextOptions[index];
+    const toggleAdvanced = () => {
+      this._advancedTextOptions = { ...this._advancedTextOptions, [index]: !isAdvancedOpen };
+    };
+
+    switch (element.type) {
+      case 'rectangle':
+        return html`
+          <!-- Fill color group -->
+          <div style="grid-column: 1 / -1; height: 8px;"></div>
+          <ha-textfield label="Fill Color" name="fill" .value=${fillValue} @input=${(e: Event) => this._handleElementChange(e, index, 'fill', 'props')}></ha-textfield>
+          <ha-textfield label="Corner Radius X (rx)" name="rx" type="number" step="1" .value=${rxValue} @input=${(e: Event) => this._handleElementChange(e, index, 'rx', 'props')}></ha-textfield>
+          <ha-textfield label="Corner Radius Y (ry)" name="ry" type="number" step="1" .value=${ryValue} @input=${(e: Event) => this._handleElementChange(e, index, 'ry', 'props')}></ha-textfield>
+        `;
+      case 'text':
+        return html`
+          <!-- Text content and font size group -->
+          <div style="grid-column: 1 / -1; height: 8px;"></div>
+          <ha-textfield label="Text Content" name="text" .value=${textValue} @input=${(e: Event) => this._handleElementChange(e, index, 'text', 'props')}></ha-textfield>
+          <ha-textfield label="Font Size (px)" name="fontSize" type="number" step="1" .value=${fontSizeValue} @input=${(e: Event) => this._handleElementChange(e, index, 'fontSize', 'props')}></ha-textfield>
+          <!-- Advanced text options -->
+          <div style="grid-column: 1 / -1; display: flex; align-items: center; cursor: pointer; user-select: none; margin-bottom: 4px;" @click=${toggleAdvanced}>
+            <span style="font-weight: bold;">Advanced Text Options</span>
+            <ha-icon icon="mdi:${isAdvancedOpen ? 'chevron-up' : 'chevron-down'}" style="margin-left: 4px;"></ha-icon>
+          </div>
+          ${isAdvancedOpen ? html`
+            <ha-textfield label="Font Family" name="fontFamily" .value=${fontFamilyValue} @input=${(e: Event) => this._handleElementChange(e, index, 'fontFamily', 'props')}></ha-textfield>
+            <ha-select label="Font Weight" name="fontWeight" .value=${fontWeightValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'fontWeight', 'props')} @closed=${(ev: Event) => ev.stopPropagation()}>
+              <ha-list-item value="normal">Normal</ha-list-item>
+              <ha-list-item value="bold">Bold</ha-list-item>
+              <ha-list-item value="bolder">Bolder</ha-list-item>
+              <ha-list-item value="lighter">Lighter</ha-list-item>
+              <ha-list-item value="100">100</ha-list-item>
+              <ha-list-item value="200">200</ha-list-item>
+              <ha-list-item value="300">300</ha-list-item>
+              <ha-list-item value="400">400</ha-list-item>
+              <ha-list-item value="500">500</ha-list-item>
+              <ha-list-item value="600">600</ha-list-item>
+              <ha-list-item value="700">700</ha-list-item>
+              <ha-list-item value="800">800</ha-list-item>
+              <ha-list-item value="900">900</ha-list-item>
+            </ha-select>
+            <ha-textfield label="Letter Spacing" name="letterSpacing" .value=${letterSpacingValue} @input=${(e: Event) => this._handleElementChange(e, index, 'letterSpacing', 'props')}></ha-textfield>
+            <ha-select label="Anchor Point" name="textAnchor" .value=${textAnchorValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'textAnchor', 'props')} @closed=${(ev: Event) => ev.stopPropagation()}>
+              <ha-list-item value="start">Start</ha-list-item>
+              <ha-list-item value="middle">Middle</ha-list-item>
+              <ha-list-item value="end">End</ha-list-item>
+            </ha-select>
+            <ha-select label="Dominant Baseline" name="dominantBaseline" .value=${dominantBaselineValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'dominantBaseline', 'props')} @closed=${(ev: Event) => ev.stopPropagation()}>
+              <ha-list-item value="auto">Auto</ha-list-item>
+              <ha-list-item value="middle">Middle</ha-list-item>
+              <ha-list-item value="central">Central</ha-list-item>
+              <ha-list-item value="hanging">Hanging</ha-list-item>
+            </ha-select>
+            <ha-textfield label="Text Transform" name="textTransform" .value=${textTransformValue} @input=${(e: Event) => this._handleElementChange(e, index, 'textTransform', 'props')}></ha-textfield>
+            <!-- Width/Height in advanced for text -->
+            <ha-textfield label="Width (px or %)" name="width" type="number" step="1" .value=${element.layout?.width ?? ''} @input=${(e: Event) => this._handleElementChange(e, index, 'width', 'layout')}></ha-textfield>
+            <ha-textfield label="Height (px or %)" name="height" type="number" step="1" .value=${element.layout?.height ?? ''} @input=${(e: Event) => this._handleElementChange(e, index, 'height', 'layout')}></ha-textfield>
+          ` : ''}
+          <!-- Fill color group -->
+          <div style="grid-column: 1 / -1; height: 8px;"></div>
+          <ha-textfield label="Fill Color" name="fill" .value=${fillValue} @input=${(e: Event) => this._handleElementChange(e, index, 'fill', 'props')}></ha-textfield>
+        `;
+      case 'endcap':
+        return html`
+          <!-- Fill color group -->
+          <div style="grid-column: 1 / -1; height: 8px;"></div>
+          <ha-textfield label="Fill Color" name="fill" .value=${fillValue} @input=${(e: Event) => this._handleElementChange(e, index, 'fill', 'props')}></ha-textfield>
+          <ha-select label="Direction" name="direction" .value=${directionValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'direction', 'props')} @closed=${(ev: Event) => ev.stopPropagation()}>
+            <ha-list-item value="left">Left</ha-list-item>
+            <ha-list-item value="right">Right</ha-list-item>
+          </ha-select>
+        `;
+      default:
+        return html`<span>Unknown element type: ${element.type}</span>`;
     }
   }
 
-  // Render the editor form
+  // Renders common layout fields 
+  private _renderLayoutFields(element: any, index: number): TemplateResult {
+      const layout = element.layout || {};
+      const containerAnchorPoint = layout.containerAnchorPoint ?? '';
+      const anchorToValue = layout.anchorTo ?? '';
+      const anchorPointValue = layout.anchorPoint ?? '';
+      const targetAnchorPointValue = layout.targetAnchorPoint ?? '';
+      const stretchToValue = layout.stretchTo ?? '';
+      const offsetXValue = layout.offsetX ?? '';
+      const offsetYValue = layout.offsetY ?? '';
+      const otherElementIds = (this._config?.elements || [])
+                                .map(el => el.id)
+                                .filter(id => id && id !== element.id); 
+      return html`
+        <div style="grid-column: 1 / -1; height: 8px;"></div>
+        <!-- Container Anchor Point -->
+        <div style="display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; gap: 32px; flex-wrap: wrap;">
+          <div style="min-width: 120px;">
+            ${this._renderAnchorGrid({
+              label: 'Container Anchors',
+              value: containerAnchorPoint,
+              onSelect: (val: string) => {
+                const event = { target: { value: val, type: 'text' } } as unknown as Event;
+                this._handleElementChange(event, index, 'containerAnchorPoint', 'layout');
+              },
+              labelCenter: true
+            })}
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 16px; min-width: 320px;">
+            <div style="display: flex; flex-direction: row; gap: 32px; align-items: flex-start; justify-content: flex-start;">
+              ${anchorToValue ? html`
+                <div style="min-width: 120px;">
+                  ${this._renderAnchorGrid({
+                    label: 'Anchor Point',
+                    value: anchorPointValue,
+                    onSelect: (val: string) => {
+                      const event = { target: { value: val, type: 'text' } } as unknown as Event;
+                      this._handleElementChange(event, index, 'anchorPoint', 'layout');
+                    },
+                    labelCenter: true
+                  })}
+                </div>
+                <div style="min-width: 120px;">
+                  ${this._renderAnchorGrid({
+                    label: 'Target Anchor Point',
+                    value: targetAnchorPointValue,
+                    onSelect: (val: string) => {
+                      const event = { target: { value: val, type: 'text' } } as unknown as Event;
+                      this._handleElementChange(event, index, 'targetAnchorPoint', 'layout');
+                    },
+                    labelCenter: true
+                  })}
+                </div>
+              ` : ''}
+            </div>
+            <div style="display: flex; flex-direction: row; gap: 32px; align-items: flex-end; justify-content: flex-start; margin-top: 8px;">
+              <div style="min-width: 200px;">
+                <span class="anchor-grid-label" style="text-align:center;display:block;width:100%;">Anchor To Element</span>
+                <ha-select label="" name="anchorTo" .value=${anchorToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'anchorTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
+                  ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
+                </ha-select>
+              </div>
+              <div style="min-width: 200px;">
+                <span class="anchor-grid-label" style="text-align:center;display:block;width:100%;">Stretch To Element</span>
+                <ha-select label="" name="stretchTo" .value=${stretchToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'stretchTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
+                  ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
+                </ha-select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="grid-column: 1 / -1; height: 8px;"></div>
+        <!-- Offsets group -->
+        <ha-textfield label="Offset X" name="offsetX" type="number" step="1" .value=${offsetXValue} @input=${(e: Event) => this._handleElementChange(e, index, 'offsetX', 'layout')}></ha-textfield>
+        <ha-textfield label="Offset Y" name="offsetY" type="number" step="1" .value=${offsetYValue} @input=${(e: Event) => this._handleElementChange(e, index, 'offsetY', 'layout')}></ha-textfield>
+      `;
+  }
+
+  private _toggleElementCollapse(index: number): void {
+    this._collapsedElements = this._collapsedElements.map((c, i) => i === index ? !c : c);
+  }
+  private _toggleSectionCollapse(index: number, section: 'props' | 'layout'): void {
+    this._collapsedSections = {
+      ...this._collapsedSections,
+      [index]: {
+        ...this._collapsedSections[index],
+        [section]: !this._collapsedSections[index][section]
+      }
+    };
+  }
+
+  // --- Main Render --- 
+
   protected render() {
     if (!this.hass || !this._config) {
       return html``;
     }
 
-    const elementsJson = this._config.elements ? JSON.stringify(this._config.elements, null, 2) : '[]';
-
     return html`
       <div class="form-container">
-        <div class="form-field">
-          <label for="title">Title</label>
-          <input
-            id="title"
-            type="text"
-            .value="${this._config.title || DEFAULT_TITLE}"
-            .configValue=${'title'}
-            @input=${this._valueChanged}
-          />
+        <h3>Basic Card Options</h3>
+        <div class="grid-container"> 
+            <ha-textfield label="Title" name="title" .value=${this._config.title || DEFAULT_TITLE} @input=${this._handleBasicChange}></ha-textfield>
+            <ha-textfield label="Default Text (if no elements)" name="text" .value=${this._config.text || DEFAULT_TEXT} @input=${this._handleBasicChange}></ha-textfield>
+            <ha-textfield label="Default Font Size (px)" name="fontSize" type="number" min="8" max="72" .value=${this._config.fontSize || DEFAULT_FONT_SIZE} @input=${this._handleBasicChange}></ha-textfield>
         </div>
 
-        <div class="form-field">
-          <label for="text">Text</label>
-          <input
-            id="text"
-            type="text"
-            .value="${this._config.text || DEFAULT_TEXT}"
-            .configValue=${'text'}
-            @input=${this._valueChanged}
-          />
-        </div>
-
-        <div class="form-field">
-          <label for="fontSize">Font Size (px)</label>
-          <input
-            id="fontSize"
-            type="number"
-            min="8"
-            max="72"
-            .value="${this._config.fontSize || DEFAULT_FONT_SIZE}"
-            .configValue=${'fontSize'}
-            @input=${this._valueChanged}
-          />
-        </div>
-
-        <div class="advanced-toggle" @click=${this._toggleAdvanced}>
-          <ha-icon .icon=${this._showAdvanced ? 'mdi:chevron-down' : 'mdi:chevron-right'}></ha-icon>
-          <span>Advanced Configuration</span>
-        </div>
-
-        ${this._showAdvanced ? html`
-          <div class="advanced-section">
-            <div class="form-field">
-              <label for="elementsConfig">Elements Configuration (JSON)</label>
-              <textarea
-                id="elementsConfig"
-                class="yaml-editor"
-                .value=${elementsJson}
-                @change=${this._yamlChanged}
-              ></textarea>
-              <small>Configure LCARS elements using JSON format. See documentation for examples.</small>
-            </div>
+        <div class="elements-section">
+          <h3>LCARS Elements (${this._config.elements?.length || 0})</h3>
+          ${this._config.elements?.map((el, index) => this._renderElementEditor(el, index))}
+          <div class="add-element">
+            <ha-button raised label="Add New Element" @click=${this._addElement}></ha-button>
           </div>
-        ` : ''}
+        </div>
       </div>
     `;
   }
