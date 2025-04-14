@@ -1,0 +1,5 @@
+# add the dist, node_modules, and package-lock.json to the gitignore file
+dist/
+node_modules/
+package-lock.json
+

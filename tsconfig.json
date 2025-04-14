@@ -11,7 +11,8 @@
       "useDefineForClassFields": false, // Important for Lit property decorators
       "outDir": "dist", // Where the compiled JS for build goes
       "declaration": true, // Optional: Generate type definition files
-      "sourceMap": true // Optional: Generate source maps for debugging
+      "sourceMap": true, // Optional: Generate source maps for debugging
+      "strictPropertyInitialization": false // Disable strict initialization checks for classes
     },
     "include": ["src/**/*.ts"], // Which files to compile
     "exclude": ["node_modules", "dist"]

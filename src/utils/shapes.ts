@@ -282,26 +282,34 @@ export function generateEndcapPath(
     x: number = 0,
     y: number = 0
 ): string {
+    console.log(`[generateEndcapPath] Called with: w=${width}, h=${height}, dir=${direction}, x=${x}, y=${y}`);
     let points: [number, number, number][];
      if (height <= 0 || width <= 0) {
-         console.warn("LCARS Card: generateEndcapPath requires positive width and height.");
+         console.warn("[generateEndcapPath] Requires positive width and height.");
          points = [[x, y, 0], [x, y, 0], [x, y, 0]];
     } else {
-        // Calculate corner radius based on dimensions
         const cornerRadius = width >= height/2 ? height/2 : width;
+        console.log(`[generateEndcapPath] Calculated cornerRadius: ${cornerRadius}`);
         if (direction === 'left') {
             points = [
-                [x, y, cornerRadius], [x + width, y, 0],
-                [x + width, y + height, 0], [x, y + height, cornerRadius]
+                [x, y, cornerRadius], // Top Left (Rounded)
+                [x + width, y, 0],    // Top Right (Sharp)
+                [x + width, y + height, 0], // Bottom Right (Sharp)
+                [x, y + height, cornerRadius] // Bottom Left (Rounded)
             ];
         } else { // direction === 'right'
             points = [
-                [x, y, 0], [x + width, y, cornerRadius],
-                [x + width, y + height, cornerRadius], [x, y + height, 0]
+                [x, y, 0],                 // Top Left (Sharp)
+                [x + width, y, cornerRadius], // Top Right (Rounded)
+                [x + width, y + height, cornerRadius], // Bottom Right (Rounded)
+                [x, y + height, 0]        // Bottom Left (Sharp)
             ];
         }
+        console.log(`[generateEndcapPath] Generated points for ${direction}:`, JSON.stringify(points));
     }
-    return buildShape(points);
+    const pathD = buildShape(points);
+    console.log(`[generateEndcapPath] Resulting path data: ${pathD}`);
+    return pathD;
 }
 
 /**
