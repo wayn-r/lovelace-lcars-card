@@ -1,0 +1,31 @@
+{
+    "name": "lovelace-lcars-card",
+    "version": "1.0.0",
+    "description": "LCARS themed card for Home Assistant",
+    "main": "dist/lovelace-lcars-card.js",
+    "module": "dist/lovelace-lcars-card.js",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "start": "vite",
+        "build": "tsc && vite build",
+        "preview": "vite preview"
+    },
+    "keywords": [
+        "home-assistant",
+        "lovelace",
+        "card",
+        "lcars"
+    ],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+        "custom-card-helpers": "^1.9.0",
+        "lit": "^3.0.0",
+        "typescript": "^5.0.0",
+        "vite": "^5.0.0"
+    },
+    "dependencies": {
+        "lit": "^3.0.0"
+    }
+}
