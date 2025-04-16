@@ -31,6 +31,17 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   // --- Drag and Drop for Reordering Elements ---
   private _draggedIndex: number | null = null;
   private _dragOverIndex: number | null = null;
+  @state() private _groups: string[] = [];
+  @state() private _collapsedGroups: { [groupId: string]: boolean } = {};
+  @state() private _newGroupDraft: string | null = null;
+  @state() private _newGroupInput: string = '';
+  @state() private _editingGroup: string | null = null;
+  @state() private _editingGroupInput: string = '';
+  @state() private _deleteWarningGroup: string | null = null;
+  @state() private _groupIdWarning: string = '';
+  @state() private _addElementDraftGroup: string | null = null;
+  @state() private _addElementInput: string = '';
+  @state() private _addElementWarning: string = '';
 
   static styles = css`
     /* Basic styles */
@@ -134,10 +145,25 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
 
   public setConfig(config: LcarsCardConfig): void {
     this._config = { ...config, elements: config.elements || [] };
-    // Only re-initialize collapse state arrays if the number of elements changes
+    // --- Group extraction (only on initial load) ---
+    if (!this._groups || this._groups.length === 0) {
+      const groupSet = new Set<string>();
+      (config.elements || []).forEach(el => {
+        if (el.id && typeof el.id === 'string' && el.id.includes('.')) {
+          groupSet.add(el.id.split('.')[0]);
+        }
+      });
+      this._groups = Array.from(groupSet);
+    }
+    // --- Collapse state for groups ---
+    const prevCollapsedGroups = this._collapsedGroups || {};
+    this._collapsedGroups = {};
+    this._groups.forEach(gid => {
+      this._collapsedGroups[gid] = prevCollapsedGroups[gid] ?? true;
+    });
+    // --- Elements collapse ---
     const numElements = config.elements?.length || 0;
     if (this._collapsedElements.length !== numElements) {
-      // Default: all collapsed
       this._collapsedElements = Array(numElements).fill(true);
     }
     if (Object.keys(this._collapsedSections).length !== numElements) {
@@ -220,40 +246,85 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
               updatedElement[section] = { ...currentSection, [key]: value };
             }
           }
-        } else { // Update top-level key ('type', 'group', or 'id')
-          if (value === '' || value === undefined || value === null) {
-            const { [key]: _removed, ...rest } = updatedElement;
-            return rest;
-          } else {
-            (updatedElement as any)[key] = value;
+        } else if (key === 'id') {
+          // Only allow editing the base id
+          const group = el.id.split('.')[0];
+          let baseId = value as string;
+          if (!/^[a-zA-Z0-9_-]+$/.test(baseId)) {
+            alert('Element ID can only contain letters, numbers, underscores (_), or hyphens (-).');
+            return el;
           }
+          const fullId = `${group}.${baseId}`;
+          if (this._config && this._config.elements && this._config.elements.some((e, idx) => e.id === fullId && idx !== index)) {
+            alert('An element with this id already exists in this group.');
+            return el;
+          }
+          updatedElement.id = fullId;
+        } else {
+          (updatedElement as any)[key] = value;
         }
         return updatedElement;
       }
       return el;
     });
 
-    this._config = { ...this._config, elements: newElements };
+    // Only include type if it is defined
+    const { type, ...restConfig } = this._config || {};
+    const configToUpdate = { ...restConfig, type: typeof type === 'string' ? type : '', elements: newElements };
+    this._config = configToUpdate;
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
   // Add a new, default element placeholder
-  private _addElement(): void {
-    if (!this._config) return;
+  private async _addElement(groupId?: string): Promise<void> {
+    if (this._addElementDraftGroup) return; // Only one at a time
+    this._addElementDraftGroup = groupId || (this._groups[0] || 'default');
+    this._addElementInput = '';
+    this._addElementWarning = '';
+    await this.requestUpdate();
+    const input = this.renderRoot.querySelector('ha-textfield[label="New Element ID"] input') as HTMLInputElement;
+    if (input) input.select();
+  }
 
+  private _confirmAddElement(): void {
+    const group = this._addElementDraftGroup;
+    let baseId = this._addElementInput.trim();
+    if (!group || !baseId) return;
+    if (!/^[a-zA-Z0-9_-]+$/.test(baseId)) {
+      this._addElementWarning = 'Element ID can only contain letters, numbers, underscores (_), or hyphens (-).';
+      this.requestUpdate();
+      return;
+    }
+    const fullId = `${group}.${baseId}`;
+    if (this._config && this._config.elements && this._config.elements.some(el => el.id === fullId)) {
+      this._addElementWarning = 'An element with this id already exists in this group.';
+      this.requestUpdate();
+      return;
+    }
     const newElement = {
-      id: `element-${Date.now()}`,
-      type: 'rectangle', // Default to rectangle, user can change
-      group: 'default',
-      props: { fill: '#FF9900' }, // Add a default fill
-      layout: { width: 100, height: 30 } // Add some default size
+      id: fullId,
+      type: 'rectangle',
+      props: { fill: '#FF9900' },
+      layout: { width: 100, height: 30 }
     };
-
-    const elements = [...(this._config.elements || []), newElement];
-    this._config = { ...this._config, elements };
-    // Expand the new element, keep others collapsed
+    const elements = [...(this._config?.elements || []), newElement];
+    // Only include type if it is defined
+    const { type: type2, ...restConfig2 } = this._config || {};
+    const configToUpdate2 = { ...restConfig2, type: typeof type2 === 'string' ? type2 : '', elements };
+    this._config = configToUpdate2;
     this._collapsedElements = Array(elements.length - 1).fill(true).concat(false);
+    this._addElementDraftGroup = null;
+    this._addElementInput = '';
+    this._addElementWarning = '';
     fireEvent(this, 'config-changed', { config: this._config });
+    this.requestUpdate();
+  }
+
+  private _cancelAddElement(): void {
+    this._addElementDraftGroup = null;
+    this._addElementInput = '';
+    this._addElementWarning = '';
+    this.requestUpdate();
   }
 
   // Remove an element at a given index
@@ -263,6 +334,141 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     const elements = this._config.elements.filter((_, i) => i !== index);
     this._config = { ...this._config, elements };
     fireEvent(this, 'config-changed', { config: this._config });
+  }
+
+  // Add a new group
+  private async _addGroup(): Promise<void> {
+    if (this._newGroupDraft) return; // Only one at a time
+    this._newGroupDraft = '__new__';
+    this._newGroupInput = '';
+    this._collapsedGroups = { ...this._collapsedGroups, ['__new__']: false };
+    this._groupIdWarning = '';
+    await this.requestUpdate();
+    const input = this.renderRoot.querySelector('ha-textfield[label="New Group Name"] input') as HTMLInputElement;
+    if (input) input.select();
+  }
+
+  // Toggle group collapse
+  private _toggleGroupCollapse(groupId: string): void {
+    this._collapsedGroups = { ...this._collapsedGroups, [groupId]: !this._collapsedGroups[groupId] };
+  }
+
+  // Confirm new group
+  private _confirmNewGroup(): void {
+    const name = this._newGroupInput.trim();
+    if (!name) return;
+    if (this._groups.includes(name)) {
+      alert('Group already exists. Please choose a different name.');
+      return;
+    }
+    // Replace the draft group with the real one
+    this._groups = [...this._groups, name];
+    const { ['__new__']: _removed, ...rest } = this._collapsedGroups;
+    this._collapsedGroups = { ...rest, [name]: false };
+    this._newGroupDraft = null;
+    this._newGroupInput = '';
+    this._groupIdWarning = '';
+    this.requestUpdate();
+  }
+
+  // Cancel new group
+  private _cancelNewGroup(): void {
+    const { ['__new__']: _removed, ...rest } = this._collapsedGroups;
+    this._collapsedGroups = rest;
+    this._newGroupDraft = null;
+    this._newGroupInput = '';
+    this._groupIdWarning = '';
+    this.requestUpdate();
+  }
+
+  // Start editing a group
+  private _startEditGroup(groupId: string): void {
+    this._editingGroup = groupId;
+    this._editingGroupInput = groupId;
+    this._groupIdWarning = '';
+    this.requestUpdate();
+  }
+
+  // Confirm editing a group
+  private _confirmEditGroup(): void {
+    const oldName = this._editingGroup;
+    const newName = this._editingGroupInput.trim();
+    if (!oldName || !newName) return;
+    if (this._groups.includes(newName) && newName !== oldName) {
+      alert('Group already exists. Please choose a different name.');
+      return;
+    }
+    // Update group name in _groups
+    this._groups = this._groups.map(g => g === oldName ? newName : g).filter((g, i, arr) => arr.indexOf(g) === i);
+    // Update collapse state
+    const { [oldName]: oldVal, ...rest } = this._collapsedGroups;
+    this._collapsedGroups = { ...rest, [newName]: oldVal };
+    // Update all elements in this group
+    if (this._config && this._config.elements) {
+      const elements = this._config.elements.map(el => {
+        const [group, ...baseIdParts] = el.id.split('.');
+        if (group === oldName) {
+          return { ...el, id: `${newName}.${baseIdParts.join('.')}` };
+        }
+        return el;
+      });
+      this._config = { ...this._config, elements };
+      fireEvent(this, 'config-changed', { config: this._config });
+    }
+    this._editingGroup = null;
+    this._editingGroupInput = '';
+    this._groupIdWarning = '';
+    this.requestUpdate();
+  }
+
+  // Cancel editing a group
+  private _cancelEditGroup(): void {
+    this._editingGroup = null;
+    this._editingGroupInput = '';
+    this._groupIdWarning = '';
+    this.requestUpdate();
+  }
+
+  // Delete a group
+  private _deleteGroup(groupId: string): void {
+    // If group has elements, show warning
+    const hasElements = (this._config?.elements || []).some(el => el.id.split('.')[0] === groupId);
+    if (hasElements) {
+      this._deleteWarningGroup = groupId;
+      this.requestUpdate();
+      return;
+    }
+    // If no elements, delete immediately
+    this._doDeleteGroup(groupId);
+  }
+
+  private _doDeleteGroup(groupId: string): void {
+    // Remove group from _groups
+    this._groups = this._groups.filter(g => g !== groupId);
+    // Remove collapse state
+    const { [groupId]: _removed, ...rest } = this._collapsedGroups;
+    this._collapsedGroups = rest;
+    // Remove all elements in this group
+    if (this._config && this._config.elements) {
+      const elements = this._config.elements.filter(el => el.id.split('.')[0] !== groupId);
+      this._config = { ...this._config, elements };
+      fireEvent(this, 'config-changed', { config: this._config });
+    }
+    // Cancel edit if editing this group
+    if (this._editingGroup === groupId) {
+      this._editingGroup = null;
+      this._editingGroupInput = '';
+    }
+    if (this._deleteWarningGroup === groupId) {
+      this._deleteWarningGroup = null;
+    }
+    this._groupIdWarning = '';
+    this.requestUpdate();
+  }
+
+  private _cancelDeleteGroup(): void {
+    this._deleteWarningGroup = null;
+    this.requestUpdate();
   }
 
   // --- Render Helpers --- 
@@ -399,6 +605,8 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     const collapsed = this._collapsedElements[index];
     const isDragging = this._draggedIndex === index;
     const isDragOver = this._dragOverIndex === index;
+    const [group, ...baseIdParts] = element.id.split('.');
+    const baseId = baseIdParts.join('.') || '';
     return html`
       <div class="element-editor"
         @dragover=${(e: DragEvent) => this._onDragOver(index, e)}
@@ -410,7 +618,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           ${collapsed
             ? html`
                 <span class="element-header-summary">
-                  ${element.id ?? '(no id)'} <span style="color:var(--secondary-text-color); margin-left: 6px;">(${element.type ?? 'unknown'})</span>
+                  ${(baseId || element.id) ?? '(no id)'} <span style="color:var(--secondary-text-color); margin-left: 6px;">(${element.type ?? 'unknown'})</span>
                 </span>
                 <span class="element-header-actions">
                   <ha-icon-button @click=${() => this._toggleElementCollapse(index)} title="Expand">
@@ -456,19 +664,12 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           ? html``
           : html`
               <div class="grid-container">
-                <!-- Top group: Element Type, ID, Group ID -->
                 <ha-textfield
                   label="Element ID"
                   name="id"
                   required
-                  .value=${element.id ?? ''}
+                  .value=${baseId}
                   @input=${(e: Event) => this._handleElementChange(e, index, 'id')}
-                ></ha-textfield>
-                <ha-textfield
-                  label="Group ID"
-                  name="group"
-                  .value=${element.group ?? ''}
-                  @input=${(e: Event) => this._handleElementChange(e, index, 'group')}
                 ></ha-textfield>
                 <div style="grid-column: 1 / -1; height: 8px;"></div>
                 ${this._renderPropsFields(element, index)}
@@ -737,17 +938,184 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     if (!this.hass || !this._config) {
       return html``;
     }
-
+    // Group elements by group id
+    const groupMap: { [groupId: string]: any[] } = {};
+    (this._config.elements || []).forEach((el, idx) => {
+      const gid = el.id.split('.')[0];
+      if (!groupMap[gid]) groupMap[gid] = [];
+      groupMap[gid].push({ el, idx });
+    });
+    // Only include groups that are explicitly created or present in element ids
+    const allGroupNames = Array.from(new Set([
+      ...this._groups,
+      ...((this._config?.elements || []).map(el => el.id.split('.')[0]))
+    ])).filter(name => name && (this._groups.includes(name) || (this._config?.elements || []).some(el => el.id.startsWith(name + '.'))));
     return html`
       <div class="form-container">
         <div class="elements-section">
-          <h3>LCARS Elements (${this._config.elements?.length || 0})</h3>
-          ${this._config.elements?.map((el, index) => this._renderElementEditor(el, index))}
-          <div class="add-element">
-            <ha-button raised label="Add New Element" @click=${this._addElement}></ha-button>
+          <h3>LCARS Groups (${this._groups.length + (this._newGroupDraft ? 1 : 0)})</h3>
+          <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <ha-button outlined @click=${() => this._addGroup()}>Add New Group</ha-button>
           </div>
+          ${allGroupNames.map(groupId => html`
+            <div style="margin-bottom: 24px; border: 1.5px solid var(--divider-color); border-radius: 6px; background: var(--secondary-background-color, #222);">
+              <div style="display: flex; align-items: center; padding: 8px 12px; cursor: pointer; user-select: none;" @click=${() => this._toggleGroupCollapse(groupId)}>
+                <ha-icon icon="mdi:${this._collapsedGroups[groupId] ? 'chevron-right' : 'chevron-down'}"></ha-icon>
+                ${this._editingGroup === groupId
+                  ? html`
+                      <div style="display: flex; flex-direction: row; align-items: flex-start; width: 100%; margin-left: 8px;">
+                        <div style="flex: 1; display: flex; flex-direction: column; min-width: 150px;">
+                          <ha-textfield
+                            label="Edit Group Name"
+                            .value=${this._editingGroupInput}
+                            @input=${(e: Event) => {
+                              this._editingGroupInput = (e.target as HTMLInputElement).value;
+                              this._groupIdWarning = this._validateGroupIdInput(this._editingGroupInput);
+                              this.requestUpdate();
+                            }}
+                            @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter') { e.stopPropagation(); this._confirmEditGroup(); } }}
+                            autofocus
+                          ></ha-textfield>
+                          ${this._groupIdWarning ? html`<div style="color: var(--error-color, #c00); font-size: 0.95em; margin-top: 2px;">${this._groupIdWarning}</div>` : ''}
+                        </div>
+                        <ha-icon-button
+                          style="margin-left: 8px; color: var(--primary-color); flex-shrink: 0;"
+                          @click=${(e: Event) => { e.stopPropagation(); this._confirmEditGroup(); }}
+                          title="Rename Group"
+                          .disabled=${!this._editingGroupInput.trim() || (this._groups.includes(this._editingGroupInput.trim()) && this._editingGroupInput.trim() !== groupId) || !!this._groupIdWarning}
+                        >
+                          <ha-icon icon="mdi:check"></ha-icon>
+                        </ha-icon-button>
+                        <ha-icon-button
+                          style="margin-left: 2px; color: var(--error-color); flex-shrink: 0;"
+                          @click=${(e: Event) => { e.stopPropagation(); this._cancelEditGroup(); }}
+                          title="Cancel"
+                        >
+                          <ha-icon icon="mdi:close"></ha-icon>
+                        </ha-icon-button>
+                      </div>
+                    `
+                  : html`
+                      <span style="font-weight: bold; margin-left: 8px;">${groupId}</span>
+                      <span style="color: var(--secondary-text-color); margin-left: 12px; font-size: 0.95em;">(${(groupMap[groupId]?.length || 0)} element${(groupMap[groupId]?.length || 0) === 1 ? '' : 's'})</span>
+                    `}
+                <span style="flex: 1 1 auto;"></span>
+                ${!this._collapsedGroups[groupId] && this._editingGroup !== groupId ? html`
+                  <ha-icon-button
+                    style="margin-left: 2px;"
+                    @click=${(e: Event) => { e.stopPropagation(); this._startEditGroup(groupId); }}
+                    title="Edit Group Name"
+                  >
+                    <ha-icon icon="mdi:pencil"></ha-icon>
+                  </ha-icon-button>
+                  <ha-icon-button
+                    style="margin-left: 2px; color: var(--error-color);"
+                    @click=${(e: Event) => { e.stopPropagation(); this._deleteGroup(groupId); }}
+                    title="Delete Group"
+                  >
+                    <ha-icon icon="mdi:delete"></ha-icon>
+                  </ha-icon-button>
+                ` : ''}
+              </div>
+              ${this._deleteWarningGroup === groupId ? html`
+                <div style="background: var(--error-color, #c00); color: #fff; border-radius: 4px; margin: 8px 16px 0 16px; padding: 12px 16px; display: flex; align-items: center; gap: 16px;">
+                  <ha-icon icon="mdi:alert" style="margin-right: 8px;"></ha-icon>
+                  <span style="flex:1;">Are you sure you want to delete group <b>${groupId}</b> and all its elements?</span>
+                  <ha-button style="background: #fff; color: var(--error-color, #c00);" @click=${() => this._doDeleteGroup(groupId)}>Delete</ha-button>
+                  <ha-button outlined style="margin-left: 4px;" @click=${() => this._cancelDeleteGroup()}>Cancel</ha-button>
+                </div>
+              ` : ''}
+              ${this._collapsedGroups[groupId] ? html`` : html`
+                <div style="padding: 8px 16px 16px 16px;">
+                  ${(groupMap[groupId] || []).map(({ el, idx }) => this._renderElementEditor(el, idx))}
+                  <div style="text-align: right; margin-top: 8px;">
+                    ${this._addElementDraftGroup === groupId ? html`
+                      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                        <ha-textfield
+                          style="min-width: 120px;"
+                          label="New Element ID"
+                          .value=${this._addElementInput}
+                          @input=${(e: Event) => {
+                            this._addElementInput = (e.target as HTMLInputElement).value;
+                            this._addElementWarning = '';
+                            this.requestUpdate();
+                          }}
+                          @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter') { e.stopPropagation(); this._confirmAddElement(); } }}
+                          autofocus
+                        ></ha-textfield>
+                        ${this._addElementWarning ? html`<div style="color: var(--error-color, #c00); font-size: 0.95em; margin-top: 2px; align-self: flex-start;">${this._addElementWarning}</div>` : ''}
+                        <div style="display: flex; gap: 4px; margin-top: 2px;">
+                          <ha-icon-button
+                            style="color: var(--primary-color);"
+                            @click=${() => this._confirmAddElement()}
+                            title="Add Element"
+                            .disabled=${!this._addElementInput.trim()}
+                          >
+                            <ha-icon icon="mdi:check"></ha-icon>
+                          </ha-icon-button>
+                          <ha-icon-button
+                            style="color: var(--error-color);"
+                            @click=${() => this._cancelAddElement()}
+                            title="Cancel"
+                          >
+                            <ha-icon icon="mdi:close"></ha-icon>
+                          </ha-icon-button>
+                        </div>
+                      </div>
+                    ` : html`
+                      <ha-button small outlined @click=${() => this._addElement(groupId)}>Add Element to Group</ha-button>
+                    `}
+                  </div>
+                </div>
+              `}
+            </div>
+          `)}
+          ${this._newGroupDraft ? html`
+            <div style="margin-bottom: 24px; border: 1.5px solid var(--primary-color); border-radius: 6px; background: var(--secondary-background-color, #222);">
+              <div style="display: flex; align-items: center; padding: 8px 12px;">
+                <ha-icon icon="mdi:chevron-down"></ha-icon>
+                <div style="display: flex; flex-direction: column; margin-left: 8px; min-width: 120px; flex: 1;">
+                  <ha-textfield
+                    label="New Group Name"
+                    .value=${this._newGroupInput}
+                    @input=${(e: Event) => {
+                      this._newGroupInput = (e.target as HTMLInputElement).value;
+                      this._groupIdWarning = this._validateGroupIdInput(this._newGroupInput);
+                      this.requestUpdate();
+                    }}
+                    @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter') { e.stopPropagation(); this._confirmNewGroup(); } }}
+                    autofocus
+                  ></ha-textfield>
+                  ${this._groupIdWarning ? html`<div style="color: var(--error-color, #c00); font-size: 0.95em; margin-top: 2px;">${this._groupIdWarning}</div>` : ''}
+                </div>
+                <ha-icon-button
+                  style="margin-left: 8px; color: var(--primary-color);"
+                  @click=${() => this._confirmNewGroup()}
+                  title="Create Group"
+                  .disabled=${!this._newGroupInput.trim() || this._groups.includes(this._newGroupInput.trim()) || !!this._groupIdWarning}
+                >
+                  <ha-icon icon="mdi:check"></ha-icon>
+                </ha-icon-button>
+                <ha-icon-button
+                  style="margin-left: 2px; color: var(--error-color);"
+                  @click=${() => this._cancelNewGroup()}
+                  title="Cancel"
+                >
+                  <ha-icon icon="mdi:close"></ha-icon>
+                </ha-icon-button>
+              </div>
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
+  }
+
+  private _validateGroupIdInput(input: string): string {
+    if (!input) return '';
+    // Only allow a-z, A-Z, 0-9, _, -
+    return /^[a-zA-Z0-9_-]+$/.test(input)
+      ? ''
+      : 'Group ID can only contain letters, numbers, underscores (_), or hyphens (-).';
   }
 } 
