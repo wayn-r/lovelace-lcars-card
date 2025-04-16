@@ -94,7 +94,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       grid-template-rows: repeat(3, 28px);
       gap: 4px;
       margin-bottom: 8px;
-      justify-content: start;
+      justify-content: center;
     }
     .anchor-grid-btn {
       width: 28px;
@@ -122,9 +122,8 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     // Only re-initialize collapse state arrays if the number of elements changes
     const numElements = config.elements?.length || 0;
     if (this._collapsedElements.length !== numElements) {
-      // Try to preserve previous state for existing elements
-      const prevCollapsed = this._collapsedElements || [];
-      this._collapsedElements = Array(numElements).fill(false).map((_, i) => prevCollapsed[i] ?? false);
+      // Default: all collapsed
+      this._collapsedElements = Array(numElements).fill(true);
     }
     if (Object.keys(this._collapsedSections).length !== numElements) {
       const prevSections = this._collapsedSections || {};
@@ -185,7 +184,19 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         if (section) { // Update nested 'props' or 'layout'
           // Ensure the section object exists
           const currentSection = updatedElement[section] || {};
-          updatedElement[section] = { ...currentSection, [key]: value };
+          // Special case: if changing anchorTo in layout and value is empty, remove anchorPoint/targetAnchorPoint
+          if (section === 'layout' && key === 'anchorTo') {
+            if (!value || value === '') {
+              const { anchorPoint, targetAnchorPoint, ...rest } = currentSection;
+              updatedElement[section] = { ...rest, [key]: value };
+            } else {
+              // If anchorTo is set, remove containerAnchorPoint
+              const { containerAnchorPoint, ...rest } = currentSection;
+              updatedElement[section] = { ...rest, [key]: value };
+            }
+          } else {
+            updatedElement[section] = { ...currentSection, [key]: value };
+          }
         } else { // Update top-level key ('type', 'group', or 'id')
           (updatedElement as any)[key] = value;
         }
@@ -212,6 +223,8 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
 
     const elements = [...(this._config.elements || []), newElement];
     this._config = { ...this._config, elements };
+    // Expand the new element, keep others collapsed
+    this._collapsedElements = Array(elements.length - 1).fill(true).concat(false);
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
@@ -253,17 +266,45 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     return html`
       <span class="anchor-grid-label" style="${labelCenter ? 'text-align:center;display:block;width:100%;' : ''}">${label}</span>
       <div class="anchor-grid">
-        ${points.flat().map((pt, i) => html`
-          <button
-            class="anchor-grid-btn${value === pt ? ' selected' : ''}"
-            title=${pt}
-            ?disabled=${disabled}
-            @click=${() => !disabled && onSelect(pt)}
-            type="button"
-          >
-            ${value === pt ? html`<ha-icon icon="mdi:circle" style="font-size:18px;"></ha-icon>` : ''}
-          </button>
-        `)}
+        ${(() => {
+          const iconMap: Record<string, string> = {
+            topLeft: 'mdi:arrow-top-left',
+            topCenter: 'mdi:arrow-up',
+            topRight: 'mdi:arrow-top-right',
+            centerLeft: 'mdi:arrow-left',
+            center: 'mdi:circle-small',
+            centerRight: 'mdi:arrow-right',
+            bottomLeft: 'mdi:arrow-bottom-left',
+            bottomCenter: 'mdi:arrow-down',
+            bottomRight: 'mdi:arrow-bottom-right',
+          };
+          return points.flat().map((pt, i) => html`
+            <button
+              class="anchor-grid-btn${value === pt ? ' selected' : ''}"
+              title=${pt}
+              ?disabled=${disabled}
+              @click=${() => {
+                if (disabled) return;
+                if (value === pt) {
+                  onSelect('');
+                } else {
+                  onSelect(pt);
+                }
+              }}
+              type="button"
+            >
+              <ha-icon
+                icon="${iconMap[pt]}"
+                style="
+                  font-size: 18px;
+                  ${pt === 'center' ? 'opacity:0.7;' : ''}
+                  color: ${value === pt ? '#fff' : 'var(--secondary-text-color, #bbb)'};
+                "
+              ></ha-icon>
+              ${value === pt && pt === 'center' ? html`<ha-icon icon="mdi:circle" style="font-size:18px;position:absolute;"></ha-icon>` : ''}
+            </button>
+          `);
+        })()}
       </div>
     `;
   }
@@ -437,6 +478,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           ${isAdvancedOpen ? html`
             <ha-textfield label="Font Family" name="fontFamily" .value=${fontFamilyValue} @input=${(e: Event) => this._handleElementChange(e, index, 'fontFamily', 'props')}></ha-textfield>
             <ha-select label="Font Weight" name="fontWeight" .value=${fontWeightValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'fontWeight', 'props')} @closed=${(ev: Event) => ev.stopPropagation()}>
+              <ha-list-item value=""></ha-list-item>
               <ha-list-item value="normal">Normal</ha-list-item>
               <ha-list-item value="bold">Bold</ha-list-item>
               <ha-list-item value="bolder">Bolder</ha-list-item>
@@ -453,11 +495,13 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
             </ha-select>
             <ha-textfield label="Letter Spacing" name="letterSpacing" .value=${letterSpacingValue} @input=${(e: Event) => this._handleElementChange(e, index, 'letterSpacing', 'props')}></ha-textfield>
             <ha-select label="Anchor Point" name="textAnchor" .value=${textAnchorValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'textAnchor', 'props')} @closed=${(ev: Event) => ev.stopPropagation()}>
+              <ha-list-item value=""></ha-list-item>
               <ha-list-item value="start">Start</ha-list-item>
               <ha-list-item value="middle">Middle</ha-list-item>
               <ha-list-item value="end">End</ha-list-item>
             </ha-select>
             <ha-select label="Dominant Baseline" name="dominantBaseline" .value=${dominantBaselineValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'dominantBaseline', 'props')} @closed=${(ev: Event) => ev.stopPropagation()}>
+              <ha-list-item value=""></ha-list-item>
               <ha-list-item value="auto">Auto</ha-list-item>
               <ha-list-item value="middle">Middle</ha-list-item>
               <ha-list-item value="central">Central</ha-list-item>
@@ -478,6 +522,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           <div style="grid-column: 1 / -1; height: 8px;"></div>
           <ha-textfield label="Fill Color" name="fill" .value=${fillValue} @input=${(e: Event) => this._handleElementChange(e, index, 'fill', 'props')}></ha-textfield>
           <ha-select label="Direction" name="direction" .value=${directionValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'direction', 'props')} @closed=${(ev: Event) => ev.stopPropagation()}>
+            <ha-list-item value=""></ha-list-item>
             <ha-list-item value="left">Left</ha-list-item>
             <ha-list-item value="right">Right</ha-list-item>
           </ha-select>
@@ -502,9 +547,9 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                                 .filter(id => id && id !== element.id); 
       return html`
         <div style="grid-column: 1 / -1; height: 8px;"></div>
-        <!-- Container Anchor Point -->
-        <div style="display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; gap: 32px; flex-wrap: wrap;">
-          <div style="min-width: 120px;">
+        <!-- Container Anchor Point and Dropdowns -->
+        ${!anchorToValue ? html`
+          <div style="min-width: 200px;">
             ${this._renderAnchorGrid({
               label: 'Container Anchors',
               value: containerAnchorPoint,
@@ -515,49 +560,58 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
               labelCenter: true
             })}
           </div>
+          <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 8px; min-width: 200px;">
+            <ha-select label="Anchor To Element" name="anchorTo" .value=${anchorToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'anchorTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
+              <ha-list-item value=""></ha-list-item>
+              ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
+            </ha-select>
+            <ha-select label="Stretch To Element" name="stretchTo" .value=${stretchToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'stretchTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
+              <ha-list-item value=""></ha-list-item>
+              ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
+            </ha-select>
+          </div>
+        ` : html`
           <div style="display: flex; flex-direction: column; gap: 16px; min-width: 320px;">
-            <div style="display: flex; flex-direction: row; gap: 32px; align-items: flex-start; justify-content: flex-start;">
-              ${anchorToValue ? html`
-                <div style="min-width: 120px;">
-                  ${this._renderAnchorGrid({
-                    label: 'Anchor Point',
-                    value: anchorPointValue,
-                    onSelect: (val: string) => {
-                      const event = { target: { value: val, type: 'text' } } as unknown as Event;
-                      this._handleElementChange(event, index, 'anchorPoint', 'layout');
-                    },
-                    labelCenter: true
-                  })}
-                </div>
-                <div style="min-width: 120px;">
-                  ${this._renderAnchorGrid({
-                    label: 'Target Anchor Point',
-                    value: targetAnchorPointValue,
-                    onSelect: (val: string) => {
-                      const event = { target: { value: val, type: 'text' } } as unknown as Event;
-                      this._handleElementChange(event, index, 'targetAnchorPoint', 'layout');
-                    },
-                    labelCenter: true
-                  })}
-                </div>
-              ` : ''}
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%;">
+              <div style="display: flex; flex-direction: column; align-items: center; min-width: 200px;">
+                ${this._renderAnchorGrid({
+                  label: 'Anchor Point',
+                  value: anchorPointValue,
+                  onSelect: (val: string) => {
+                    const event = { target: { value: val, type: 'text' } } as unknown as Event;
+                    this._handleElementChange(event, index, 'anchorPoint', 'layout');
+                  },
+                  labelCenter: true
+                })}
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: center; min-width: 200px;">
+                ${this._renderAnchorGrid({
+                  label: 'Target Anchor Point',
+                  value: targetAnchorPointValue,
+                  onSelect: (val: string) => {
+                    const event = { target: { value: val, type: 'text' } } as unknown as Event;
+                    this._handleElementChange(event, index, 'targetAnchorPoint', 'layout');
+                  },
+                  labelCenter: true
+                })}
+              </div>
             </div>
             <div style="display: flex; flex-direction: row; gap: 32px; align-items: flex-end; justify-content: flex-start; margin-top: 8px;">
               <div style="min-width: 200px;">
-                <span class="anchor-grid-label" style="text-align:center;display:block;width:100%;">Anchor To Element</span>
-                <ha-select label="" name="anchorTo" .value=${anchorToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'anchorTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
+                <ha-select label="Anchor To Element" name="anchorTo" .value=${anchorToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'anchorTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
+                  <ha-list-item value=""></ha-list-item>
                   ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
                 </ha-select>
               </div>
               <div style="min-width: 200px;">
-                <span class="anchor-grid-label" style="text-align:center;display:block;width:100%;">Stretch To Element</span>
-                <ha-select label="" name="stretchTo" .value=${stretchToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'stretchTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
+                <ha-select label="Stretch To Element" name="stretchTo" .value=${stretchToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'stretchTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
+                  <ha-list-item value=""></ha-list-item>
                   ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
                 </ha-select>
               </div>
             </div>
           </div>
-        </div>
+        `}
         <div style="grid-column: 1 / -1; height: 8px;"></div>
         <!-- Offsets group -->
         <ha-textfield label="Offset X" name="offsetX" type="number" step="1" .value=${offsetXValue} @input=${(e: Event) => this._handleElementChange(e, index, 'offsetX', 'layout')}></ha-textfield>
@@ -587,13 +641,6 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
 
     return html`
       <div class="form-container">
-        <h3>Basic Card Options</h3>
-        <div class="grid-container"> 
-            <ha-textfield label="Title" name="title" .value=${this._config.title || DEFAULT_TITLE} @input=${this._handleBasicChange}></ha-textfield>
-            <ha-textfield label="Default Text (if no elements)" name="text" .value=${this._config.text || DEFAULT_TEXT} @input=${this._handleBasicChange}></ha-textfield>
-            <ha-textfield label="Default Font Size (px)" name="fontSize" type="number" min="8" max="72" .value=${this._config.fontSize || DEFAULT_FONT_SIZE} @input=${this._handleBasicChange}></ha-textfield>
-        </div>
-
         <div class="elements-section">
           <h3>LCARS Elements (${this._config.elements?.length || 0})</h3>
           ${this._config.elements?.map((el, index) => this._renderElementEditor(el, index))}
