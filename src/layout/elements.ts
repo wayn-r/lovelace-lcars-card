@@ -7,7 +7,7 @@
 
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElement, LayoutElementProps, LayoutConfigOptions } from './engine.js';
-import { generateRectanglePath, generateEndcapPath, getTextWidth, measureTextBBox } from '../utils/shapes.js';
+import { generateRectanglePath, generateEndcapPath, getTextWidth, measureTextBBox, getFontMetrics } from '../utils/shapes.js';
 import { SVGTemplateResult, svg } from 'lit';
 
 /**
@@ -99,7 +99,23 @@ export class TextElement extends LayoutElement {
     // Use measured dimensions
     if (bbox) {
       this.intrinsicSize.width = bbox.width;
-      this.intrinsicSize.height = bbox.height;
+      // --- Use font metrics for normalized height ---
+      const metrics = getFontMetrics({
+        fontFamily: this.props.fontFamily || 'Arial',
+        fontWeight: this.props.fontWeight || 'normal',
+        fontSize: this.props.fontSize || 16,
+        origin: 'baseline',
+      });
+      if (metrics) {
+        // The total height from top to bottom (normalized to fontSize)
+        // metrics.top is negative, metrics.bottom is positive, so total = bottom - top
+        const normalizedHeight = (metrics.bottom - metrics.top) * (this.props.fontSize || 16);
+        this.intrinsicSize.height = normalizedHeight;
+        // Optionally, you could also store ascent, descent, capHeight, etc. for further alignment
+        (this as any)._fontMetrics = metrics;
+      } else {
+        this.intrinsicSize.height = bbox.height;
+      }
     } else {
       // Fallback if measurement fails
       this.intrinsicSize.width = getTextWidth(this.props.text || '', 
@@ -133,14 +149,38 @@ export class TextElement extends LayoutElement {
       textX += width;
     }
     
-    // Adjust vertical position based on dominant-baseline
-    if (dominantBaseline === 'middle') {
-      textY += height / 2;
-    } else if (dominantBaseline === 'hanging') {
-      // already at top
+    // --- Use font metrics for vertical alignment normalization ---
+    let metrics: any = (this as any)._fontMetrics;
+    if (!metrics && this.props.fontFamily) {
+      metrics = getFontMetrics({
+        fontFamily: this.props.fontFamily,
+        fontWeight: this.props.fontWeight || 'normal',
+        fontSize: this.props.fontSize || 16,
+        origin: 'baseline',
+      });
+    }
+    if (metrics) {
+      // Align baseline to y + (ascent from baseline)
+      // metrics.ascent is negative, so y + (-ascent * fontSize) moves down from y to baseline
+      textY += -metrics.ascent * (this.props.fontSize || 16);
+      // If dominantBaseline is 'middle', center using capHeight/xHeight if desired
+      if (dominantBaseline === 'middle') {
+        const totalHeight = (metrics.bottom - metrics.top) * (this.props.fontSize || 16);
+        textY = y + totalHeight / 2 + metrics.top * (this.props.fontSize || 16);
+      }
+      // If dominantBaseline is 'hanging', align to top
+      if (dominantBaseline === 'hanging') {
+        textY = y + metrics.top * (this.props.fontSize || 16);
+      }
     } else {
-      // Default alignment is 'baseline', which typically needs a vertical offset
-      textY += height * 0.8; // Approximate baseline position
+      // Fallback vertical alignment
+      if (dominantBaseline === 'middle') {
+        textY += height / 2;
+      } else if (dominantBaseline === 'hanging') {
+        // already at top
+      } else {
+        textY += height * 0.8; // Approximate baseline position
+      }
     }
     
     // Use style attribute for text-transform as it's not an SVG attribute

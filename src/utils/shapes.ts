@@ -11,6 +11,8 @@
  * 3. `generateEquilateralTrianglePoints()`: Special case generating a `points` string for SVG `<polygon>`.
  */
 
+import FontMetrics from 'fontmetrics';
+
 // === Constants ===
 
 export const EPSILON = 0.0001; // Numerical precision for path calculations
@@ -488,4 +490,39 @@ export function calculateDynamicBarHeight(measuredTextHeight: number): number {
         return 0; // Handle invalid or zero height input
     }
     return measuredTextHeight * CAP_HEIGHT_RATIO;
+}
+
+/**
+ * Gets detailed font metrics (ascent, descent, cap height, x-height, baseline, etc.) for a given font.
+ * @param fontFamily The font family to measure (e.g., 'Roboto').
+ * @param fontWeight The font weight (e.g., 'normal', 'bold', 400, 700).
+ * @param fontSize The font size in px (number or string, e.g., 16 or '16px').
+ * @param origin The origin for normalization (default: 'baseline').
+ * @returns The normalized font metrics object, or null if measurement fails.
+ */
+export function getFontMetrics({
+  fontFamily,
+  fontWeight = 'normal',
+  fontSize = 200,
+  origin = 'baseline',
+}: {
+  fontFamily: string;
+  fontWeight?: string | number;
+  fontSize?: number | string;
+  origin?: string;
+}): ReturnType<typeof FontMetrics> | null {
+  try {
+    // FontMetrics expects fontSize as a number (px)
+    let size = typeof fontSize === 'string' ? parseFloat(fontSize) : fontSize;
+    if (!size || isNaN(size)) size = 200;
+    return FontMetrics({
+      fontFamily,
+      fontWeight: fontWeight as any,
+      fontSize: size,
+      origin,
+    });
+  } catch (e) {
+    console.warn('LCARS Card: Failed to get font metrics for', fontFamily, e);
+    return null;
+  }
 } 
