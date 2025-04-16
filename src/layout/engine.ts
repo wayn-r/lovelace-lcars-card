@@ -260,21 +260,62 @@ export abstract class LayoutElement {
       elementHeight = containerHeight * (parseFloat(this.layoutConfig.height) / 100);
     }
     let x = 0, y = 0;
-    if (this.layoutConfig.anchorLeft) {
-      x = this._parseOffset(this.layoutConfig.offsetX, containerWidth);
-    } else if (this.layoutConfig.anchorRight) {
-      x = containerWidth - elementWidth - this._parseOffset(this.layoutConfig.offsetX, containerWidth);
-    } else {
-      x = (containerWidth - elementWidth) / 2;
+    // --- Container anchoring logic ---
+    if (!this.layoutConfig.anchorTo) {
+      // Use containerAnchorPoint if present
+      const containerAnchor = this.layoutConfig.containerAnchorPoint || 'topLeft';
+      // Get the anchor offset for this element (where its anchor point is)
+      const anchorOffset = this._getRelativeAnchorPosition(containerAnchor, elementWidth, elementHeight);
+      // Get the container anchor position
+      let containerAnchorX = 0;
+      let containerAnchorY = 0;
+      switch (containerAnchor) {
+        case 'topLeft':
+          containerAnchorX = 0;
+          containerAnchorY = 0;
+          break;
+        case 'topCenter':
+          containerAnchorX = containerWidth / 2;
+          containerAnchorY = 0;
+          break;
+        case 'topRight':
+          containerAnchorX = containerWidth;
+          containerAnchorY = 0;
+          break;
+        case 'centerLeft':
+          containerAnchorX = 0;
+          containerAnchorY = containerHeight / 2;
+          break;
+        case 'center':
+          containerAnchorX = containerWidth / 2;
+          containerAnchorY = containerHeight / 2;
+          break;
+        case 'centerRight':
+          containerAnchorX = containerWidth;
+          containerAnchorY = containerHeight / 2;
+          break;
+        case 'bottomLeft':
+          containerAnchorX = 0;
+          containerAnchorY = containerHeight;
+          break;
+        case 'bottomCenter':
+          containerAnchorX = containerWidth / 2;
+          containerAnchorY = containerHeight;
+          break;
+        case 'bottomRight':
+          containerAnchorX = containerWidth;
+          containerAnchorY = containerHeight;
+          break;
+        default:
+          containerAnchorX = 0;
+          containerAnchorY = 0;
+      }
+      x = containerAnchorX - anchorOffset.x;
+      y = containerAnchorY - anchorOffset.y;
+      // Apply offsets if present
+      x += this._parseOffset(this.layoutConfig.offsetX, containerWidth);
+      y += this._parseOffset(this.layoutConfig.offsetY, containerHeight);
     }
-    if (this.layoutConfig.anchorTop) {
-      y = this._parseOffset(this.layoutConfig.offsetY, containerHeight);
-    } else if (this.layoutConfig.anchorBottom) {
-      y = containerHeight - elementHeight - this._parseOffset(this.layoutConfig.offsetY, containerHeight);
-    } else {
-      y = (containerHeight - elementHeight) / 2;
-    }
-
     // --- Debugging Anchor Logic --- 
     if (this.layoutConfig.anchorTo) {
       const targetElement = elementsMap.get(this.layoutConfig.anchorTo);

@@ -183,22 +183,35 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         const updatedElement = { ...el };
         if (section) { // Update nested 'props' or 'layout'
           // Ensure the section object exists
-          const currentSection = updatedElement[section] || {};
+          const currentSection = { ...updatedElement[section] };
           // Special case: if changing anchorTo in layout and value is empty, remove anchorPoint/targetAnchorPoint
           if (section === 'layout' && key === 'anchorTo') {
             if (!value || value === '') {
               const { anchorPoint, targetAnchorPoint, ...rest } = currentSection;
-              updatedElement[section] = { ...rest, [key]: value };
+              delete rest[key];
+              updatedElement[section] = rest;
             } else {
               // If anchorTo is set, remove containerAnchorPoint
               const { containerAnchorPoint, ...rest } = currentSection;
-              updatedElement[section] = { ...rest, [key]: value };
+              rest[key] = value;
+              updatedElement[section] = rest;
             }
           } else {
-            updatedElement[section] = { ...currentSection, [key]: value };
+            if (value === '' || value === undefined || value === null) {
+              // Remove the key if value is empty
+              const { [key]: _removed, ...rest } = currentSection;
+              updatedElement[section] = rest;
+            } else {
+              updatedElement[section] = { ...currentSection, [key]: value };
+            }
           }
         } else { // Update top-level key ('type', 'group', or 'id')
-          (updatedElement as any)[key] = value;
+          if (value === '' || value === undefined || value === null) {
+            const { [key]: _removed, ...rest } = updatedElement;
+            return rest;
+          } else {
+            (updatedElement as any)[key] = value;
+          }
         }
         return updatedElement;
       }
