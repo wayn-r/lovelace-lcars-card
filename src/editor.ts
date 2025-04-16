@@ -664,6 +664,9 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         <!-- Offsets group -->
         <ha-textfield label="Offset X" name="offsetX" type="number" step="1" .value=${offsetXValue} @input=${(e: Event) => this._handleElementChange(e, index, 'offsetX', 'layout')}></ha-textfield>
         <ha-textfield label="Offset Y" name="offsetY" type="number" step="1" .value=${offsetYValue} @input=${(e: Event) => this._handleElementChange(e, index, 'offsetY', 'layout')}></ha-textfield>
+        <!-- Stretch Gap group -->
+        <ha-textfield label="Stretch Gap" name="stretchPaddingX" type="number" step="1" .value=${layout.stretchPaddingX ?? ''} @input=${(e: Event) => this._handleElementChange(e, index, 'stretchPaddingX', 'layout')}></ha-textfield>
+        </div>
       `;
   }
 
