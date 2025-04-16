@@ -7,7 +7,7 @@
 
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElement, LayoutElementProps, LayoutConfigOptions } from './engine.js';
-import { generateRectanglePath, generateEndcapPath, getTextWidth, measureTextBBox, getFontMetrics } from '../utils/shapes.js';
+import { generateRectanglePath, generateEndcapPath, generateElbowPath, getTextWidth, measureTextBBox, getFontMetrics } from '../utils/shapes.js';
 import { SVGTemplateResult, svg } from 'lit';
 
 /**
@@ -305,6 +305,78 @@ export class EndcapElement extends LayoutElement {
         fill=${this.props.fill || 'none'}
         stroke=${this.props.stroke || 'none'}
         stroke-width=${this.props.strokeWidth || '0'}
+      />
+    `;
+  }
+}
+
+/**
+ * An elbow element for LCARS-style elbows.
+ */
+export class ElbowElement extends LayoutElement {
+  constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant) {
+    super(id, props, layoutConfig, hass);
+    this.resetLayout();
+  }
+
+  /**
+   * Calculates the intrinsic size of the elbow.
+   * @param container - The SVG container element.
+   */
+  calculateIntrinsicSize(container: SVGElement): void {
+    // Use horizontalWidth and totalElbowHeight from props or layoutConfig, defaulting to 100x100
+    this.intrinsicSize.width = this.props.horizontalWidth || this.layoutConfig.horizontalWidth || 100;
+    this.intrinsicSize.height = this.props.totalElbowHeight || this.layoutConfig.totalElbowHeight || 100;
+    this.intrinsicSize.calculated = true;
+  }
+
+  /**
+   * Checks if dependencies are ready to calculate this element's layout.
+   */
+  canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
+    return super.canCalculateLayout(elementsMap);
+  }
+
+  /**
+   * Calculates the layout of the elbow.
+   */
+  calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
+    super.calculateLayout(elementsMap, containerRect);
+  }
+
+  /**
+   * Renders the elbow as an SVG path element.
+   */
+  render(): SVGTemplateResult | null {
+    if (!this.layout.calculated || this.layout.height <= 0 || this.layout.width <= 0) return null;
+    const { x, y, width, height } = this.layout;
+    const fill = this.props.fill || 'none';
+    const stroke = this.props.stroke || 'none';
+    const strokeWidth = this.props.strokeWidth || '0';
+    const orientation = this.props.orientation || 'top-left';
+    const horizontalWidth = this.props.horizontalWidth || width;
+    const verticalWidth = this.props.verticalWidth || 30;
+    const headerHeight = this.props.headerHeight || 30;
+    const totalElbowHeight = this.props.totalElbowHeight || height;
+    const outerCornerRadius = this.props.outerCornerRadius || headerHeight;
+    const pathData = generateElbowPath(
+      x,
+      horizontalWidth,
+      verticalWidth,
+      headerHeight,
+      totalElbowHeight,
+      orientation,
+      y,
+      outerCornerRadius
+    );
+    if (!pathData) return null;
+    return svg`
+      <path
+        id=${this.id}
+        d=${pathData}
+        fill=${fill}
+        stroke=${stroke}
+        stroke-width=${strokeWidth}
       />
     `;
   }

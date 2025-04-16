@@ -93,7 +93,7 @@ export function buildShape(points: [number, number, number][]): string {
             
                 // Limit the distance to half the length of the shorter adjacent segment
                 // This prevents the rounded corner from overlapping itself or extending past the midpoint
-            dist = Math.min(dist, magV1 / 2, magV2 / 2);
+            dist = Math.min(dist, magV1, magV2);
             
                 // Recalculate the actual radius that can be applied based on the limited distance
                 cornerRadius = dist * Math.abs(Math.tan(angle / 2));
@@ -234,17 +234,19 @@ export function generateElbowPath(
     const wV = verticalWidth;
     const totalH = totalElbowHeight;
     const innerRadius = Math.min(h / 2, wV);
-    
+    // Limit outerCornerRadius to the lesser of horizontalWidth and totalElbowHeight
+    const maxOuterRadius = Math.min(wH, totalH);
+    const safeOuterCornerRadius = Math.min(outerCornerRadius, maxOuterRadius);
     switch (orientation) {
         case 'top-left':
                 points = [
-                    [x + wH, y, 0], [x, y, outerCornerRadius],
+                    [x + wH, y, 0], [x, y, safeOuterCornerRadius],
                     [x, y + totalH, 0], [x + wV, y + totalH, 0],
                     [x + wV, y + h, innerRadius], [x + wH, y + h, 0]
                 ]; break;
         case 'top-right':
                 points = [
-                    [x, y, 0], [x + wH, y, outerCornerRadius],
+                    [x, y, 0], [x + wH, y, safeOuterCornerRadius],
                     [x + wH, y + totalH, 0], [x + wH - wV, y + totalH, 0],
                     [x + wH - wV, y + h, innerRadius], [x, y + h, 0]
                 ]; break;
@@ -252,13 +254,13 @@ export function generateElbowPath(
                 points = [
                     [x, y + totalH - h, 0], [x + wH - wV, y + totalH - h, innerRadius],
                     [x + wH - wV, y, 0], [x + wH, y, 0],
-                    [x + wH, y + totalH, outerCornerRadius], [x, y + totalH, 0]
+                    [x + wH, y + totalH, safeOuterCornerRadius], [x, y + totalH, 0]
                 ]; break;
             case 'bottom-left':
                 points = [
                     [x + wH, y + totalH - h, 0], [x + wV, y + totalH - h, innerRadius],
                     [x + wV, y, 0], [x, y, 0],
-                    [x, y + totalH, outerCornerRadius], [x + wH, y + totalH, 0]
+                    [x, y + totalH, safeOuterCornerRadius], [x + wH, y + totalH, 0]
                 ]; break;
             default:
                  console.error(`LCARS Card: Invalid orientation "${orientation}" provided to generateElbowPath.`);
