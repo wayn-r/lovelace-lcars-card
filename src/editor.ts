@@ -28,6 +28,9 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   @state() private _collapsedElements: boolean[] = [];
   @state() private _collapsedSections: { [key: number]: { props: boolean; layout: boolean } } = {};
   @state() private _advancedTextOptions: { [key: number]: boolean } = {}; // Track advanced text options per element
+  // --- Drag and Drop for Reordering Elements ---
+  private _draggedIndex: number | null = null;
+  private _dragOverIndex: number | null = null;
 
   static styles = css`
     /* Basic styles */
@@ -114,6 +117,18 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       border-color: var(--primary-color, #ff9800);
       background: var(--primary-color, #ff9800);
       color: #fff;
+    }
+    .drag-handle {
+      cursor: grab;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .drag-handle:active {
+      cursor: grabbing;
+      opacity: 1;
+    }
+    .element-editor[draggable="true"] {
+      user-select: none;
     }
   `;
 
@@ -382,8 +397,15 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   // Renders the editor for a single element
   private _renderElementEditor(element: any, index: number): TemplateResult {
     const collapsed = this._collapsedElements[index];
+    const isDragging = this._draggedIndex === index;
+    const isDragOver = this._dragOverIndex === index;
     return html`
-      <div class="element-editor">
+      <div class="element-editor"
+        @dragover=${(e: DragEvent) => this._onDragOver(index, e)}
+        @drop=${() => this._onDrop(index)}
+        @dragend=${() => this._onDragEnd()}
+        style="${isDragging ? 'opacity:0.5;' : isDragOver ? 'border:2px dashed var(--primary-color); background:rgba(255,152,0,0.08);' : ''}"
+      >
         <div class="element-header">
           ${collapsed
             ? html`
@@ -393,6 +415,12 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                 <span class="element-header-actions">
                   <ha-icon-button @click=${() => this._toggleElementCollapse(index)} title="Expand">
                     <ha-icon icon="mdi:chevron-down"></ha-icon>
+                  </ha-icon-button>
+                  <ha-icon-button class="drag-handle" title="Drag to reorder" style="cursor:grab;" tabindex="0"
+                    draggable="true"
+                    @dragstart=${(e: DragEvent) => this._onDragStart(index, e)}
+                  >
+                    <ha-icon icon="mdi:drag-vertical"></ha-icon>
                   </ha-icon-button>
                   <ha-icon-button @click=${() => this._removeElement(index)} title="Delete Element">
                     <ha-icon icon="mdi:delete"></ha-icon>
@@ -411,6 +439,12 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                 <span class="element-header-actions">
                   <ha-icon-button @click=${() => this._toggleElementCollapse(index)} title="Collapse">
                     <ha-icon icon="mdi:chevron-up"></ha-icon>
+                  </ha-icon-button>
+                  <ha-icon-button class="drag-handle" title="Drag to reorder" style="cursor:grab;" tabindex="0"
+                    draggable="true"
+                    @dragstart=${(e: DragEvent) => this._onDragStart(index, e)}
+                  >
+                    <ha-icon icon="mdi:drag-vertical"></ha-icon>
                   </ha-icon-button>
                   <ha-icon-button @click=${() => this._removeElement(index)} title="Delete Element">
                     <ha-icon icon="mdi:delete"></ha-icon>
@@ -645,6 +679,38 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         [section]: !this._collapsedSections[index][section]
       }
     };
+  }
+
+  // --- Drag and Drop for Reordering Elements ---
+  private _onDragStart(index: number, ev: DragEvent) {
+    this._draggedIndex = index;
+    // Optionally, set drag image for better UX
+    if (ev.dataTransfer) {
+      ev.dataTransfer.effectAllowed = 'move';
+      // Optionally, set a transparent drag image to avoid default ghost
+      const img = document.createElement('img');
+      img.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>';
+      ev.dataTransfer.setDragImage(img, 0, 0);
+    }
+  }
+  private _onDragOver(index: number, ev: DragEvent) {
+    ev.preventDefault();
+    this._dragOverIndex = index;
+  }
+  private _onDrop(index: number) {
+    if (this._draggedIndex === null || this._draggedIndex === index) return;
+    if (!this._config || !this._config.elements) return;
+    const elements = [...this._config.elements];
+    const [moved] = elements.splice(this._draggedIndex, 1);
+    elements.splice(index, 0, moved);
+    this._config = { ...this._config, elements };
+    this._draggedIndex = null;
+    this._dragOverIndex = null;
+    fireEvent(this, 'config-changed', { config: this._config });
+  }
+  private _onDragEnd() {
+    this._draggedIndex = null;
+    this._dragOverIndex = null;
   }
 
   // --- Main Render --- 
