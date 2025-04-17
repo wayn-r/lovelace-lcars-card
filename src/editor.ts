@@ -1,4 +1,4 @@
-import { LitElement, html, css, TemplateResult, PropertyValues } from 'lit';
+import { LitElement, html, css, TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, fireEvent, LovelaceCardEditor } from 'custom-card-helpers';
 // Make sure these components are loaded if not already globally available
@@ -12,7 +12,6 @@ import { HomeAssistant, fireEvent, LovelaceCardEditor } from 'custom-card-helper
 
 import { LcarsCardConfig } from './lovelace-lcars-card.js';
 import { DEFAULT_FONT_SIZE, DEFAULT_TITLE, DEFAULT_TEXT } from './constants';
-import Sortable from 'sortablejs';
 
 // Available element types
 const ELEMENT_TYPES = ['rectangle', 'text', 'endcap', 'elbow'];
@@ -1062,7 +1061,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                 </div>
               ` : ''}
               ${this._collapsedGroups[groupId] ? html`` : html`
-                <div class="group-elements-container" data-group-id=${groupId} style="padding: 8px 16px 16px 16px;">
+                <div style="padding: 8px 16px 16px 16px;">
                   ${(groupMap[groupId] || []).map(({ el, idx }) => this._renderElementEditor(el, idx))}
                   <div style="text-align: right; margin-top: 8px;">
                     ${this._addElementDraftGroup === groupId ? html`
@@ -1200,46 +1199,5 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     this._editingElementIdInput = '';
     this._elementIdWarning = '';
     this.requestUpdate();
-  }
-
-  // Initialize SortableJS on each group's element list when first rendered and after updates
-  protected firstUpdated(_changedProperties: PropertyValues): void {
-    super.firstUpdated(_changedProperties);
-    this._initSortable();
-  }
-  protected updated(_changedProperties: PropertyValues): void {
-    super.updated(_changedProperties);
-    this._initSortable();
-  }
-
-  private _initSortable(): void {
-    const listContainers = this.renderRoot.querySelectorAll('.group-elements-container:not([data-sortable-initialized])');
-    listContainers.forEach(container => {
-      const groupId = container.getAttribute('data-group-id') || '';
-      Sortable.create(container as HTMLElement, {
-        animation: 150,
-        ghostClass: 'sortable-ghost',
-        handle: '.drag-handle',
-        draggable: '.element-editor',
-        onEnd: (evt: any) => this._onSortEnd(evt.oldIndex, evt.newIndex, groupId),
-      });
-      container.setAttribute('data-sortable-initialized', 'true');
-    });
-  }
-
-  // Reorder elements in the config when a drag completes
-  private _onSortEnd(oldIndex: number, newIndex: number, groupId: string): void {
-    if (!this._config || !this._config.elements) return;
-    const elements = [...this._config.elements];
-    const positions = elements
-      .map((el, idx) => ({ idx, gid: el.id.split('.')[0] }))
-      .filter(item => item.gid === groupId)
-      .map(item => item.idx);
-    const globalOldIndex = positions[oldIndex];
-    const globalNewIndex = positions[newIndex];
-    const [moved] = elements.splice(globalOldIndex, 1);
-    elements.splice(globalNewIndex, 0, moved);
-    this._config = { ...this._config, elements };
-    fireEvent(this, 'config-changed', { config: this._config });
   }
 } 
