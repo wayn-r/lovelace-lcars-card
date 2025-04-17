@@ -7,8 +7,11 @@ export default defineConfig({
     // basicSsl() // Comment out or remove
   ],
   server: {
+    // Enable CORS for all origins
+    cors: true,
     host: true,
     port: 5000,
+    // Additional headers if needed
     headers: {
       'Access-Control-Allow-Origin': '*',
     },

@@ -20,6 +20,7 @@
     "author": "",
     "license": "MIT",
     "devDependencies": {
+        "@types/sortablejs": "^1.15.8",
         "custom-card-helpers": "^1.9.0",
         "lit": "^3.0.0",
         "typescript": "^5.0.0",
@@ -28,6 +29,7 @@
     "dependencies": {
         "fontmetrics": "^1.0.0",
         "gsap": "^3.12.7",
-        "lit": "^3.0.0"
+        "lit": "^3.0.0",
+        "sortablejs": "^1.15.6"
     }
 }

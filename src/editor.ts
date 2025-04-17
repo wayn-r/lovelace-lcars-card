@@ -1,4 +1,4 @@
-import { LitElement, html, css, TemplateResult } from 'lit';
+import { LitElement, html, css, TemplateResult, PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, fireEvent, LovelaceCardEditor } from 'custom-card-helpers';
 // Make sure these components are loaded if not already globally available
@@ -12,6 +12,7 @@ import { HomeAssistant, fireEvent, LovelaceCardEditor } from 'custom-card-helper
 
 import { LcarsCardConfig } from './lovelace-lcars-card.js';
 import { DEFAULT_FONT_SIZE, DEFAULT_TITLE, DEFAULT_TEXT } from './constants';
+import Sortable from 'sortablejs';
 
 // Available element types
 const ELEMENT_TYPES = ['rectangle', 'text', 'endcap', 'elbow'];
@@ -42,6 +43,9 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   @state() private _addElementDraftGroup: string | null = null;
   @state() private _addElementInput: string = '';
   @state() private _addElementWarning: string = '';
+  @state() private _editingElementId: number | null = null;
+  @state() private _editingElementIdInput: string = '';
+  @state() private _elementIdWarning: string = '';
 
   static styles = css`
     /* Basic styles */
@@ -61,14 +65,16 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     }
     .element-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 15px;
+      margin-bottom: 0;
+      min-height: 40px;
     }
     .element-header .element-header-summary {
       font-weight: bold;
       display: flex;
       align-items: center;
+      margin: 0;
+      padding: 0;
     }
     .element-header .element-header-actions {
       display: flex;
@@ -615,15 +621,67 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         style="${isDragging ? 'opacity:0.5;' : isDragOver ? 'border:2px dashed var(--primary-color); background:rgba(255,152,0,0.08);' : ''}"
       >
         <div class="element-header">
-          ${collapsed
-            ? html`
-                <span class="element-header-summary">
-                  ${(baseId || element.id) ?? '(no id)'} <span style="color:var(--secondary-text-color); margin-left: 6px;">(${element.type ?? 'unknown'})</span>
-                </span>
-                <span class="element-header-actions">
-                  <ha-icon-button @click=${() => this._toggleElementCollapse(index)} title="Expand">
-                    <ha-icon icon="mdi:chevron-down"></ha-icon>
+          <div class="element-header-toggle" style="display: flex; align-items: center; gap: 8px; cursor: pointer;" @click=${(e: Event) => { if (this._editingElementId === index) { e.stopPropagation(); return; } this._toggleElementCollapse(index); }}>
+            <ha-icon
+              icon="mdi:${collapsed ? 'chevron-right' : 'chevron-down'}"
+              style="margin-right:8px;"
+              title="${collapsed ? 'Expand' : 'Collapse'} Element"
+            ></ha-icon>
+            ${collapsed
+              ? html`<span class="element-header-summary" style="display:flex; align-items:center;">${(baseId || element.id) ?? '(no id)'} <span style="color:var(--secondary-text-color); margin-left: 6px;">(${element.type ?? 'unknown'})</span></span>`
+              : html`<div style="display: flex; align-items: center; gap: 8px;">
+                  ${this._editingElementId === index
+                    ? html`
+                        <ha-textfield
+                          label="Edit Element ID"
+                          .value=${this._editingElementIdInput}
+                          @input=${(e: Event) => {
+                            this._editingElementIdInput = (e.target as HTMLInputElement).value;
+                            this._elementIdWarning = '';
+                            this.requestUpdate();
+                          }}
+                          @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter') { e.stopPropagation(); this._confirmEditElementId(index, group); } }}
+                          autofocus
+                          style="flex: 1; min-width: 80px; cursor: auto;"
+                          @click=${(e: Event) => e.stopPropagation()}
+                        ></ha-textfield>
+                      `
+                    : html`
+                        <span class="element-header-summary">
+                          ${baseId || '(no id)'}
+                        </span>
+                        <ha-icon-button
+                          style="margin-left: 4px; cursor: pointer;"
+                          @click=${(e: Event) => { e.stopPropagation(); this._startEditElementId(index, baseId); }}
+                          title="Edit Element ID"
+                        >
+                          <ha-icon icon="mdi:pencil"></ha-icon>
+                        </ha-icon-button>
+                      `
+                  }
+                </div>`}
+          </div>
+          <span class="element-header-actions" style="margin-left:auto;" @click=${(e: Event) => e.stopPropagation()}>
+            ${this._editingElementId === index
+              ? html`
+                  ${this._elementIdWarning ? html`<div style="color: var(--error-color, #c00); font-size: 0.95em; margin-right: 8px;">${this._elementIdWarning}</div>` : ''}
+                  <ha-icon-button
+                    style="color: var(--primary-color);"
+                    @click=${() => this._confirmEditElementId(index, group)}
+                    title="Rename Element ID"
+                    .disabled=${!this._editingElementIdInput.trim() || !!this._elementIdWarning}
+                  >
+                    <ha-icon icon="mdi:check"></ha-icon>
                   </ha-icon-button>
+                  <ha-icon-button
+                    style="color: var(--error-color);"
+                    @click=${() => this._cancelEditElementId()}
+                    title="Cancel"
+                  >
+                    <ha-icon icon="mdi:close"></ha-icon>
+                  </ha-icon-button>
+                `
+              : html`
                   <ha-icon-button class="drag-handle" title="Drag to reorder" style="cursor:grab;" tabindex="0"
                     draggable="true"
                     @dragstart=${(e: DragEvent) => this._onDragStart(index, e)}
@@ -633,44 +691,22 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                   <ha-icon-button @click=${() => this._removeElement(index)} title="Delete Element">
                     <ha-icon icon="mdi:delete"></ha-icon>
                   </ha-icon-button>
-                </span>
-              `
-            : html`
-                <ha-select
-                  label="Element Type"
-                  .value=${element.type ?? ''}
-                  @selected=${(e: Event) => this._handleElementChange(e, index, 'type')}
-                  @closed=${(ev: Event) => ev.stopPropagation()}
-                >
-                  ${ELEMENT_TYPES.map(type => html`<ha-list-item .value=${type}>${type}</ha-list-item>`)}
-                </ha-select>
-                <span class="element-header-actions">
-                  <ha-icon-button @click=${() => this._toggleElementCollapse(index)} title="Collapse">
-                    <ha-icon icon="mdi:chevron-up"></ha-icon>
-                  </ha-icon-button>
-                  <ha-icon-button class="drag-handle" title="Drag to reorder" style="cursor:grab;" tabindex="0"
-                    draggable="true"
-                    @dragstart=${(e: DragEvent) => this._onDragStart(index, e)}
-                  >
-                    <ha-icon icon="mdi:drag-vertical"></ha-icon>
-                  </ha-icon-button>
-                  <ha-icon-button @click=${() => this._removeElement(index)} title="Delete Element">
-                    <ha-icon icon="mdi:delete"></ha-icon>
-                  </ha-icon-button>
-                </span>
-              `}
+                `}
+          </span>
         </div>
         ${collapsed
           ? html``
           : html`
               <div class="grid-container">
-                <ha-textfield
-                  label="Element ID"
-                  name="id"
-                  required
-                  .value=${baseId}
-                  @input=${(e: Event) => this._handleElementChange(e, index, 'id')}
-                ></ha-textfield>
+                <ha-select
+                  label="Element Type"
+                  .value=${element.type ?? ''}
+                  @selected=${(e: Event) => this._handleElementChange(e, index, 'type')}
+                  @closed=${(ev: Event) => ev.stopPropagation()}
+                  style="grid-column: 1 / -1;"
+                >
+                  ${ELEMENT_TYPES.map(type => html`<ha-list-item .value=${type}>${type}</ha-list-item>`)}
+                </ha-select>
                 <div style="grid-column: 1 / -1; height: 8px;"></div>
                 ${this._renderPropsFields(element, index)}
                 <div style="grid-column: 1 / -1; height: 8px;"></div>
@@ -987,7 +1023,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                           <ha-icon icon="mdi:check"></ha-icon>
                         </ha-icon-button>
                         <ha-icon-button
-                          style="margin-left: 2px; color: var(--error-color); flex-shrink: 0;"
+                          style="margin-left: 2px; color: var(--error-color);"
                           @click=${(e: Event) => { e.stopPropagation(); this._cancelEditGroup(); }}
                           title="Cancel"
                         >
@@ -1026,7 +1062,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                 </div>
               ` : ''}
               ${this._collapsedGroups[groupId] ? html`` : html`
-                <div style="padding: 8px 16px 16px 16px;">
+                <div class="group-elements-container" data-group-id=${groupId} style="padding: 8px 16px 16px 16px;">
                   ${(groupMap[groupId] || []).map(({ el, idx }) => this._renderElementEditor(el, idx))}
                   <div style="text-align: right; margin-top: 8px;">
                     ${this._addElementDraftGroup === groupId ? html`
@@ -1117,5 +1153,93 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     return /^[a-zA-Z0-9_-]+$/.test(input)
       ? ''
       : 'Group ID can only contain letters, numbers, underscores (_), or hyphens (-).';
+  }
+
+  private _startEditElementId(index: number, baseId: string) {
+    this._editingElementId = index;
+    this._editingElementIdInput = baseId;
+    this._elementIdWarning = '';
+    this.requestUpdate();
+  }
+
+  private _confirmEditElementId(index: number, group: string) {
+    const baseId = this._editingElementIdInput.trim();
+    if (!baseId) return;
+    if (!/^[a-zA-Z0-9_-]+$/.test(baseId)) {
+      this._elementIdWarning = 'Element ID can only contain letters, numbers, underscores (_), or hyphens (-).';
+      this.requestUpdate();
+      return;
+    }
+    if (!this._config || !this._config.elements) return;
+    const fullId = `${group}.${baseId}`;
+    if (this._config.elements.some((el, idx) => el.id === fullId && idx !== index)) {
+      this._elementIdWarning = 'An element with this id already exists in this group.';
+      this.requestUpdate();
+      return;
+    }
+    // Actually update the element id
+    const newElements = this._config.elements.map((el, i) => {
+      if (i === index) {
+        return { ...el, id: fullId };
+      }
+      return el;
+    });
+    // Only include type if it is defined
+    const { type, ...restConfig } = this._config;
+    const configToUpdate = { ...restConfig, type: typeof type === 'string' ? type : '', elements: newElements };
+    this._config = configToUpdate;
+    this._editingElementId = null;
+    this._editingElementIdInput = '';
+    this._elementIdWarning = '';
+    fireEvent(this, 'config-changed', { config: this._config });
+    this.requestUpdate();
+  }
+
+  private _cancelEditElementId() {
+    this._editingElementId = null;
+    this._editingElementIdInput = '';
+    this._elementIdWarning = '';
+    this.requestUpdate();
+  }
+
+  // Initialize SortableJS on each group's element list when first rendered and after updates
+  protected firstUpdated(_changedProperties: PropertyValues): void {
+    super.firstUpdated(_changedProperties);
+    this._initSortable();
+  }
+  protected updated(_changedProperties: PropertyValues): void {
+    super.updated(_changedProperties);
+    this._initSortable();
+  }
+
+  private _initSortable(): void {
+    const listContainers = this.renderRoot.querySelectorAll('.group-elements-container:not([data-sortable-initialized])');
+    listContainers.forEach(container => {
+      const groupId = container.getAttribute('data-group-id') || '';
+      Sortable.create(container as HTMLElement, {
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        handle: '.drag-handle',
+        draggable: '.element-editor',
+        onEnd: (evt: any) => this._onSortEnd(evt.oldIndex, evt.newIndex, groupId),
+      });
+      container.setAttribute('data-sortable-initialized', 'true');
+    });
+  }
+
+  // Reorder elements in the config when a drag completes
+  private _onSortEnd(oldIndex: number, newIndex: number, groupId: string): void {
+    if (!this._config || !this._config.elements) return;
+    const elements = [...this._config.elements];
+    const positions = elements
+      .map((el, idx) => ({ idx, gid: el.id.split('.')[0] }))
+      .filter(item => item.gid === groupId)
+      .map(item => item.idx);
+    const globalOldIndex = positions[oldIndex];
+    const globalNewIndex = positions[newIndex];
+    const [moved] = elements.splice(globalOldIndex, 1);
+    elements.splice(globalNewIndex, 0, moved);
+    this._config = { ...this._config, elements };
+    fireEvent(this, 'config-changed', { config: this._config });
   }
 } 
