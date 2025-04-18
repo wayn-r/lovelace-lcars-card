@@ -134,14 +134,36 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       background: var(--primary-color, #ff9800);
       color: #fff;
     }
-    .drag-handle {
+    .drag-handle-container {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 0;
       cursor: grab;
+      /* No background, no border, no highlight */
+    }
+    .drag-handle-container:active {
+      cursor: grabbing;
+    }
+    .drag-handle-container ha-icon {
       opacity: 0.7;
       transition: opacity 0.2s;
+      color: var(--secondary-text-color, #bbb);
     }
-    .drag-handle:active {
-      cursor: grabbing;
+    .drag-handle-container:active ha-icon {
       opacity: 1;
+    }
+    /* Remove previous drag-handle button styles */
+    ha-icon-button.drag-handle,
+    ha-icon-button.drag-handle:focus,
+    ha-icon-button.drag-handle:active,
+    ha-icon-button.drag-handle[active],
+    ha-icon-button.drag-handle[focused],
+    ha-icon-button.drag-handle:hover {
+      background: none !important;
+      box-shadow: none !important;
+      color: inherit !important;
     }
     .element-editor[draggable="true"] {
       user-select: none;
@@ -681,12 +703,11 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                   </ha-icon-button>
                 `
               : html`
-                  <ha-icon-button class="drag-handle" title="Drag to reorder" style="cursor:grab;" tabindex="0"
-                    draggable="true"
+                  <span class="drag-handle-container" draggable="true"
                     @dragstart=${(e: DragEvent) => this._onDragStart(index, e)}
-                  >
+                    style="display: inline-flex; align-items: center; justify-content: center;">
                     <ha-icon icon="mdi:drag-vertical"></ha-icon>
-                  </ha-icon-button>
+                  </span>
                   <ha-icon-button @click=${() => this._removeElement(index)} title="Delete Element">
                     <ha-icon icon="mdi:delete"></ha-icon>
                   </ha-icon-button>
@@ -938,13 +959,33 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   // --- Drag and Drop for Reordering Elements ---
   private _onDragStart(index: number, ev: DragEvent) {
     this._draggedIndex = index;
-    // Optionally, set drag image for better UX
     if (ev.dataTransfer) {
       ev.dataTransfer.effectAllowed = 'move';
-      // Optionally, set a transparent drag image to avoid default ghost
-      const img = document.createElement('img');
-      img.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>';
-      ev.dataTransfer.setDragImage(img, 0, 0);
+      // Find the .element-editor for this index
+      const editors = this.renderRoot.querySelectorAll('.element-editor');
+      const editor = editors[index] as HTMLElement | undefined;
+      if (editor) {
+        // Clone the node
+        const ghost = editor.cloneNode(true) as HTMLElement;
+        // Style the ghost
+        ghost.style.position = 'absolute';
+        ghost.style.top = '-9999px';
+        ghost.style.left = '-9999px';
+        ghost.style.width = `${editor.offsetWidth}px`;
+        ghost.style.height = `${editor.offsetHeight}px`;
+        ghost.style.opacity = '0.8';
+        ghost.style.pointerEvents = 'none';
+        ghost.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+        ghost.style.background = getComputedStyle(editor).background;
+        document.body.appendChild(ghost);
+        // Offset: center the drag image on the mouse
+        const rect = editor.getBoundingClientRect();
+        const offsetX = ev.clientX - rect.left;
+        const offsetY = ev.clientY - rect.top;
+        ev.dataTransfer.setDragImage(ghost, offsetX, offsetY);
+        // Remove the ghost after a tick (let the browser use it for drag image)
+        setTimeout(() => document.body.removeChild(ghost), 0);
+      }
     }
   }
   private _onDragOver(index: number, ev: DragEvent) {
