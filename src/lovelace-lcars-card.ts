@@ -39,6 +39,7 @@ export class LcarsCard extends LitElement {
   private _lastConfig?: LcarsCardConfig;
   private _layoutCalculationPending: boolean = false;
   private _hasRenderedOnce: boolean = false; // Track first render completion
+  @state() private _hasMeasuredRenderedText: boolean = false; // Track if we've done post-render measurement
 
   // Static styles for the card
   static styles = css`
@@ -91,14 +92,47 @@ export class LcarsCard extends LitElement {
     if (!this._resizeObserver) {
        this._resizeObserver = new ResizeObserver(this._handleResize.bind(this));
     }
+    // After full page load (CSS/fonts), trigger a recalc to ensure correct measurements
+    if (document.readyState === 'complete') {
+      this._triggerRecalc();
+    } else {
+      window.addEventListener('load', () => this._triggerRecalc(), { once: true });
+    }
+    // Also recalc once all fonts have loaded to get correct text metrics
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        this._layoutCalculationPending = true;
+        this.requestUpdate();
+      });
+    }
   }
   
-  firstUpdated() {
+  public firstUpdated() {
     const container = this.shadowRoot?.querySelector('.card-container');
     if (container && this._resizeObserver) {
       this._resizeObserver.observe(container);
-      // Schedule the first check slightly later
-      requestAnimationFrame(() => this._scheduleInitialCalculation());
+      // Explicitly load fonts used by text elements, then perform initial layout
+      const fontLoadPromises: Promise<FontFace[]>[] = [];
+      if (this._config.elements) {
+        this._config.elements.forEach(el => {
+          if (el.type?.toLowerCase() === 'text' && el.props) {
+            const ff = (el.props.fontFamily || 'sans-serif').toString();
+            const fs = (el.props.fontSize || DEFAULT_FONT_SIZE).toString();
+            const fw = (el.props.fontWeight || 'normal').toString();
+            try {
+              fontLoadPromises.push(document.fonts.load(`${fw} ${fs}px ${ff}`));
+            } catch (_e) {
+              // ignore if FontFaceSet API not supported or invalid
+            }
+          }
+        });
+      }
+      const fontsLoaded = fontLoadPromises.length ? Promise.all(fontLoadPromises) : Promise.resolve();
+      Promise.all([this.updateComplete, fontsLoaded]).then(() => {
+        requestAnimationFrame(() => this._scheduleInitialCalculation());
+      }).catch(() => {
+        requestAnimationFrame(() => this._scheduleInitialCalculation());
+      });
     } else {
       console.error("[firstUpdated] Could not find .card-container to observe.");
     }
@@ -138,7 +172,11 @@ export class LcarsCard extends LitElement {
       // Perform layout calculation *after* the DOM update cycle if needed
       if (this._layoutCalculationPending && this._containerRect && this._config) {
           this._performLayoutCalculation(this._containerRect);
-      } else if (this._layoutCalculationPending) {
+      }
+      // After first layout and render, measure actual text via getBBox and rerun layout once
+      if (!this._hasMeasuredRenderedText && this._hasRenderedOnce && this._containerRect) {
+          this._hasMeasuredRenderedText = true;
+          requestAnimationFrame(() => this._measureAndRecalc());
       }
   }
   
@@ -150,6 +188,11 @@ export class LcarsCard extends LitElement {
         return;
     }
 
+    // Ensure measurements use the in-shadow SVG for correct font context
+    const svgElement = this.shadowRoot?.querySelector('.card-container svg') as SVGSVGElement | null;
+    if (svgElement) {
+      (this._layoutEngine as any).tempSvgContainer = svgElement;
+    }
     this._layoutEngine.clearLayout();
     const groups = parseConfig(this._config, this.hass);
     groups.forEach((group: Group) => { this._layoutEngine.addGroup(group); });
@@ -239,5 +282,52 @@ export class LcarsCard extends LitElement {
         </div>
       </ha-card>
     `;
+  }
+
+  // Force a layout recalculation
+  private _triggerRecalc(): void {
+    this._layoutCalculationPending = true;
+    this.requestUpdate();
+  }
+
+  // Measure rendered <text> elements and update layout based on real sizes
+  private _measureAndRecalc(): void {
+    const svg = this.shadowRoot?.querySelector<SVGSVGElement>('.card-container svg');
+    if (!svg || !this._containerRect) return;
+    const measured: Record<string, {w: number; h: number}> = {};
+    // Collect bounding boxes of rendered text elements
+    svg.querySelectorAll<SVGTextElement>('text[id]').forEach(el => {
+      try {
+        const bbox = el.getBBox();
+        if (bbox.width > 0 && bbox.height > 0) {
+          measured[el.id] = { w: bbox.width, h: bbox.height };
+        }
+      } catch {}
+    });
+    // Patch engine elements' intrinsic sizes
+    const engineAny = this._layoutEngine as any;
+    const elementsMap: Map<string, any> = engineAny.elements;
+    let changed = false;
+    elementsMap.forEach((el: any, id: string) => {
+      const m = measured[id];
+      if (m && (el.intrinsicSize.width !== m.w || el.intrinsicSize.height !== m.h)) {
+        el.intrinsicSize.width = m.w;
+        el.intrinsicSize.height = m.h;
+        el.intrinsicSize.calculated = true;
+        changed = true;
+      }
+    });
+    // Rerun layout if any sizes changed
+    if (changed) {
+      this._layoutCalculationPending = true;
+      this._performLayoutCalculation(this._containerRect);
+      // Update state to reflect new templates
+      const newTemplates = this._layoutEngine.layoutGroups.flatMap((group: any) =>
+        group.elements.map((e: any) => e.render()).filter((t: any) => t !== null)
+      );
+      this._layoutElementTemplates = newTemplates;
+      this._viewBox = `0 0 ${this._containerRect.width} ${this._containerRect.height}`;
+      this.requestUpdate();
+    }
   }
 }

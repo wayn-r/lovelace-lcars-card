@@ -75,16 +75,15 @@ export class TextElement extends LayoutElement {
     // Create temporary text element for measurement
     const tempText = document.createElementNS("http://www.w3.org/2000/svg", "text");
     tempText.textContent = this.props.text || '';
-    
-    // Apply font properties
-    if (this.props.fontFamily) {
-      tempText.setAttribute('font-family', this.props.fontFamily);
+    // Apply font properties matching render attributes
+    tempText.setAttribute('font-family', this.props.fontFamily || 'sans-serif');
+    tempText.setAttribute('font-size', `${this.props.fontSize || 16}px`);
+    tempText.setAttribute('font-weight', this.props.fontWeight || 'normal');
+    if (this.props.letterSpacing) {
+      tempText.setAttribute('letter-spacing', this.props.letterSpacing);
     }
-    if (this.props.fontSize) {
-      tempText.setAttribute('font-size', `${this.props.fontSize}px`);
-    }
-    if (this.props.fontWeight) {
-      tempText.setAttribute('font-weight', this.props.fontWeight);
+    if (this.props.textTransform) {
+      tempText.setAttribute('text-transform', this.props.textTransform);
     }
     
     // Add to container temporarily for measurement
