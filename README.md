@@ -1,2 +1,8 @@
 #TODOs:
- - 
+ - implement chisel endcap
+   - update chisel shape drawing to draw left and right (currently only supports right)
+ - implement headerbar as a standalone element
+ - implement buttons
+ - determine an appropriate way to handle vertical groups of elements
+ - determine an appropriate way to handle groups of elements that curve into other groups of elements. visually, these look like they might be the same concept to group into a larger section
+ - determine a way to implement animation logic for elements

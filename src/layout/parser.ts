@@ -7,7 +7,7 @@
 
 import { HomeAssistant } from 'custom-card-helpers';
 import { Group, LayoutElement } from './engine.js';
-import { RectangleElement, TextElement, EndcapElement, ElbowElement } from './elements.js';
+import { RectangleElement, TextElement, EndcapElement, ElbowElement, ChiselEndcapElement } from './elements.js';
 import { LcarsCardConfig } from '../lovelace-lcars-card.js';
 
 /**
@@ -140,6 +140,9 @@ function createLayoutElement(
     
     case 'elbow':
       return new ElbowElement(id, props, layoutConfig, hass);
+    
+    case 'chisel-endcap':
+      return new ChiselEndcapElement(id, props, layoutConfig, hass);
       
     case 'rectangle':
     default:

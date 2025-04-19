@@ -168,8 +168,8 @@ export function generateChiselEndcapPath(
     side: 'right',
     x: number = 0,
     y: number = 0,
-    topCornerRadius: number = 0,
-    bottomCornerRadius: number = 0
+    topCornerRadius: number = height / 8,
+    bottomCornerRadius: number = height / 4
 ): string {
     let points: [number, number, number][];
     if (width <= 0 || height <= 0) {
@@ -191,7 +191,7 @@ export function generateChiselEndcapPath(
         }
     } else {
         const upperWidth = width;
-        const lowerWidth = Math.max(0, Math.min(width * 0.9, width - 15));
+        const lowerWidth = width - height / 2;
         points = [
             [x, y, 0], // Top left
             [x + upperWidth, y, topCornerRadius], // Top right

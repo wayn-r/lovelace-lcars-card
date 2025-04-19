@@ -7,7 +7,7 @@
 
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElement, LayoutElementProps, LayoutConfigOptions } from './engine.js';
-import { generateRectanglePath, generateEndcapPath, generateElbowPath, getTextWidth, measureTextBBox, getFontMetrics } from '../utils/shapes.js';
+import { generateRectanglePath, generateEndcapPath, generateElbowPath, generateChiselEndcapPath, getTextWidth, measureTextBBox, getFontMetrics } from '../utils/shapes.js';
 import { SVGTemplateResult, svg } from 'lit';
 
 /**
@@ -378,5 +378,61 @@ export class ElbowElement extends LayoutElement {
         stroke-width=${strokeWidth}
       />
     `;
+  }
+}
+
+// Add chisel-style endcap element
+export class ChiselEndcapElement extends LayoutElement {
+  constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant) {
+    super(id, props, layoutConfig, hass);
+    // Initialize layout state
+    this.resetLayout();
+  }
+
+  calculateIntrinsicSize(container: SVGElement): void {
+    this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 40;
+    this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 0;
+    this.intrinsicSize.calculated = true;
+  }
+
+  canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
+    if (this.intrinsicSize.height === 0 && this.layoutConfig.anchorTo) {
+      const anchorElement = elementsMap.get(this.layoutConfig.anchorTo);
+      if (!anchorElement || !anchorElement.layout.calculated) return false;
+    }
+    return super.canCalculateLayout(elementsMap);
+  }
+
+  calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
+    if (this.intrinsicSize.height === 0 && this.layoutConfig.anchorTo) {
+      const anchorElement = elementsMap.get(this.layoutConfig.anchorTo);
+      if (anchorElement) {
+        const adoptedHeight = anchorElement.layout.height;
+        const originalLayoutHeight = this.layoutConfig.height;
+        this.layoutConfig.height = adoptedHeight;
+        super.calculateLayout(elementsMap, containerRect);
+        this.layoutConfig.height = originalLayoutHeight;
+        return;
+      }
+    }
+    super.calculateLayout(elementsMap, containerRect);
+  }
+
+  render(): SVGTemplateResult | null {
+    if (!this.layout.calculated || this.layout.height <= 0 || this.layout.width <= 0) return null;
+    const { x, y, width, height } = this.layout;
+    // Support directional chisel endcaps (default 'right')
+    const direction = (this.props.direction || 'right') as 'right';
+    // Generate path without manual corner radii (handled internally)
+    const pathData = generateChiselEndcapPath(width, height, direction, x, y);
+    if (!pathData) return null;
+    return svg`
+      <path
+        id=${this.id}
+        d=${pathData}
+        fill=${this.props.fill || 'none'}
+        stroke=${this.props.stroke || 'none'}
+        stroke-width=${this.props.strokeWidth || '0'}
+      />`;
   }
 } 
