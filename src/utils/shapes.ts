@@ -155,7 +155,7 @@ export function buildShape(points: [number, number, number][]): string {
  * Generates the SVG path data (`d` attribute) for a "chisel" style endcap using `buildShape`.
  * @param width The total width of the shape's bounding box.
  * @param height The total height of the shape's bounding box.
- * @param side Which side the angled part is on (currently only 'right' supported).
+ * @param side Which side the angled part is on ('left' or 'right').
  * @param x The starting x coordinate (top-left). Default 0.
  * @param y The starting y coordinate (top-left). Default 0.
  * @param topCornerRadius Radius for the top-right corner. Default 0.
@@ -165,7 +165,7 @@ export function buildShape(points: [number, number, number][]): string {
 export function generateChiselEndcapPath(
     width: number,
     height: number,
-    side: 'right',
+    side: 'left' | 'right',
     x: number = 0,
     y: number = 0,
     topCornerRadius: number = height / 8,
@@ -176,26 +176,29 @@ export function generateChiselEndcapPath(
         console.warn("LCARS Card: generateChiselEndcapPath requires positive width and height.");
         points = [[x, y, 0], [x, y, 0], [x, y, 0]];
     }
-    else if (side !== 'right') {
-        console.warn("LCARS Card: generateChiselEndcapPath currently only supports side='right'. Falling back to rectangle.");
-        // Inlined rectToPoints logic as fallback
-        if (width <= 0 || height <= 0) {
-            points = [[x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0]];
-        } else {
-            points = [
-                [x, y, 0],                 // Top left
-                [x + width, y, 0],         // Top right
-                [x + width, y + height, 0], // Bottom right
-                [x, y + height, 0]        // Bottom left
-            ];
-        }
-    } else {
+    else if (side === 'right') {
         const upperWidth = width;
         const lowerWidth = width - height / 2;
         points = [
             [x, y, 0], // Top left
             [x + upperWidth, y, topCornerRadius], // Top right
             [x + lowerWidth, y + height, bottomCornerRadius], // Bottom right
+            [x, y + height, 0] // Bottom left
+        ];
+    } else if (side === 'left') {
+        const lowerOffset = height / 2;
+        points = [
+            [x, y, topCornerRadius], // Top left angled
+            [x + width, y, 0], // Top right
+            [x + width, y + height, 0], // Bottom right
+            [x + lowerOffset, y + height, bottomCornerRadius] // Bottom left angled
+        ];
+    } else {
+        console.warn("LCARS Card: generateChiselEndcapPath currently only supports side='left' or 'right'. Falling back to rectangle.");
+        points = [
+            [x, y, 0], // Top left
+            [x + width, y, 0], // Top right
+            [x + width, y + height, 0], // Bottom right
             [x, y + height, 0] // Bottom left
         ];
     }

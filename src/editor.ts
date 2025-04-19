@@ -841,8 +841,8 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           <div style="grid-column: 1 / -1; height: 8px;"></div>
           <ha-textfield label="Fill Color" name="fill" .value=${fillValue} @input=${(e: Event) => this._handleElementChange(e, index, 'fill', 'props')}></ha-textfield>
           <ha-select label="Direction" name="direction" .value=${directionValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'direction', 'props')} @closed=${(ev: Event) => ev.stopPropagation()}>
-            <ha-list-item .value="left">Left</ha-list-item>
-            <ha-list-item .value="right">Right</ha-list-item>
+            <ha-list-item value="left">Left</ha-list-item>
+            <ha-list-item value="right">Right</ha-list-item>
           </ha-select>
           <ha-textfield label="Width (px)" name="width" type="number" step="1" .value=${element.layout?.width ?? ''} @input=${(e: Event) => this._handleElementChange(e, index, 'width', 'layout')}></ha-textfield>
           <ha-textfield label="Height (px)" name="height" type="number" step="1" .value=${element.layout?.height ?? ''} @input=${(e: Event) => this._handleElementChange(e, index, 'height', 'layout')}></ha-textfield>
