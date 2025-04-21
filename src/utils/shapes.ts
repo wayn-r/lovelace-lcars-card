@@ -11,6 +11,8 @@
  * 3. `generateEquilateralTrianglePoints()`: Special case generating a `points` string for SVG `<polygon>`.
  */
 
+import FontMetrics from 'fontmetrics';
+
 // === Constants ===
 
 export const EPSILON = 0.0001; // Numerical precision for path calculations
@@ -91,7 +93,7 @@ export function buildShape(points: [number, number, number][]): string {
             
                 // Limit the distance to half the length of the shorter adjacent segment
                 // This prevents the rounded corner from overlapping itself or extending past the midpoint
-            dist = Math.min(dist, magV1 / 2, magV2 / 2);
+            dist = Math.min(dist, magV1, magV2);
             
                 // Recalculate the actual radius that can be applied based on the limited distance
                 cornerRadius = dist * Math.abs(Math.tan(angle / 2));
@@ -153,7 +155,7 @@ export function buildShape(points: [number, number, number][]): string {
  * Generates the SVG path data (`d` attribute) for a "chisel" style endcap using `buildShape`.
  * @param width The total width of the shape's bounding box.
  * @param height The total height of the shape's bounding box.
- * @param side Which side the angled part is on (currently only 'right' supported).
+ * @param side Which side the angled part is on ('left' or 'right').
  * @param x The starting x coordinate (top-left). Default 0.
  * @param y The starting y coordinate (top-left). Default 0.
  * @param topCornerRadius Radius for the top-right corner. Default 0.
@@ -163,37 +165,40 @@ export function buildShape(points: [number, number, number][]): string {
 export function generateChiselEndcapPath(
     width: number,
     height: number,
-    side: 'right',
+    side: 'left' | 'right',
     x: number = 0,
     y: number = 0,
-    topCornerRadius: number = 0,
-    bottomCornerRadius: number = 0
+    topCornerRadius: number = height / 8,
+    bottomCornerRadius: number = height / 4
 ): string {
     let points: [number, number, number][];
     if (width <= 0 || height <= 0) {
         console.warn("LCARS Card: generateChiselEndcapPath requires positive width and height.");
         points = [[x, y, 0], [x, y, 0], [x, y, 0]];
     }
-    else if (side !== 'right') {
-        console.warn("LCARS Card: generateChiselEndcapPath currently only supports side='right'. Falling back to rectangle.");
-        // Inlined rectToPoints logic as fallback
-        if (width <= 0 || height <= 0) {
-            points = [[x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0]];
-        } else {
-            points = [
-                [x, y, 0],                 // Top left
-                [x + width, y, 0],         // Top right
-                [x + width, y + height, 0], // Bottom right
-                [x, y + height, 0]        // Bottom left
-            ];
-        }
-    } else {
+    else if (side === 'right') {
         const upperWidth = width;
-        const lowerWidth = Math.max(0, Math.min(width * 0.9, width - 15));
+        const lowerWidth = width - height / 2;
         points = [
             [x, y, 0], // Top left
             [x + upperWidth, y, topCornerRadius], // Top right
             [x + lowerWidth, y + height, bottomCornerRadius], // Bottom right
+            [x, y + height, 0] // Bottom left
+        ];
+    } else if (side === 'left') {
+        const lowerOffset = height / 2;
+        points = [
+            [x, y, topCornerRadius], // Top left angled
+            [x + width, y, 0], // Top right
+            [x + width, y + height, 0], // Bottom right
+            [x + lowerOffset, y + height, bottomCornerRadius] // Bottom left angled
+        ];
+    } else {
+        console.warn("LCARS Card: generateChiselEndcapPath currently only supports side='left' or 'right'. Falling back to rectangle.");
+        points = [
+            [x, y, 0], // Top left
+            [x + width, y, 0], // Top right
+            [x + width, y + height, 0], // Bottom right
             [x, y + height, 0] // Bottom left
         ];
     }
@@ -232,17 +237,19 @@ export function generateElbowPath(
     const wV = verticalWidth;
     const totalH = totalElbowHeight;
     const innerRadius = Math.min(h / 2, wV);
-    
+    // Limit outerCornerRadius to the lesser of horizontalWidth and totalElbowHeight
+    const maxOuterRadius = Math.min(wH, totalH);
+    const safeOuterCornerRadius = Math.min(outerCornerRadius, maxOuterRadius);
     switch (orientation) {
         case 'top-left':
                 points = [
-                    [x + wH, y, 0], [x, y, outerCornerRadius],
+                    [x + wH, y, 0], [x, y, safeOuterCornerRadius],
                     [x, y + totalH, 0], [x + wV, y + totalH, 0],
                     [x + wV, y + h, innerRadius], [x + wH, y + h, 0]
                 ]; break;
         case 'top-right':
                 points = [
-                    [x, y, 0], [x + wH, y, outerCornerRadius],
+                    [x, y, 0], [x + wH, y, safeOuterCornerRadius],
                     [x + wH, y + totalH, 0], [x + wH - wV, y + totalH, 0],
                     [x + wH - wV, y + h, innerRadius], [x, y + h, 0]
                 ]; break;
@@ -250,13 +257,13 @@ export function generateElbowPath(
                 points = [
                     [x, y + totalH - h, 0], [x + wH - wV, y + totalH - h, innerRadius],
                     [x + wH - wV, y, 0], [x + wH, y, 0],
-                    [x + wH, y + totalH, outerCornerRadius], [x, y + totalH, 0]
+                    [x + wH, y + totalH, safeOuterCornerRadius], [x, y + totalH, 0]
                 ]; break;
             case 'bottom-left':
                 points = [
                     [x + wH, y + totalH - h, 0], [x + wV, y + totalH - h, innerRadius],
                     [x + wV, y, 0], [x, y, 0],
-                    [x, y + totalH, outerCornerRadius], [x + wH, y + totalH, 0]
+                    [x, y + totalH, safeOuterCornerRadius], [x + wH, y + totalH, 0]
                 ]; break;
             default:
                  console.error(`LCARS Card: Invalid orientation "${orientation}" provided to generateElbowPath.`);
@@ -282,26 +289,34 @@ export function generateEndcapPath(
     x: number = 0,
     y: number = 0
 ): string {
+    
     let points: [number, number, number][];
      if (height <= 0 || width <= 0) {
-         console.warn("LCARS Card: generateEndcapPath requires positive width and height.");
+         console.warn("[generateEndcapPath] Requires positive width and height.");
          points = [[x, y, 0], [x, y, 0], [x, y, 0]];
     } else {
-        // Calculate corner radius based on dimensions
         const cornerRadius = width >= height/2 ? height/2 : width;
+        
         if (direction === 'left') {
             points = [
-                [x, y, cornerRadius], [x + width, y, 0],
-                [x + width, y + height, 0], [x, y + height, cornerRadius]
+                [x, y, cornerRadius], // Top Left (Rounded)
+                [x + width, y, 0],    // Top Right (Sharp)
+                [x + width, y + height, 0], // Bottom Right (Sharp)
+                [x, y + height, cornerRadius] // Bottom Left (Rounded)
             ];
         } else { // direction === 'right'
             points = [
-                [x, y, 0], [x + width, y, cornerRadius],
-                [x + width, y + height, cornerRadius], [x, y + height, 0]
+                [x, y, 0],                 // Top Left (Sharp)
+                [x + width, y, cornerRadius], // Top Right (Rounded)
+                [x + width, y + height, cornerRadius], // Bottom Right (Rounded)
+                [x, y + height, 0]        // Bottom Left (Sharp)
             ];
         }
+        
     }
-    return buildShape(points);
+    const pathD = buildShape(points);
+    
+    return pathD;
 }
 
 /**
@@ -480,4 +495,39 @@ export function calculateDynamicBarHeight(measuredTextHeight: number): number {
         return 0; // Handle invalid or zero height input
     }
     return measuredTextHeight * CAP_HEIGHT_RATIO;
+}
+
+/**
+ * Gets detailed font metrics (ascent, descent, cap height, x-height, baseline, etc.) for a given font.
+ * @param fontFamily The font family to measure (e.g., 'Roboto').
+ * @param fontWeight The font weight (e.g., 'normal', 'bold', 400, 700).
+ * @param fontSize The font size in px (number or string, e.g., 16 or '16px').
+ * @param origin The origin for normalization (default: 'baseline').
+ * @returns The normalized font metrics object, or null if measurement fails.
+ */
+export function getFontMetrics({
+  fontFamily,
+  fontWeight = 'normal',
+  fontSize = 200,
+  origin = 'baseline',
+}: {
+  fontFamily: string;
+  fontWeight?: string | number;
+  fontSize?: number | string;
+  origin?: string;
+}): ReturnType<typeof FontMetrics> | null {
+  try {
+    // FontMetrics expects fontSize as a number (px)
+    let size = typeof fontSize === 'string' ? parseFloat(fontSize) : fontSize;
+    if (!size || isNaN(size)) size = 200;
+    return FontMetrics({
+      fontFamily,
+      fontWeight: fontWeight as any,
+      fontSize: size,
+      origin,
+    });
+  } catch (e) {
+    console.warn('LCARS Card: Failed to get font metrics for', fontFamily, e);
+    return null;
+  }
 } 
