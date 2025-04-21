@@ -1,5 +1,6 @@
 #TODOs:
  - implement stretch to cardinal point (top, bottom, left, right, or combination)
+   - this is partially implemented. need to determine an appropriate way to handle stretching in multiple directions. elbow for example may stretch to the left canvas border AND stretch the vertical opening to a button placement.
  - implement headerbar as a standalone element
  - implement buttons
  - determine an appropriate way to handle vertical groups of elements

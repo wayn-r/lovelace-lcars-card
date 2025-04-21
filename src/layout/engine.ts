@@ -227,7 +227,7 @@ export abstract class LayoutElement {
         }
     }
     // Check stretch dependencies
-    if (this.layoutConfig.stretchTo) {
+    if (this.layoutConfig.stretchTo && this.layoutConfig.stretchTo !== 'canvas') {
         const targetElement = elementsMap.get(this.layoutConfig.stretchTo);
         if (!targetElement || !targetElement.layout.calculated) {
             return false;
@@ -359,25 +359,67 @@ export abstract class LayoutElement {
     }
     // --- End Debugging --- 
 
-    // Handle stretching to other elements (can modify width/height)
+    // Handle stretching to other elements or canvas edges (can modify width/height and x/y)
     if (this.layoutConfig.stretchTo) {
-      const targetElement = elementsMap.get(this.layoutConfig.stretchTo);
-      if (targetElement && targetElement.layout.calculated) {
-        const stretchAnchorPoint = this.layoutConfig.stretchAnchorPoint || 'topRight';
-        const targetStretchAnchorPoint = this.layoutConfig.targetStretchAnchorPoint || 'topLeft';
-        const myStretchPos = this._getRelativeAnchorPosition(stretchAnchorPoint, elementWidth, elementHeight);
-        const targetStretchPos = targetElement._getRelativeAnchorPosition(targetStretchAnchorPoint);
-        const targetStretchCoordX = targetElement.layout.x + targetStretchPos.x;
-        const targetStretchCoordY = targetElement.layout.y + targetStretchPos.y;
-        const currentStretchCoordX = x + myStretchPos.x;
-        const currentStretchCoordY = y + myStretchPos.y;
-        let stretchX = targetStretchCoordX - currentStretchCoordX + (this._parseOffset(this.layoutConfig.stretchPaddingX, containerWidth) || 0);
-        let stretchY = targetStretchCoordY - currentStretchCoordY + (this._parseOffset(this.layoutConfig.stretchPaddingY, containerHeight) || 0);
-        if (stretchAnchorPoint.includes('Right') && !stretchAnchorPoint.includes('Left')) elementWidth += stretchX;
-        if (stretchAnchorPoint.includes('Bottom') && !stretchAnchorPoint.includes('Top')) elementHeight += stretchY;
-        elementWidth = Math.max(0, elementWidth);
-        elementHeight = Math.max(0, elementHeight);
+      const stretchAnchorPoint = this.layoutConfig.stretchAnchorPoint || 'topRight';
+      const targetStretchAnchorPoint = this.layoutConfig.targetStretchAnchorPoint || 'topLeft';
+      const myStretchPos = this._getRelativeAnchorPosition(stretchAnchorPoint, elementWidth, elementHeight);
+      // Compute target stretch coordinates
+      let targetStretchCoordX = x + myStretchPos.x;
+      let targetStretchCoordY = y + myStretchPos.y;
+      if (this.layoutConfig.stretchTo === 'canvas') {
+        // Use canvas edge as target
+        switch (targetStretchAnchorPoint) {
+          case 'topLeft':
+            targetStretchCoordX = 0; targetStretchCoordY = 0; break;
+          case 'topCenter':
+            targetStretchCoordX = containerWidth / 2; targetStretchCoordY = 0; break;
+          case 'topRight':
+            targetStretchCoordX = containerWidth; targetStretchCoordY = 0; break;
+          case 'centerLeft':
+            targetStretchCoordX = 0; targetStretchCoordY = containerHeight / 2; break;
+          case 'center':
+            targetStretchCoordX = containerWidth / 2; targetStretchCoordY = containerHeight / 2; break;
+          case 'centerRight':
+            targetStretchCoordX = containerWidth; targetStretchCoordY = containerHeight / 2; break;
+          case 'bottomLeft':
+            targetStretchCoordX = 0; targetStretchCoordY = containerHeight; break;
+          case 'bottomCenter':
+            targetStretchCoordX = containerWidth / 2; targetStretchCoordY = containerHeight; break;
+          case 'bottomRight':
+            targetStretchCoordX = containerWidth; targetStretchCoordY = containerHeight; break;
+        }
+      } else {
+        // Stretch to another element
+        const targetElement = elementsMap.get(this.layoutConfig.stretchTo);
+        if (targetElement && targetElement.layout.calculated) {
+          const targetPos = targetElement._getRelativeAnchorPosition(targetStretchAnchorPoint);
+          targetStretchCoordX = targetElement.layout.x + targetPos.x;
+          targetStretchCoordY = targetElement.layout.y + targetPos.y;
+        }
       }
+      // Calculate deltas
+      const currentStretchCoordX = x + myStretchPos.x;
+      const currentStretchCoordY = y + myStretchPos.y;
+      const dx = targetStretchCoordX - currentStretchCoordX + (this._parseOffset(this.layoutConfig.stretchPaddingX, containerWidth) || 0);
+      const dy = targetStretchCoordY - currentStretchCoordY + (this._parseOffset(this.layoutConfig.stretchPaddingY, containerHeight) || 0);
+      // Horizontal stretching
+      if (stretchAnchorPoint.includes('Right') && !stretchAnchorPoint.includes('Left')) {
+        elementWidth += dx;
+      } else if (stretchAnchorPoint.includes('Left') && !stretchAnchorPoint.includes('Right')) {
+        x += dx;
+        elementWidth -= dx;
+      }
+      // Vertical stretching
+      if (stretchAnchorPoint.includes('Bottom') && !stretchAnchorPoint.includes('Top')) {
+        elementHeight += dy;
+      } else if (stretchAnchorPoint.includes('Top') && !stretchAnchorPoint.includes('Bottom')) {
+        y += dy;
+        elementHeight -= dy;
+      }
+      // Clamp sizes
+      elementWidth = Math.max(0, elementWidth);
+      elementHeight = Math.max(0, elementHeight);
     }
     
     // Update layout state

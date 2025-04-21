@@ -511,13 +511,15 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     value,
     onSelect,
     disabled = false,
-    labelCenter = false
+    labelCenter = false,
+    disableCorners = false
   }: {
     label: string;
     value: string;
     onSelect: (val: string) => void;
     disabled?: boolean;
     labelCenter?: boolean;
+    disableCorners?: boolean;
   }) {
     const points = [
       ['topLeft', 'topCenter', 'topRight'],
@@ -539,13 +541,18 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
             bottomCenter: 'mdi:arrow-down',
             bottomRight: 'mdi:arrow-bottom-right',
           };
-          return points.flat().map((pt, i) => html`
+          return points.flat().map((pt, i) => {
+            const isCorner = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(pt);
+            const btnDisabled = disabled || (disableCorners && isCorner);
+            const opacityStyle = btnDisabled ? 'opacity:0.3;' : '';
+            return html`
             <button
               class="anchor-grid-btn${value === pt ? ' selected' : ''}"
+              style="${opacityStyle}"
               title=${pt}
-              ?disabled=${disabled}
+              ?disabled=${btnDisabled}
               @click=${() => {
-                if (disabled) return;
+                if (btnDisabled) return;
                 if (value === pt) {
                   onSelect('');
                 } else {
@@ -563,8 +570,8 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                 "
               ></ha-icon>
               ${value === pt && pt === 'center' ? html`<ha-icon icon="mdi:circle" style="font-size:18px;position:absolute;"></ha-icon>` : ''}
-            </button>
-          `);
+            </button>`;
+          });
         })()}
       </div>
     `;
@@ -900,6 +907,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
             </ha-select>
             <ha-select label="Stretch To Element" name="stretchTo" .value=${stretchToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'stretchTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
               <ha-list-item value=""></ha-list-item>
+              <ha-list-item value="canvas">Canvas Edge</ha-list-item>
               ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
             </ha-select>
           </div>
@@ -939,6 +947,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
               <div style="min-width: 200px;">
                 <ha-select label="Stretch To Element" name="stretchTo" .value=${stretchToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'stretchTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
                   <ha-list-item value=""></ha-list-item>
+                  <ha-list-item value="canvas">Canvas Edge</ha-list-item>
                   ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
                 </ha-select>
               </div>
@@ -951,6 +960,20 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         <ha-textfield label="Offset Y" name="offsetY" type="number" step="1" .value=${offsetYValue} @input=${(e: Event) => this._handleElementChange(e, index, 'offsetY', 'layout')}></ha-textfield>
         <!-- Stretch Gap group -->
         <ha-textfield label="Stretch Gap" name="stretchPaddingX" type="number" step="1" .value=${layout.stretchPaddingX ?? ''} @input=${(e: Event) => this._handleElementChange(e, index, 'stretchPaddingX', 'layout')}></ha-textfield>
+        ${stretchToValue ? html`
+          <div style="display: flex; flex-direction: column; gap: 16px; align-items: center; margin-top: 8px;">
+            ${this._renderAnchorGrid({
+              label: 'Target Stretch Anchor Point',
+              value: layout.targetStretchAnchorPoint ?? '',
+              onSelect: (val: string) => {
+                const event = { target: { value: val, type: 'text' } } as unknown as Event;
+                this._handleElementChange(event, index, 'targetStretchAnchorPoint', 'layout');
+              },
+              labelCenter: true,
+              disableCorners: true
+            })}
+          </div>
+        ` : ''}
         </div>
       `;
   }
