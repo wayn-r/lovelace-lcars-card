@@ -929,7 +929,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                 })}
               </div>
             </div>
-            <div style="display: flex; flex-direction: row; gap: 32px; align-items: flex-end; justify-content: flex-start; margin-top: 8px;">
+            <div style="display: flex; flex-direction: row; gap: 12px; align-items: flex-end; justify-content: flex-start; margin-top: 8px;">
               <div style="min-width: 200px;">
                 <ha-select label="Anchor To Element" name="anchorTo" .value=${anchorToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'anchorTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
                   <ha-list-item value=""></ha-list-item>

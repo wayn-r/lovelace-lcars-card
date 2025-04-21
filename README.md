@@ -1,4 +1,5 @@
 #TODOs:
+ - implement stretch to cardinal point (top, bottom, left, right, or combination)
  - implement headerbar as a standalone element
  - implement buttons
  - determine an appropriate way to handle vertical groups of elements
