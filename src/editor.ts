@@ -45,6 +45,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   @state() private _editingElementId: number | null = null;
   @state() private _editingElementIdInput: string = '';
   @state() private _elementIdWarning: string = '';
+  @state() private _stretchAxis: { [key: number]: 'h' | 'v' } = {};
 
   static styles = css`
     /* Basic styles */
@@ -220,7 +221,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   }
 
   // Handle changes within an element's configuration
-  private _handleElementChange(ev: Event, index: number, key: string, section?: 'props' | 'layout'): void {
+  private _handleElementChange(ev: any, index: number, key: string, section?: 'props' | 'layout'): void {
     if (!this._config || !this._config.elements) return;
 
     const target = ev.target as any; // Use any for simplicity with different component types
@@ -249,7 +250,27 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     const newElements = this._config.elements.map((el, i) => {
       if (i === index) {
         const updatedElement = { ...el };
-        if (section) { // Update nested 'props' or 'layout'
+        if (section && key.includes('.')) {
+          // Handle nested keys like 'anchor.targetPoint' or 'stretch.hTarget'
+          const [groupKey, subKey] = key.split('.');
+          const currentSection = { ...updatedElement[section] };
+          const groupObj = { ...((currentSection as any)[groupKey] || {}) };
+          if (value === '' || value === undefined || value === null) {
+            // Remove the nested property
+            delete (groupObj as any)[subKey];
+            if (Object.keys(groupObj).length === 0) {
+              // Remove the entire group if empty
+              const { [groupKey]: _removed, ...restSection } = currentSection;
+              updatedElement[section] = restSection;
+            } else {
+              updatedElement[section] = { ...currentSection, [groupKey]: groupObj };
+            }
+          } else {
+            // Set or update nested property
+            (groupObj as any)[subKey] = value;
+            updatedElement[section] = { ...currentSection, [groupKey]: groupObj };
+          }
+        } else if (section) {
           // Ensure the section object exists
           const currentSection = { ...updatedElement[section] };
           // Special case: if changing anchorTo in layout and value is empty, remove anchorPoint/targetAnchorPoint
@@ -512,7 +533,8 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     onSelect,
     disabled = false,
     labelCenter = false,
-    disableCorners = false
+    disableCorners = false,
+    disabledPoints = []
   }: {
     label: string;
     value: string;
@@ -520,6 +542,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     disabled?: boolean;
     labelCenter?: boolean;
     disableCorners?: boolean;
+    disabledPoints?: string[];
   }) {
     const points = [
       ['topLeft', 'topCenter', 'topRight'],
@@ -543,7 +566,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           };
           return points.flat().map((pt, i) => {
             const isCorner = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(pt);
-            const btnDisabled = disabled || (disableCorners && isCorner);
+            const btnDisabled = disabled || (disableCorners && isCorner) || disabledPoints.includes(pt);
             const opacityStyle = btnDisabled ? 'opacity:0.3;' : '';
             return html`
             <button
@@ -641,6 +664,11 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     const isDragOver = this._dragOverIndex === index;
     const [group, ...baseIdParts] = element.id.split('.');
     const baseId = baseIdParts.join('.') || '';
+
+    const otherElementIds = (this._config?.elements || [])
+                              .map(el => el.id)
+                              .filter(id => id && id !== element.id);
+
     return html`
       <div class="element-editor"
         @dragover=${(e: DragEvent) => this._onDragOver(index, e)}
@@ -874,108 +902,196 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
 
   // Renders common layout fields 
   private _renderLayoutFields(element: any, index: number): TemplateResult {
-      const layout = element.layout || {};
-      const containerAnchorPoint = layout.containerAnchorPoint ?? '';
-      const anchorToValue = layout.anchorTo ?? '';
-      const anchorPointValue = layout.anchorPoint ?? '';
-      const targetAnchorPointValue = layout.targetAnchorPoint ?? '';
-      const stretchToValue = layout.stretchTo ?? '';
-      const offsetXValue = layout.offsetX ?? '';
-      const offsetYValue = layout.offsetY ?? '';
-      const otherElementIds = (this._config?.elements || [])
-                                .map(el => el.id)
-                                .filter(id => id && id !== element.id); 
-      return html`
-        <div style="grid-column: 1 / -1; height: 8px;"></div>
-        <!-- Container Anchor Point and Dropdowns -->
-        ${!anchorToValue ? html`
-          <div style="min-width: 200px;">
-            ${this._renderAnchorGrid({
-              label: 'Container Anchors',
-              value: containerAnchorPoint,
-              onSelect: (val: string) => {
-                const event = { target: { value: val, type: 'text' } } as unknown as Event;
-                this._handleElementChange(event, index, 'containerAnchorPoint', 'layout');
-              },
-              labelCenter: true
-            })}
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 8px; min-width: 200px;">
-            <ha-select label="Anchor To Element" name="anchorTo" .value=${anchorToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'anchorTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
-              <ha-list-item value=""></ha-list-item>
-              ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
-            </ha-select>
-            <ha-select label="Stretch To Element" name="stretchTo" .value=${stretchToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'stretchTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
-              <ha-list-item value=""></ha-list-item>
-              <ha-list-item value="canvas">Canvas Edge</ha-list-item>
-              ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
-            </ha-select>
-          </div>
-        ` : html`
-          <div style="display: flex; flex-direction: column; gap: 16px; min-width: 320px;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%;">
-              <div style="display: flex; flex-direction: column; align-items: center; min-width: 200px;">
+    const layout = element.layout || {};
+    const anchorCfg = layout.anchor || {};
+    const anchorTarget = anchorCfg.target ?? '';
+    const anchorSelfPoint = anchorCfg.selfPoint ?? '';
+    const anchorTargetPoint = anchorCfg.targetPoint ?? '';
+    const stretchCfg = layout.stretch || {};
+    const hTarget = stretchCfg.hTarget ?? '';
+    const hPadding = stretchCfg.hPadding ?? '';
+    const hPoint = stretchCfg.hPoint ?? '';
+    const vTarget = stretchCfg.vTarget ?? '';
+    const vPadding = stretchCfg.vPadding ?? '';
+    const vPoint = stretchCfg.vPoint ?? '';
+    // Determine active axis and related stretch fields
+    const activeAxis = this._stretchAxis[index] ?? ((hTarget && !vTarget) ? 'h' : ((vTarget && !hTarget) ? 'v' : 'h'));
+    const firstTarget = activeAxis === 'h' ? hTarget : vTarget;
+    const firstPadding = activeAxis === 'h' ? hPadding : vPadding;
+    const firstPoint = activeAxis === 'h' ? hPoint : vPoint;
+    const otherAxis = activeAxis === 'h' ? 'v' : 'h';
+    const secondTarget = otherAxis === 'h' ? hTarget : vTarget;
+    // Precompute stretch key names
+    const firstTargetKey = `stretch.${activeAxis}Target`;
+    const firstPaddingKey = `stretch.${activeAxis}Padding`;
+    const secondTargetKey = `stretch.${otherAxis}Target`;
+    const secondPaddingKey = `stretch.${otherAxis}Padding`;
+    const secondPointKey = `stretch.${otherAxis}Point`;
+    const secondPadding = otherAxis === 'h' ? hPadding : vPadding;
+    const secondPoint = otherAxis === 'h' ? hPoint : vPoint;
+    const offsetX = layout.offsetX ?? '';
+    const offsetY = layout.offsetY ?? '';
+    const otherElementIds = (this._config?.elements || [])
+                              .map(el => el.id)
+                              .filter(id => id && id !== element.id);
+
+    const selectedTarget = firstTarget;
+
+    return html`  
+      <div style="grid-column: 1 / -1; display: grid; gap: 8px;">
+        <ha-select
+          label="Anchor Target"
+          name="anchor.target"
+          .value=${element.layout?.anchor?.target ?? ''}
+          @selected=${(e: Event) => this._handleElementChange(e, index, 'anchor.target', 'layout')}
+          @closed=${(ev: Event) => ev.stopPropagation()}
+        >
+          <ha-list-item value=""></ha-list-item>
+          <ha-list-item value="canvas">Canvas</ha-list-item>
+          ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
+        </ha-select>
+        ${element.layout?.anchor?.target
+          ? html`
+            <div style="display: grid; grid-template-columns: repeat(2,1fr); gap:16px;">
+              <div>
                 ${this._renderAnchorGrid({
-                  label: 'Anchor Point',
-                  value: anchorPointValue,
-                  onSelect: (val: string) => {
-                    const event = { target: { value: val, type: 'text' } } as unknown as Event;
-                    this._handleElementChange(event, index, 'anchorPoint', 'layout');
-                  },
+                  label: 'Self Point',
+                  value: element.layout.anchor?.selfPoint ?? '',
+                  onSelect: (val: string) => this._handleElementChange({ target: { value: val } }, index, 'anchor.selfPoint', 'layout'),
                   labelCenter: true
                 })}
               </div>
-              <div style="display: flex; flex-direction: column; align-items: center; min-width: 200px;">
+              <div>
                 ${this._renderAnchorGrid({
-                  label: 'Target Anchor Point',
-                  value: targetAnchorPointValue,
-                  onSelect: (val: string) => {
-                    const event = { target: { value: val, type: 'text' } } as unknown as Event;
-                    this._handleElementChange(event, index, 'targetAnchorPoint', 'layout');
-                  },
+                  label: 'Target Point',
+                  value: element.layout.anchor?.targetPoint ?? '',
+                  onSelect: (val: string) => this._handleElementChange({ target: { value: val } }, index, 'anchor.targetPoint', 'layout'),
                   labelCenter: true
                 })}
               </div>
             </div>
-            <div style="display: flex; flex-direction: row; gap: 12px; align-items: flex-end; justify-content: flex-start; margin-top: 8px;">
-              <div style="min-width: 200px;">
-                <ha-select label="Anchor To Element" name="anchorTo" .value=${anchorToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'anchorTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
-                  <ha-list-item value=""></ha-list-item>
-                  ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
-                </ha-select>
-              </div>
-              <div style="min-width: 200px;">
-                <ha-select label="Stretch To Element" name="stretchTo" .value=${stretchToValue} @selected=${(e: Event) => this._handleElementChange(e, index, 'stretchTo', 'layout')} @closed=${(ev: Event) => ev.stopPropagation()}>
-                  <ha-list-item value=""></ha-list-item>
-                  <ha-list-item value="canvas">Canvas Edge</ha-list-item>
-                  ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
-                </ha-select>
-              </div>
-            </div>
-          </div>
-        `}
-        <div style="grid-column: 1 / -1; height: 8px;"></div>
-        <!-- Offsets group -->
-        <ha-textfield label="Offset X" name="offsetX" type="number" step="1" .value=${offsetXValue} @input=${(e: Event) => this._handleElementChange(e, index, 'offsetX', 'layout')}></ha-textfield>
-        <ha-textfield label="Offset Y" name="offsetY" type="number" step="1" .value=${offsetYValue} @input=${(e: Event) => this._handleElementChange(e, index, 'offsetY', 'layout')}></ha-textfield>
-        <!-- Stretch Gap group -->
-        <ha-textfield label="Stretch Gap" name="stretchPaddingX" type="number" step="1" .value=${layout.stretchPaddingX ?? ''} @input=${(e: Event) => this._handleElementChange(e, index, 'stretchPaddingX', 'layout')}></ha-textfield>
-        ${stretchToValue ? html`
-          <div style="display: flex; flex-direction: column; gap: 16px; align-items: center; margin-top: 8px;">
+          `
+          : ''}
+      </div>
+      <!-- Dynamic Stretch Configuration -->
+      <div style="grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr; gap: 8px; margin-top: 8px; align-items: start;">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <ha-select
+            label="Stretch"
+            .value=${selectedTarget}
+            @selected=${(e: Event) => {
+              const val = (e.target as any).value;
+              if (!val) {
+                // Clear all stretch settings
+                delete this._stretchAxis[index];
+                ['hTarget','hPoint','hPadding','vTarget','vPoint','vPadding'].forEach(suf =>
+                  this._handleElementChange({ target: { value: '' } }, index, `stretch.${suf}`, 'layout')
+                );
+              } else {
+                // Commit stretch target for current axis
+                const axis = this._stretchAxis[index] ?? 'h';
+                this._stretchAxis = { ...this._stretchAxis, [index]: axis };
+                this._handleElementChange({ target: { value: val } }, index, firstTargetKey, 'layout');
+              }
+              this.requestUpdate();
+            }}
+            @closed=${(ev: Event) => ev.stopPropagation()}
+          >
+            <ha-list-item value=""></ha-list-item>
+            <ha-list-item value="canvas">Canvas Edge</ha-list-item>
+            ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
+          </ha-select>
+          ${selectedTarget ? html`
+            <ha-textfield
+              label="Padding"
+              name=${firstPaddingKey}
+              type="number"
+              step="1"
+              .value=${firstPadding}
+              @input=${(e: Event) => this._handleElementChange(e, index, firstPaddingKey, 'layout')}
+            ></ha-textfield>
+          ` : ''}
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+          ${selectedTarget ? html`
             ${this._renderAnchorGrid({
-              label: 'Target Stretch Anchor Point',
-              value: layout.targetStretchAnchorPoint ?? '',
+              label: 'Stretch Anchor',
+              value: firstPoint,
               onSelect: (val: string) => {
-                const event = { target: { value: val, type: 'text' } } as unknown as Event;
-                this._handleElementChange(event, index, 'targetStretchAnchorPoint', 'layout');
+                const axis = activeAxis;
+                if (val) {
+                  this._handleElementChange({ target: { value: val } }, index, `stretch.${axis}Point`, 'layout');
+                } else {
+                  ['Point','Padding'].forEach(part =>
+                    this._handleElementChange({ target: { value: '' } }, index, `stretch.${axis}${part}`, 'layout')
+                  );
+                }
               },
               labelCenter: true,
               disableCorners: true
             })}
-          </div>
-        ` : ''}
+          ` : ''}
         </div>
-      `;
+      </div>
+      ${selectedTarget ? html`
+        <div style="grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr; gap: 8px; margin-top: 8px; align-items: start;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <ha-select
+              label="Stretch"
+              name=${secondTargetKey}
+              .value=${secondTarget}
+              @selected=${(e: Event) => this._handleElementChange(e, index, secondTargetKey, 'layout')}
+              @closed=${(ev: Event) => ev.stopPropagation()}
+            >
+              <ha-list-item value=""></ha-list-item>
+              <ha-list-item value="canvas">Canvas Edge</ha-list-item>
+              ${otherElementIds.map(id => html`<ha-list-item .value=${id}>${id}</ha-list-item>`)}
+            </ha-select>
+            ${secondTarget ? html`
+              <ha-textfield
+                label="Padding"
+                name=${secondPaddingKey}
+                type="number"
+                step="1"
+                .value=${secondPadding}
+                @input=${(e: Event) => this._handleElementChange(e, index, secondPaddingKey, 'layout')}
+              ></ha-textfield>
+            ` : ''}
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            ${secondTarget ? html`
+              ${this._renderAnchorGrid({
+                label: 'Stretch Anchor',
+                value: secondPoint,
+                onSelect: (val: string) => this._handleElementChange({ target: { value: val } }, index, secondPointKey, 'layout'),
+                labelCenter: true,
+                disableCorners: true,
+                disabledPoints: activeAxis === 'h'
+                  ? ['topLeft', 'centerLeft', 'bottomLeft', 'topRight', 'centerRight', 'bottomRight']
+                  : ['topLeft', 'topCenter', 'topRight', 'bottomLeft', 'bottomCenter', 'bottomRight']
+              })}
+            ` : ''}
+          </div>
+        </div>
+      ` : ''}
+      <div style="grid-column: 1 / -1; height: 8px;"></div>
+      <ha-textfield
+        label="Offset X"
+        name="offsetX"
+        type="number"
+        step="1"
+        .value=${offsetX}
+        @input=${(e: Event) => this._handleElementChange(e, index, 'offsetX', 'layout')}
+      ></ha-textfield>
+      <ha-textfield
+        label="Offset Y"
+        name="offsetY"
+        type="number"
+        step="1"
+        .value=${offsetY}
+        @input=${(e: Event) => this._handleElementChange(e, index, 'offsetY', 'layout')}
+      ></ha-textfield>
+    `;
   }
 
   private _toggleElementCollapse(index: number): void {
@@ -1091,7 +1207,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                         </div>
                         <ha-icon-button
                           style="margin-left: 8px; color: var(--primary-color); flex-shrink: 0;"
-                          @click=${(e: Event) => { e.stopPropagation(); this._confirmEditGroup(); }}
+                          @click=${() => this._confirmEditGroup()}
                           title="Rename Group"
                           .disabled=${!this._editingGroupInput.trim() || (this._groups.includes(this._editingGroupInput.trim()) && this._editingGroupInput.trim() !== groupId) || !!this._groupIdWarning}
                         >
@@ -1099,7 +1215,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                         </ha-icon-button>
                         <ha-icon-button
                           style="margin-left: 2px; color: var(--error-color);"
-                          @click=${(e: Event) => { e.stopPropagation(); this._cancelEditGroup(); }}
+                          @click=${() => this._cancelEditGroup()}
                           title="Cancel"
                         >
                           <ha-icon icon="mdi:close"></ha-icon>
@@ -1153,6 +1269,8 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                           }}
                           @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter') { e.stopPropagation(); this._confirmAddElement(); } }}
                           autofocus
+                          style="flex: 1; min-width: 80px; cursor: auto;"
+                          @click=${(e: Event) => e.stopPropagation()}
                         ></ha-textfield>
                         ${this._addElementWarning ? html`<div style="color: var(--error-color, #c00); font-size: 0.95em; margin-top: 2px; align-self: flex-start;">${this._addElementWarning}</div>` : ''}
                         <div style="display: flex; gap: 4px; margin-top: 2px;">
