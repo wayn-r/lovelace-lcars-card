@@ -219,35 +219,35 @@ export abstract class LayoutElement {
    * @returns True if layout can be calculated, false otherwise.
    */
   canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
-    // Only nested anchor is supported; skip checks when targeting 'canvas'
-    const anchorCfg = (this.layoutConfig.anchor || {}) as { target?: string };
-    if (anchorCfg.target && anchorCfg.target !== 'canvas') {
-      const targetElement = elementsMap.get(anchorCfg.target);
+    // Check anchor dependencies
+    if (this.layoutConfig.anchorTo) {
+        const targetElement = elementsMap.get(this.layoutConfig.anchorTo);
+        if (!targetElement || !targetElement.layout.calculated) {
+            return false;
+        }
+    }
+    // Check stretch dependencies
+    if (this.layoutConfig.stretchTo && this.layoutConfig.stretchTo !== 'canvas') {
+        const targetElement = elementsMap.get(this.layoutConfig.stretchTo);
+        if (!targetElement || !targetElement.layout.calculated) {
+            return false;
+        }
+    }
+    // Check height dependency for endcaps specifically
+    if (this.constructor.name === 'EndcapElement' && this.layoutConfig.anchorTo && !this.props.height) {
+      const targetElement = elementsMap.get(this.layoutConfig.anchorTo);
       if (!targetElement || !targetElement.layout.calculated) {
-        return false;
+          return false;
       }
     }
-    // Ensure stretch target dependencies are met before calculating
-    const stretchCfg = (this.layoutConfig.stretch || {}) as { hTarget?: string; vTarget?: string };
-    if (stretchCfg.hTarget && stretchCfg.hTarget !== 'canvas') {
-      const hEl = elementsMap.get(stretchCfg.hTarget);
-      if (!hEl || !hEl.layout.calculated) {
-        return false;
-      }
-    }
-    if (stretchCfg.vTarget && stretchCfg.vTarget !== 'canvas') {
-      const vEl = elementsMap.get(stretchCfg.vTarget);
-      if (!vEl || !vEl.layout.calculated) {
-        return false;
-      }
-    }
+
     return true;
   }
 
   /**
-   * Calculates the element's layout based on its configuration and the layout of other elements.
+   * Calculates the element's layout based on its configuration and dependencies.
    * @param elementsMap - Map of all elements by ID.
-   * @param containerRect - The bounding rectangle of the target container.
+   * @param containerRect - The bounding rect of the SVG container.
    */
   calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
     const { width: containerWidth, height: containerHeight } = containerRect;
@@ -259,141 +259,167 @@ export abstract class LayoutElement {
     if (typeof this.layoutConfig.height === 'string' && this.layoutConfig.height.endsWith('%')) {
       elementHeight = containerHeight * (parseFloat(this.layoutConfig.height) / 100);
     }
-
-    // --- Anchor logic (nested only, migrated from original code) ---
-    const anchorCfg = (this.layoutConfig.anchor || {}) as { target?: string; selfPoint?: string; targetPoint?: string } | undefined;
     let x = 0, y = 0;
-    if (anchorCfg && anchorCfg.target) {
-      const selfPoint = anchorCfg.selfPoint || 'topLeft';
-      const targetPoint = anchorCfg.targetPoint || selfPoint;
-      const selfOffset = this._getRelativeAnchorPosition(selfPoint, elementWidth, elementHeight);
-      if (anchorCfg.target === 'canvas') {
-        // Container anchoring
-        let cX = 0, cY = 0;
-        switch (targetPoint) {
-          case 'topLeft':      cX = 0;            cY = 0;            break;
-          case 'topCenter':    cX = containerWidth/2;  cY = 0;        break;
-          case 'topRight':     cX = containerWidth;    cY = 0;        break;
-          case 'centerLeft':   cX = 0;            cY = containerHeight/2; break;
-          case 'center':       cX = containerWidth/2;  cY = containerHeight/2; break;
-          case 'centerRight':  cX = containerWidth;    cY = containerHeight/2; break;
-          case 'bottomLeft':   cX = 0;            cY = containerHeight;   break;
-          case 'bottomCenter': cX = containerWidth/2;  cY = containerHeight;   break;
-          case 'bottomRight':  cX = containerWidth;    cY = containerHeight;   break;
+    // --- Container anchoring logic ---
+    if (!this.layoutConfig.anchorTo) {
+      // Use containerAnchorPoint if present
+      const containerAnchor = this.layoutConfig.containerAnchorPoint || 'topLeft';
+      // Get the anchor offset for this element (where its anchor point is)
+      const anchorOffset = this._getRelativeAnchorPosition(containerAnchor, elementWidth, elementHeight);
+      // Get the container anchor position
+      let containerAnchorX = 0;
+      let containerAnchorY = 0;
+      switch (containerAnchor) {
+        case 'topLeft':
+          containerAnchorX = 0;
+          containerAnchorY = 0;
+          break;
+        case 'topCenter':
+          containerAnchorX = containerWidth / 2;
+          containerAnchorY = 0;
+          break;
+        case 'topRight':
+          containerAnchorX = containerWidth;
+          containerAnchorY = 0;
+          break;
+        case 'centerLeft':
+          containerAnchorX = 0;
+          containerAnchorY = containerHeight / 2;
+          break;
+        case 'center':
+          containerAnchorX = containerWidth / 2;
+          containerAnchorY = containerHeight / 2;
+          break;
+        case 'centerRight':
+          containerAnchorX = containerWidth;
+          containerAnchorY = containerHeight / 2;
+          break;
+        case 'bottomLeft':
+          containerAnchorX = 0;
+          containerAnchorY = containerHeight;
+          break;
+        case 'bottomCenter':
+          containerAnchorX = containerWidth / 2;
+          containerAnchorY = containerHeight;
+          break;
+        case 'bottomRight':
+          containerAnchorX = containerWidth;
+          containerAnchorY = containerHeight;
+          break;
+        default:
+          containerAnchorX = 0;
+          containerAnchorY = 0;
+      }
+      x = containerAnchorX - anchorOffset.x;
+      y = containerAnchorY - anchorOffset.y;
+      // Apply offsets if present
+      x += this._parseOffset(this.layoutConfig.offsetX, containerWidth);
+      y += this._parseOffset(this.layoutConfig.offsetY, containerHeight);
+    }
+    // --- Debugging Anchor Logic --- 
+    if (this.layoutConfig.anchorTo) {
+      const targetElement = elementsMap.get(this.layoutConfig.anchorTo);
+      
+      if (targetElement && targetElement.layout.calculated) { 
+        
+        const anchorPoint = this.layoutConfig.anchorPoint || 'topLeft';
+        const targetAnchorPoint = this.layoutConfig.targetAnchorPoint || 'topLeft';
+        
+        
+        const anchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
+        const targetPos = targetElement._getRelativeAnchorPosition(targetAnchorPoint);
+        
+        
+        const initialX = targetElement.layout.x + targetPos.x - anchorPos.x;
+        const initialY = targetElement.layout.y + targetPos.y - anchorPos.y;
+        
+
+        x = initialX;
+        y = initialY;
+        
+        // Apply offsets relative to the anchor
+        const offsetX = this._parseOffset(this.layoutConfig.offsetX, containerWidth);
+        const offsetY = this._parseOffset(this.layoutConfig.offsetY, containerHeight);
+        if (this.layoutConfig.offsetX !== undefined) {
+            
+            x += offsetX;
         }
-        x = cX - selfOffset.x + this._parseOffset(this.layoutConfig.offsetX, containerWidth);
-        y = cY - selfOffset.y + this._parseOffset(this.layoutConfig.offsetY, containerHeight);
+        if (this.layoutConfig.offsetY !== undefined) {
+            
+            y += offsetY;
+        }
+        
+
       } else {
-        // Element anchoring
-        const targetEl = elementsMap.get(anchorCfg.target);
-        if (!targetEl || !targetEl.layout.calculated) {
-          this.layout.calculated = false;
-          return;
-        }
-        const targetOffset = targetEl._getRelativeAnchorPosition(targetPoint, targetEl.layout.width, targetEl.layout.height);
-        x = targetEl.layout.x + targetOffset.x - selfOffset.x + this._parseOffset(this.layoutConfig.offsetX, containerWidth);
-        y = targetEl.layout.y + targetOffset.y - selfOffset.y + this._parseOffset(this.layoutConfig.offsetY, containerHeight);
+        console.warn(`[${this.id}] Anchor target '${this.layoutConfig.anchorTo}' not found or not calculated yet.`);
+        // If target not ready, layout cannot be calculated accurately this pass
+        this.layout.calculated = false; 
+        return; // Stop calculation for this element this pass
       }
     }
+    // --- End Debugging --- 
 
-    // Check stretch dependencies for both horizontal and vertical axes
-    const stretchCfg = (this.layoutConfig.stretch || {}) as { hTarget?: string; hPoint?: string; hPadding?: number | string; vTarget?: string; vPoint?: string; vPadding?: number | string };
-    // Horizontal stretching
-    if (stretchCfg.hTarget && stretchCfg.hPoint) {
-        let selfHPoint = (stretchCfg as any).hSelfPoint as string | undefined;
-        if (!selfHPoint) {
-            // Default self point opposite to target side
-            if (stretchCfg.hPoint.endsWith('Left')) {
-                selfHPoint = 'centerRight';
-            } else if (stretchCfg.hPoint.endsWith('Right')) {
-                selfHPoint = 'centerLeft';
-            } else {
-                selfHPoint = 'center';
-            }
+    // Handle stretching to other elements or canvas edges (can modify width/height and x/y)
+    if (this.layoutConfig.stretchTo) {
+      const stretchAnchorPoint = this.layoutConfig.stretchAnchorPoint || 'topRight';
+      const targetStretchAnchorPoint = this.layoutConfig.targetStretchAnchorPoint || 'topLeft';
+      const myStretchPos = this._getRelativeAnchorPosition(stretchAnchorPoint, elementWidth, elementHeight);
+      // Compute target stretch coordinates
+      let targetStretchCoordX = x + myStretchPos.x;
+      let targetStretchCoordY = y + myStretchPos.y;
+      if (this.layoutConfig.stretchTo === 'canvas') {
+        // Use canvas edge as target
+        switch (targetStretchAnchorPoint) {
+          case 'topLeft':
+            targetStretchCoordX = 0; targetStretchCoordY = 0; break;
+          case 'topCenter':
+            targetStretchCoordX = containerWidth / 2; targetStretchCoordY = 0; break;
+          case 'topRight':
+            targetStretchCoordX = containerWidth; targetStretchCoordY = 0; break;
+          case 'centerLeft':
+            targetStretchCoordX = 0; targetStretchCoordY = containerHeight / 2; break;
+          case 'center':
+            targetStretchCoordX = containerWidth / 2; targetStretchCoordY = containerHeight / 2; break;
+          case 'centerRight':
+            targetStretchCoordX = containerWidth; targetStretchCoordY = containerHeight / 2; break;
+          case 'bottomLeft':
+            targetStretchCoordX = 0; targetStretchCoordY = containerHeight; break;
+          case 'bottomCenter':
+            targetStretchCoordX = containerWidth / 2; targetStretchCoordY = containerHeight; break;
+          case 'bottomRight':
+            targetStretchCoordX = containerWidth; targetStretchCoordY = containerHeight; break;
         }
-        const myHPos = this._getRelativeAnchorPosition(selfHPoint, elementWidth, elementHeight);
-        let targetHCoordX = x + myHPos.x;
-        let targetHCoordY = y + myHPos.y;
-        if (stretchCfg.hTarget === 'canvas') {
-            switch (stretchCfg.hPoint) {
-                case 'topLeft':    targetHCoordX = 0; break;
-                case 'topCenter':  targetHCoordX = elementWidth / 2; break;
-                case 'topRight':   targetHCoordX = elementWidth; break;
-                case 'centerLeft': targetHCoordX = 0; break;
-                case 'center':     targetHCoordX = elementWidth / 2; break;
-                case 'centerRight':targetHCoordX = elementWidth; break;
-                case 'bottomLeft': targetHCoordX = 0; break;
-                case 'bottomCenter':targetHCoordX = elementWidth / 2; break;
-                case 'bottomRight':targetHCoordX = elementWidth; break;
-            }
-        } else {
-            const targetEl = elementsMap.get(stretchCfg.hTarget);
-            if (targetEl && targetEl.layout.calculated) {
-                const tpos = targetEl._getRelativeAnchorPosition(stretchCfg.hPoint, targetEl.layout.width, targetEl.layout.height);
-                targetHCoordX = targetEl.layout.x + tpos.x;
-                targetHCoordY = targetEl.layout.y + tpos.y;
-            }
+      } else {
+        // Stretch to another element
+        const targetElement = elementsMap.get(this.layoutConfig.stretchTo);
+        if (targetElement && targetElement.layout.calculated) {
+          const targetPos = targetElement._getRelativeAnchorPosition(targetStretchAnchorPoint);
+          targetStretchCoordX = targetElement.layout.x + targetPos.x;
+          targetStretchCoordY = targetElement.layout.y + targetPos.y;
         }
-        const currentH = x + myHPos.x;
-        const dh = (targetHCoordX - currentH) + (this._parseOffset(stretchCfg.hPadding, elementWidth) || 0);
-        const spaH = selfHPoint.toLowerCase();
-        if (spaH.includes('right') && !spaH.includes('left')) {
-            elementWidth += dh;
-        } else if (spaH.includes('left') && !spaH.includes('right')) {
-            // Stretch from left anchor: set width directly to span to target
-            elementWidth = dh;
-        }
-        elementWidth = Math.max(0, elementWidth);
-    }
-    // Vertical stretching
-    if (stretchCfg.vTarget && stretchCfg.vPoint) {
-        let selfVPoint = (stretchCfg as any).vSelfPoint as string | undefined;
-        if (!selfVPoint) {
-            // Default self point opposite to target side
-            if (stretchCfg.vPoint.startsWith('top')) {
-                selfVPoint = 'bottomCenter';
-            } else if (stretchCfg.vPoint.startsWith('bottom')) {
-                selfVPoint = 'topCenter';
-            } else {
-                selfVPoint = 'center';
-            }
-        }
-        const myVPos = this._getRelativeAnchorPosition(selfVPoint, elementWidth, elementHeight);
-        let targetVCoordX = x + myVPos.x;
-        let targetVCoordY = y + myVPos.y;
-        if (stretchCfg.vTarget === 'canvas') {
-            switch (stretchCfg.vPoint) {
-                case 'topLeft':    targetVCoordY = 0; break;
-                case 'topCenter':  targetVCoordY = 0; break;
-                case 'topRight':   targetVCoordY = 0; break;
-                case 'centerLeft': targetVCoordY = elementHeight / 2; break;
-                case 'center':     targetVCoordY = elementHeight / 2; break;
-                case 'centerRight':targetVCoordY = elementHeight / 2; break;
-                case 'bottomLeft': targetVCoordY = elementHeight; break;
-                case 'bottomCenter':targetVCoordY = elementHeight; break;
-                case 'bottomRight':targetVCoordY = elementHeight; break;
-            }
-        } else {
-            const targetEl = elementsMap.get(stretchCfg.vTarget);
-            if (targetEl && targetEl.layout.calculated) {
-                const tpos = targetEl._getRelativeAnchorPosition(stretchCfg.vPoint, targetEl.layout.width, targetEl.layout.height);
-                targetVCoordX = targetEl.layout.x + tpos.x;
-                targetVCoordY = targetEl.layout.y + tpos.y;
-            }
-        }
-        const currentV = y + myVPos.y;
-        const dv = (targetVCoordY - currentV) + (this._parseOffset(stretchCfg.vPadding, elementHeight) || 0);
-        const spaV = selfVPoint.toLowerCase();
-        if (spaV.includes('top') && !spaV.includes('bottom')) {
-            // Stretch down from top
-            elementHeight = Math.max(0, dv);
-        } else if (spaV.includes('bottom') && !spaV.includes('top')) {
-            // Stretch up from bottom, allow overlap
-            const absDv = Math.abs(dv);
-            // Reposition so element bottom aligns to target
-            y = targetVCoordY - absDv;
-            elementHeight = absDv;
-        }
+      }
+      // Calculate deltas
+      const currentStretchCoordX = x + myStretchPos.x;
+      const currentStretchCoordY = y + myStretchPos.y;
+      const dx = targetStretchCoordX - currentStretchCoordX + (this._parseOffset(this.layoutConfig.stretchPaddingX, containerWidth) || 0);
+      const dy = targetStretchCoordY - currentStretchCoordY + (this._parseOffset(this.layoutConfig.stretchPaddingY, containerHeight) || 0);
+      // Horizontal stretching
+      if (stretchAnchorPoint.includes('Right') && !stretchAnchorPoint.includes('Left')) {
+        elementWidth += dx;
+      } else if (stretchAnchorPoint.includes('Left') && !stretchAnchorPoint.includes('Right')) {
+        x += dx;
+        elementWidth -= dx;
+      }
+      // Vertical stretching
+      if (stretchAnchorPoint.includes('Bottom') && !stretchAnchorPoint.includes('Top')) {
+        elementHeight += dy;
+      } else if (stretchAnchorPoint.includes('Top') && !stretchAnchorPoint.includes('Bottom')) {
+        y += dy;
+        elementHeight -= dy;
+      }
+      // Clamp sizes
+      elementWidth = Math.max(0, elementWidth);
+      elementHeight = Math.max(0, elementHeight);
     }
     
     // Update layout state
@@ -402,6 +428,7 @@ export abstract class LayoutElement {
     this.layout.width = elementWidth;
     this.layout.height = elementHeight;
     this.layout.calculated = true;
+    // 
   }
 
   /**

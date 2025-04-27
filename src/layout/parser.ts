@@ -68,7 +68,8 @@ function createDefaultGroup(config: LcarsCardConfig, hass?: HomeAssistant): Grou
       fill: '#FFFFFF'
     },
     {
-      anchor: { target: 'canvas', selfPoint: 'topLeft', targetPoint: 'topLeft' },
+      anchorLeft: true,
+      anchorTop: true,
       offsetX: 16,
       offsetY: 30
     },
@@ -83,7 +84,8 @@ function createDefaultGroup(config: LcarsCardConfig, hass?: HomeAssistant): Grou
       fill: '#CCCCCC'
     },
     {
-      anchor: { target: 'canvas', selfPoint: 'topLeft', targetPoint: 'topLeft' },
+      anchorLeft: true,
+      anchorTop: true,
       offsetX: 16,
       offsetY: 60
     },
@@ -99,7 +101,8 @@ function createDefaultGroup(config: LcarsCardConfig, hass?: HomeAssistant): Grou
       ry: 0
     },
     {
-      anchor: { target: 'canvas', selfPoint: 'topLeft', targetPoint: 'topLeft' },
+      anchorLeft: true,
+      anchorTop: true,
       offsetX: 0,
       offsetY: 0,
       width: '100%',
