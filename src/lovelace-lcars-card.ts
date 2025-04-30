@@ -9,6 +9,9 @@ import gsap from 'gsap';
 import { LayoutEngine, Group, LayoutElement } from './layout/engine.js';
 import { parseConfig } from './layout/parser.js';
 
+// Import the NEW editor from its new location
+import './editor/lcars-card-editor.js';
+
 // Define the card configuration options interface
 export interface LcarsCardConfig {
   type: string;
@@ -235,8 +238,9 @@ export class LcarsCard extends LitElement {
     }
   }
 
+  // Define the static method to return the editor instance
   public static async getConfigElement(): Promise<LovelaceCardEditor> {
-    await import('./editor.js');
+    // Use the NEW editor tag
     return document.createElement('lcars-card-editor') as LovelaceCardEditor;
   }
 
