@@ -1,6 +1,4 @@
 ## BUGS:
- - group and element name editor should fill the width of its respective container up to the confirm/cancel buttons.
-   - the confirm/cancel buttons seem to be left aligned with the name editor input field, but should instead be right aligned in their respective container
 
 ## TODOs:
  - implement stretch to cardinal point (top, bottom, left, right, or combination)

@@ -107,15 +107,14 @@ export function renderElement(
   const customSchema = schema.filter(s => s.type === 'custom');
 
   return html`
-    <div class="element-editor"
+    <div class="element-editor ${isDragOver ? 'drag-over' : ''}"
          data-element-id=${elementId}
          draggable="true"
          @dragstart=${(e: DragEvent) => context.onDragStart(e, elementId)}
          @dragover=${(e: DragEvent) => context.onDragOver(e, elementId)}
          @drop=${(e: DragEvent) => context.onDrop(e, elementId)}
          @dragend=${context.onDragEnd}
-         style=${isDragging ? 'opacity: 0.5;' : ''}
-         class=${isDragOver ? 'drag-over' : ''}
+         style=${isDragging ? 'opacity: 0.4;' : ''}
     >
       <div class="element-header ${isEditingId ? 'editing' : ''}" @click=${() => !isEditingId && context.toggleElementCollapse(elementId)}>
           <ha-icon class="collapse-icon" icon="mdi:${isCollapsed ? 'chevron-right' : 'chevron-down'}"></ha-icon>
@@ -128,9 +127,21 @@ export function renderElement(
           }
           <span class="spacer"></span>
           ${!isEditingId ? html`
-               <ha-icon-button class="drag-handle" title="Drag to reorder" @mousedown=${(e: Event) => { e.stopPropagation(); }}> <ha-icon icon="mdi:drag-vertical"></ha-icon> </ha-icon-button>
-               <ha-icon-button class="edit-button" @click=${(e: Event) => { e.stopPropagation(); context.startEditElementId(elementId); }} title="Edit Element ID"> <ha-icon icon="mdi:pencil"></ha-icon> </ha-icon-button>
-               <ha-icon-button class="delete-button" @click=${(e: Event) => { e.stopPropagation(); context.handleDeleteElement(elementId); }} title="Delete Element"> <ha-icon icon="mdi:delete"></ha-icon> </ha-icon-button>
+               <div 
+                   class="drag-handle" 
+                   title="Drag to reorder" 
+                   draggable="true" 
+                   @dragstart=${(e: DragEvent) => context.onDragStart(e, elementId)}
+                   @mousedown=${(e: MouseEvent) => e.stopPropagation()} /* Prevent text selection */
+               >
+                   <ha-icon icon="mdi:drag-vertical"></ha-icon>
+               </div>
+               <div class="edit-button icon-button" @click=${(e: Event) => { e.stopPropagation(); context.startEditElementId(elementId); }} title="Edit Element ID">
+                   <ha-icon icon="mdi:pencil"></ha-icon>
+               </div>
+               <div class="delete-button icon-button" @click=${(e: Event) => { e.stopPropagation(); context.handleDeleteElement(elementId); }} title="Delete Element">
+                   <ha-icon icon="mdi:delete"></ha-icon>
+               </div>
           ` : ''}
       </div>
 
@@ -255,20 +266,20 @@ export function renderGroup(
                }
                <span class="spacer"></span>
                ${!isUngrouped && !isEditing && !isCollapsed ? html`
-                  <ha-icon-button
+                  <div
                       class="edit-button"
                       @click=${(e: Event) => { e.stopPropagation(); groupContext.startEditGroup(groupId); }}
                       title="Edit Group Name"
                   >
                       <ha-icon icon="mdi:pencil"></ha-icon>
-                  </ha-icon-button>
-                  <ha-icon-button
+                  </div>
+                  <div
                       class="delete-button"
                       @click=${(e: Event) => { e.stopPropagation(); groupContext.requestDeleteGroup(groupId); }}
                       title="Delete Group"
                   >
                       <ha-icon icon="mdi:delete"></ha-icon>
-                  </ha-icon-button>
+                  </div>
                ` : ''}
           </div>
 

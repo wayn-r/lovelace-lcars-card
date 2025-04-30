@@ -655,9 +655,37 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
        this._draggedElementId = elementId;
       if (ev.dataTransfer) {
           ev.dataTransfer.effectAllowed = 'move';
+          
+          // Find the element being dragged
+          const draggedEl = this.renderRoot.querySelector(`.element-editor[data-element-id="${elementId}"]`) as HTMLElement | null;
+          if (draggedEl) {
+              // Clone for drag image
+              const ghost = draggedEl.cloneNode(true) as HTMLElement;
+              ghost.style.position = 'absolute';
+              ghost.style.top = '-9999px';
+              ghost.style.left = '-9999px';
+              ghost.style.width = `${draggedEl.offsetWidth}px`;
+              ghost.style.height = 'auto';
+              ghost.style.opacity = '0.7';
+              ghost.style.pointerEvents = 'none';
+              ghost.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+              ghost.style.background = getComputedStyle(draggedEl).background;
+              
+              document.body.appendChild(ghost);
+              
+              // Center the drag image under the cursor
+              const rect = draggedEl.getBoundingClientRect();
+              const offsetX = ev.clientX - rect.left;
+              const offsetY = ev.clientY - rect.top;
+              
+              ev.dataTransfer.setDragImage(ghost, offsetX, offsetY);
+              
+              // Remove ghost after drag image is captured
+              setTimeout(() => {
+                  document.body.removeChild(ghost);
+              }, 0);
+          }
       }
-       const target = ev.target as HTMLElement | null;
-       if (target) target.style.opacity = '0.5';
   }
   private _onDragOver(ev: DragEvent, targetElementId: string): void { 
        ev.preventDefault();
@@ -695,20 +723,22 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           this._onDragEnd(ev);
           return;
       }
+      
+      // Fix: Simply splice out the dragged element and insert at target position
+      // No adjustment needed as that was causing the incorrect movement
       const [movedElement] = elements.splice(draggedIndex, 1);
-      const adjustedTargetIndex = draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
-      elements.splice(adjustedTargetIndex, 0, movedElement);
+      elements.splice(targetIndex, 0, movedElement);
+      
       this._draggedElementId = null;
       this._dragOverElementId = null;
       this._updateConfig(elements);
   }
   private _onDragEnd(ev: DragEvent): void { 
-        if (this._draggedElementId) {
-           const draggedEl = this.renderRoot.querySelector(`.element-editor[data-element-id="${this._draggedElementId}"]`) as HTMLElement | null;
-           if (draggedEl) draggedEl.style.opacity = '1';
-       }
+      // Reset drag related state
       this._draggedElementId = null;
       this._dragOverElementId = null;
+      
+      // Force re-render to ensure UI updates
       this.requestUpdate();
   }
 
@@ -808,7 +838,8 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         addElementDraftGroup: this._addElementDraftGroup,
         addElementInput: this._addElementInput,
         addElementWarning: this._addElementWarning,
-        groupInstances: this._groupInstances
+        groupInstances: this._groupInstances,
+        newGroupInput: this._newGroupInput
     };
 
     // Create custom renderGroupList with our own Add Group button

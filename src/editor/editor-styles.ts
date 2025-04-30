@@ -163,8 +163,13 @@ export const editorStyles = css`
   .delete-button {
       color: var(--error-color);
   }
-  .drag-handle {
+  .drag-handle:active {
       cursor: grab;
+      /* Add minimal styling for the div handle */
+      display: inline-flex; /* Align icon nicely */
+      align-items: center;
+      padding: 6px; /* Adjust padding as needed */
+      margin-right: 4px; /* Spacing */
   }
   .drag-handle:active {
       cursor: grabbing;
@@ -204,5 +209,21 @@ export const editorStyles = css`
       display: flex;
       margin-left: auto;
       gap: 4px;
+  }
+  /* Common styles for div-based icon buttons */
+  .icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px; /* Match drag handle or adjust */
+    cursor: pointer;
+    border-radius: 50%; /* Optional: make it round */
+    transition: background-color 0.2s;
+  }
+  .icon-button:hover {
+    background-color: rgba(var(--rgb-primary-text-color), 0.05);
+  }
+  .icon-button:active {
+    background-color: rgba(var(--rgb-primary-text-color), 0.1);
   }
 `; 
