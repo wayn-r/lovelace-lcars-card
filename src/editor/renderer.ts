@@ -53,6 +53,7 @@ interface GroupEditorContext {
   addElementInput: string;
   addElementWarning: string;
   groupInstances: Map<string, LcarsGroup>;
+  newGroupInput: string;
 }
 
 // Function to render a single element
@@ -116,7 +117,7 @@ export function renderElement(
          style=${isDragging ? 'opacity: 0.5;' : ''}
          class=${isDragOver ? 'drag-over' : ''}
     >
-      <div class="element-header" @click=${() => !isEditingId && context.toggleElementCollapse(elementId)}>
+      <div class="element-header ${isEditingId ? 'editing' : ''}" @click=${() => !isEditingId && context.toggleElementCollapse(elementId)}>
           <ha-icon class="collapse-icon" icon="mdi:${isCollapsed ? 'chevron-right' : 'chevron-down'}"></ha-icon>
           ${isEditingId
               ? renderElementIdEditForm(elementId, elementInstance, context)
@@ -203,28 +204,30 @@ export function renderElementIdEditForm(
           ></ha-textfield>
           ${warningMessage ? html`<div class="warning-text">${warningMessage}</div>` : ''}
       </div>
-       <ha-icon-button
-          class="confirm-button"
-          @click=${(e: Event) => { 
-              e.stopPropagation(); 
-              context.handleConfirmEditElementId(elementInstance); 
-          }}
-          title="Rename Element ID"
-          .disabled=${!currentInput.trim() || !!warningMessage}
-      >
-          <ha-icon icon="mdi:check"></ha-icon>
-      </ha-icon-button>
-      <ha-icon-button
-          class="cancel-button"
-          @click=${(e: Event) => { 
-              e.stopPropagation(); 
-              elementInstance.cancelEditingId(); // Cancel on instance
-              context.cancelEditElementId(); // Cancel on editor
-          }}
-          title="Cancel"
-      >
-          <ha-icon icon="mdi:close"></ha-icon>
-      </ha-icon-button>
+      <div class="editing-actions">
+         <ha-icon-button
+            class="confirm-button"
+            @click=${(e: Event) => { 
+                e.stopPropagation(); 
+                context.handleConfirmEditElementId(elementInstance); 
+            }}
+            title="Rename Element ID"
+            .disabled=${!currentInput.trim() || !!warningMessage}
+         >
+            <ha-icon icon="mdi:check"></ha-icon>
+         </ha-icon-button>
+         <ha-icon-button
+            class="cancel-button"
+            @click=${(e: Event) => { 
+                e.stopPropagation(); 
+                elementInstance.cancelEditingId(); // Cancel on instance
+                context.cancelEditElementId(); // Cancel on editor
+            }}
+            title="Cancel"
+         >
+            <ha-icon icon="mdi:close"></ha-icon>
+         </ha-icon-button>
+      </div>
   `;
 }
 
@@ -241,7 +244,7 @@ export function renderGroup(
 
     return html`
       <div class="group-editor ${isUngrouped ? 'ungrouped' : ''}">
-          <div class="group-header" @click=${() => !isEditing && groupContext.toggleGroupCollapse(groupId)}>
+          <div class="group-header ${isEditing ? 'editing' : ''}" @click=${() => !isEditing && groupContext.toggleGroupCollapse(groupId)}>
                <ha-icon icon="mdi:${isCollapsed ? 'chevron-right' : 'chevron-down'}"></ha-icon>
                ${isEditing
                   ? renderGroupEditForm(groupId, groupContext)
@@ -296,47 +299,55 @@ export function renderGroup(
 
 // Renders the form for adding a new group
 export function renderNewGroupForm(groupContext: GroupEditorContext): TemplateResult {
-  return html`
-      <div class="group-editor new-group-draft">
-          <div class="group-header">
+    const currentInput = groupContext.newGroupInput;
+    const warningMessage = groupContext.groupIdWarning;
+
+    return html`
+      <div class="group-editor new-group">
+          <div class="group-header editing">
               <ha-icon icon="mdi:chevron-down"></ha-icon>
               <div class="group-name-input">
                   <ha-textfield
                       label="New Group Name"
-                      .value=${groupContext.editingGroupInput}
+                      .value=${currentInput}
                       @input=${(e: Event) => {
                           const newValue = (e.target as HTMLInputElement).value;
-                          // Update the editor state through the callback
                           groupContext.updateGroupNameInput(newValue);
                       }}
                       @keydown=${(e: KeyboardEvent) => { 
-                          if (e.key === 'Enter') {
-                              // Use the proper callback for confirming new group
-                              groupContext.confirmAddElement();
-                          }
+                          if (e.key === 'Enter') { 
+                              e.stopPropagation(); 
+                              groupContext.handleConfirmEditGroup('__new__'); 
+                          } 
                       }}
                       autofocus
-                      required
-                      error-message=${groupContext.groupIdWarning || "Invalid input"}
-                      .invalid=${!!groupContext.groupIdWarning}
+                      .invalid=${!!warningMessage}
                   ></ha-textfield>
-                  ${groupContext.groupIdWarning ? html`<div class="warning-text">${groupContext.groupIdWarning}</div>` : ''}
+                  ${warningMessage ? html`<div class="warning-text">${warningMessage}</div>` : ''}
               </div>
-               <ha-icon-button
-                  class="confirm-button"
-                  @click=${groupContext.confirmAddElement}
-                  title="Create Group"
-                  .disabled=${!groupContext.editingGroupInput.trim() || !!groupContext.groupIdWarning}
-               >
-                  <ha-icon icon="mdi:check"></ha-icon>
-              </ha-icon-button>
-              <ha-icon-button
-                  class="cancel-button"
-                  @click=${groupContext.cancelAddElement}
-                  title="Cancel"
-              >
-                  <ha-icon icon="mdi:close"></ha-icon>
-              </ha-icon-button>
+              <div class="editing-actions">
+                  <ha-icon-button
+                      class="confirm-button"
+                      @click=${(e: Event) => { 
+                          e.stopPropagation(); 
+                          groupContext.handleConfirmEditGroup('__new__');
+                      }}
+                      title="Create Group"
+                      .disabled=${!currentInput.trim() || !!warningMessage}
+                  >
+                      <ha-icon icon="mdi:check"></ha-icon>
+                  </ha-icon-button>
+                  <ha-icon-button
+                      class="cancel-button"
+                      @click=${(e: Event) => { 
+                          e.stopPropagation(); 
+                          groupContext.cancelEditGroup(); 
+                      }}
+                      title="Cancel"
+                  >
+                      <ha-icon icon="mdi:close"></ha-icon>
+                  </ha-icon-button>
+              </div>
           </div>
       </div>
     `;
@@ -347,58 +358,59 @@ export function renderGroupEditForm(
   groupId: string,
   groupContext: GroupEditorContext
 ): TemplateResult {
-    // Get the actual instance to bind events and get state
+    // Get current input value from editor state
+    const currentInput = groupContext.editingGroupInput;
+    const warningMessage = groupContext.groupIdWarning;
     const groupInstance = groupContext.groupInstances.get(groupId);
-    if (!groupInstance) {
-        return html`<div class="error-message">Error: Group instance not found.</div>`;
-    }
+    // Simple validation - name is not empty and no warning message
+    const isValid = !!currentInput.trim() && !warningMessage;
 
     return html`
       <div class="group-name-input">
           <ha-textfield
               label="Edit Group Name"
-              .value=${groupContext.editingGroupInput}
+              .value=${currentInput}
               @input=${(e: Event) => {
                   const newValue = (e.target as HTMLInputElement).value;
-                  // Update both the group instance and the editor's state
-                  groupInstance.updateNameInput(newValue);
+                  if (groupInstance) {
+                      groupInstance.updateNameInput(newValue);
+                  }
                   groupContext.updateGroupNameInput(newValue);
-                  // Error message will be synced by the updateGroupNameInput method
               }}
               @keydown=${(e: KeyboardEvent) => { 
                   if (e.key === 'Enter') { 
                       e.stopPropagation(); 
-                      groupContext.handleConfirmEditGroup(groupId);
+                      groupContext.handleConfirmEditGroup(groupId); 
                   } 
               }}
               autofocus
-              required
-              .invalid=${!!groupContext.groupIdWarning}
+              .invalid=${!!warningMessage}
           ></ha-textfield>
-          ${groupContext.groupIdWarning ? html`<div class="warning-text">${groupContext.groupIdWarning}</div>` : ''}
+          ${warningMessage ? html`<div class="warning-text">${warningMessage}</div>` : ''}
       </div>
-      <ha-icon-button
-          class="confirm-button"
-          @click=${(e: Event) => { 
-              e.stopPropagation(); 
-              groupContext.handleConfirmEditGroup(groupId);
-          }}
-          title="Rename Group"
-          .disabled=${!groupContext.editingGroupInput.trim() || !!groupContext.groupIdWarning}
-      >
-          <ha-icon icon="mdi:check"></ha-icon>
-      </ha-icon-button>
-      <ha-icon-button
-          class="cancel-button"
-          @click=${(e: Event) => { 
-              e.stopPropagation(); 
-              groupInstance.cancelEditingName(); // Cancel on instance 
-              groupContext.cancelEditGroup(); // Cancel on editor 
-          }}
-          title="Cancel"
-      >
-          <ha-icon icon="mdi:close"></ha-icon>
-      </ha-icon-button>
+      <div class="editing-actions">
+          <ha-icon-button
+              class="confirm-button"
+              @click=${(e: Event) => { 
+                  e.stopPropagation(); 
+                  groupContext.handleConfirmEditGroup(groupId); 
+              }}
+              title="Rename Group"
+              .disabled=${!currentInput.trim() || !isValid || !!warningMessage}
+          >
+              <ha-icon icon="mdi:check"></ha-icon>
+          </ha-icon-button>
+          <ha-icon-button
+              class="cancel-button"
+              @click=${(e: Event) => { 
+                  e.stopPropagation(); 
+                  groupContext.cancelEditGroup(); 
+              }}
+              title="Cancel"
+          >
+              <ha-icon icon="mdi:close"></ha-icon>
+          </ha-icon-button>
+      </div>
     `;
 }
 
@@ -419,44 +431,51 @@ export function renderGroupDeleteWarning(
 
 // Renders the form for adding a new element within a group
 export function renderAddElementForm(groupContext: GroupEditorContext): TemplateResult {
-  return html`
-      <div class="add-element-form">
-          <ha-textfield
-              label="New Element ID (base)"
-              .value=${groupContext.addElementInput}
-              @input=${(e: Event) => {
-                  const newValue = (e.target as HTMLInputElement).value;
-                  // Update the editor state through the callback
-                  groupContext.updateNewElementInput(newValue);
-              }}
-              @keydown=${(e: KeyboardEvent) => { 
-                  if (e.key === 'Enter') {
-                      groupContext.confirmAddElement();
-                  }
-              }}
-              autofocus
-              required
-              .invalid=${!!groupContext.addElementWarning}
-          ></ha-textfield>
-          ${groupContext.addElementWarning ? html`<div class="warning-text">${groupContext.addElementWarning}</div>` : ''}
-          <div class="form-actions">
-               <ha-icon-button
-                  class="confirm-button"
-                  @click=${groupContext.confirmAddElement}
-                  title="Add Element"
-                  .disabled=${!groupContext.addElementInput.trim() || !!groupContext.addElementWarning}
-               >
-                  <ha-icon icon="mdi:check"></ha-icon>
-              </ha-icon-button>
-              <ha-icon-button
-                  class="cancel-button"
-                  @click=${groupContext.cancelAddElement}
-                  title="Cancel"
-              >
-                  <ha-icon icon="mdi:close"></ha-icon>
-              </ha-icon-button>
-          </div>
-      </div>
+    const groupId = groupContext.addElementDraftGroup;
+    if (!groupId) return html``;
+    
+    const currentInput = groupContext.addElementInput;
+    const warningMessage = groupContext.addElementWarning;
+    
+    return html`
+        <div class="add-element-form">
+            <div class="element-name-input">
+                <ha-textfield
+                    label="New Element ID"
+                    .value=${currentInput}
+                    @input=${(e: Event) => {
+                        const newValue = (e.target as HTMLInputElement).value;
+                        groupContext.updateNewElementInput(newValue);
+                    }}
+                    @keydown=${(e: KeyboardEvent) => { 
+                        if (e.key === 'Enter') { 
+                            e.stopPropagation(); 
+                            groupContext.confirmAddElement(); 
+                        } 
+                    }}
+                    autofocus
+                    .invalid=${!!warningMessage}
+                ></ha-textfield>
+                ${warningMessage ? html`<div class="warning-text">${warningMessage}</div>` : ''}
+            </div>
+            <div class="editing-actions">
+                <ha-icon-button
+                    class="confirm-button"
+                    @click=${() => groupContext.confirmAddElement()}
+                    title="Add Element"
+                    .disabled=${!currentInput.trim()}
+                >
+                    <ha-icon icon="mdi:check"></ha-icon>
+                </ha-icon-button>
+                <ha-icon-button
+                    class="cancel-button"
+                    @click=${() => groupContext.cancelAddElement()}
+                    title="Cancel"
+                >
+                    <ha-icon icon="mdi:close"></ha-icon>
+                </ha-icon-button>
+            </div>
+        </div>
     `;
 }
 

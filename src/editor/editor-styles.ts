@@ -43,6 +43,12 @@ export const editorStyles = css`
       user-select: none;
       gap: 8px;
   }
+  .group-header.editing {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      gap: 8px;
+  }
   .group-name {
       font-weight: bold;
   }
@@ -55,6 +61,13 @@ export const editorStyles = css`
   .element-name-input {
       flex: 1;
       margin-left: 8px;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+  }
+  .group-name-input ha-textfield,
+  .element-name-input ha-textfield {
+      width: 100%;
   }
   .warning-text {
       color: var(--error-color);
@@ -102,6 +115,12 @@ export const editorStyles = css`
       user-select: none;
       gap: 8px;
       border-bottom: 1px solid var(--divider-color);
+  }
+  .element-header.editing {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      gap: 8px;
   }
   .element-name {
       font-weight: 500;
@@ -156,17 +175,16 @@ export const editorStyles = css`
       margin-top: 8px;
   }
   .add-element-form {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 4px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 8px;
       padding: 8px;
       border: 1px dashed var(--divider-color);
       border-radius: 4px;
   }
-  .add-element-form .form-actions {
-      display: flex;
-      gap: 4px;
+  .add-element-form .element-name-input {
+      width: 100%;
   }
   .layout-grid-2col { display: none; } /* Hide old layout */
   .element-section h5 { display: none; } /* Hide old section headers */
@@ -181,5 +199,10 @@ export const editorStyles = css`
   .element-body {
       padding: 12px;
       background-color: rgba(var(--rgb-primary-background-color), 0.5);
+  }
+  .editing-actions {
+      display: flex;
+      margin-left: auto;
+      gap: 4px;
   }
 `; 
