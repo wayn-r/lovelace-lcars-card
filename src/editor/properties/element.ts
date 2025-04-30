@@ -168,13 +168,27 @@ export abstract class LcarsElementBase {
         // Add cleanup logic here...
         // This logic depends on the final structure (props vs layout)
         // For now, assume a flat structure matching schema names
-        if (processedData.anchorTo && processedData.containerAnchorPoint) {
+        
+        // Handle container anchoring
+        if (processedData.anchorTo === 'container') {
+            // When anchoring to container, we should use containerAnchorPoint
+            // If there's no containerAnchorPoint, use a default value
+            if (!processedData.containerAnchorPoint) {
+                processedData.containerAnchorPoint = 'topLeft';
+            }
+            // Remove any element-specific anchor points since we're using the container
+            if (processedData.anchorPoint) delete processedData.anchorPoint;
+            if (processedData.targetAnchorPoint) delete processedData.targetAnchorPoint;
+        } else if (processedData.anchorTo && processedData.containerAnchorPoint) {
+            // If anchoring to element, remove containerAnchorPoint
             delete processedData.containerAnchorPoint;
-        }
-        if (!processedData.anchorTo && (processedData.anchorPoint || processedData.targetAnchorPoint)) {
+        } else if (!processedData.anchorTo && (processedData.anchorPoint || processedData.targetAnchorPoint)) {
+            // If not anchoring to anything, remove element-specific anchor points
             delete processedData.anchorPoint;
             delete processedData.targetAnchorPoint;
         }
+        
+        // Handle stretching
         if (!processedData.stretchTo && processedData.targetStretchAnchorPoint) {
             delete processedData.targetStretchAnchorPoint;
         }

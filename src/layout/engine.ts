@@ -220,21 +220,21 @@ export abstract class LayoutElement {
    */
   canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
     // Check anchor dependencies
-    if (this.layoutConfig.anchorTo) {
+    if (this.layoutConfig.anchorTo && this.layoutConfig.anchorTo !== 'container') {
         const targetElement = elementsMap.get(this.layoutConfig.anchorTo);
         if (!targetElement || !targetElement.layout.calculated) {
             return false;
         }
     }
     // Check stretch dependencies
-    if (this.layoutConfig.stretchTo && this.layoutConfig.stretchTo !== 'canvas') {
+    if (this.layoutConfig.stretchTo && this.layoutConfig.stretchTo !== 'canvas' && this.layoutConfig.stretchTo !== 'container') {
         const targetElement = elementsMap.get(this.layoutConfig.stretchTo);
         if (!targetElement || !targetElement.layout.calculated) {
             return false;
         }
     }
     // Check height dependency for endcaps specifically
-    if (this.constructor.name === 'EndcapElement' && this.layoutConfig.anchorTo && !this.props.height) {
+    if (this.constructor.name === 'EndcapElement' && this.layoutConfig.anchorTo && this.layoutConfig.anchorTo !== 'container' && !this.props.height) {
       const targetElement = elementsMap.get(this.layoutConfig.anchorTo);
       if (!targetElement || !targetElement.layout.calculated) {
           return false;
@@ -261,7 +261,7 @@ export abstract class LayoutElement {
     }
     let x = 0, y = 0;
     // --- Container anchoring logic ---
-    if (!this.layoutConfig.anchorTo) {
+    if (!this.layoutConfig.anchorTo || this.layoutConfig.anchorTo === 'container') {
       // Use containerAnchorPoint if present
       const containerAnchor = this.layoutConfig.containerAnchorPoint || 'topLeft';
       // Get the anchor offset for this element (where its anchor point is)
@@ -317,7 +317,7 @@ export abstract class LayoutElement {
       y += this._parseOffset(this.layoutConfig.offsetY, containerHeight);
     }
     // --- Debugging Anchor Logic --- 
-    if (this.layoutConfig.anchorTo) {
+    if (this.layoutConfig.anchorTo && this.layoutConfig.anchorTo !== 'container') {
       const targetElement = elementsMap.get(this.layoutConfig.anchorTo);
       
       if (targetElement && targetElement.layout.calculated) { 
@@ -367,7 +367,7 @@ export abstract class LayoutElement {
       // Compute target stretch coordinates
       let targetStretchCoordX = x + myStretchPos.x;
       let targetStretchCoordY = y + myStretchPos.y;
-      if (this.layoutConfig.stretchTo === 'canvas') {
+      if (this.layoutConfig.stretchTo === 'canvas' || this.layoutConfig.stretchTo === 'container') {
         // Use canvas edge as target
         switch (targetStretchAnchorPoint) {
           case 'topLeft':

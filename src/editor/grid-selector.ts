@@ -20,11 +20,10 @@ export class LcarsGridSelector extends LitElement {
       font-weight: bold;
       margin-bottom: 4px;
       display: block;
-      /* text-align: inherit; /* Default alignment */ */
     }
     .anchor-grid-label.center {
-        text-align:center;
-        width:100%;
+        text-align: center;
+        width: 100%;
     }
     .anchor-grid {
       display: grid;
@@ -76,7 +75,6 @@ export class LcarsGridSelector extends LitElement {
         position: absolute;
         color: #fff; /* White indicator for center */
     }
-
   `;
 
   private _handleClick(point: string): void {
@@ -136,7 +134,6 @@ export class LcarsGridSelector extends LitElement {
                 icon="${iconMap[pt]}"
               ></ha-icon>
               ${isSelected && isCenter ? html`<ha-icon class="center-selected-indicator" icon="mdi:circle"></ha-icon>` : ''}
-              <paper-tooltip for="button-${pt}" position="top">${pt}</paper-tooltip>
             </button>
           `;
         })}

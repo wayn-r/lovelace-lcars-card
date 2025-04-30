@@ -94,34 +94,39 @@ export class OffsetY implements LcarsPropertyBase {
 
 export class AnchorTo implements LcarsPropertyBase {
     name = 'anchorTo';
-    label = 'Anchor To Element';
+    label = 'Anchor To';
     configPath = 'layout.anchorTo';
 
     getSchema(context?: PropertySchemaContext): HaFormSchema {
-        const options = [{ value: '', label: 'None (Use Container Anchors)' }, ...(context?.otherElementIds || [])];
+        const options = [
+            { value: '', label: 'None (Use Container Anchors)' },
+            { value: 'container', label: 'Container' },
+            ...(context?.otherElementIds || [])
+        ];
         return {
             name: this.name,
             label: this.label,
-            selector: { select: { options: options } }
+            selector: { select: { options: options, mode: 'dropdown' } }
         };
     }
 }
 
 export class StretchTo implements LcarsPropertyBase {
     name = 'stretchTo';
-    label = 'Stretch To Element/Canvas';
+    label = 'Stretch To';
     configPath = 'layout.stretchTo';
 
     getSchema(context?: PropertySchemaContext): HaFormSchema {
         const options = [
             { value: '', label: 'None' }, 
+            { value: 'container', label: 'Container' },
             { value: 'canvas', label: 'Canvas Edge' }, 
             ...(context?.otherElementIds || [])
         ];
         return {
             name: this.name,
             label: this.label,
-            selector: { select: { options: options } }
+            selector: { select: { options: options, mode: 'dropdown' } }
         };
     }
 }
