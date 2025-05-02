@@ -97,7 +97,7 @@ export class OffsetY implements LcarsPropertyBase {
 export class AnchorTo implements LcarsPropertyBase {
     name = 'anchorTo';
     label = 'Anchor To';
-    configPath = 'layout.anchorTo';
+    configPath = 'layout.anchor.anchorTo';
 
     getSchema(context?: PropertySchemaContext): HaFormSchema {
         const options = [
@@ -132,25 +132,10 @@ export class StretchTo implements LcarsPropertyBase {
     }
 }
 
-export class ContainerAnchorPoint implements LcarsPropertyBase {
-    name = 'containerAnchorPoint';
-    label = 'Container Anchor Point';
-    configPath = 'layout.containerAnchorPoint';
-
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            type: 'custom', // Use custom type
-            selector: { lcars_grid: { labelCenter: true } } // Config for our custom element
-        };
-    }
-}
-
 export class AnchorPoint implements LcarsPropertyBase {
     name = 'anchorPoint';
     label = 'Anchor Point';
-    configPath = 'layout.anchorPoint';
+    configPath = 'layout.anchor.anchorPoint';
 
     getSchema(): HaFormSchema {
         return {
@@ -165,7 +150,7 @@ export class AnchorPoint implements LcarsPropertyBase {
 export class TargetAnchorPoint implements LcarsPropertyBase {
     name = 'targetAnchorPoint';
     label = 'Target Point';
-    configPath = 'layout.targetAnchorPoint';
+    configPath = 'layout.anchor.targetAnchorPoint';
 
     getSchema(): HaFormSchema {
         return {

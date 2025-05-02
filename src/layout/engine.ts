@@ -220,8 +220,8 @@ export abstract class LayoutElement {
    */
   canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
     // Check anchor dependencies
-    if (this.layoutConfig.anchorTo && this.layoutConfig.anchorTo !== 'container') {
-        const targetElement = elementsMap.get(this.layoutConfig.anchorTo);
+    if (this.layoutConfig.anchor?.anchorTo && this.layoutConfig.anchor.anchorTo !== 'container') {
+        const targetElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
         if (!targetElement || !targetElement.layout.calculated) {
             return false;
         }
@@ -234,8 +234,8 @@ export abstract class LayoutElement {
         }
     }
     // Check height dependency for endcaps specifically
-    if (this.constructor.name === 'EndcapElement' && this.layoutConfig.anchorTo && this.layoutConfig.anchorTo !== 'container' && !this.props.height) {
-      const targetElement = elementsMap.get(this.layoutConfig.anchorTo);
+    if (this.constructor.name === 'EndcapElement' && this.layoutConfig.anchor?.anchorTo && this.layoutConfig.anchor.anchorTo !== 'container' && !this.props.height) {
+      const targetElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
       if (!targetElement || !targetElement.layout.calculated) {
           return false;
       }
@@ -259,107 +259,46 @@ export abstract class LayoutElement {
     if (typeof this.layoutConfig.height === 'string' && this.layoutConfig.height.endsWith('%')) {
       elementHeight = containerHeight * (parseFloat(this.layoutConfig.height) / 100);
     }
-    let x = 0, y = 0;
-    // --- Container anchoring logic ---
-    if (!this.layoutConfig.anchorTo || this.layoutConfig.anchorTo === 'container') {
-      // Use containerAnchorPoint if present
-      const containerAnchor = this.layoutConfig.containerAnchorPoint || 'topLeft';
-      // Get the anchor offset for this element (where its anchor point is)
-      const anchorOffset = this._getRelativeAnchorPosition(containerAnchor, elementWidth, elementHeight);
-      // Get the container anchor position
-      let containerAnchorX = 0;
-      let containerAnchorY = 0;
-      switch (containerAnchor) {
-        case 'topLeft':
-          containerAnchorX = 0;
-          containerAnchorY = 0;
-          break;
-        case 'topCenter':
-          containerAnchorX = containerWidth / 2;
-          containerAnchorY = 0;
-          break;
-        case 'topRight':
-          containerAnchorX = containerWidth;
-          containerAnchorY = 0;
-          break;
-        case 'centerLeft':
-          containerAnchorX = 0;
-          containerAnchorY = containerHeight / 2;
-          break;
-        case 'center':
-          containerAnchorX = containerWidth / 2;
-          containerAnchorY = containerHeight / 2;
-          break;
-        case 'centerRight':
-          containerAnchorX = containerWidth;
-          containerAnchorY = containerHeight / 2;
-          break;
-        case 'bottomLeft':
-          containerAnchorX = 0;
-          containerAnchorY = containerHeight;
-          break;
-        case 'bottomCenter':
-          containerAnchorX = containerWidth / 2;
-          containerAnchorY = containerHeight;
-          break;
-        case 'bottomRight':
-          containerAnchorX = containerWidth;
-          containerAnchorY = containerHeight;
-          break;
-        default:
-          containerAnchorX = 0;
-          containerAnchorY = 0;
-      }
-      x = containerAnchorX - anchorOffset.x;
-      y = containerAnchorY - anchorOffset.y;
-      // Apply offsets if present
-      x += this._parseOffset(this.layoutConfig.offsetX, containerWidth);
-      y += this._parseOffset(this.layoutConfig.offsetY, containerHeight);
-    }
-    // --- Debugging Anchor Logic --- 
-    if (this.layoutConfig.anchorTo && this.layoutConfig.anchorTo !== 'container') {
-      const targetElement = elementsMap.get(this.layoutConfig.anchorTo);
-      
-      if (targetElement && targetElement.layout.calculated) { 
-        
-        const anchorPoint = this.layoutConfig.anchorPoint || 'topLeft';
-        const targetAnchorPoint = this.layoutConfig.targetAnchorPoint || 'topLeft';
-        
-        
-        const anchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
-        const targetPos = targetElement._getRelativeAnchorPosition(targetAnchorPoint);
-        
-        
-        const initialX = targetElement.layout.x + targetPos.x - anchorPos.x;
-        const initialY = targetElement.layout.y + targetPos.y - anchorPos.y;
-        
 
-        x = initialX;
-        y = initialY;
-        
-        // Apply offsets relative to the anchor
-        const offsetX = this._parseOffset(this.layoutConfig.offsetX, containerWidth);
-        const offsetY = this._parseOffset(this.layoutConfig.offsetY, containerHeight);
-        if (this.layoutConfig.offsetX !== undefined) {
-            
-            x += offsetX;
-        }
-        if (this.layoutConfig.offsetY !== undefined) {
-            
-            y += offsetY;
-        }
-        
+    let x = 0;
+    let y = 0;
+
+    const anchorConfig = this.layoutConfig.anchor;
+    const anchorTo = anchorConfig?.anchorTo;
+    const anchorPoint = anchorConfig?.anchorPoint || 'topLeft';
+    const targetAnchorPoint = anchorConfig?.targetAnchorPoint || 'topLeft';
+
+    // --- Anchoring Logic (Unified) ---
+    if (!anchorTo || anchorTo === 'container') {
+      // Anchoring to container
+      const elementAnchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
+      const containerTargetPos = this._getRelativeAnchorPosition(targetAnchorPoint, containerWidth, containerHeight); // Get target position relative to container 0,0
+
+      x = containerTargetPos.x - elementAnchorPos.x;
+      y = containerTargetPos.y - elementAnchorPos.y;
+
+    } else {
+      // Anchoring to another element
+      const targetElement = elementsMap.get(anchorTo);
+      if (targetElement && targetElement.layout.calculated) {
+        const elementAnchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
+        const targetElementPos = targetElement._getRelativeAnchorPosition(targetAnchorPoint);
+
+        x = targetElement.layout.x + targetElementPos.x - elementAnchorPos.x;
+        y = targetElement.layout.y + targetElementPos.y - elementAnchorPos.y;
 
       } else {
-        console.warn(`[${this.id}] Anchor target '${this.layoutConfig.anchorTo}' not found or not calculated yet.`);
-        // If target not ready, layout cannot be calculated accurately this pass
-        this.layout.calculated = false; 
+        console.warn(`[${this.id}] Anchor target '${anchorTo}' not found or not calculated yet.`);
+        this.layout.calculated = false;
         return; // Stop calculation for this element this pass
       }
     }
-    // --- End Debugging --- 
 
-    // Handle stretching to other elements or canvas edges (can modify width/height and x/y)
+    // Apply offsets relative to the calculated anchor position
+    x += this._parseOffset(this.layoutConfig.offsetX, containerWidth);
+    y += this._parseOffset(this.layoutConfig.offsetY, containerHeight);
+
+    // --- Stretching Logic (Remains the same, uses layoutConfig.stretchTo etc.) ---
     if (this.layoutConfig.stretchTo) {
       const stretchAnchorPoint = this.layoutConfig.stretchAnchorPoint || 'topRight';
       const targetStretchAnchorPoint = this.layoutConfig.targetStretchAnchorPoint || 'topLeft';

@@ -155,36 +155,8 @@ export function renderElement(
   // Get the unified schema dynamically
   const schema = elementInstance.getSchema(schemaContext);
 
-  // Prepare data for the form (flattened based on schema)
-  const propertiesMap = elementInstance.getPropertiesMap();
-  const formData: Record<string, any> = {};
-  propertiesMap.forEach((propInstance, key) => {
-      const pathParts = propInstance.configPath.split('.');
-      if (pathParts.length === 1) {
-          // Handle top-level properties like 'type'
-          const propKey = pathParts[0];
-          if (propKey in element) {
-              let value = element[propKey];
-              // Use formatValueForForm if available to transform the value for the form
-              if (propInstance.formatValueForForm) {
-                  value = propInstance.formatValueForForm(value);
-              }
-              formData[key] = value;
-          }
-      } else if (pathParts.length === 2) {
-          const parentKey = pathParts[0] as 'props' | 'layout';
-          const childKey = pathParts[1];
-          // Get value from the actual config object
-          if (element[parentKey] && childKey in element[parentKey]) {
-               let value = element[parentKey][childKey];
-               // Use formatValueForForm if available to transform the value for the form
-               if (propInstance.formatValueForForm) {
-                   value = propInstance.formatValueForForm(value);
-               }
-               formData[key] = value;
-          }
-      }
-  });
+  // Prepare data for the form using the new helper method
+  const formData = elementInstance.getFormData();
   
   // Filter schema to separate standard fields from custom ones (like grid selector)
   const standardSchema = schema.filter(s => s.type !== 'custom');

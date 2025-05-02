@@ -12,7 +12,6 @@ import {
     AnchorTo, 
     StretchTo,
     StretchTo2,
-    ContainerAnchorPoint,
     AnchorPoint, 
     TargetAnchorPoint, 
     TargetStretchAnchorPoint,
@@ -98,20 +97,15 @@ export abstract class LcarsElementBase {
 
         // Conditional Anchor Logic - Always include AnchorTo if required
         const anchorToType = allRequiredPropTypes.find(cls => cls === AnchorTo);
-        const containerAnchorType = allRequiredPropTypes.find(cls => cls === ContainerAnchorPoint);
         const anchorPointType = allRequiredPropTypes.find(cls => cls === AnchorPoint);
         const targetAnchorPointType = allRequiredPropTypes.find(cls => cls === TargetAnchorPoint);
 
         if (anchorToType) applicablePropTypes.push(anchorToType);
         
-        // Only include anchor points if anchoring to something specific
-        if (layoutData.anchorTo && layoutData.anchorTo !== '') {
-            // Always use the same anchor points regardless of target type
+        // Always include anchor points if anchoring is possible (AnchorTo property exists)
+        if (anchorToType) {
             if (anchorPointType) applicablePropTypes.push(anchorPointType);
             if (targetAnchorPointType) applicablePropTypes.push(targetAnchorPointType);
-        } else {
-            // Include container anchor point when not anchoring to a specific element
-            if (containerAnchorType) applicablePropTypes.push(containerAnchorType);
         }
 
         // Conditional Stretch Logic - Always include StretchTo if required
@@ -189,14 +183,56 @@ export abstract class LcarsElementBase {
     }
 
     /** 
+     * Gets a flattened data object suitable for ha-form's data property.
+     * Reads values from the nested config using configPath and keys by property name.
+     */
+    getFormData(): Record<string, any> {
+        const formData: Record<string, any> = {};
+        const propertiesMap = this.getPropertiesMap();
+
+        propertiesMap.forEach((propInstance, propName) => {
+            const pathParts = propInstance.configPath.split('.');
+            let value: any;
+
+            // Helper function to get nested property value
+            const getDeepValue = (obj: any, parts: string[]): any => {
+                let current = obj;
+                for (const part of parts) {
+                    if (current === null || current === undefined) return undefined;
+                    current = current[part];
+                }
+                return current;
+            };
+            
+            value = getDeepValue(this.config, pathParts);
+
+            // Apply formatting if needed (e.g., hex to rgb array for color picker)
+            if (propInstance.formatValueForForm) {
+                value = propInstance.formatValueForForm(value);
+            }
+            
+            // Only add to form data if value is not undefined
+            // (ha-form might interpret undefined differently than a missing key)
+            if (value !== undefined) {
+                 formData[propName] = value;
+            }
+        });
+        
+        return formData;
+    }
+
+    /** 
      * Process data updates for an element. 
      * Handles special cases for stretch and anchor properties.
      */
     processDataUpdate(newData: any): any {
         let processedData = { ...newData };
         
-        // Handle anchor points
-        if (processedData.anchorTo && processedData.anchorTo !== '') {
+        // If anchorTo is missing or empty, remove anchorPoint and targetAnchorPoint
+        if (!processedData.anchorTo || processedData.anchorTo === '') {
+            if (processedData.anchorPoint) delete processedData.anchorPoint;
+            if (processedData.targetAnchorPoint) delete processedData.targetAnchorPoint;
+        } else {
             // If anchoring to something but no anchor points are specified, set defaults
             if (!processedData.anchorPoint) {
                 processedData.anchorPoint = 'center';
@@ -204,16 +240,6 @@ export abstract class LcarsElementBase {
             if (!processedData.targetAnchorPoint) {
                 processedData.targetAnchorPoint = 'center';
             }
-            
-            // Remove containerAnchorPoint since we're using regular anchor points
-            if (processedData.containerAnchorPoint) {
-                delete processedData.containerAnchorPoint;
-            }
-        } else {
-            // If not anchoring to anything, remove all anchor points
-            if (processedData.anchorPoint) delete processedData.anchorPoint;
-            if (processedData.targetAnchorPoint) delete processedData.targetAnchorPoint;
-            if (processedData.containerAnchorPoint) delete processedData.containerAnchorPoint;
         }
         
         // Handle stretching
@@ -357,7 +383,7 @@ export class RectangleElement extends LcarsElementBase {
             Fill, 
             Width, Height,
             // Anchor options
-            AnchorTo, AnchorPoint, TargetAnchorPoint, ContainerAnchorPoint,
+            AnchorTo, AnchorPoint, TargetAnchorPoint,
             // Stretch options
             StretchTo, TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY,
             StretchTo2, TargetStretchAnchorPoint2,
@@ -378,7 +404,7 @@ export class TextElement extends LcarsElementBase {
             TextAnchor, DominantBaseline,
             TextTransform,
             // Anchor options
-            AnchorTo, AnchorPoint, TargetAnchorPoint, ContainerAnchorPoint,
+            AnchorTo, AnchorPoint, TargetAnchorPoint,
             // Stretch options
             StretchTo, TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY,
             StretchTo2, TargetStretchAnchorPoint2,
@@ -399,7 +425,7 @@ export class ElbowElement extends LcarsElementBase {
             HeaderHeight, TotalElbowHeight,
             OuterCornerRadius,
             // Anchor options
-            AnchorTo, AnchorPoint, TargetAnchorPoint, ContainerAnchorPoint,
+            AnchorTo, AnchorPoint, TargetAnchorPoint,
             // Stretch options
             StretchTo, TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY,
             StretchTo2, TargetStretchAnchorPoint2,
@@ -418,7 +444,7 @@ export class EndcapElement extends LcarsElementBase {
             // Layout 
             Width, Height,
             // Anchor options from base class
-            AnchorTo, AnchorPoint, TargetAnchorPoint, ContainerAnchorPoint,
+            AnchorTo, AnchorPoint, TargetAnchorPoint,
             // Stretch options from base class
             StretchTo, TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY,
             StretchTo2, TargetStretchAnchorPoint2,
@@ -437,7 +463,7 @@ export class ChiselEndcapElement extends LcarsElementBase {
             // Layout 
             Width, Height,
             // Anchor options
-            AnchorTo, AnchorPoint, TargetAnchorPoint, ContainerAnchorPoint,
+            AnchorTo, AnchorPoint, TargetAnchorPoint,
             // Stretch options
             StretchTo, TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY,
             StretchTo2, TargetStretchAnchorPoint2,
