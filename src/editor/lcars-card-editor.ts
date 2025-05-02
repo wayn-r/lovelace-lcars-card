@@ -793,6 +793,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     // Create context objects for the renderers
     const editorContext = {
         hass: this.hass,
+        cardConfig: this._config,
         handleFormValueChanged: this._handleFormValueChanged.bind(this),
         getElementInstance: this._getElementInstance.bind(this),
         onDragStart: this._onDragStart.bind(this),
@@ -871,7 +872,38 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       ev.stopPropagation();
       const index = this._findElementIndex(elementId);
       if (index === -1) return;
-
+      
+      const formData = ev.detail.value; // Flat object: { width: 100, fill: [255, 0, 0], ... }
+      
+      // --- Special Case: Handling update from the 'invalid type' form --- 
+      // If the form data only contains the 'type' field, we assume it's fixing an invalid type.
+      if (Object.keys(formData).length === 1 && formData.hasOwnProperty('type')) {
+          const newType = formData.type;
+          if (!newType) { 
+              // Don't update if the type is cleared again, wait for a valid selection
+              console.warn('Type selection cleared, no update performed.');
+              return;
+          }
+          
+          console.log(`Handling invalid type fix. Setting type to: ${newType} for ${elementId}`);
+          
+          // Create a deep copy of the current config to modify
+          const newElements = structuredClone(this._config.elements);
+          const elementToUpdate = newElements[index];
+          
+          // Directly update the type
+          elementToUpdate.type = newType;
+          
+          // Optionally: Reset props/layout if type changes significantly? 
+          // For now, let's keep existing props/layout to be less destructive.
+          // If the new type needs different props, the full editor will show them.
+          
+          this._updateConfig(newElements);
+          this.requestUpdate(); // Ensure re-render with the new type
+          return; // Exit early, bypassing the instance-dependent logic below
+      }
+      
+      // --- Regular handling for valid element forms ---
       const currentElementConfig = this._config.elements[index];
       const elementInstance = createElementInstance(currentElementConfig);
       if (!elementInstance) {
@@ -880,10 +912,16 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       }
 
       const propertiesMap = elementInstance.getPropertiesMap();
-      const formData = ev.detail.value; // Flat object: { width: 100, fill: '#ff0000', ... }
       
       // Process data (e.g., cleanup conflicting fields like anchor points)
       const cleanedData = elementInstance.processDataUpdate(formData);
+      
+      // Special handling for color_rgb picker which returns an RGB array
+      if (cleanedData.fill && Array.isArray(cleanedData.fill) && cleanedData.fill.length === 3) {
+          // Convert RGB array to HEX format
+          cleanedData.fill = this._rgbArrayToHex(cleanedData.fill);
+          console.log('Converted RGB array to HEX:', cleanedData.fill);
+      }
 
       // Create a deep copy to modify safely
       const newElementConfig = structuredClone(currentElementConfig);
@@ -928,6 +966,30 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       // Request update needed if schema depends on the changes (e.g., anchorTo)
       // This ensures the form re-renders with conditional fields updated
       this.requestUpdate(); 
+  }
+  
+  // Helper to convert RGB array to HEX format
+  private _rgbArrayToHex(rgb: number[]): string {
+      return '#' + rgb.map(val => {
+          const hex = Math.max(0, Math.min(255, val)).toString(16);
+          return hex.length === 1 ? '0' + hex : hex;
+      }).join('');
+  }
+  
+  // Helper to update the element config using the path
+  private _updateElementConfigValue(elementConfig: any, path: string, value: any): void {
+      const pathParts = path.split('.');
+      if (pathParts.length === 1) {
+          // Top-level property like 'type'
+          elementConfig[pathParts[0]] = value;
+      } else if (pathParts.length === 2) {
+          // Nested property like 'props.fill' or 'layout.width'
+          const [section, property] = pathParts;
+          if (!elementConfig[section]) {
+              elementConfig[section] = {};
+          }
+          elementConfig[section][property] = value;
+      }
   }
 
   // Add missing _renderGroupList method still referenced in some places

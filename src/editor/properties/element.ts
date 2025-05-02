@@ -10,11 +10,13 @@ import {
     OffsetY,
     Fill,
     AnchorTo, 
-    StretchTo, 
+    StretchTo,
+    StretchTo2,
     ContainerAnchorPoint,
     AnchorPoint, 
     TargetAnchorPoint, 
-    TargetStretchAnchorPoint, 
+    TargetStretchAnchorPoint,
+    TargetStretchAnchorPoint2,
     StretchPaddingX, 
     StretchPaddingY,
     // Props - Text
@@ -22,7 +24,9 @@ import {
     // Props - Elbow
     Orientation, HorizontalWidth, VerticalWidth, HeaderHeight, TotalElbowHeight, OuterCornerRadius,
     // Props - Endcap/Chisel
-    Direction
+    Direction, Side,
+    // Props - Type
+    Type
 } from './properties';
 
 // Base Element Interface/Class
@@ -74,6 +78,10 @@ export abstract class LcarsElementBase {
         let applicablePropTypes: (new () => LcarsPropertyBase)[] = [];
 
         // --- Filter logic based on type and config ---
+        
+        // Always add Type if it's in required properties
+        const typeProperty = allRequiredPropTypes.find(cls => cls === Type);
+        if (typeProperty) applicablePropTypes.push(typeProperty);
 
         // Add properties based on the element's required list
         // Basic Layout (always check if required by element)
@@ -88,32 +96,50 @@ export abstract class LcarsElementBase {
         );
         applicablePropTypes.push(...commonPropTypes);
 
-        // Conditional Anchor Logic
+        // Conditional Anchor Logic - Always include AnchorTo if required
         const anchorToType = allRequiredPropTypes.find(cls => cls === AnchorTo);
         const containerAnchorType = allRequiredPropTypes.find(cls => cls === ContainerAnchorPoint);
         const anchorPointType = allRequiredPropTypes.find(cls => cls === AnchorPoint);
         const targetAnchorPointType = allRequiredPropTypes.find(cls => cls === TargetAnchorPoint);
 
         if (anchorToType) applicablePropTypes.push(anchorToType);
-        if (layoutData.anchorTo) {
+        
+        // Only include anchor points if anchoring to something specific
+        if (layoutData.anchorTo && layoutData.anchorTo !== '') {
+            // Always use the same anchor points regardless of target type
             if (anchorPointType) applicablePropTypes.push(anchorPointType);
             if (targetAnchorPointType) applicablePropTypes.push(targetAnchorPointType);
         } else {
+            // Include container anchor point when not anchoring to a specific element
             if (containerAnchorType) applicablePropTypes.push(containerAnchorType);
         }
 
-        // Conditional Stretch Logic
+        // Conditional Stretch Logic - Always include StretchTo if required
         const stretchToType = allRequiredPropTypes.find(cls => cls === StretchTo);
         const targetStretchType = allRequiredPropTypes.find(cls => cls === TargetStretchAnchorPoint);
         const stretchPadXType = allRequiredPropTypes.find(cls => cls === StretchPaddingX);
-        const stretchPadYType = allRequiredPropTypes.find(cls => cls === StretchPaddingY);
+        const stretchTo2Type = allRequiredPropTypes.find(cls => cls === StretchTo2);
+        const targetStretchType2 = allRequiredPropTypes.find(cls => cls === TargetStretchAnchorPoint2);
 
         if (stretchToType) applicablePropTypes.push(stretchToType);
-        if (layoutData.stretchTo && targetStretchType) {
-            applicablePropTypes.push(targetStretchType);
+        
+        // Only include stretch target and padding if stretching to something
+        if (layoutData.stretchTo && layoutData.stretchTo !== '') {
+            // Include target stretch selector when stretching to something
+            if (targetStretchType) applicablePropTypes.push(targetStretchType);
+            
+            // Include stretch padding when stretching to something 
+            // We'll only use StretchPaddingX for the UI (as requested)
+            if (stretchPadXType) applicablePropTypes.push(stretchPadXType);
+            
+            // Include a second stretch target option if the first is already selected
+            if (stretchTo2Type) applicablePropTypes.push(stretchTo2Type);
+            
+            // If second stretch target is selected, include its target point selector
+            if (layoutData.stretchTo2 && layoutData.stretchTo2 !== '' && targetStretchType2) {
+                applicablePropTypes.push(targetStretchType2);
+            }
         }
-        if (stretchPadXType) applicablePropTypes.push(stretchPadXType);
-        if (stretchPadYType) applicablePropTypes.push(stretchPadYType);
 
         // Add Text properties if required by element type
         const textPropTypes = allRequiredPropTypes.filter(cls => 
@@ -129,7 +155,7 @@ export abstract class LcarsElementBase {
         
         // Add Endcap/Chisel properties if required by element type
         const endcapPropTypes = allRequiredPropTypes.filter(cls => 
-            [Direction].some(endcapCls => cls === endcapCls)
+            [Direction, Side].some(endcapCls => cls === endcapCls)
         );
         applicablePropTypes.push(...endcapPropTypes);
 
@@ -162,35 +188,76 @@ export abstract class LcarsElementBase {
         return map;
     }
 
-    // Optional: Method to process data updates (can reuse logic from old LcarsLayout)
+    /** 
+     * Process data updates for an element. 
+     * Handles special cases for stretch and anchor properties.
+     */
     processDataUpdate(newData: any): any {
-         let processedData = { ...newData };
-        // Add cleanup logic here...
-        // This logic depends on the final structure (props vs layout)
-        // For now, assume a flat structure matching schema names
+        let processedData = { ...newData };
         
-        // Handle container anchoring
-        if (processedData.anchorTo === 'container') {
-            // When anchoring to container, we should use containerAnchorPoint
-            // If there's no containerAnchorPoint, use a default value
-            if (!processedData.containerAnchorPoint) {
-                processedData.containerAnchorPoint = 'topLeft';
+        // Handle anchor points
+        if (processedData.anchorTo && processedData.anchorTo !== '') {
+            // If anchoring to something but no anchor points are specified, set defaults
+            if (!processedData.anchorPoint) {
+                processedData.anchorPoint = 'center';
             }
-            // Remove any element-specific anchor points since we're using the container
+            if (!processedData.targetAnchorPoint) {
+                processedData.targetAnchorPoint = 'center';
+            }
+            
+            // Remove containerAnchorPoint since we're using regular anchor points
+            if (processedData.containerAnchorPoint) {
+                delete processedData.containerAnchorPoint;
+            }
+        } else {
+            // If not anchoring to anything, remove all anchor points
             if (processedData.anchorPoint) delete processedData.anchorPoint;
             if (processedData.targetAnchorPoint) delete processedData.targetAnchorPoint;
-        } else if (processedData.anchorTo && processedData.containerAnchorPoint) {
-            // If anchoring to element, remove containerAnchorPoint
-            delete processedData.containerAnchorPoint;
-        } else if (!processedData.anchorTo && (processedData.anchorPoint || processedData.targetAnchorPoint)) {
-            // If not anchoring to anything, remove element-specific anchor points
-            delete processedData.anchorPoint;
-            delete processedData.targetAnchorPoint;
+            if (processedData.containerAnchorPoint) delete processedData.containerAnchorPoint;
         }
         
         // Handle stretching
-        if (!processedData.stretchTo && processedData.targetStretchAnchorPoint) {
-            delete processedData.targetStretchAnchorPoint;
+        if (processedData.stretchTo && processedData.stretchTo !== '') {
+            // If stretching to something but no target point is specified, set a default
+            if (!processedData.targetStretchAnchorPoint) {
+                processedData.targetStretchAnchorPoint = 'right';
+            }
+            
+            // When stretchPaddingX is set, also apply to stretchPaddingY for consistency
+            if ('stretchPaddingX' in processedData) {
+                processedData.stretchPaddingY = processedData.stretchPaddingX;
+            }
+            
+            // Handle the second stretch to option if present
+            if (processedData.stretchTo2 && processedData.stretchTo2 !== '') {
+                // If second stretch is set, ensure we have a default target point for it
+                if (!processedData.targetStretchAnchorPoint2) {
+                    processedData.targetStretchAnchorPoint2 = 'right';
+                }
+            } else {
+                // Clean up second stretch properties if not used
+                if (processedData.targetStretchAnchorPoint2) {
+                    delete processedData.targetStretchAnchorPoint2;
+                }
+            }
+        } else {
+            // If not stretching to anything, clean up related properties
+            if (processedData.targetStretchAnchorPoint) {
+                delete processedData.targetStretchAnchorPoint;
+            }
+            if (processedData.stretchPaddingX) {
+                delete processedData.stretchPaddingX;
+            }
+            if (processedData.stretchPaddingY) {
+                delete processedData.stretchPaddingY;
+            }
+            // Also clean up second stretch properties
+            if (processedData.stretchTo2) {
+                delete processedData.stretchTo2;
+            }
+            if (processedData.targetStretchAnchorPoint2) {
+                delete processedData.targetStretchAnchorPoint2;
+            }
         }
         
         // Remove empty/null/undefined values before updating config
@@ -285,12 +352,17 @@ export abstract class LcarsElementBase {
 export class RectangleElement extends LcarsElementBase {
     get requiredProperties(): (new () => LcarsPropertyBase)[] {
         return [
-            // Props
+            // Props - in the order specified in TODO.md
+            Type, // Add Type property
             Fill, 
-            // Layout
-            Width, Height, OffsetX, OffsetY, 
-            AnchorTo, StretchTo, ContainerAnchorPoint, AnchorPoint, TargetAnchorPoint, 
-            TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY
+            Width, Height,
+            // Anchor options
+            AnchorTo, AnchorPoint, TargetAnchorPoint, ContainerAnchorPoint,
+            // Stretch options
+            StretchTo, TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY,
+            StretchTo2, TargetStretchAnchorPoint2,
+            // Offset at the end as specified in TODO.md
+            OffsetX, OffsetY
         ];
     }
 }
@@ -298,13 +370,21 @@ export class RectangleElement extends LcarsElementBase {
 export class TextElement extends LcarsElementBase {
     get requiredProperties(): (new () => LcarsPropertyBase)[] {
         return [
-            // Props
-            Fill, TextContent, FontSize, FontFamily, FontWeight, LetterSpacing, 
-            TextAnchor, DominantBaseline, TextTransform,
-            // Layout (Text elements also need standard layout)
-            Width, Height, OffsetX, OffsetY, 
-            AnchorTo, StretchTo, ContainerAnchorPoint, AnchorPoint, TargetAnchorPoint, 
-            TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY
+            // Props - in the order specified in TODO.md
+            Type, // Add Type property
+            TextContent, Fill,
+            FontFamily, FontSize,
+            FontWeight, LetterSpacing,
+            TextAnchor, DominantBaseline,
+            TextTransform,
+            // Anchor options
+            AnchorTo, AnchorPoint, TargetAnchorPoint, ContainerAnchorPoint,
+            // Stretch options
+            StretchTo, TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY,
+            StretchTo2, TargetStretchAnchorPoint2,
+            // Offset at the end as specified in TODO.md
+            OffsetX, OffsetY
+            // Removed Width, Height as per TODO requirements
         ];
     }
 }
@@ -312,14 +392,19 @@ export class TextElement extends LcarsElementBase {
 export class ElbowElement extends LcarsElementBase {
      get requiredProperties(): (new () => LcarsPropertyBase)[] {
         return [
-            // Props
-            Fill, Orientation, HorizontalWidth, VerticalWidth, HeaderHeight, 
-            TotalElbowHeight, OuterCornerRadius,
-             // Layout (Elbows generally don't use width/height directly, but need positioning)
-            OffsetX, OffsetY, 
-            AnchorTo, StretchTo, ContainerAnchorPoint, AnchorPoint, TargetAnchorPoint, 
-            TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY
-            // Note: Width/Height might be needed if we allow stretching elbows?
+            // Props - in the order specified in TODO.md
+            Type, // Add Type property
+            Fill, Orientation, Side, // Add Side property
+            HorizontalWidth, VerticalWidth, 
+            HeaderHeight, TotalElbowHeight,
+            OuterCornerRadius,
+            // Anchor options
+            AnchorTo, AnchorPoint, TargetAnchorPoint, ContainerAnchorPoint,
+            // Stretch options
+            StretchTo, TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY,
+            StretchTo2, TargetStretchAnchorPoint2,
+            // Offset at the end as specified in TODO.md
+            OffsetX, OffsetY
         ];
     }
 }
@@ -327,21 +412,39 @@ export class ElbowElement extends LcarsElementBase {
 export class EndcapElement extends LcarsElementBase {
     get requiredProperties(): (new () => LcarsPropertyBase)[] {
         return [
-            // Props
+            // Props - in the order specified in TODO.md
+            Type, // Add Type property 
             Fill, Direction,
             // Layout 
-            Width, Height, OffsetX, OffsetY, 
-            AnchorTo, StretchTo, ContainerAnchorPoint, AnchorPoint, TargetAnchorPoint, 
-            TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY
+            Width, Height,
+            // Anchor options from base class
+            AnchorTo, AnchorPoint, TargetAnchorPoint, ContainerAnchorPoint,
+            // Stretch options from base class
+            StretchTo, TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY,
+            StretchTo2, TargetStretchAnchorPoint2,
+            // Offset at the end as specified in TODO.md
+            OffsetX, OffsetY
         ];
     }
 }
 
-// Assuming ChiselEndcap is the same as Endcap for now regarding properties
-// If it differs, create a separate class
-export class ChiselEndcapElement extends EndcapElement { 
-    // Inherits requiredProperties from EndcapElement
-    // Override if needed
+export class ChiselEndcapElement extends LcarsElementBase { 
+    get requiredProperties(): (new () => LcarsPropertyBase)[] {
+        return [
+            // Props - in the order specified in TODO.md
+            Type, // Add Type property
+            Fill, Direction,
+            // Layout 
+            Width, Height,
+            // Anchor options
+            AnchorTo, AnchorPoint, TargetAnchorPoint, ContainerAnchorPoint,
+            // Stretch options
+            StretchTo, TargetStretchAnchorPoint, StretchPaddingX, StretchPaddingY,
+            StretchTo2, TargetStretchAnchorPoint2,
+            // Offset at the end as specified in TODO.md
+            OffsetX, OffsetY
+        ];
+    }
 }
 
 // --- Factory Function (Example) ---

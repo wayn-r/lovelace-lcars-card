@@ -30,6 +30,8 @@ export interface LcarsPropertyBase {
     configPath: string; 
     // Ensure context is optional in the base interface signature
     getSchema(context?: PropertySchemaContext): HaFormSchema;
+    // Optional method to format a value from the config for the form UI
+    formatValueForForm?(value: any): any;
 }
 
 // --- Common Layout Property Classes ---
@@ -99,7 +101,7 @@ export class AnchorTo implements LcarsPropertyBase {
 
     getSchema(context?: PropertySchemaContext): HaFormSchema {
         const options = [
-            { value: '', label: 'None (Use Container Anchors)' },
+            { value: '', label: '' },
             { value: 'container', label: 'Container' },
             ...(context?.otherElementIds || [])
         ];
@@ -118,9 +120,8 @@ export class StretchTo implements LcarsPropertyBase {
 
     getSchema(context?: PropertySchemaContext): HaFormSchema {
         const options = [
-            { value: '', label: 'None' }, 
+            { value: '', label: '' }, 
             { value: 'container', label: 'Container' },
-            { value: 'canvas', label: 'Canvas Edge' }, 
             ...(context?.otherElementIds || [])
         ];
         return {
@@ -148,7 +149,7 @@ export class ContainerAnchorPoint implements LcarsPropertyBase {
 
 export class AnchorPoint implements LcarsPropertyBase {
     name = 'anchorPoint';
-    label = 'Anchor Point (Self)';
+    label = 'Anchor Point';
     configPath = 'layout.anchorPoint';
 
     getSchema(): HaFormSchema {
@@ -163,7 +164,7 @@ export class AnchorPoint implements LcarsPropertyBase {
 
 export class TargetAnchorPoint implements LcarsPropertyBase {
     name = 'targetAnchorPoint';
-    label = 'Target Anchor Point (Other)';
+    label = 'Target Point';
     configPath = 'layout.targetAnchorPoint';
 
     getSchema(): HaFormSchema {
@@ -178,7 +179,7 @@ export class TargetAnchorPoint implements LcarsPropertyBase {
 
 export class TargetStretchAnchorPoint implements LcarsPropertyBase {
     name = 'targetStretchAnchorPoint';
-    label = 'Target Stretch Anchor Point';
+    label = 'Target Side';
     configPath = 'layout.targetStretchAnchorPoint';
 
     getSchema(): HaFormSchema {
@@ -193,7 +194,7 @@ export class TargetStretchAnchorPoint implements LcarsPropertyBase {
 
 export class StretchPaddingX implements LcarsPropertyBase {
     name = 'stretchPaddingX';
-    label = 'Stretch Gap X (px)';
+    label = 'Stretch Gap';
     configPath = 'layout.stretchPaddingX';
 
     getSchema(): HaFormSchema {
@@ -219,6 +220,40 @@ export class StretchPaddingY implements LcarsPropertyBase {
     }
 }
 
+export class StretchTo2 implements LcarsPropertyBase {
+    name = 'stretchTo2';
+    label = 'Stretch To';
+    configPath = 'layout.stretchTo2';
+
+    getSchema(context?: PropertySchemaContext): HaFormSchema {
+        const options = [
+            { value: '', label: '' }, 
+            { value: 'container', label: 'Container' },
+            ...(context?.otherElementIds || [])
+        ];
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { select: { options: options, mode: 'dropdown' } }
+        };
+    }
+}
+
+export class TargetStretchAnchorPoint2 implements LcarsPropertyBase {
+    name = 'targetStretchAnchorPoint2';
+    label = 'Target Side';
+    configPath = 'layout.targetStretchAnchorPoint2';
+
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            type: 'custom',
+            selector: { lcars_grid: { labelCenter: true, disableCorners: true } }
+        };
+    }
+}
+
 // --- Common Props Property Classes ---
 
 export class Fill implements LcarsPropertyBase {
@@ -230,8 +265,49 @@ export class Fill implements LcarsPropertyBase {
         return {
             name: this.name,
             label: this.label,
-            selector: { color: {} }
+            selector: { color_rgb: {} }
         };
+    }
+    
+    // Convert hex value from config to RGB array for the color picker
+    formatValueForForm(value: any): any {
+        // If the value is already an RGB array, just return it
+        if (Array.isArray(value) && value.length === 3) {
+            return value;
+        }
+        
+        // If the value is a hex string, convert it to RGB array
+        if (typeof value === 'string' && value.startsWith('#')) {
+            return this.hexToRgb(value);
+        }
+        
+        return value;
+    }
+    
+    // Convert hex color to RGB array
+    private hexToRgb(hex: string): number[] {
+        // Remove the # if present
+        hex = hex.replace(/^#/, '');
+        
+        // Parse the hex values to RGB
+        if (hex.length === 3) {
+            // Handle shorthand hex (#RGB)
+            return [
+                parseInt(hex[0] + hex[0], 16),
+                parseInt(hex[1] + hex[1], 16),
+                parseInt(hex[2] + hex[2], 16)
+            ];
+        } else if (hex.length === 6) {
+            // Handle full hex (#RRGGBB)
+            return [
+                parseInt(hex.substring(0, 2), 16),
+                parseInt(hex.substring(2, 4), 16),
+                parseInt(hex.substring(4, 6), 16)
+            ];
+        }
+        
+        // Default to black if invalid hex
+        return [0, 0, 0];
     }
 }
 
@@ -292,7 +368,7 @@ export class FontWeight implements LcarsPropertyBase {
             selector: {
               select: {
                 options: [
-                  { value: '', label: 'Default' },
+                  { value: '', label: '' },
                   { value: 'normal', label: 'Normal' },
                   { value: 'bold', label: 'Bold' },
                   { value: 'bolder', label: 'Bolder' },
@@ -316,7 +392,7 @@ export class LetterSpacing implements LcarsPropertyBase {
         return {
             name: this.name,
             label: this.label,
-            selector: { text: {} } // e.g., '1px', 'normal'
+            selector: { number: { mode: 'box', step: 1 } } // e.g., '1px', 'normal'
         };
     }
 }
@@ -333,11 +409,12 @@ export class TextAnchor implements LcarsPropertyBase {
             selector: {
               select: {
                 options: [
-                  { value: '', label: 'Default (start)' },
+                  { value: '', label: '' },
                   { value: 'start', label: 'Start' },
                   { value: 'middle', label: 'Middle' },
                   { value: 'end', label: 'End' },
                 ],
+                mode: 'dropdown'
               },
             }
         };
@@ -356,12 +433,13 @@ export class DominantBaseline implements LcarsPropertyBase {
             selector: {
               select: {
                 options: [
-                  { value: '', label: 'Default (auto)' },
+                  { value: '', label: '' },
                   { value: 'auto', label: 'Auto' },
                   { value: 'middle', label: 'Middle' },
                   { value: 'central', label: 'Central' },
                   { value: 'hanging', label: 'Hanging' },
                 ],
+                mode: 'dropdown'
               },
             }
         };
@@ -401,6 +479,7 @@ export class Orientation implements LcarsPropertyBase {
                   { value: 'bottom-left', label: 'Bottom Left' },
                   { value: 'bottom-right', label: 'Bottom Right' },
                 ],
+                mode: 'dropdown'
               },
             },
             default: 'top-left',
@@ -478,6 +557,32 @@ export class OuterCornerRadius implements LcarsPropertyBase {
     }
 }
 
+// --- Type Property ---
+export class Type implements LcarsPropertyBase {
+    name = 'type';
+    label = 'Element Type';
+    configPath = 'type';
+
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: {
+                select: {
+                    options: [
+                        { value: 'rectangle', label: 'Rectangle' },
+                        { value: 'text', label: 'Text' },
+                        { value: 'endcap', label: 'Endcap' },
+                        { value: 'elbow', label: 'Elbow' },
+                        { value: 'chisel-endcap', label: 'Chisel Endcap' },
+                    ],
+                    mode: 'dropdown'
+                },
+            },
+        };
+    }
+}
+
 // --- Endcap/Chisel Props ---
 export class Direction implements LcarsPropertyBase {
     name = 'direction';
@@ -494,6 +599,31 @@ export class Direction implements LcarsPropertyBase {
                         { value: 'left', label: 'Left' },
                         { value: 'right', label: 'Right' },
                     ],
+                    mode: 'dropdown'
+                },
+            },
+        };
+    }
+}
+
+export class Side implements LcarsPropertyBase {
+    name = 'side';
+    label = 'Side';
+    configPath = 'props.side';
+
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: {
+                select: {
+                    options: [
+                        { value: 'top', label: 'Top' },
+                        { value: 'bottom', label: 'Bottom' },
+                        { value: 'left', label: 'Left' },
+                        { value: 'right', label: 'Right' },
+                    ],
+                    mode: 'dropdown'
                 },
             },
         };

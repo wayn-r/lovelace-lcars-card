@@ -1,15 +1,64 @@
 ## BUGS:
 
-### ~~Anchor and Stretch components~~
-  - ~~Anchor and stretch weren't properly migrated in the refactor:~~
-    - ~~Anchor a stretch are currently bullet selectors and should instead be~~ 
-      - ~~dropdowns that:~~
-        - ~~defaults to a blank selection~~
-        - ~~contains all of the existing elements~~
-        - ~~contains 'Container' as an option~~
-          - ~~this should be the first option below the blank option~~
-
 ## TODOs:
+
+### Properties
+- endcap:
+  - missing color, direction, and type properties
+  - direction should be a dropdown
+  - properties should be in the following format:
+    | element type |
+    | color | direction |
+    | width | height |
+    < anchor options >
+    < stretch options >
+    | offset x | offset y |
+- text:
+  - missing color and type properties
+  - shouldn't have width and height properties
+  - text anchor and dominant baseline should be a dropdown instead of radio buttons
+  - properties should be in the following format:
+    | element type |
+    | text content | color |
+    | font family | font size |
+    | font weight | letter spacing |
+    | text anchor | dominant baseline |
+    | text transform |  |
+    < anchor options >
+    < stretch options >
+    | offset x | offset y |
+- rectangle:
+  - missing color and type properties
+  - properties should be in the following format:
+    | element type |
+    | color |  |
+    | width | height |
+    < anchor options >
+    < stretch options >
+    | offset x | offset y |
+- chisel-endcap:
+  - missing color, side, and type properties
+  - direction should be a dropdown instead of radio buttons
+  - properties should be in the following format:
+    | element type |
+    | color | direction |
+    | width | height |
+    < anchor options >
+    < stretch options >
+    | offset x | offset y |
+- elbow:
+  - missing color, side, and type properties
+  - orientation should be a dropdown instead of radio buttons
+  - properties should be in the following format:
+    | element type |
+    | color | orientation |
+    | horizontal width | vertical width |
+    | header height | total height |
+    | outer corner radius |  |
+    < anchor options >
+    < stretch options >
+    | offset x | offset y |
+
 
 ### Components
 - implement headerbar as a standalone element
