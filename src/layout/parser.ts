@@ -38,9 +38,15 @@ export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant): Grou
   
   Object.entries(groupedElements).forEach(([groupId, elements]) => {
     // Create layout elements for each element in the group
-    const layoutElements: LayoutElement[] = elements.map(element => 
-      createLayoutElement(element.id, element.type, element.props || {}, element.layout || {}, hass)
-    );
+    const layoutElements: LayoutElement[] = elements.map(element => {
+      return createLayoutElement(
+        element.id,
+        element.type,
+        element.props || {},
+        element.layout || {},
+        hass
+      );
+    });
     
     // Create the group and add it to the list
     groups.push(new Group(groupId, layoutElements));

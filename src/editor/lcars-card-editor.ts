@@ -1,4 +1,4 @@
-import { LitElement, html, TemplateResult } from 'lit';
+import { LitElement, html, TemplateResult, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardEditor, fireEvent } from 'custom-card-helpers';
 import { LcarsCardConfig } from '../lovelace-lcars-card.js';
@@ -9,7 +9,6 @@ import { editorStyles } from './editor-styles.js';
 import { 
   renderElement, 
   renderGroup, 
-  renderGroupList, 
   renderNewGroupForm
 } from './renderer.js';
 
@@ -17,7 +16,7 @@ import {
 import './grid-selector.js';
 // Import the new element structure
 import { createElementInstance, LcarsElementBase, RectangleElement } from './properties/element.js';
-import { HaFormSchema, LcarsPropertyBase, PropertySchemaContext } from './properties/properties.js';
+import { HaFormSchema } from './properties/properties.js';
 import { LcarsGroup } from './group.js';
 
 // Helper function to set deep properties
@@ -84,7 +83,6 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   // --- Drag and Drop State ---
   private _draggedElementId: string | null = null;
   private _dragOverElementId: string | null = null;
-  private _dragOverGroup: string | null = null; // Track group for potential cross-group drop (not implemented yet)
 
   public setConfig(config: LcarsCardConfig): void {
     const prevConfig = this._config;
@@ -160,7 +158,6 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   // --- Event Handlers ---
   // Helper to update config and fire event
   private _updateConfig(newElements: any[]): void {
-      console.log(`Updating config with ${newElements.length} elements`);
       
       // Store a snapshot of the old elements IDs for logging
       const oldElementIds = this._config?.elements?.map(el => el.id) || [];
@@ -172,12 +169,6 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       const newElementIds = newElements.map(el => el.id);
       const addedIds = newElementIds.filter(id => !oldElementIds.includes(id));
       const removedIds = oldElementIds.filter(id => !newElementIds.includes(id));
-      
-      if (addedIds.length > 0 || removedIds.length > 0) {
-          console.log('Element ID changes:');
-          if (addedIds.length > 0) console.log('- Added:', addedIds);
-          if (removedIds.length > 0) console.log('- Removed:', removedIds);
-      }
       
       this._extractGroupsAndInitState(); // Re-sync groups and collapse states
       fireEvent(this, 'config-changed', { config: this._config });
@@ -215,8 +206,10 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   }
 
   private _confirmNewGroup(): void { 
-      const name = this._newGroupInput.trim();
-      // Use static validation method
+      
+      // Use the input value directly without trimming
+      const name = this._newGroupInput;
+      // Use static validation method (which now checks for spaces)
       const validation = LcarsGroup.validateNewGroupName(name, new Set(this._groups));
 
       if (!validation.isValid) {
@@ -224,7 +217,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           this.requestUpdate();
           return;
       }
-
+      
       // Update editor state (add group ID, create instance, update collapse state)
       const newInstance = new LcarsGroup(name);
       this._groups = [...this._groups, name].sort();
@@ -328,13 +321,17 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
            }
            
            // Update any references to elements in this group
-           if (updatedEl.layout?.anchorTo?.startsWith(oldId + '.')) {
-               const targetBaseId = updatedEl.layout.anchorTo.substring(oldId.length + 1);
-               updatedEl.layout.anchorTo = `${newId}.${targetBaseId}`;
+           if (updatedEl.layout?.anchor?.anchorTo?.startsWith(oldId + '.')) {
+               const targetBaseId = updatedEl.layout.anchor.anchorTo.substring(oldId.length + 1);
+               if (!updatedEl.layout) updatedEl.layout = {};
+               if (!updatedEl.layout.anchor) updatedEl.layout.anchor = { anchorTo: '', anchorPoint: '', targetAnchorPoint: '' };
+               updatedEl.layout.anchor.anchorTo = `${newId}.${targetBaseId}`;
            }
-           if (updatedEl.layout?.stretchTo?.startsWith(oldId + '.')) {
-               const targetBaseId = updatedEl.layout.stretchTo.substring(oldId.length + 1);
-               updatedEl.layout.stretchTo = `${newId}.${targetBaseId}`;
+           if (updatedEl.layout?.stretch?.stretchTo1?.startsWith(oldId + '.')) {
+               const targetBaseId = updatedEl.layout.stretch.stretchTo1.substring(oldId.length + 1);
+               if (!updatedEl.layout) updatedEl.layout = {};
+               if (!updatedEl.layout.stretch) updatedEl.layout.stretch = { stretchTo1: '', targetStretchAnchorPoint1: '' };
+               updatedEl.layout.stretch.stretchTo1 = `${newId}.${targetBaseId}`;
            }
            return updatedEl;
        });
@@ -379,10 +376,10 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
        // 2. Update central config (_config.elements)
        const currentElements = this._config?.elements || [];
        const elementsToRemove = new Set(currentElements.filter(el => el.id?.startsWith(groupId + '.')).map(el => el.id));
-       const newElements = currentElements.filter(el => 
+       const elementsToKeep = currentElements.filter(el => 
            !el.id?.startsWith(groupId + '.') &&
-           !(el.layout?.anchorTo && elementsToRemove.has(el.layout.anchorTo)) &&
-           !(el.layout?.stretchTo && elementsToRemove.has(el.layout.stretchTo))
+           !(el.layout?.anchor?.anchorTo && elementsToRemove.has(el.layout.anchor.anchorTo)) &&
+           !(el.layout?.stretch?.stretchTo1 && elementsToRemove.has(el.layout.stretch.stretchTo1))
        );
        
        // 3. Reset editor state
@@ -390,7 +387,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
        this._deleteWarningGroup = null;
 
        // 4. Update config and trigger re-render
-       this._updateConfig(newElements);
+       this._updateConfig(elementsToKeep);
   }
 
   private _cancelDeleteGroup(): void { 
@@ -492,8 +489,8 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       // Filter out the element itself AND any elements anchoring/stretching to it
       const newElements = currentElements.filter(el => 
            el.id !== elementId && 
-           el.layout?.anchorTo !== elementId && 
-           el.layout?.stretchTo !== elementId
+           el.layout?.anchor?.anchorTo !== elementId && 
+           el.layout?.stretch?.stretchTo1 !== elementId
       );
 
       // Update editor collapse state
@@ -553,8 +550,6 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       }
 
       const { oldId, newId } = result;
-      
-      console.log(`Renaming element from ${oldId} to ${newId}`);
 
       // Check for duplicate ID in the main editor context
       if (this._config?.elements?.some(el => el.id === newId && el.id !== oldId)) {
@@ -593,20 +588,22 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           // Create deep clones of layout objects only if needed
           let updatedLayout = el.layout;
           
-          if (el.layout?.anchorTo === oldId) {
+          if (el.layout?.anchor?.anchorTo === oldId) {
               if (!needsUpdate) {
                   updatedLayout = { ...el.layout };
+                  if (updatedLayout && !updatedLayout.anchor) updatedLayout.anchor = { anchorTo: '' };
                   needsUpdate = true;
               }
-              updatedLayout.anchorTo = newId;
+              if(updatedLayout?.anchor) updatedLayout.anchor.anchorTo = newId;
           }
           
-          if (el.layout?.stretchTo === oldId) {
+          if (el.layout?.stretch?.stretchTo1 === oldId) {
               if (!needsUpdate) {
                   updatedLayout = { ...el.layout };
+                  if (updatedLayout && !updatedLayout.stretch) updatedLayout.stretch = { stretchTo1: '', targetStretchAnchorPoint1: '' };
                   needsUpdate = true;
               }
-              updatedLayout.stretchTo = newId;
+              if(updatedLayout?.stretch) updatedLayout.stretch.stretchTo1 = newId;
           }
           
           if (needsUpdate) {
@@ -806,6 +803,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         handleConfirmEditElementId: this._handleConfirmEditElementId.bind(this),
         cancelEditElementId: this._cancelEditElementId.bind(this),
         updateElementIdInput: this._updateElementIdInput.bind(this),
+        updateElementConfigValue: this._updateElementConfigValue.bind(this),
         
         // State variables
         editingElementId: this._editingElementId,
@@ -829,6 +827,9 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         cancelAddElement: this._cancelAddElement.bind(this),
         updateGroupNameInput: this._updateGroupNameInput.bind(this),
         updateNewElementInput: this._updateNewElementInput.bind(this),
+        confirmNewGroup: this._confirmNewGroup.bind(this),
+        cancelNewGroup: this._cancelNewGroup.bind(this),
+        addGroup: this._addGroup.bind(this),
         
         // State variables
         collapsedGroups: this._collapsedGroups,
@@ -867,106 +868,106 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   static styles = editorStyles;
 
   // NEW UNIFIED HANDLER for the single ha-form per element
-  private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
-      if (!this._config?.elements) return;
-      ev.stopPropagation();
-      const index = this._findElementIndex(elementId);
-      if (index === -1) return;
-      
-      const formData = ev.detail.value; // Flat object: { width: 100, fill: [255, 0, 0], ... }
-      
-      // --- Special Case: Handling update from the 'invalid type' form --- 
-      // If the form data only contains the 'type' field, we assume it's fixing an invalid type.
-      if (Object.keys(formData).length === 1 && formData.hasOwnProperty('type')) {
-          const newType = formData.type;
-          if (!newType) { 
-              // Don't update if the type is cleared again, wait for a valid selection
-              console.warn('Type selection cleared, no update performed.');
-              return;
-          }
-          
-          console.log(`Handling invalid type fix. Setting type to: ${newType} for ${elementId}`);
-          
-          // Create a deep copy of the current config to modify
-          const newElements = structuredClone(this._config.elements);
-          const elementToUpdate = newElements[index];
-          
-          // Directly update the type
-          elementToUpdate.type = newType;
-          
-          // Optionally: Reset props/layout if type changes significantly? 
-          // For now, let's keep existing props/layout to be less destructive.
-          // If the new type needs different props, the full editor will show them.
-          
-          this._updateConfig(newElements);
-          this.requestUpdate(); // Ensure re-render with the new type
-          return; // Exit early, bypassing the instance-dependent logic below
-      }
-      
-      // --- Regular handling for valid element forms ---
-      const currentElementConfig = this._config.elements[index];
-      const elementInstance = createElementInstance(currentElementConfig);
-      if (!elementInstance) {
-          console.error(`Could not get element instance for handler (Element ID: ${elementId})`);
-          return;
-      }
+// lcars-card-editor.ts
+private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
+    if (!this._config?.elements) return;
+    ev.stopPropagation();
+    const index = this._findElementIndex(elementId);
+    if (index === -1) return;
 
-      const propertiesMap = elementInstance.getPropertiesMap();
-      
-      // Process data (e.g., cleanup conflicting fields like anchor points)
-      const cleanedData = elementInstance.processDataUpdate(formData);
-      
-      // Special handling for color_rgb picker which returns an RGB array
-      if (cleanedData.fill && Array.isArray(cleanedData.fill) && cleanedData.fill.length === 3) {
-          // Convert RGB array to HEX format
-          cleanedData.fill = this._rgbArrayToHex(cleanedData.fill);
-          console.log('Converted RGB array to HEX:', cleanedData.fill);
-      }
+    const formData = ev.detail.value;
 
-      // Create a deep copy to modify safely
-      const newElementConfig = structuredClone(currentElementConfig);
-      
-      // Keep track of which keys were present in the form data
-      const formKeys = new Set(Object.keys(cleanedData));
+    // --- Special Case: Handling update from the 'invalid type' form ---
+    if (Object.keys(formData).length === 1 && formData.hasOwnProperty('type')) {
+        const newType = formData.type;
+        if (!newType) {
+            console.warn('Type selection cleared, no update performed.');
+            return;
+        }
 
-      // Update/delete values using configPath from propertiesMap
-      propertiesMap.forEach((propInstance, key) => {
-          const configPath = propInstance.configPath;
-          if (formKeys.has(key)) {
-              // Key exists in form data, update using setDeep
-              // Ensure parent objects exist before setting
-              const pathParts = configPath.split('.');
-              if (pathParts.length === 2) {
-                   const parentKey = pathParts[0] as 'props' | 'layout';
-                   if (!newElementConfig[parentKey]) {
-                       newElementConfig[parentKey] = {};
-                   }
-              }
-              setDeep(newElementConfig, configPath, cleanedData[key]);
-          } else {
-              // Key from schema is *not* in the submitted form data
-              // Delete the corresponding key from the config
-              unsetDeep(newElementConfig, configPath);
-          }
-      });
+        const newElementsConfig = structuredClone(this._config.elements);
+        const elementToUpdate = newElementsConfig[index];
+        elementToUpdate.type = newType;
 
-       // Clean up empty props/layout objects after potential deletions
-       if (newElementConfig.props && Object.keys(newElementConfig.props).length === 0) {
-           delete newElementConfig.props;
-       }
-       if (newElementConfig.layout && Object.keys(newElementConfig.layout).length === 0) {
-           delete newElementConfig.layout;
-       }
+        this._updateConfig(newElementsConfig);
+        this.requestUpdate();
+        return;
+    }
 
-      // Update the config array
-      const newElements = [...this._config.elements];
-      newElements[index] = newElementConfig;
+    // --- Regular handling for valid element forms ---
+    const currentElementConfig = this._config.elements[index];
+    const elementInstance = createElementInstance(currentElementConfig);
+    if (!elementInstance) {
+        console.error(`Could not get element instance for handler (Element ID: ${elementId})`);
+        return;
+    }
 
-      this._updateConfig(newElements);
-      // Request update needed if schema depends on the changes (e.g., anchorTo)
-      // This ensures the form re-renders with conditional fields updated
-      this.requestUpdate(); 
-  }
+    // Process data using the instance method (handles cleanup, conversion)
+    const cleanedData = elementInstance.processDataUpdate(formData);
+
+    // Reconstruct the element config
+    let newElementConfig: any = { id: currentElementConfig.id, type: currentElementConfig.type };
+
+    const propertiesMap = elementInstance.getPropertiesMap();
+
+    propertiesMap.forEach((propInstance, key) => {
+        if (cleanedData.hasOwnProperty(key)) {
+            let value = cleanedData[key];
+
+            if (key === 'fill' && Array.isArray(value) && value.length === 3) {
+                value = this._rgbArrayToHex(value);
+            }
+            
+            // The new unified stretch properties will be handled here naturally by their configPath
+            // processDataUpdate has already structured them if needed (e.g. stretchAxis from direction)
+
+            setDeep(newElementConfig, propInstance.configPath, value);
+        }
+    });
+    
+    // --- Special handling to preserve stretchTo2 if it already exists ---
+    // This might need to be revisited if processDataUpdate handles it sufficiently.
+    // If stretchTo2 is part of formData and processDataUpdate processes it, this might be redundant
+    // or could conflict if processDataUpdate decides to remove it.
+    // However, if processDataUpdate *doesn't* receive stretchTo2 from formData (because it wasn't in the schema that caused the event)
+    // but it *was* in the original config, this preserves it.
+    // Given that stretchTo2 is now part of getFormData and getSchema, it should be in formData.
+    // Let's assume processDataUpdate and the loop above handle it correctly.
+    // This specific preservation might no longer be needed if stretchTo2 is always in `cleanedData` when appropriate.
+    // For safety, we can keep it, but if stretchTo2 is *cleared* via the form, this would incorrectly add it back.
+    //
+    // Revised approach: rely on `processDataUpdate` and `setDeep`.
+    // If `currentElementConfig.layout?.stretch?.stretchTo2` existed and `cleanedData` doesn't clear it,
+    // and `stretchTo2` is a property in `propertiesMap`, `setDeep` will handle it.
+    // If `cleanedData` *does* clear it (because the form cleared it), `setDeep` won't set it.
+    // The key is that `processDataUpdate` correctly reflects the intent from `formData`.
+
+    // Clean up empty props/layout objects
+    if (newElementConfig.props && Object.keys(newElementConfig.props).length === 0) {
+        delete newElementConfig.props;
+    }
+    if (newElementConfig.layout) {
+        if (Object.keys(newElementConfig.layout).length === 0) {
+            delete newElementConfig.layout; // Delete layout if it's truly empty
+        } else if (newElementConfig.layout.stretch && Object.keys(newElementConfig.layout.stretch).length === 0) {
+            // If layout is not empty but stretch is, delete stretch
+            delete newElementConfig.layout.stretch;
+            // If layout then becomes empty, delete layout
+            if (Object.keys(newElementConfig.layout).length === 0) {
+                delete newElementConfig.layout;
+            }
+        }
+    }
+
+    const updatedElementsArray = [...this._config.elements];
+    updatedElementsArray[index] = newElementConfig;
+
+    this._updateConfig(updatedElementsArray);
+    this.requestUpdate();
+}
+
+// Remove the _determineStretchAxis method as it's no longer used:
+// private _determineStretchAxis(direction: string | undefined): 'X' | 'Y' | undefined { /* ... */ }
   
   // Helper to convert RGB array to HEX format
   private _rgbArrayToHex(rgb: number[]): string {
@@ -992,12 +993,6 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       }
   }
 
-  // Add missing _renderGroupList method still referenced in some places
-  private _renderGroupList(): TemplateResult {
-    // Just delegate to our new implementation
-    return this._renderGroupListUsingModules();
-  }
-
   // Update to handle element ID input changes
   private _updateElementIdInput(value: string): void {
     // Update editor state
@@ -1007,8 +1002,9 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     if (this._editingElementId) {
       const elementInstance = this._getElementInstance(this._editingElementId);
       if (elementInstance) {
-        // The instance was already updated by the renderer via elementInstance.updateIdInput
-        // Now we just need to sync back the error message
+        // Update the input value and validate immediately
+        elementInstance.currentIdInput = value;
+        elementInstance.validateIdInput();
         this._elementIdWarning = elementInstance.idEditErrorMessage;
       }
     }
@@ -1018,19 +1014,23 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
 
   // Update to handle group name input changes
   private _updateGroupNameInput(value: string): void {
-    // Update editor state
-    this._editingGroupInput = value;
-    
-    // Sync validation state by getting the group instance
+    // Update editor state for the appropriate input field
     if (this._editingGroup) {
+      this._editingGroupInput = value;
+      
+      // Sync validation state by getting the group instance
       const groupInstance = this._groupInstances.get(this._editingGroup);
       if (groupInstance) {
-        // The instance was already updated by the renderer via groupInstance.updateNameInput
-        // Now we just need to sync back the error message
+        // Update the input value and validate immediately
+        groupInstance.currentNameInput = value;
+        groupInstance.validateNameInput();
         this._groupIdWarning = groupInstance.editErrorMessage;
       }
     } else if (this._newGroupDraft) {
-      // Validate new group name
+      // Update the new group input field
+      this._newGroupInput = value;
+      
+      // Validate new group name immediately
       const validation = LcarsGroup.validateNewGroupName(value, new Set(this._groups));
       this._groupIdWarning = validation.error || '';
     }
@@ -1046,6 +1046,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     // Validate using a temporary element instance
     const tempElement = new RectangleElement({ id: '', type: 'rectangle' });
     tempElement.currentIdInput = value;
+    // Immediately validate the input
     tempElement.validateIdInput();
     this._addElementWarning = tempElement.idEditErrorMessage;
     

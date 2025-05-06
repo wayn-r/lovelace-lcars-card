@@ -155,6 +155,13 @@ export const editorStyles = css`
   }
   .confirm-button {
       color: var(--primary-color);
+      opacity: 0.5;
+  }
+  .confirm-button.valid {
+      opacity: 1;
+  }
+  .confirm-button[disabled] {
+      opacity: 0.5;
   }
   .cancel-button {
       color: var(--error-color);

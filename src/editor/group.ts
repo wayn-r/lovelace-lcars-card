@@ -42,15 +42,25 @@ export class LcarsGroup {
     }
 
     validateNameInput(): boolean {
+        // Check for empty string after trimming
         const trimmed = this.currentNameInput.trim();
         if (!trimmed) {
              this.editErrorMessage = 'Group ID cannot be empty.';
              return false;
         }
-        if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
+        
+        // Check if the original input contains spaces (different from trimmed length)
+        if (this.currentNameInput !== trimmed) {
+            this.editErrorMessage = 'Group ID cannot contain spaces.';
+            return false;
+        }
+        
+        // Check for valid characters
+        if (!/^[a-zA-Z0-9_-]+$/.test(this.currentNameInput)) {
             this.editErrorMessage = 'Group ID must be letters, numbers, _, -.';
             return false;
         }
+        
         // Instance validation doesn't check for duplicates against the global list here
         this.editErrorMessage = ''; 
         return true;
@@ -76,7 +86,8 @@ export class LcarsGroup {
         if (!this.isEditingName || !this.validateNameInput()) {
             return null; // Do nothing if not editing or invalid
         }
-        const newId = this.currentNameInput.trim();
+        // Use the current input without trimming since validateNameInput already checks for spaces
+        const newId = this.currentNameInput;
         if (newId === this.id) { // No actual change
             this.cancelEditingName();
             return null;
@@ -129,16 +140,27 @@ export class LcarsGroup {
 
     // --- Static Validation for New Groups ---
     static validateNewGroupName(name: string, existingGroupIds: Set<string>): { isValid: boolean, error?: string } {
-        const trimmedName = name.trim();
-        if (!trimmedName) {
+        // Check for empty string after trimming
+        const trimmed = name.trim();
+        if (!trimmed) {
             return { isValid: false, error: 'Group ID cannot be empty.' };
         }
-        if (!/^[a-zA-Z0-9_-]+$/.test(trimmedName)) {
-             return { isValid: false, error: 'Group ID must be letters, numbers, _, -.' };
+        
+        // Check if the original input contains spaces (different from trimmed length)
+        if (name !== trimmed) {
+            return { isValid: false, error: 'Group ID cannot contain spaces.' };
         }
-        if (existingGroupIds.has(trimmedName)) {
-             return { isValid: false, error: 'Group name already exists.' };
+        
+        // Check for valid characters
+        if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+            return { isValid: false, error: 'Group ID must be letters, numbers, _, -.' };
         }
+        
+        // Check for duplicates
+        if (existingGroupIds.has(name)) {
+            return { isValid: false, error: 'Group name already exists.' };
+        }
+        
         return { isValid: true };
     }
 } 

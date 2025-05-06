@@ -18,7 +18,43 @@ export interface LcarsCardConfig {
   title?: string;
   text?: string;
   fontSize?: number;
-  elements?: any[];
+  elements?: LcarsElementConfig[];
+}
+
+// New interface for element configuration
+export interface LcarsElementConfig {
+  id: string;
+  type: string;
+  props?: Record<string, any>;
+  layout?: LcarsLayoutConfig;
+  group?: string;
+}
+
+// Layout configuration interface
+export interface LcarsLayoutConfig {
+  width?: number | string;
+  height?: number | string;
+  offsetX?: number | string;
+  offsetY?: number | string;
+  
+  // Anchor properties
+  anchor?: {
+    anchorTo: string;
+    anchorPoint?: string;
+    targetAnchorPoint?: string;
+  };
+  
+  // New unified stretch property format
+  stretch?: {
+    stretchTo1?: string;
+    stretchAxis1?: 'X' | 'Y';
+    targetStretchAnchorPoint1?: string;
+    stretchPadding1?: number;
+    stretchTo2?: string;
+    stretchAxis2?: 'X' | 'Y';
+    targetStretchAnchorPoint2?: string;
+    stretchPadding2?: number;
+  };
 }
 
 // Register the card with Home Assistant

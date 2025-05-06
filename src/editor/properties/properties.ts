@@ -11,7 +11,10 @@ export interface HaFormSchema {
     column_min_width?: string;
     schema?: HaFormSchema[];
     element?: string; 
-    config?: Record<string, any>; 
+    config?: Record<string, any>;
+    grid_columns?: number; // Number of columns this field takes up
+    grid_column_span?: number; // How many columns this field spans
+    grid_column_start?: number; // Which column to start at (1-based)
 }
 
 // import { HaFormSchema } from '../types'; // Assuming types are defined or will be defined
@@ -32,6 +35,120 @@ export interface LcarsPropertyBase {
     getSchema(context?: PropertySchemaContext): HaFormSchema;
     // Optional method to format a value from the config for the form UI
     formatValueForForm?(value: any): any;
+}
+
+// --- NEW UNIFIED STRETCH CLASSES ---
+
+/**
+ * StretchTarget - The primary class for selecting a target element to stretch to
+ */
+export class StretchTarget implements LcarsPropertyBase {
+    name: string;
+    label: string;
+    configPath: string;
+    index: number;
+
+    constructor(index: number = 0) {
+        this.index = index;
+        const suffix = index === 0 ? '1' : '2';
+        
+        this.name = `stretchTo${suffix}`;
+        this.label = index === 0 ? 'Stretch To' : `Stretch To ${suffix}`;
+        this.configPath = `layout.stretch.stretchTo${suffix}`;
+    }
+
+    getSchema(context?: PropertySchemaContext): HaFormSchema {
+        const options = [
+            { value: '', label: '' }, 
+            { value: 'container', label: 'Container' },
+            ...(context?.otherElementIds || [])
+        ];
+
+        // Get the current value for logging
+        const currentValue = context?.layoutData?.stretch?.[`stretchTo${this.index === 0 ? '1' : '2'}`];
+
+        return {
+            name: this.name,
+            label: this.label,
+            column_min_width: '100px',
+            grid_column_span: 2, // Make the dropdown take up two columns
+            selector: { select: { options: options, mode: 'dropdown' } },
+            required: false,
+            default: '' // Ensure there's always a default empty value
+        };
+    }
+}
+
+/**
+ * StretchDirection - Allows selecting the direction to stretch (using a grid selector)
+ */
+export class StretchDirection implements LcarsPropertyBase {
+    name: string;
+    label: string;
+    configPath: string;
+    index: number;
+
+    constructor(index: number = 0) {
+        this.index = index;
+        const suffix = index === 0 ? '1' : '2';
+        
+        this.name = `stretchDirection${suffix}`;
+        this.label = 'Direction';
+        this.configPath = `layout.stretch.targetStretchAnchorPoint${suffix}`;
+    }
+
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            type: 'custom',
+            column_min_width: '100px',
+            grid_column_start: 2, // Start in second column
+            grid_column_span: 1, // Take up one column
+            grid_columns: 2, // Take up two rows worth of vertical space
+            selector: { 
+                lcars_grid: { 
+                    labelCenter: true,
+                    clearable: true,
+                    required: false,
+                    disableCorners: true, 
+                    disableCenter: true,
+                    onlyCardinalDirections: true,
+                    stretchMode: true
+                } 
+            }
+        };
+    }
+}
+
+/**
+ * StretchPadding - Allows setting padding value for the stretch
+ */
+export class StretchPadding implements LcarsPropertyBase {
+    name: string;
+    label: string;
+    configPath: string;
+    index: number;
+
+    constructor(index: number = 0) {
+        this.index = index;
+        const suffix = index === 0 ? '1' : '2';
+        
+        this.name = `stretchPadding${suffix}`;
+        this.label = 'Padding (px)';
+        this.configPath = `layout.stretch.stretchPadding${suffix}`;
+    }
+
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            column_min_width: '100px',
+            grid_column_start: 1, // Start in first column
+            grid_column_span: 1, // Take up one column
+            selector: { number: { mode: 'box', step: 1 } }
+        };
+    }
 }
 
 // --- Common Layout Property Classes ---
@@ -113,25 +230,6 @@ export class AnchorTo implements LcarsPropertyBase {
     }
 }
 
-export class StretchTo implements LcarsPropertyBase {
-    name = 'stretchTo';
-    label = 'Stretch To';
-    configPath = 'layout.stretchTo';
-
-    getSchema(context?: PropertySchemaContext): HaFormSchema {
-        const options = [
-            { value: '', label: '' }, 
-            { value: 'container', label: 'Container' },
-            ...(context?.otherElementIds || [])
-        ];
-        return {
-            name: this.name,
-            label: this.label,
-            selector: { select: { options: options, mode: 'dropdown' } }
-        };
-    }
-}
-
 export class AnchorPoint implements LcarsPropertyBase {
     name = 'anchorPoint';
     label = 'Anchor Point';
@@ -158,83 +256,6 @@ export class TargetAnchorPoint implements LcarsPropertyBase {
             label: this.label,
             type: 'custom',
             selector: { lcars_grid: { labelCenter: true } }
-        };
-    }
-}
-
-export class TargetStretchAnchorPoint implements LcarsPropertyBase {
-    name = 'targetStretchAnchorPoint';
-    label = 'Target Side';
-    configPath = 'layout.targetStretchAnchorPoint';
-
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            type: 'custom',
-            selector: { lcars_grid: { labelCenter: true, disableCorners: true } }
-        };
-    }
-}
-
-export class StretchPaddingX implements LcarsPropertyBase {
-    name = 'stretchPaddingX';
-    label = 'Stretch Gap';
-    configPath = 'layout.stretchPaddingX';
-
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            selector: { number: { mode: 'box', step: 1 } }
-        };
-    }
-}
-
-export class StretchPaddingY implements LcarsPropertyBase {
-    name = 'stretchPaddingY';
-    label = 'Stretch Gap Y (px)';
-    configPath = 'layout.stretchPaddingY';
-
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            selector: { number: { mode: 'box', step: 1 } }
-        };
-    }
-}
-
-export class StretchTo2 implements LcarsPropertyBase {
-    name = 'stretchTo2';
-    label = 'Stretch To';
-    configPath = 'layout.stretchTo2';
-
-    getSchema(context?: PropertySchemaContext): HaFormSchema {
-        const options = [
-            { value: '', label: '' }, 
-            { value: 'container', label: 'Container' },
-            ...(context?.otherElementIds || [])
-        ];
-        return {
-            name: this.name,
-            label: this.label,
-            selector: { select: { options: options, mode: 'dropdown' } }
-        };
-    }
-}
-
-export class TargetStretchAnchorPoint2 implements LcarsPropertyBase {
-    name = 'targetStretchAnchorPoint2';
-    label = 'Target Side';
-    configPath = 'layout.targetStretchAnchorPoint2';
-
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            type: 'custom',
-            selector: { lcars_grid: { labelCenter: true, disableCorners: true } }
         };
     }
 }

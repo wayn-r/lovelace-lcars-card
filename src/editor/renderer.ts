@@ -43,6 +43,9 @@ interface GroupEditorContext {
   cancelAddElement: () => void;
   updateGroupNameInput: (value: string) => void;
   updateNewElementInput: (value: string) => void;
+  confirmNewGroup: () => void;
+  cancelNewGroup: () => void;
+  addGroup: () => void;
   
   // State variables
   collapsedGroups: { [groupId: string]: boolean };
@@ -195,12 +198,17 @@ export function renderElement(
   // Find all anchor and stretch related schemas (preserve these for the existing logic)
   const anchorToSchema = standardSchema.find(s => s.name === 'anchorTo');
   
-  // Find all stretch schemas - we may have multiple due to the second stretch option
-  const stretchToSchemas = standardSchema.filter(s => s.name === 'stretchTo');
-  const primaryStretchSchema = stretchToSchemas[0];
+  // Extract the first and second stretch schemas
+  const primaryStretchSchema = standardSchema.find(s => s.name === 'stretchTo1');
   const secondaryStretchSchema = standardSchema.find(s => s.name === 'stretchTo2');
   
-  const stretchPaddingXSchema = standardSchema.find(s => s.name === 'stretchPaddingX');
+  // Get the right padding schemas, prioritizing the indexed ones first
+  const stretchPadding1Schema = standardSchema.find(s => s.name === 'stretchPadding1');
+  const stretchPadding2Schema = standardSchema.find(s => s.name === 'stretchPadding2');
+
+  // Find direction/target anchor point schemas
+  const targetStretchAnchorPoint1Schema = customSchema.find(s => s.name === 'targetStretchAnchorPoint1' || s.name === 'stretchDirection1');
+  const targetStretchAnchorPoint2Schema = customSchema.find(s => s.name === 'targetStretchAnchorPoint2' || s.name === 'stretchDirection2');
   
   // Remove all handled schemas from the standardSchema to avoid duplication
   const filteredStandardSchema = standardSchema.filter(s => 
@@ -209,32 +217,50 @@ export function renderElement(
     'text', 'fontFamily', 'fontSize', 'fontWeight', 'letterSpacing', 
     'textAnchor', 'dominantBaseline', 'textTransform',
     'horizontalWidth', 'verticalWidth', 'headerHeight', 'totalElbowHeight', 'outerCornerRadius',
-    'anchorTo', 'stretchTo', 'stretchTo2', 'stretchPaddingX', 'stretchPaddingY'].includes(s.name)
+    'anchorTo', 'stretchTo1', 'stretchTo2', 'stretchPadding1', 'stretchPadding2',
+    'targetStretchAnchorPoint1', 'targetStretchAnchorPoint2', 'stretchDirection1', 'stretchDirection2'].includes(s.name)
   );
   
   // Extract custom grid selectors
   const containerAnchorPointSchema = customSchema.find(s => s.name === 'containerAnchorPoint');
   const anchorPointSchema = customSchema.find(s => s.name === 'anchorPoint');
   const targetAnchorPointSchema = customSchema.find(s => s.name === 'targetAnchorPoint');
-  const targetStretchAnchorPointSchema = customSchema.find(s => s.name === 'targetStretchAnchorPoint');
-  const targetStretchAnchorPoint2Schema = customSchema.find(s => s.name === 'targetStretchAnchorPoint2');
   
   // Create schema arrays for ha-form based on which properties exist
   const widthHeightSchema = [widthSchema, heightSchema].filter(Boolean);
   const offsetSchema = [offsetXSchema, offsetYSchema].filter(Boolean);
   
   // Use these variables for the existing anchor/stretch logic
-  const anchorSchema = [anchorToSchema].filter(Boolean);
-  const stretchSchema = [primaryStretchSchema].filter(Boolean);
-  const secondStretchSchema = secondaryStretchSchema ? [secondaryStretchSchema] : [];
-  const stretchPaddingSchema = [stretchPaddingXSchema].filter(Boolean);
-  
-  // Determine if we need to show anchor point selectors
   const showAnchorPoints = formData.anchorTo && formData.anchorTo !== '';
   
-  // Determine if we need to show stretch target selector
-  const showStretchTarget = formData.stretchTo && formData.stretchTo !== '';
+  // Determine if we need to show stretch target selectors
+  const showStretchTarget = formData.stretchTo1 && formData.stretchTo1 !== '';
   const showSecondStretchTarget = formData.stretchTo2 && formData.stretchTo2 !== '';
+
+  // Helper function to render a single property form, closing over context, elementId, and formData
+  function renderProp(
+    schema: HaFormSchema | undefined,
+    sideClass: string
+  ): TemplateResult {
+    if (!schema) return html``;
+
+    const value = formData[schema.name];
+
+    // Create a refresh key containing the field name and value to force updates
+    // const refreshKey = `${schema.name}:${value}`; // No Date.now()
+
+    return html`
+      <div class=${sideClass}>
+        <ha-form
+          .hass=${context.hass}
+          .data=${formData}
+          .schema=${[schema]}
+          .computeLabel=${(s: HaFormSchema) => s.label || s.name}
+          @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
+        ></ha-form>
+      </div>
+    `;
+  }
 
   return html`
     <div class="element-editor ${isDragOver ? 'drag-over' : ''}"
@@ -280,17 +306,7 @@ export function renderElement(
                <!-- Property Container with 2-column layout -->
                <div class="property-container">
                   <!-- Type Property (Always show first) -->
-                  ${typeSchema ? html`
-                     <div class="property-full-width">
-                       <ha-form
-                         .hass=${context.hass}
-                         .data=${formData} 
-                         .schema=${[typeSchema]} 
-                         .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                         @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                       ></ha-form>
-                     </div>
-                  ` : ''}
+                  ${renderFullWidthPropertyForm(context, elementId, formData, typeSchema)}
                   
                   <!-- Properties based on element type -->
                   ${(() => {
@@ -298,202 +314,46 @@ export function renderElement(
                     if (element.type === 'rectangle') {
                       return html`
                         <!-- Fill Color -->
-                        ${fillSchema ? html`
-                          <div class="property-full-width">
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[fillSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          </div>
-                        ` : ''}
-                        
+                        ${renderFullWidthPropertyForm(context, elementId, formData, fillSchema)}
+
                         <!-- Width and Height -->
-                        ${widthHeightSchema.length > 0 ? html`
-                          <div class="property-left">
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[widthSchema].filter(Boolean)} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          </div>
-                          <div class="property-right">
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[heightSchema].filter(Boolean)} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          </div>
-                        ` : ''}
+                        ${renderProp(widthSchema, 'property-left')}
+                        ${renderProp(heightSchema, 'property-right')}
                       `;
                     }
                     // Layout for endcap elements (both endcap and chisel-endcap)
                     else if (element.type === 'endcap' || element.type === 'chisel-endcap') {
                       return html`
                         <!-- Fill Color and Direction -->
-                        <div class="property-left">
-                          ${fillSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[fillSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        <div class="property-right">
-                          ${directionSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[directionSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        
+                        ${renderProp(fillSchema, 'property-left')}
+                        ${renderProp(directionSchema, 'property-right')}
+
                         <!-- Width and Height -->
-                        ${widthHeightSchema.length > 0 ? html`
-                          <div class="property-left">
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[widthSchema].filter(Boolean)} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          </div>
-                          <div class="property-right">
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[heightSchema].filter(Boolean)} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          </div>
-                        ` : ''}
+                        ${renderProp(widthSchema, 'property-left')}
+                        ${renderProp(heightSchema, 'property-right')}
                       `;
                     }
                     // Layout for text elements
                     else if (element.type === 'text') {
                       return html`
                         <!-- Text Content and Fill Color -->
-                        <div class="property-left">
-                          ${textContentSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[textContentSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        <div class="property-right">
-                          ${fillSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[fillSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        
+                        ${renderProp(textContentSchema, 'property-left')}
+                        ${renderProp(fillSchema, 'property-right')}
+
                         <!-- Font Family and Font Size -->
-                        <div class="property-left">
-                          ${fontFamilySchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[fontFamilySchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        <div class="property-right">
-                          ${fontSizeSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[fontSizeSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        
+                        ${renderProp(fontFamilySchema, 'property-left')}
+                        ${renderProp(fontSizeSchema, 'property-right')}
+
                         <!-- Font Weight and Letter Spacing -->
-                        <div class="property-left">
-                          ${fontWeightSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[fontWeightSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        <div class="property-right">
-                          ${letterSpacingSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[letterSpacingSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        
+                        ${renderProp(fontWeightSchema, 'property-left')}
+                        ${renderProp(letterSpacingSchema, 'property-right')}
+
                         <!-- Text Anchor and Dominant Baseline -->
-                        <div class="property-left">
-                          ${textAnchorSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[textAnchorSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        <div class="property-right">
-                          ${dominantBaselineSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[dominantBaselineSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        
+                        ${renderProp(textAnchorSchema, 'property-left')}
+                        ${renderProp(dominantBaselineSchema, 'property-right')}
+
                         <!-- Text Transform -->
-                        <div class="property-left">
-                          ${textTransformSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[textTransformSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
+                        ${renderProp(textTransformSchema, 'property-left')}
                         <div class="property-right"></div>
                       `;
                     }
@@ -501,102 +361,22 @@ export function renderElement(
                     else if (element.type === 'elbow') {
                       return html`
                         <!-- Fill Color and Orientation -->
-                        <div class="property-left">
-                          ${fillSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[fillSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        <div class="property-right">
-                          ${orientationSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[orientationSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        
+                        ${renderProp(fillSchema, 'property-left')}
+                        ${renderProp(orientationSchema, 'property-right')}
+
                         <!-- Side property -->
-                        ${sideSchema ? html`
-                          <div class="property-full-width">
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[sideSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          </div>
-                        ` : ''}
-                        
+                        ${renderFullWidthPropertyForm(context, elementId, formData, sideSchema)}
+
                         <!-- Horizontal Width and Vertical Width -->
-                        <div class="property-left">
-                          ${horizontalWidthSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[horizontalWidthSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        <div class="property-right">
-                          ${verticalWidthSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[verticalWidthSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        
+                        ${renderProp(horizontalWidthSchema, 'property-left')}
+                        ${renderProp(verticalWidthSchema, 'property-right')}
+
                         <!-- Header Height and Total Height -->
-                        <div class="property-left">
-                          ${headerHeightSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[headerHeightSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        <div class="property-right">
-                          ${totalElbowHeightSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[totalElbowHeightSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        
+                        ${renderProp(headerHeightSchema, 'property-left')}
+                        ${renderProp(totalElbowHeightSchema, 'property-right')}
+
                         <!-- Outer Corner Radius -->
-                        <div class="property-left">
-                          ${outerCornerRadiusSchema ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[outerCornerRadiusSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
+                        ${renderProp(outerCornerRadiusSchema, 'property-left')}
                         <div class="property-right"></div>
                       `;
                     }
@@ -604,222 +384,70 @@ export function renderElement(
                     else {
                       return html`
                         <!-- Fill Color -->
-                        ${fillSchema ? html`
-                          <div class="property-full-width">
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[fillSchema]} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          </div>
-                        ` : ''}
-                        
+                        ${renderFullWidthPropertyForm(context, elementId, formData, fillSchema)}
+
                         <!-- Width and Height -->
-                        ${widthHeightSchema.length > 0 ? html`
-                          <div class="property-left">
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[widthSchema].filter(Boolean)} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          </div>
-                          <div class="property-right">
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${[heightSchema].filter(Boolean)} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          </div>
-                        ` : ''}
+                        ${renderProp(widthSchema, 'property-left')}
+                        ${renderProp(heightSchema, 'property-right')}
                       `;
                     }
                   })()}
                   
                   <!-- Anchor To Row -->
-                  ${anchorSchema.length > 0 ? html`
-                     <div class="property-full-width">
-                       <ha-form
-                         .hass=${context.hass}
-                         .data=${formData} 
-                         .schema=${anchorSchema} 
-                         .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                         @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                       ></ha-form>
-                     </div>
-                  ` : ''}
+                  ${renderFullWidthPropertyForm(context, elementId, formData, anchorToSchema)}
                   
                   <!-- Container Anchor Point Selector (show when no specific anchor is selected) -->
                   ${!showAnchorPoints && containerAnchorPointSchema ? html`
-                     <div class="property-full-width">
-                       ${renderCustomSelector(containerAnchorPointSchema, formData[containerAnchorPointSchema.name], 
-                          (value: string) => {
-                            const detail = { value: { ...formData, [containerAnchorPointSchema.name]: value } };
-                            const customEvent = new CustomEvent('value-changed', { detail });
-                            context.handleFormValueChanged(customEvent, elementId);
-                          })}
-                     </div>
+                     ${renderCustomSelectorWrapper(containerAnchorPointSchema, formData[containerAnchorPointSchema.name],
+                        (value: string) => {
+                          const detail = { value: { ...formData, [containerAnchorPointSchema.name]: value } };
+                          const customEvent = new CustomEvent('value-changed', { detail });
+                          context.handleFormValueChanged(customEvent, elementId);
+                        }, 'property-full-width')}
                   ` : ''}
                   
                   <!-- Anchor Point Selectors (always show when anchor is selected) -->
                   ${showAnchorPoints && anchorPointSchema && targetAnchorPointSchema ? html`
-                     <div class="property-left">
-                       ${renderCustomSelector(anchorPointSchema, formData[anchorPointSchema.name], 
-                          (value: string) => {
-                            const detail = { value: { ...formData, [anchorPointSchema.name]: value } };
-                            const customEvent = new CustomEvent('value-changed', { detail });
-                            context.handleFormValueChanged(customEvent, elementId);
-                          })}
-                     </div>
-                     <div class="property-right">
-                       ${renderCustomSelector(targetAnchorPointSchema, formData[targetAnchorPointSchema.name], 
-                          (value: string) => {
-                            const detail = { value: { ...formData, [targetAnchorPointSchema.name]: value } };
-                            const customEvent = new CustomEvent('value-changed', { detail });
-                            context.handleFormValueChanged(customEvent, elementId);
-                          })}
-                     </div>
+                     ${renderCustomSelectorWrapper(anchorPointSchema, formData[anchorPointSchema.name],
+                        (value: string) => {
+                          const detail = { value: { ...formData, [anchorPointSchema.name]: value } };
+                          const customEvent = new CustomEvent('value-changed', { detail });
+                          context.handleFormValueChanged(customEvent, elementId);
+                        }, 'property-left')}
+                     ${renderCustomSelectorWrapper(targetAnchorPointSchema, formData[targetAnchorPointSchema.name],
+                        (value: string) => {
+                          const detail = { value: { ...formData, [targetAnchorPointSchema.name]: value } };
+                          const customEvent = new CustomEvent('value-changed', { detail });
+                          context.handleFormValueChanged(customEvent, elementId);
+                        }, 'property-right')}
                   ` : ''}
                   
-                  <!-- Primary Stretch To Row - Single row when no stretch target, otherwise multi-row layout -->
-                  ${stretchSchema.length > 0 ? html`
-                     ${!showStretchTarget ? html`
-                        <!-- No stretch target selected: single row full-width -->
-                        <div class="property-full-width">
-                          <ha-form
-                            .hass=${context.hass}
-                            .data=${formData} 
-                            .schema=${stretchSchema} 
-                            .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                            @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                          ></ha-form>
-                        </div>
-                     ` : html`
-                        <!-- Stretch target selected: two columns -->
-                        <div class="property-left">
-                          <!-- First column, first row: Stretch To -->
-                          <ha-form
-                            .hass=${context.hass}
-                            .data=${formData} 
-                            .schema=${stretchSchema} 
-                            .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                            @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                          ></ha-form>
-                          
-                          <!-- First column, second row: Stretch Gap -->
-                          ${stretchPaddingSchema.length > 0 ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${stretchPaddingSchema} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        
-                        <!-- Second column: Target Side grid -->
-                        <div class="property-right">
-                          ${targetStretchAnchorPointSchema ? html`
-                            ${renderCustomSelector(targetStretchAnchorPointSchema, formData[targetStretchAnchorPointSchema.name], 
-                              (value: string) => {
-                                const detail = { value: { ...formData, [targetStretchAnchorPointSchema.name]: value } };
-                                const customEvent = new CustomEvent('value-changed', { detail });
-                                context.handleFormValueChanged(customEvent, elementId);
-                              })}
-                          ` : ''}
-                        </div>
-                     `}
-                  ` : ''}
-                  
-                  <!-- Second Stretch Target Dropdown (only shown if primary is selected) -->
-                  ${showStretchTarget && secondStretchSchema ? html`
-                     ${!showSecondStretchTarget ? html`
-                        <!-- No second stretch target selected: single row full-width -->
-                        <div class="property-full-width">
-                          <ha-form
-                            .hass=${context.hass}
-                            .data=${formData} 
-                            .schema=${secondStretchSchema} 
-                            .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                            @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                          ></ha-form>
-                        </div>
-                     ` : html`
-                        <!-- Second stretch target selected: two columns -->
-                        <div class="property-left">
-                          <!-- First column, first row: Second Stretch To -->
-                          <ha-form
-                            .hass=${context.hass}
-                            .data=${formData} 
-                            .schema=${secondStretchSchema} 
-                            .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                            @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                          ></ha-form>
-                          
-                          <!-- First column, second row: Stretch Gap for second stretch -->
-                          ${stretchPaddingSchema.length > 0 ? html`
-                            <ha-form
-                              .hass=${context.hass}
-                              .data=${formData} 
-                              .schema=${stretchPaddingSchema} 
-                              .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                              @value-changed=${(ev: CustomEvent) => {
-                                // For the second stretch, we also need to update stretchPaddingY
-                                const newValue = ev.detail.value.stretchPaddingX;
-                                const detail = { 
-                                  value: { 
-                                    ...formData, 
-                                    stretchPaddingX: newValue,
-                                    stretchPaddingY: newValue 
-                                  } 
-                                };
-                                const customEvent = new CustomEvent('value-changed', { detail });
-                                context.handleFormValueChanged(customEvent, elementId);
-                              }}
-                            ></ha-form>
-                          ` : ''}
-                        </div>
-                        
-                        <!-- Second column: Second Target Side grid -->
-                        <div class="property-right">
-                          ${targetStretchAnchorPoint2Schema ? html`
-                            ${renderCustomSelector(targetStretchAnchorPoint2Schema, formData[targetStretchAnchorPoint2Schema.name], 
-                              (value: string) => {
-                                const detail = { value: { ...formData, [targetStretchAnchorPoint2Schema.name]: value } };
-                                const customEvent = new CustomEvent('value-changed', { detail });
-                                context.handleFormValueChanged(customEvent, elementId);
-                              })}
-                          ` : ''}
-                        </div>
-                     `}
-                  ` : ''}
+                  <!-- Primary Stretch To Row -->
+                  ${renderStretchSection(
+                    context,
+                    elementId,
+                    formData,
+                    primaryStretchSchema,
+                    stretchPadding1Schema,
+                    targetStretchAnchorPoint1Schema,
+                    showStretchTarget
+                  )}
+
+                  <!-- Second Stretch Target Dropdown (only shown if a primary target is selected) -->
+                  ${showStretchTarget ? renderStretchSection(
+                    context,
+                    elementId,
+                    formData,
+                    secondaryStretchSchema,
+                    stretchPadding2Schema,
+                    targetStretchAnchorPoint2Schema,
+                    showSecondStretchTarget
+                  ) : ''}
                   
                   <!-- Offset X and Y Row -->
                   ${offsetSchema.length > 0 ? html`
-                     <div class="property-left">
-                       <ha-form
-                         .hass=${context.hass}
-                         .data=${formData} 
-                         .schema=${[offsetXSchema].filter(Boolean)} 
-                         .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                         @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                       ></ha-form>
-                     </div>
-                     <div class="property-right">
-                       <ha-form
-                         .hass=${context.hass}
-                         .data=${formData} 
-                         .schema=${[offsetYSchema].filter(Boolean)} 
-                         .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                         @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                       ></ha-form>
-                     </div>
+                    ${renderProp(offsetXSchema, 'property-left')}
+                    ${renderProp(offsetYSchema, 'property-right')}
                   ` : ''}
                   
                   <!-- Remaining properties -->
@@ -827,8 +455,8 @@ export function renderElement(
                      <div class="property-full-width">
                        <ha-form
                          .hass=${context.hass}
-                         .data=${formData} 
-                         .schema=${filteredStandardSchema} 
+                         .data=${formData}
+                         .schema=${filteredStandardSchema}
                          .computeLabel=${(s: HaFormSchema) => s.label || s.name}
                          @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
                        ></ha-form>
@@ -849,17 +477,77 @@ function renderCustomSelector(
   onChange: (value: string) => void
 ): TemplateResult {
   if (schema.selector.lcars_grid) {
+    
+    // Add a timestamp to force rerender when values change
+    // const refreshKey = `${schema.name}:${value}:${Date.now()}`; // REMOVE Date.now()
+    
     return html`
       <lcars-grid-selector
         .label=${schema.label || schema.name}
         .value=${value || ''}
         ?labelCenter=${schema.selector.lcars_grid.labelCenter}
         ?disableCorners=${schema.selector.lcars_grid.disableCorners}
+        ?disableCenter=${schema.selector.lcars_grid.disableCenter}
+        ?onlyCardinalDirections=${schema.selector.lcars_grid.onlyCardinalDirections}
+        ?stretchMode=${schema.selector.lcars_grid.stretchMode}
+        ?clearable=${schema.selector.lcars_grid.clearable}
+        ?required=${schema.selector.lcars_grid.required}
         @value-changed=${(e: CustomEvent) => onChange(e.detail.value)}
       ></lcars-grid-selector>
     `;
   }
   return html``; // Handle other custom types if needed
+}
+
+// Helper function to wrap custom selectors in appropriate div (left/right/full-width)
+function renderCustomSelectorWrapper(
+  schema: HaFormSchema | undefined,
+  value: string,
+  onChange: (value: string) => void,
+  sideClass: string // "property-left", "property-right", or "property-full-width"
+): TemplateResult {
+  if (!schema) return html``;
+
+  return html`
+    <div class="${sideClass}">
+      ${renderCustomSelector(schema, value, onChange)}
+    </div>
+  `;
+}
+
+// Helper function to render confirm and cancel action buttons
+function renderActionButtons(
+  isValid: boolean,
+  onConfirm: (e: Event) => void,
+  onCancel: (e: Event) => void,
+  confirmTitle: string = "Confirm",
+  cancelTitle: string = "Cancel"
+): TemplateResult {
+  return html`
+    <div class="editing-actions">
+      <ha-icon-button
+        class="confirm-button ${isValid ? 'valid' : ''}"
+        @click=${(e: Event) => { 
+            e.stopPropagation(); 
+            if (isValid) { onConfirm(e); }
+        }}
+        title=${confirmTitle}
+        .disabled=${!isValid}
+      >
+        <ha-icon icon="mdi:check"></ha-icon>
+      </ha-icon-button>
+      <ha-icon-button
+        class="cancel-button"
+        @click=${(e: Event) => { 
+            e.stopPropagation(); 
+            onCancel(e);
+        }}
+        title=${cancelTitle}
+      >
+        <ha-icon icon="mdi:close"></ha-icon>
+      </ha-icon-button>
+    </div>
+  `;
 }
 
 // Renders the input fields for editing an element's base ID
@@ -868,58 +556,62 @@ export function renderElementIdEditForm(
   elementInstance: LcarsElementBase,
   context: EditorContext
 ): TemplateResult {
-    // Use a placeholder or error message if instance somehow isn't found
-    const currentInput = context.editingElementIdInput; 
+    const currentInput = context.editingElementIdInput;
     const warningMessage = context.elementIdWarning;
+    const isValid = !!currentInput.trim() && !warningMessage;
 
-    return html`
-      <div class="element-name-input">
-          <ha-textfield
-              label="Edit Element ID (base)"
-              .value=${currentInput}
-              @input=${(e: Event) => {
-                  const newValue = (e.target as HTMLInputElement).value;
-                  // Update both the element instance and the editor's state
-                  elementInstance.updateIdInput(newValue);
-                  context.updateElementIdInput(newValue);
-                  // Error message will be synced by the updateElementIdInput method
-              }}
-              @keydown=${(e: KeyboardEvent) => { 
-                  if (e.key === 'Enter') { 
-                      e.stopPropagation(); 
-                      context.handleConfirmEditElementId(elementInstance); 
-                  } 
-              }}
-              autofocus
-              required
-              .invalid=${!!warningMessage}
-          ></ha-textfield>
-          ${warningMessage ? html`<div class="warning-text">${warningMessage}</div>` : ''}
-      </div>
-      <div class="editing-actions">
-         <ha-icon-button
-            class="confirm-button"
-            @click=${(e: Event) => { 
-                e.stopPropagation(); 
-                context.handleConfirmEditElementId(elementInstance); 
-            }}
-            title="Rename Element ID"
-            .disabled=${!currentInput.trim() || !!warningMessage}
-         >
-            <ha-icon icon="mdi:check"></ha-icon>
-         </ha-icon-button>
-         <ha-icon-button
-            class="cancel-button"
-            @click=${(e: Event) => { 
-                e.stopPropagation(); 
-                elementInstance.cancelEditingId(); // Cancel on instance
-                context.cancelEditElementId(); // Cancel on editor
-            }}
-            title="Cancel"
-         >
-            <ha-icon icon="mdi:close"></ha-icon>
-         </ha-icon-button>
-      </div>
+    return renderInputForm(
+      "Edit Element ID (base)",
+      currentInput,
+      warningMessage,
+      isValid,
+      (newValue) => {
+        elementInstance.updateIdInput(newValue);
+        context.updateElementIdInput(newValue);
+      },
+      (e) => { // onKeydown
+        if (e.key === 'Enter' && isValid) {
+          e.stopPropagation();
+          context.handleConfirmEditElementId(elementInstance);
+        }
+      },
+      () => context.handleConfirmEditElementId(elementInstance), // onConfirm
+      () => { // onCancel
+        elementInstance.cancelEditingId();
+        context.cancelEditElementId();
+      },
+      "Rename Element ID",
+      "Cancel"
+    );
+}
+
+// Generic helper function to render a text input form with validation and actions
+function renderInputForm(
+  label: string,
+  currentInput: string,
+  warningMessage: string | null | undefined,
+  isValid: boolean,
+  onInput: (newValue: string) => void,
+  onKeydown: (e: KeyboardEvent) => void,
+  onConfirm: (e: Event) => void,
+  onCancel: (e: Event) => void,
+  confirmTitle: string,
+  cancelTitle: string
+): TemplateResult {
+  return html`
+    <div class="element-name-input"> // Re-using class, consider making it more generic if needed
+      <ha-textfield
+        .label=${label}
+        .value=${currentInput}
+        @input=${(e: Event) => onInput((e.target as HTMLInputElement).value)}
+        @keydown=${onKeydown}
+        autofocus
+        required
+        .invalid=${!!warningMessage}
+      ></ha-textfield>
+      ${warningMessage ? html`<div class="warning-text">${warningMessage}</div>` : ''}
+    </div>
+    ${renderActionButtons(isValid, onConfirm, onCancel, confirmTitle, cancelTitle)}
   `;
 }
 
@@ -993,54 +685,31 @@ export function renderGroup(
 export function renderNewGroupForm(groupContext: GroupEditorContext): TemplateResult {
     const currentInput = groupContext.newGroupInput;
     const warningMessage = groupContext.groupIdWarning;
+    const isValid = !!currentInput.trim() && !warningMessage;
 
+    // Wrapping the form in the standard group structure for consistency
     return html`
       <div class="group-editor new-group">
-          <div class="group-header editing">
-              <ha-icon icon="mdi:chevron-down"></ha-icon>
-              <div class="group-name-input">
-                  <ha-textfield
-                      label="New Group Name"
-                      .value=${currentInput}
-                      @input=${(e: Event) => {
-                          const newValue = (e.target as HTMLInputElement).value;
-                          groupContext.updateGroupNameInput(newValue);
-                      }}
-                      @keydown=${(e: KeyboardEvent) => { 
-                          if (e.key === 'Enter') { 
-                              e.stopPropagation(); 
-                              groupContext.handleConfirmEditGroup('__new__'); 
-                          } 
-                      }}
-                      autofocus
-                      .invalid=${!!warningMessage}
-                  ></ha-textfield>
-                  ${warningMessage ? html`<div class="warning-text">${warningMessage}</div>` : ''}
-              </div>
-              <div class="editing-actions">
-                  <ha-icon-button
-                      class="confirm-button"
-                      @click=${(e: Event) => { 
-                          e.stopPropagation(); 
-                          groupContext.handleConfirmEditGroup('__new__');
-                      }}
-                      title="Create Group"
-                      .disabled=${!currentInput.trim() || !!warningMessage}
-                  >
-                      <ha-icon icon="mdi:check"></ha-icon>
-                  </ha-icon-button>
-                  <ha-icon-button
-                      class="cancel-button"
-                      @click=${(e: Event) => { 
-                          e.stopPropagation(); 
-                          groupContext.cancelEditGroup(); 
-                      }}
-                      title="Cancel"
-                  >
-                      <ha-icon icon="mdi:close"></ha-icon>
-                  </ha-icon-button>
-              </div>
-          </div>
+        <div class="group-header editing">
+          <ha-icon icon="mdi:chevron-down"></ha-icon>
+          ${renderInputForm(
+            "New Group Name",
+            currentInput,
+            warningMessage,
+            isValid,
+            (newValue) => groupContext.updateGroupNameInput(newValue),
+            (e) => { // onKeydown
+              if (e.key === 'Enter' && isValid) {
+                e.stopPropagation();
+                groupContext.confirmNewGroup();
+              }
+            },
+            () => groupContext.confirmNewGroup(), // onConfirm
+            () => groupContext.cancelNewGroup(), // onCancel
+            "Create Group",
+            "Cancel"
+          )}
+        </div>
       </div>
     `;
 }
@@ -1050,60 +719,33 @@ export function renderGroupEditForm(
   groupId: string,
   groupContext: GroupEditorContext
 ): TemplateResult {
-    // Get current input value from editor state
     const currentInput = groupContext.editingGroupInput;
     const warningMessage = groupContext.groupIdWarning;
     const groupInstance = groupContext.groupInstances.get(groupId);
-    // Simple validation - name is not empty and no warning message
     const isValid = !!currentInput.trim() && !warningMessage;
 
-    return html`
-      <div class="group-name-input">
-          <ha-textfield
-              label="Edit Group Name"
-              .value=${currentInput}
-              @input=${(e: Event) => {
-                  const newValue = (e.target as HTMLInputElement).value;
-                  if (groupInstance) {
-                      groupInstance.updateNameInput(newValue);
-                  }
-                  groupContext.updateGroupNameInput(newValue);
-              }}
-              @keydown=${(e: KeyboardEvent) => { 
-                  if (e.key === 'Enter') { 
-                      e.stopPropagation(); 
-                      groupContext.handleConfirmEditGroup(groupId); 
-                  } 
-              }}
-              autofocus
-              .invalid=${!!warningMessage}
-          ></ha-textfield>
-          ${warningMessage ? html`<div class="warning-text">${warningMessage}</div>` : ''}
-      </div>
-      <div class="editing-actions">
-          <ha-icon-button
-              class="confirm-button"
-              @click=${(e: Event) => { 
-                  e.stopPropagation(); 
-                  groupContext.handleConfirmEditGroup(groupId); 
-              }}
-              title="Rename Group"
-              .disabled=${!currentInput.trim() || !isValid || !!warningMessage}
-          >
-              <ha-icon icon="mdi:check"></ha-icon>
-          </ha-icon-button>
-          <ha-icon-button
-              class="cancel-button"
-              @click=${(e: Event) => { 
-                  e.stopPropagation(); 
-                  groupContext.cancelEditGroup(); 
-              }}
-              title="Cancel"
-          >
-              <ha-icon icon="mdi:close"></ha-icon>
-          </ha-icon-button>
-      </div>
-    `;
+    return renderInputForm(
+      "Edit Group Name",
+      currentInput,
+      warningMessage,
+      isValid,
+      (newValue) => {
+        if (groupInstance) {
+          groupInstance.updateNameInput(newValue);
+        }
+        groupContext.updateGroupNameInput(newValue);
+      },
+      (e) => { // onKeydown
+        if (e.key === 'Enter' && isValid) {
+          e.stopPropagation();
+          groupContext.handleConfirmEditGroup(groupId);
+        }
+      },
+      () => groupContext.handleConfirmEditGroup(groupId), // onConfirm
+      () => groupContext.cancelEditGroup(), // onCancel
+      "Rename Group",
+      "Cancel"
+    );
 }
 
 // Renders the confirmation dialog for deleting a group
@@ -1125,49 +767,32 @@ export function renderGroupDeleteWarning(
 export function renderAddElementForm(groupContext: GroupEditorContext): TemplateResult {
     const groupId = groupContext.addElementDraftGroup;
     if (!groupId) return html``;
-    
+
     const currentInput = groupContext.addElementInput;
     const warningMessage = groupContext.addElementWarning;
-    
+    const isValid = !!currentInput.trim() && !warningMessage;
+
+    // Wrapping the form in the standard structure
     return html`
-        <div class="add-element-form">
-            <div class="element-name-input">
-                <ha-textfield
-                    label="New Element ID"
-                    .value=${currentInput}
-                    @input=${(e: Event) => {
-                        const newValue = (e.target as HTMLInputElement).value;
-                        groupContext.updateNewElementInput(newValue);
-                    }}
-                    @keydown=${(e: KeyboardEvent) => { 
-                        if (e.key === 'Enter') { 
-                            e.stopPropagation(); 
-                            groupContext.confirmAddElement(); 
-                        } 
-                    }}
-                    autofocus
-                    .invalid=${!!warningMessage}
-                ></ha-textfield>
-                ${warningMessage ? html`<div class="warning-text">${warningMessage}</div>` : ''}
-            </div>
-            <div class="editing-actions">
-                <ha-icon-button
-                    class="confirm-button"
-                    @click=${() => groupContext.confirmAddElement()}
-                    title="Add Element"
-                    .disabled=${!currentInput.trim()}
-                >
-                    <ha-icon icon="mdi:check"></ha-icon>
-                </ha-icon-button>
-                <ha-icon-button
-                    class="cancel-button"
-                    @click=${() => groupContext.cancelAddElement()}
-                    title="Cancel"
-                >
-                    <ha-icon icon="mdi:close"></ha-icon>
-                </ha-icon-button>
-            </div>
-        </div>
+      <div class="add-element-form">
+        ${renderInputForm(
+          "New Element ID",
+          currentInput,
+          warningMessage,
+          isValid,
+          (newValue) => groupContext.updateNewElementInput(newValue),
+          (e) => { // onKeydown
+            if (e.key === 'Enter' && isValid) {
+              e.stopPropagation();
+              groupContext.confirmAddElement();
+            }
+          },
+          () => groupContext.confirmAddElement(), // onConfirm
+          () => groupContext.cancelAddElement(), // onCancel
+          "Add Element",
+          "Cancel"
+        )}
+      </div>
     `;
 }
 
@@ -1184,12 +809,10 @@ export function renderGroupList(
     return html`
       <div class="groups-container" style="padding: 16px;">
           <div class="add-group-section" style="margin-bottom: 16px;">
-              <ha-button outlined @click=${() => /*groupContext.addGroup()*/ null}>Add New Group</ha-button>
+              <ha-button outlined @click=${() => groupContext.addGroup()}>Add New Group</ha-button>
           </div>
 
-          ${groupContext.editingGroup === '__new__' ? renderNewGroupForm(groupContext) : ''}
-
-          ${groupIdsToRender.map(groupId => 
+          ${Object.keys(groupedElements).sort().map(groupId => 
             renderGroup(groupId, groupedElements[groupId], editorContext, groupContext)
           )}
 
@@ -1198,4 +821,97 @@ export function renderGroupList(
               : ''}
       </div>
     `;
+}
+
+// Helper function to render a single property form full width
+function renderFullWidthPropertyForm(
+  context: EditorContext,
+  elementId: string,
+  formData: any,
+  schema: HaFormSchema | undefined
+): TemplateResult {
+  if (!schema) return html``;
+  
+  const value = formData[schema.name];
+  
+  // Create a refresh key containing the field name and value to force updates
+  const refreshKey = `${schema.name}:${value}:${Date.now()}`;
+  
+  return html`
+    <div class="property-full-width">
+      <ha-form
+        .hass=${context.hass}
+        .data=${formData}
+        .schema=${[schema]}
+        .computeLabel=${(s: HaFormSchema) => s.label || s.name}
+        @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
+        .key=${refreshKey}
+      ></ha-form>
+    </div>
+  `;
+}
+
+// Helper function to render a stretch section (primary or secondary)
+function renderStretchSection(
+  context: EditorContext,
+  elementId: string,
+  formData: any,
+  stretchToSchema: HaFormSchema | undefined,
+  stretchPaddingSchema: HaFormSchema | undefined,
+  targetAnchorPointSchema: HaFormSchema | undefined,
+  showTarget: boolean
+): TemplateResult {
+  if (!stretchToSchema) return html``;
+
+  const targetKey = targetAnchorPointSchema?.name;
+  const targetValue = targetKey ? formData[targetKey] : '';
+  const paddingValue = stretchPaddingSchema ? formData[stretchPaddingSchema.name] : '';
+  // const paddingRefreshKey = stretchPaddingSchema ? `${stretchPaddingSchema.name}:${paddingValue}:${Date.now()}` : '';
+  const stretchToValue = formData[stretchToSchema.name];
+  // const stretchToRefreshKey = `${stretchToSchema.name}:${stretchToValue}:${Date.now()}`;
+
+  if (!showTarget) {
+    // No stretch target selected: single row full-width for the dropdown
+    return renderFullWidthPropertyForm(context, elementId, formData, stretchToSchema);
+  } else {
+    // Stretch target selected: Render left and right columns for the main grid
+    return html`
+      <div class="property-left stretch-column-left">
+        <!-- Stretch To Dropdown -->
+        <ha-form
+          .hass=${context.hass}
+          .data=${formData}
+          .schema=${[stretchToSchema]} /* Pass schema as array */
+          .computeLabel=${(s: HaFormSchema) => s.label || s.name}
+          @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
+        ></ha-form>
+
+        <!-- Stretch Padding Input -->
+        ${stretchPaddingSchema ? html`
+          <ha-form
+            .hass=${context.hass}
+            .data=${formData}
+            .schema=${[stretchPaddingSchema]} /* Pass schema as array */
+            .computeLabel=${(s: HaFormSchema) => s.label || s.name}
+            @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
+          ></ha-form>
+        ` : ''}
+      </div>
+
+      <div class="property-right stretch-column-right">
+        <!-- Direction Selector Grid -->
+        ${targetAnchorPointSchema ? html`
+          ${renderCustomSelector(targetAnchorPointSchema, targetValue,
+            (value: string) => {
+              if (targetKey) {
+                const detail = { value: { ...formData, [targetKey]: value } };
+                const customEvent = new CustomEvent('value-changed', { detail });
+                context.handleFormValueChanged(customEvent, elementId);
+              }
+            }
+          )}
+        ` : ''}
+      </div>
+    `;
+  }
 } 
