@@ -11,7 +11,7 @@ import { parseConfig } from './layout/parser.js';
 
 import './editor/lcars-card-editor.js';
 
-import { editorStyles } from './editor/editor-styles.js';
+import { editorStyles } from './styles/styles.js';
 
 export interface LcarsCardConfig {
   type: string;

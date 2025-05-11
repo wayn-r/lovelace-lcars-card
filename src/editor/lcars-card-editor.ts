@@ -3,7 +3,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardEditor, fireEvent } from 'custom-card-helpers';
 import { LcarsCardConfig } from '../lovelace-lcars-card.js';
 
-import { editorStyles } from './editor-styles.js';
+import { editorStyles } from '../styles/styles.js';
 import { 
   renderGroup, 
   renderNewGroupForm
