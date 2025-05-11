@@ -268,7 +268,7 @@ export class Button {
                 @mouseleave=${buttonHandlers.handleMouseLeave}
                 @mousedown=${buttonHandlers.handleMouseDown}
                 @mouseup=${buttonHandlers.handleMouseUp}
-                style="cursor: pointer;"
+                style="cursor: pointer; outline: none;"
                 role="button"
                 aria-label=${buttonText || elementId}
                 tabindex="0"

@@ -139,6 +139,26 @@ export class LcarsCard extends LitElement {
       display: block;
       min-height: 50px;
     }
+    
+    /* Remove focus outline from SVG elements when clicked */
+    svg *:focus {
+      outline: none !important;
+    }
+    
+    /* Remove outline from SVG button groups */
+    svg .lcars-button-group:focus {
+      outline: none !important;
+    }
+    
+    /* Disable focus rectangle globally for the card */
+    :host * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
   `;
 
   public setConfig(config: LcarsCardConfig): void {
