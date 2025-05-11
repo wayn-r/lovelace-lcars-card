@@ -11,6 +11,8 @@ import { parseConfig } from './layout/parser.js';
 
 import './editor/lcars-card-editor.js';
 
+import { editorStyles } from './editor/editor-styles.js';
+
 export interface LcarsCardConfig {
   type: string;
   title?: string;
@@ -118,48 +120,7 @@ export class LcarsCard extends LitElement {
   private _hasRenderedOnce: boolean = false;
   @state() private _hasMeasuredRenderedText: boolean = false;
 
-  static styles = css`
-    :host {
-      display: block;
-    }
-    
-    ha-card {
-      width: 100%;
-      box-sizing: border-box;
-    }
-    
-    .card-container {
-      width: 100%;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    svg {
-      width: 100%;
-      display: block;
-      min-height: 50px;
-    }
-    
-    /* Remove focus outline from SVG elements when clicked */
-    svg *:focus {
-      outline: none !important;
-    }
-    
-    /* Remove outline from SVG button groups */
-    svg .lcars-button-group:focus {
-      outline: none !important;
-    }
-    
-    /* Disable focus rectangle globally for the card */
-    :host * {
-      -webkit-tap-highlight-color: transparent;
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
-    }
-  `;
+  static styles = [editorStyles];
 
   public setConfig(config: LcarsCardConfig): void {
     if (!config) {

@@ -1,6 +1,47 @@
 import { css } from 'lit';
 
 export const editorStyles = css`
+  :host {
+      display: block;
+    }
+    
+    ha-card {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .card-container {
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    svg {
+      width: 100%;
+      display: block;
+      min-height: 50px;
+    }
+    
+    /* Remove focus outline from SVG elements when clicked */
+    svg *:focus {
+      outline: none !important;
+    }
+    
+    /* Remove outline from SVG button groups */
+    svg .lcars-button-group:focus {
+      outline: none !important;
+    }
+    
+    /* Disable focus rectangle globally for the card */
+    :host * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+      
   .layout-grid-2col {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -151,7 +192,7 @@ export const editorStyles = css`
       padding-bottom: 4px;
   }
   ha-icon-button {
-     --mdc-icon-button-size: 36px; /* Smaller icon buttons */
+    --mdc-icon-button-size: 36px; /* Smaller icon buttons */
   }
   .confirm-button {
       color: var(--primary-color);
@@ -210,7 +251,7 @@ export const editorStyles = css`
       max-width: 100%; /* Ensure it doesn't overflow its container */
       box-sizing: border-box; /* Include padding in width calculation */
   }
-  
+
   /* Ensure the grid points themselves stay contained */
   lcars-grid-selector div {
       box-sizing: border-box;
@@ -240,7 +281,7 @@ export const editorStyles = css`
   .icon-button:active {
     background-color: rgba(var(--rgb-primary-text-color), 0.1);
   }
-  
+
   /* Property layout styles */
   .property-container {
     display: grid;
@@ -249,33 +290,33 @@ export const editorStyles = css`
     margin-bottom: 16px;
     /* overflow: hidden; /* Consider removing temporarily to debug overflow */
   }
-  
+
   .property-full-width {
     grid-column: 1 / -1;
   }
-  
+
   .property-left, .property-right {
     display: flex;
     flex-direction: column;
     gap: 12px; /* Add spacing between items in the same column */
     min-width: 0; /* Prevent content from expanding the grid cell */
   }
-  
+
   .property-left {
     grid-column: 1;
   }
-  
+
   .property-right {
     grid-column: 2;
   }
-  
+
   /* Ensure ha-form and its contents respect the grid structure */
   .property-container ha-form {
     display: block; /* Ensure ha-form behaves as a block */
     width: 100%; /* Make ha-form fill its grid cell */
     box-sizing: border-box;
   }
-  
+
   /* Target common elements within ha-form to ensure they don't overflow */
   .property-container ha-form ha-textfield,
   .property-container ha-form ha-select,
@@ -284,7 +325,7 @@ export const editorStyles = css`
     width: 100%; /* Make them fill the width of ha-form */
     box-sizing: border-box; /* Include padding/border in width */
   }
-  
+
   /* Ensure custom grid selector behaves correctly */
   .property-container lcars-grid-selector {
     display: block;
@@ -292,17 +333,17 @@ export const editorStyles = css`
     max-width: 100%;
     box-sizing: border-box;
   }
-  
+
   ha-form {
       /* Add styles if needed */
   }
-  
+
   .editing-actions {
       display: flex;
       margin-left: auto;
       gap: 4px;
   }
-  
+
   /* Common styles for div-based icon buttons */
   .icon-button {
     display: inline-flex;
@@ -313,15 +354,15 @@ export const editorStyles = css`
     border-radius: 50%; /* Optional: make it round */
     transition: background-color 0.2s;
   }
-  
+
   .icon-button:hover {
     background-color: rgba(var(--rgb-primary-text-color), 0.05);
   }
-  
+
   .icon-button:active {
     background-color: rgba(var(--rgb-primary-text-color), 0.1);
   }
-  
+
   /* Stretch gap container */
   .stretch-gap-container {
     grid-column: 1;

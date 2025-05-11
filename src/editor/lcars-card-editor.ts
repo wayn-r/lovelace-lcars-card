@@ -716,7 +716,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     };
 
     return html`
-      <div class="groups-container" style="padding: 16px;">
+      <div class="groups-container">
           <div class="add-group-section" style="margin-bottom: 16px;">
               <ha-button outlined @click=${() => this._addGroup()}>Add New Group</ha-button>
           </div>

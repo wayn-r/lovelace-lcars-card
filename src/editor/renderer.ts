@@ -858,7 +858,7 @@ export function renderGroupList(
     const groupIdsToRender = Object.keys(groupedElements).sort();
 
     return html`
-      <div class="groups-container" style="padding: 16px;">
+      <div class="groups-container">
           <div class="add-group-section" style="margin-bottom: 16px;">
               <ha-button outlined @click=${() => groupContext.addGroup()}>Add New Group</ha-button>
           </div>
