@@ -7,3 +7,4 @@ package-lock.json
 editor.bak.ts
 reference-files/
 lovelace-lcars-card/lovelace-lcars-card/
+export-flattened.ps1

@@ -758,4 +758,27 @@ export class ButtonActionConfirmation implements LcarsPropertyBase {
             selector: { boolean: {} },
         };
     }
+}
+
+export class ElbowTextPosition implements LcarsPropertyBase {
+    name = 'elbow_text_position';
+    label = 'Text Position';
+    configPath = 'props.elbow_text_position';
+    
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: {
+                select: {
+                    options: [
+                        { value: 'top', label: 'Top (Horizontal Section)' },
+                        { value: 'side', label: 'Side (Vertical Section)' }
+                    ],
+                    mode: 'dropdown'
+                }
+            },
+            default: 'top'
+        };
+    }
 } 

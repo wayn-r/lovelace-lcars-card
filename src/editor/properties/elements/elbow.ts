@@ -7,7 +7,8 @@ import {
     TotalElbowHeight, 
     OuterCornerRadius,    
     Width, 
-    Height
+    Height,
+    ElbowTextPosition
 } from '../properties';
 
 export class Elbow extends EditorElement {
@@ -20,7 +21,8 @@ export class Elbow extends EditorElement {
             VerticalWidth, 
             HeaderHeight, 
             TotalElbowHeight, 
-            OuterCornerRadius
+            OuterCornerRadius,
+            ElbowTextPosition
         ];
     }
 }

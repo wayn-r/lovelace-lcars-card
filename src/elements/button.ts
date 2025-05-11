@@ -105,7 +105,11 @@ export class Button {
         options: {
             hasText: boolean,
             isCutout: boolean,
-            rx: number
+            rx: number,
+            customTextPosition?: {
+                x: number,
+                y: number
+            }
         }
     ): SVGTemplateResult {
         const buttonConfig = this._props.button as LcarsButtonElementConfig;
@@ -131,6 +135,10 @@ export class Button {
         if (options.hasText && buttonConfig.text) {
             const textConfig = this.getTextConfig(buttonConfig);
             
+            // Use custom text position if provided, otherwise center in the element
+            const textX = options.customTextPosition?.x ?? (x + width / 2);
+            const textY = options.customTextPosition?.y ?? (y + height / 2);
+            
             if (options.isCutout && maskId) {
                 elements.push(this.createTextMask(
                     maskId,
@@ -140,13 +148,15 @@ export class Button {
                     height,
                     pathData,
                     buttonConfig.text as string,
-                    textConfig
+                    textConfig,
+                    textX,
+                    textY
                 ));
             } else {
                 const currentTextColor = this.getButtonProperty('text_color', 'white');
                 elements.push(this.createText(
-                    x + width / 2,
-                    y + height / 2,
+                    textX,
+                    textY,
                     buttonConfig.text as string,
                     {
                         ...textConfig,
@@ -214,14 +224,16 @@ export class Button {
             textAnchor: string,
             dominantBaseline: string,
             textTransform: string
-        }
+        },
+        textX: number,
+        textY: number
     ): SVGTemplateResult {
         return svg`
             <mask id=${id}>
                 <path d=${pathData} fill="white" />
                 ${this.createText(
-                    x + width / 2,
-                    y + height / 2,
+                    textX,
+                    textY,
                     text,
                     {
                         ...textConfig,

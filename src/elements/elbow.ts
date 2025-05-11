@@ -53,8 +53,34 @@ export class ElbowElement extends LayoutElement {
       const isButton = Boolean(buttonConfig?.enabled);
       const hasText = isButton && Boolean(buttonConfig?.text);
       const isCutout = hasText && Boolean(buttonConfig?.cutout_text);
+      const textPosition = this.props.elbow_text_position || 'top';
       
       if (isButton && this.button) {
+        // Calculate text position based on the elbow_text_position property
+        let textX: number, textY: number;
+        
+        if (textPosition === 'top') {
+          // Center text in the horizontal header section
+          textX = x + horizontalWidth / 2;
+          textY = y + headerHeight / 2;
+        } else { // 'side'
+          // Center text in the vertical section
+          // Position depends on orientation
+          if (orientation === 'top-left') {
+            textX = x + verticalWidth / 2;
+            textY = y + headerHeight + (totalElbowHeight - headerHeight) / 2;
+          } else if (orientation === 'top-right') {
+            textX = x + horizontalWidth - verticalWidth / 2;
+            textY = y + headerHeight + (totalElbowHeight - headerHeight) / 2;
+          } else if (orientation === 'bottom-left') {
+            textX = x + verticalWidth / 2;
+            textY = y + (totalElbowHeight - headerHeight) / 2;
+          } else { // 'bottom-right'
+            textX = x + horizontalWidth - verticalWidth / 2;
+            textY = y + (totalElbowHeight - headerHeight) / 2;
+          }
+        }
+        
         return this.button.createButton(
           pathData,
           x,
@@ -64,7 +90,11 @@ export class ElbowElement extends LayoutElement {
           {
             hasText,
             isCutout,
-            rx: 0
+            rx: 0,
+            customTextPosition: {
+              x: textX,
+              y: textY
+            }
           }
         );
       } else {
