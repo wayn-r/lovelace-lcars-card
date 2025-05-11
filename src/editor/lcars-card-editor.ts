@@ -10,15 +10,15 @@ import {
 } from './renderer.js';
 
 import './grid-selector.js';
-import { EditorElement } from './properties/elements/element.js';
-import './properties/elements/rectangle.js';
-import './properties/elements/text.js';
-import './properties/elements/elbow.js';
-import './properties/elements/endcap.js';
-import './properties/elements/chisel_endcap.js';
+import { EditorElement } from './elements/element.js';
+import './elements/rectangle.js';
+import './elements/text.js';
+import './elements/elbow.js';
+import './elements/endcap.js';
+import './elements/chisel_endcap.js';
 
 import { LcarsGroup } from './group.js';
-import { Rectangle } from './properties/elements/rectangle.js';
+import { Rectangle } from './elements/rectangle.js';
 
 function setDeep(obj: any, path: string | string[], value: any): void {
     const pathArray = Array.isArray(path) ? path : path.split('.');

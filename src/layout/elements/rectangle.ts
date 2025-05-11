@@ -1,9 +1,9 @@
 import { LayoutElement } from "./element.js";
-import { LayoutElementProps, LayoutConfigOptions } from "../layout/engine.js";
+import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant } from "custom-card-helpers";
-import { LcarsButtonElementConfig } from "../lovelace-lcars-card.js";
+import { LcarsButtonElementConfig } from "../../lovelace-lcars-card.js";
 import { svg, SVGTemplateResult } from "lit";
-import { generateRectanglePath } from "../utils/shapes.js";
+import { generateRectanglePath } from "../../utils/shapes.js";
 import { Button } from "./button.js";
 
 export class RectangleElement extends LayoutElement {

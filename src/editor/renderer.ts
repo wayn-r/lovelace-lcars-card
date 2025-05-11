@@ -1,5 +1,5 @@
 import { html, TemplateResult } from 'lit';
-import { EditorElement } from './properties/elements/element.js';
+import { EditorElement } from './elements/element.js';
 import { LcarsGroup } from './group.js';
 import { HaFormSchema, PropertySchemaContext, Type } from './properties/properties.js';
 import { repeat } from 'lit/directives/repeat.js';

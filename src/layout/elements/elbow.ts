@@ -1,9 +1,9 @@
 import { LayoutElement } from "./element.js";
-import { LayoutElementProps, LayoutConfigOptions } from "../layout/engine.js";
+import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant } from "custom-card-helpers";
-import { LcarsButtonElementConfig } from "../lovelace-lcars-card.js";
+import { LcarsButtonElementConfig } from "../../lovelace-lcars-card.js";
 import { svg, SVGTemplateResult } from "lit";
-import { generateElbowPath } from "../utils/shapes.js";
+import { generateElbowPath } from "../../utils/shapes.js";
 
 export class ElbowElement extends LayoutElement {
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {

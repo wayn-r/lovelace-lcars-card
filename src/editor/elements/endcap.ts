@@ -1,16 +1,17 @@
 import { EditorElement, PropertyClass } from './element';
 import { 
+    Direction, 
     Width, 
     Height 
-} from '../properties';
+} from '../properties/properties';
 
-export class Rectangle extends EditorElement {
+export class Endcap extends EditorElement {
     get specificProperties(): PropertyClass[] {
         return [
             Width, 
-            Height
+            Height, 
+            Direction
         ];
     }
 }
-
-EditorElement.registerEditorElement('rectangle', Rectangle); 
+EditorElement.registerEditorElement('endcap', Endcap);

@@ -10,8 +10,8 @@ import {
     ButtonActionType, ButtonActionService, ButtonActionServiceData,
     ButtonActionNavigationPath, ButtonActionUrlPath, ButtonActionEntity, ButtonActionConfirmation,
     PropertySchemaContext, HaFormSchema, LcarsPropertyBase
-} from '../properties';
-import { LcarsGroup } from '../../group';
+} from '../properties/properties';
+import { LcarsGroup } from '../group';
 
 export type PropertyClass = new () => LcarsPropertyBase;
 export type PropertyClassOrFactory = (new () => LcarsPropertyBase) | (() => LcarsPropertyBase);

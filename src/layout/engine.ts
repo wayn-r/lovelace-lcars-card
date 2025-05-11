@@ -1,7 +1,7 @@
 import { SVGTemplateResult, html } from 'lit';
 import gsap from 'gsap';
 import { HomeAssistant } from 'custom-card-helpers';
-import { LayoutElement } from '../elements/element.js';
+import { LayoutElement } from './elements/element.js';
 
 export interface LayoutElementProps {
   [key: string]: any;

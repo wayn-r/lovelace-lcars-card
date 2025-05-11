@@ -1,4 +1,4 @@
-import { LcarsButtonElementConfig } from "../lovelace-lcars-card.js";
+import { LcarsButtonElementConfig } from "../../lovelace-lcars-card.js";
 import { svg, SVGTemplateResult } from "lit";
 import { HomeAssistant } from "custom-card-helpers";
 

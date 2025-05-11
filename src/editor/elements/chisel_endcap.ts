@@ -3,7 +3,7 @@ import {
     Direction, 
     Width, 
     Height 
-} from '../properties';
+} from '../properties/properties';
 
 export class ChiselEndcap extends EditorElement {
     get specificProperties(): PropertyClass[] {

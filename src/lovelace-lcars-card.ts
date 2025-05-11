@@ -6,7 +6,7 @@ import './types';
 import gsap from 'gsap';
 
 import { LayoutEngine, Group } from './layout/engine.js';
-import { LayoutElement } from './elements/element.js';
+import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
 
 import './editor/lcars-card-editor.js';

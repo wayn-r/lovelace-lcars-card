@@ -1,12 +1,12 @@
 import { HomeAssistant } from 'custom-card-helpers';
 import { Group } from './engine.js';
-import { LayoutElement } from '../elements/element.js';
-import { RectangleElement } from '../elements/rectangle.js';
+import { LayoutElement } from './elements/element.js';
+import { RectangleElement } from './elements/rectangle.js';
 import { LcarsCardConfig } from '../lovelace-lcars-card.js';
-import { TextElement } from '../elements/text.js';
-import { EndcapElement } from '../elements/endcap.js';
-import { ElbowElement } from '../elements/elbow.js';
-import { ChiselEndcapElement } from '../elements/chisel_endcap.js';
+import { TextElement } from './elements/text.js';
+import { EndcapElement } from './elements/endcap.js';
+import { ElbowElement } from './elements/elbow.js';
+import { ChiselEndcapElement } from './elements/chisel_endcap.js';
 
 export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant, requestUpdateCallback?: () => void): Group[] {
   if (!config.elements || config.elements.length === 0) {

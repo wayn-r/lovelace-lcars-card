@@ -9,7 +9,7 @@ import {
     Width, 
     Height,
     ElbowTextPosition
-} from '../properties';
+} from '../properties/properties';
 
 export class Elbow extends EditorElement {
      get specificProperties(): PropertyClass[] {

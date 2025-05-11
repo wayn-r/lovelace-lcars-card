@@ -8,7 +8,7 @@ import {
     TextAnchor, 
     DominantBaseline, 
     TextTransform
-} from '../properties';
+} from '../properties/properties';
 
 export class Text extends EditorElement {
     get specificProperties(): PropertyClass[] {

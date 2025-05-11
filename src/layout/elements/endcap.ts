@@ -1,11 +1,11 @@
 import { LayoutElement } from "./element.js";
-import { LayoutElementProps, LayoutConfigOptions } from "../layout/engine.js";
+import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant } from "custom-card-helpers";
-import { LcarsButtonElementConfig } from "../lovelace-lcars-card.js";
+import { LcarsButtonElementConfig } from "../../lovelace-lcars-card.js";
 import { svg, SVGTemplateResult } from "lit";
-import { generateChiselEndcapPath } from "../utils/shapes.js";
+import { generateEndcapPath } from "../../utils/shapes.js";
 
-export class ChiselEndcapElement extends LayoutElement {
+export class EndcapElement extends LayoutElement {
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
       super(id, props, layoutConfig, hass, requestUpdateCallback);
       this.resetLayout();
@@ -13,38 +13,47 @@ export class ChiselEndcapElement extends LayoutElement {
   
     calculateIntrinsicSize(container: SVGElement): void {
       this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 40;
-      this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 0;
+      
+      this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 0; 
+      
       this.intrinsicSize.calculated = true;
     }
   
     canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
       if (this.intrinsicSize.height === 0 && this.layoutConfig.anchorTo) {
         const anchorElement = elementsMap.get(this.layoutConfig.anchorTo);
-        if (!anchorElement || !anchorElement.layout.calculated) return false;
+        if (!anchorElement || !anchorElement.layout.calculated) return false; 
       }
-      return super.canCalculateLayout(elementsMap);
+      return super.canCalculateLayout(elementsMap); 
     }
   
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
       if (this.intrinsicSize.height === 0 && this.layoutConfig.anchorTo) {
         const anchorElement = elementsMap.get(this.layoutConfig.anchorTo);
-        if (anchorElement) {
-          const adoptedHeight = anchorElement.layout.height;
-          const originalLayoutHeight = this.layoutConfig.height;
-          this.layoutConfig.height = adoptedHeight;
-          super.calculateLayout(elementsMap, containerRect);
-          this.layoutConfig.height = originalLayoutHeight;
-          return;
+        if (anchorElement) { 
+          // IMPORTANT: Modify the height used for this specific layout calculation
+          // We store the calculated dimensions in this.layout, not this.intrinsicSize here
+          // Let the base calculateLayout use this adopted height
+           const adoptedHeight = anchorElement.layout.height;
+           const originalLayoutHeight = this.layoutConfig.height;
+           this.layoutConfig.height = adoptedHeight; 
+           super.calculateLayout(elementsMap, containerRect);
+           this.layoutConfig.height = originalLayoutHeight;
+           return;
         }
       }
+      
       super.calculateLayout(elementsMap, containerRect);
     }
   
     render(): SVGTemplateResult | null {
       if (!this.layout.calculated || this.layout.height <= 0 || this.layout.width <= 0) return null;
+  
       const { x, y, width, height } = this.layout;
-      const direction = (this.props.direction || 'right') as 'right';
-      const pathData = generateChiselEndcapPath(width, height, direction, x, y);
+      const direction = (this.props.direction || 'left') as 'left' | 'right';
+  
+      const pathData = generateEndcapPath(width, height, direction, x, y);
+  
       if (!pathData) return null;
       
       const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
@@ -77,4 +86,4 @@ export class ChiselEndcapElement extends LayoutElement {
         `;
       }
     }
-  } 
+  }
