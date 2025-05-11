@@ -2,17 +2,15 @@ import { LitElement, html, css, SVGTemplateResult, TemplateResult, svg } from 'l
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardEditor } from 'custom-card-helpers';
 import { CARD_TYPE, CARD_NAME, DEFAULT_FONT_SIZE, DEFAULT_TITLE, DEFAULT_TEXT } from './constants';
-import './types'; // Import types to ensure global declarations are included
+import './types';
 import gsap from 'gsap';
 
-// Import core layout engine classes
-import { LayoutEngine, Group, LayoutElement } from './layout/engine.js';
+import { LayoutEngine, Group } from './layout/engine.js';
+import { LayoutElement } from './elements/element.js';
 import { parseConfig } from './layout/parser.js';
 
-// Import the NEW editor from its new location
 import './editor/lcars-card-editor.js';
 
-// Define the card configuration options interface
 export interface LcarsCardConfig {
   type: string;
   title?: string;
@@ -21,30 +19,70 @@ export interface LcarsCardConfig {
   elements?: LcarsElementConfig[];
 }
 
-// New interface for element configuration
+export interface LcarsButtonActionConfig {
+  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none';
+  service?: string;
+  service_data?: Record<string, any>;
+  navigation_path?: string;
+  url_path?: string;
+  entity?: string;
+  confirmation?: boolean | {
+    text?: string;
+    exemptions?: Array<{
+      user: string;
+    }>;
+  };
+}
+
+export interface LcarsButtonElementConfig {
+  enabled?: boolean;
+  text?: string;
+  cutout_text?: boolean;
+
+  text_color?: any;
+  font_family?: string;
+  font_size?: number;
+  font_weight?: string;
+  letter_spacing?: string | number;
+  text_transform: 'none' | 'capitalize' | 'uppercase' | 'lowercase';
+  text_anchor?: 'start' | 'middle' | 'end';
+  dominant_baseline?: 'auto' | 'middle' | 'central' | 'hanging' | 'text-bottom' | 'text-top' | 'alphabetic' | 'ideographic';
+
+
+  hover_fill?: any;
+  active_fill?: any;
+  hover_stroke?: string;
+  active_stroke?: string;
+  hover_text_color?: any;
+  active_text_color?: any;
+
+  hover_transform?: string;
+  active_transform?: string;
+
+  action_config?: LcarsButtonActionConfig;
+}
+
 export interface LcarsElementConfig {
   id: string;
   type: string;
   props?: Record<string, any>;
   layout?: LcarsLayoutConfig;
   group?: string;
+  button?: LcarsButtonElementConfig;
 }
 
-// Layout configuration interface
 export interface LcarsLayoutConfig {
   width?: number | string;
   height?: number | string;
   offsetX?: number | string;
   offsetY?: number | string;
   
-  // Anchor properties
   anchor?: {
     anchorTo: string;
     anchorPoint?: string;
     targetAnchorPoint?: string;
   };
   
-  // New unified stretch property format
   stretch?: {
     stretchTo1?: string;
     stretchAxis1?: 'X' | 'Y';
@@ -57,7 +95,6 @@ export interface LcarsLayoutConfig {
   };
 }
 
-// Register the card with Home Assistant
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: CARD_TYPE,
@@ -71,16 +108,16 @@ export class LcarsCard extends LitElement {
   @property({ attribute: false }) private _config!: LcarsCardConfig;
   @state() private _layoutElementTemplates: SVGTemplateResult[] = [];
   @state() private _viewBox: string = '0 0 100 50';
+  @state() private _elementStateNeedsRefresh: boolean = false;
   
   private _layoutEngine: LayoutEngine = new LayoutEngine();
   private _resizeObserver?: ResizeObserver;
   private _containerRect?: DOMRect;
   private _lastConfig?: LcarsCardConfig;
   private _layoutCalculationPending: boolean = false;
-  private _hasRenderedOnce: boolean = false; // Track first render completion
-  @state() private _hasMeasuredRenderedText: boolean = false; // Track if we've done post-render measurement
+  private _hasRenderedOnce: boolean = false;
+  @state() private _hasMeasuredRenderedText: boolean = false;
 
-  // Static styles for the card
   static styles = css`
     :host {
       display: block;
@@ -104,7 +141,6 @@ export class LcarsCard extends LitElement {
     }
   `;
 
-  // Set the config property
   public setConfig(config: LcarsCardConfig): void {
     if (!config) {
       throw new Error('Invalid configuration');
@@ -121,7 +157,6 @@ export class LcarsCard extends LitElement {
     };
     this._lastConfig = config;
     
-    // Mark for calculation and request update. Calculation will happen in `updated`.
     this._layoutCalculationPending = true;
     this.requestUpdate(); 
   }
@@ -131,13 +166,11 @@ export class LcarsCard extends LitElement {
     if (!this._resizeObserver) {
        this._resizeObserver = new ResizeObserver(this._handleResize.bind(this));
     }
-    // After full page load (CSS/fonts), trigger a recalc to ensure correct measurements
     if (document.readyState === 'complete') {
       this._triggerRecalc();
     } else {
       window.addEventListener('load', () => this._triggerRecalc(), { once: true });
     }
-    // Also recalc once all fonts have loaded to get correct text metrics
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(() => {
         this._layoutCalculationPending = true;
@@ -150,7 +183,6 @@ export class LcarsCard extends LitElement {
     const container = this.shadowRoot?.querySelector('.card-container');
     if (container && this._resizeObserver) {
       this._resizeObserver.observe(container);
-      // Explicitly load fonts used by text elements, then perform initial layout
       const fontLoadPromises: Promise<FontFace[]>[] = [];
       if (this._config.elements) {
         this._config.elements.forEach(el => {
@@ -161,7 +193,6 @@ export class LcarsCard extends LitElement {
             try {
               fontLoadPromises.push(document.fonts.load(`${fw} ${fs}px ${ff}`));
             } catch (_e) {
-              // ignore if FontFaceSet API not supported or invalid
             }
           }
         });
@@ -176,7 +207,6 @@ export class LcarsCard extends LitElement {
       console.error("[firstUpdated] Could not find .card-container to observe.");
     }
     this._hasRenderedOnce = true;
-    // Initial render happens, _scheduleInitialCalculation will trigger state update if needed
   }
   
   disconnectedCallback(): void {
@@ -184,79 +214,95 @@ export class LcarsCard extends LitElement {
     super.disconnectedCallback();
   }
   
-  // New method to check initial dimensions and calculate
   private _scheduleInitialCalculation(): void {
-    if (!this._containerRect) { // Only run if resize observer hasn't already provided rect
+    if (!this._containerRect) {
         const container = this.shadowRoot?.querySelector('.card-container');
         if (container) {
             const initialRect = container.getBoundingClientRect();
             if (initialRect.width > 0 && initialRect.height > 0) {
                 this._containerRect = initialRect;
-                this._performLayoutCalculation(this._containerRect); // Calculate directly
+                this._performLayoutCalculation(this._containerRect);
             } else {
                 console.warn("[_scheduleInitialCalculation] Initial Rect still zero dimensions. Relying on ResizeObserver.");
             }
         }
     } else {
-         // If rect exists, but calculation is pending (e.g. from setConfig before firstUpdated), trigger it via updated
          if(this._layoutCalculationPending){
             this.requestUpdate(); 
          }
     }
   }
 
-  // updated is called after render
   protected updated(changedProperties: Map<string | number | symbol, unknown>): void {
       super.updated(changedProperties);
-      // Perform layout calculation *after* the DOM update cycle if needed
+
+      let didFullRecalc = false;
       if (this._layoutCalculationPending && this._containerRect && this._config) {
           this._performLayoutCalculation(this._containerRect);
+          didFullRecalc = true;
       }
-      // After first layout and render, measure actual text via getBBox and rerun layout once
+
+      if (didFullRecalc) {
+          this._elementStateNeedsRefresh = false; 
+      } else if (this._elementStateNeedsRefresh && this._containerRect && this._config && this._layoutEngine.layoutGroups.length > 0) {
+          this._refreshElementRenders();
+      }
+      
       if (!this._hasMeasuredRenderedText && this._hasRenderedOnce && this._containerRect) {
           this._hasMeasuredRenderedText = true;
           requestAnimationFrame(() => this._measureAndRecalc());
       }
   }
   
-  // Performs the calculation and updates state
   private _performLayoutCalculation(rect: DOMRect): void {
     if (!this._config || !rect || rect.width <= 0 || rect.height <= 0) {
         console.warn("[_performLayoutCalculation] Skipping, invalid config or rect", this._config, rect);
-        this._layoutCalculationPending = false; // Abort this attempt
+        this._layoutCalculationPending = false;
         return;
     }
 
-    // Ensure measurements use the in-shadow SVG for correct font context
     const svgElement = this.shadowRoot?.querySelector('.card-container svg') as SVGSVGElement | null;
     if (svgElement) {
       (this._layoutEngine as any).tempSvgContainer = svgElement;
     }
     this._layoutEngine.clearLayout();
-    const groups = parseConfig(this._config, this.hass);
+    const groups = parseConfig(this._config, this.hass, () => { this._elementStateNeedsRefresh = true; this.requestUpdate(); }); 
     groups.forEach((group: Group) => { this._layoutEngine.addGroup(group); });
 
     this._layoutEngine.calculateBoundingBoxes(rect);
 
-    const newTemplates = this._layoutEngine.layoutGroups.flatMap(group => 
+    const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
         group.elements
             .map(el => el.render())
             .filter((template): template is SVGTemplateResult => template !== null)
     );
     const newViewBox = `0 0 ${rect.width} ${rect.height}`;
 
-    // Check if state actually needs changing before setting it
-    // This helps prevent unnecessary re-render loops if calculation result is the same
-    if (JSON.stringify(newTemplates.map(t => t.strings)) !== JSON.stringify(this._layoutElementTemplates.map(t => t.strings)) || newViewBox !== this._viewBox) {
+    if (JSON.stringify(newTemplates.map(t => ({s: t.strings, v: (t.values || []).map(val => String(val))}))) !== JSON.stringify(this._layoutElementTemplates.map(t => ({s:t.strings, v: (t.values || []).map(val => String(val))}))) || newViewBox !== this._viewBox) {
         this._layoutElementTemplates = newTemplates;
         this._viewBox = newViewBox;
     } else {
     }
-    
-    this._layoutCalculationPending = false; // Calculation attempt finished
+    this._layoutCalculationPending = false;
   }
 
-  // Handle resize: store rect and mark for calculation
+  private _refreshElementRenders(): void {
+    if (!this._config || !this._containerRect || this._layoutEngine.layoutGroups.length === 0) {
+        this._elementStateNeedsRefresh = false;
+        return;
+    }
+
+    const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
+        group.elements
+            .map(el => el.render())
+            .filter((template): template is SVGTemplateResult => template !== null)
+    );
+
+    this._layoutElementTemplates = newTemplates;
+
+    this._elementStateNeedsRefresh = false;
+  }
+
   private _handleResize(entries: ResizeObserverEntry[]): void {
     const entry = entries[0];
     const newRect = entry.contentRect;
@@ -274,9 +320,7 @@ export class LcarsCard extends LitElement {
     }
   }
 
-  // Define the static method to return the editor instance
   public static async getConfigElement(): Promise<LovelaceCardEditor> {
-    // Use the NEW editor tag
     return document.createElement('lcars-card-editor') as LovelaceCardEditor;
   }
 
@@ -284,13 +328,13 @@ export class LcarsCard extends LitElement {
     return 3; 
   }
 
-  // Render the card
   protected render(): TemplateResult {
     if (!this._config || !this.hass) {
       return html``;
     }
 
     let svgContent: SVGTemplateResult | SVGTemplateResult[] | TemplateResult | string = '';
+    let defsContent: SVGTemplateResult[] = [];
 
     if (!this._config.elements || this._config.elements.length === 0) {
       const { title, text, fontSize } = this._config;
@@ -302,8 +346,16 @@ export class LcarsCard extends LitElement {
       `;
     } else {
       svgContent = this._layoutElementTemplates;
-      // Show calculating message only if calculation is pending AND we haven't rendered any templates yet
-      // AND the component has had its first render pass completed (to avoid flash)
+
+      this._layoutEngine.layoutGroups.forEach(group => {
+        group.elements.forEach(el => {
+          const layoutEl = el as any;
+          if (layoutEl._maskDefinition && layoutEl._maskDefinition !== null) {
+            defsContent.push(layoutEl._maskDefinition);
+          }
+        });
+      });
+
       if (this._layoutCalculationPending && this._layoutElementTemplates.length === 0 && this._hasRenderedOnce) {
            svgContent = svg`<text x="10" y="20" fill="orange">Calculating layout...</text>`;
       }
@@ -312,11 +364,12 @@ export class LcarsCard extends LitElement {
     return html`
       <ha-card>
         <div class="card-container">
-          <svg 
+          <svg
             xmlns="http://www.w3.org/2000/svg"
-            viewBox=${this._viewBox} 
+            viewBox=${this._viewBox}
             preserveAspectRatio="xMidYMid meet"
           >
+            ${defsContent.length > 0 ? svg`<defs>${defsContent}</defs>` : ''}
             ${svgContent}
           </svg>
         </div>
@@ -324,18 +377,15 @@ export class LcarsCard extends LitElement {
     `;
   }
 
-  // Force a layout recalculation
   private _triggerRecalc(): void {
     this._layoutCalculationPending = true;
     this.requestUpdate();
   }
 
-  // Measure rendered <text> elements and update layout based on real sizes
   private _measureAndRecalc(): void {
     const svg = this.shadowRoot?.querySelector<SVGSVGElement>('.card-container svg');
     if (!svg || !this._containerRect) return;
     const measured: Record<string, {w: number; h: number}> = {};
-    // Collect bounding boxes of rendered text elements
     svg.querySelectorAll<SVGTextElement>('text[id]').forEach(el => {
       try {
         const bbox = el.getBBox();
@@ -344,7 +394,6 @@ export class LcarsCard extends LitElement {
         }
       } catch {}
     });
-    // Patch engine elements' intrinsic sizes
     const engineAny = this._layoutEngine as any;
     const elementsMap: Map<string, any> = engineAny.elements;
     let changed = false;
@@ -357,11 +406,9 @@ export class LcarsCard extends LitElement {
         changed = true;
       }
     });
-    // Rerun layout if any sizes changed
     if (changed) {
       this._layoutCalculationPending = true;
       this._performLayoutCalculation(this._containerRect);
-      // Update state to reflect new templates
       const newTemplates = this._layoutEngine.layoutGroups.flatMap((group: any) =>
         group.elements.map((e: any) => e.render()).filter((t: any) => t !== null)
       );

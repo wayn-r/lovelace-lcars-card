@@ -2,15 +2,10 @@ import { LitElement, html, css, TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { fireEvent } from 'custom-card-helpers';
 
-// Import necessary elements if not globally available
-// Assume paper-tooltip and ha-icon are globally available
-// import '@polymer/paper-tooltip/paper-tooltip.js'; // For tooltips on hover
-// import '../../homeassistant-frontend/src/components/ha-icon.js';
-
 @customElement('lcars-grid-selector')
 export class LcarsGridSelector extends LitElement {
   @property({ type: String }) label = '';
-  @property({ type: String }) value = ''; // Selected anchor point (e.g., 'topLeft')
+  @property({ type: String }) value = '';
   @property({ type: Boolean }) disabled = false;
   @property({ type: Boolean }) labelCenter = false;
   @property({ type: Boolean }) disableCorners = false;
@@ -82,10 +77,10 @@ export class LcarsGridSelector extends LitElement {
 
     const isCorner = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(point);
     if (this.disableCorners && isCorner) {
-        return; // Don't allow selecting disabled corners
+        return;
     }
 
-    const newValue = this.value === point ? '' : point; // Toggle selection, empty string means deselect
+    const newValue = this.value === point ? '' : point;
     if (newValue !== this.value) {
         this.value = newValue;
         fireEvent(this, 'value-changed', { value: this.value });

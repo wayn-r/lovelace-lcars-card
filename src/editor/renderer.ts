@@ -1,5 +1,5 @@
 import { html, TemplateResult } from 'lit';
-import { LcarsElementBase } from './properties/element.js';
+import { EditorElement } from './properties/elements/element.js';
 import { LcarsGroup } from './group.js';
 import { HaFormSchema, PropertySchemaContext, Type } from './properties/properties.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -9,7 +9,7 @@ interface EditorContext {
   hass: any;
   cardConfig: any;
   handleFormValueChanged: (ev: CustomEvent, elementId: string) => void;
-  getElementInstance: (elementId: string) => LcarsElementBase | null;
+  getElementInstance: (elementId: string) => EditorElement | null;
   onDragStart: (ev: DragEvent, elementId: string) => void;
   onDragOver: (ev: DragEvent, elementId: string) => void;
   onDrop: (ev: DragEvent, elementId: string) => void;
@@ -17,7 +17,7 @@ interface EditorContext {
   toggleElementCollapse: (elementId: string) => void;
   startEditElementId: (elementId: string) => void;
   handleDeleteElement: (elementId: string) => void;
-  handleConfirmEditElementId: (elementInstance: LcarsElementBase) => void;
+  handleConfirmEditElementId: (elementInstance: EditorElement) => void;
   cancelEditElementId: () => void;
   updateElementIdInput: (value: string) => void;
   
@@ -60,7 +60,6 @@ interface GroupEditorContext {
   newGroupInput: string;
 }
 
-// Function to render a single element
 export function renderElement(
   element: any, 
   context: EditorContext
@@ -70,19 +69,15 @@ export function renderElement(
   const elementId = element.id;
   const elementInstance = context.getElementInstance(elementId);
   
-  // Declare variables needed in both paths *before* the check
   const isCollapsed = context.collapsedElements[elementId];
   const isEditingId = context.editingElementId === elementId;
   const baseId = elementId.substring(elementId.indexOf('.') + 1);
   const isDragging = context.draggedElementId === elementId;
   const isDragOver = context.dragOverElementId === elementId;
 
-  // --- Handle case where element instance couldn't be created (invalid type) ---
   if (!elementInstance) {
-      // Get schema for Type selector independently
       const typeProperty = new Type();
       const typeSchema = typeProperty.getSchema();
-      // Prepare minimal form data just for the type selector
       const minimalFormData = { type: element.type || '' }; 
 
       return html`
@@ -101,7 +96,7 @@ export function renderElement(
                                 class="cancel-button"
                                 @click=${(e: Event) => { 
                                     e.stopPropagation(); 
-                                    context.cancelEditElementId(); // Cancel on editor
+                                    context.cancelEditElementId(); 
                                 }}
                                 title="Cancel"
                             >
@@ -145,20 +140,16 @@ export function renderElement(
       `;
   }
 
-  // --- Original rendering logic for valid element instances ---
-  // These variables are only needed if elementInstance is valid
   const otherElementIds = Array.isArray(context.cardConfig?.elements) 
       ? context.cardConfig.elements
-          .filter((el: any) => el.id && el.id !== elementId)  // Exclude the current element
+          .filter((el: any) => el.id && el.id !== elementId)  
           .map((el: any) => ({ value: el.id, label: el.id }))
       : [];
   
   const schemaContext: PropertySchemaContext = { otherElementIds };
 
-  // Get the unified schema dynamically
   const schema = elementInstance.getSchema(schemaContext);
 
-  // Prepare data for the form using the new helper method
   const formData = elementInstance.getFormData();
   
   // Filter schema to separate standard fields from custom ones (like grid selector)
@@ -210,21 +201,38 @@ export function renderElement(
   const targetStretchAnchorPoint1Schema = customSchema.find(s => s.name === 'targetStretchAnchorPoint1' || s.name === 'stretchDirection1');
   const targetStretchAnchorPoint2Schema = customSchema.find(s => s.name === 'targetStretchAnchorPoint2' || s.name === 'stretchDirection2');
   
-  // Remove all handled schemas from the standardSchema to avoid duplication
-  const filteredStandardSchema = standardSchema.filter(s => 
-    !['type', 'fill', 'direction', 'orientation', 'side',
-    'width', 'height', 'offsetX', 'offsetY', 
-    'text', 'fontFamily', 'fontSize', 'fontWeight', 'letterSpacing', 
-    'textAnchor', 'dominantBaseline', 'textTransform',
-    'horizontalWidth', 'verticalWidth', 'headerHeight', 'totalElbowHeight', 'outerCornerRadius',
-    'anchorTo', 'stretchTo1', 'stretchTo2', 'stretchPadding1', 'stretchPadding2',
-    'targetStretchAnchorPoint1', 'targetStretchAnchorPoint2', 'stretchDirection1', 'stretchDirection2'].includes(s.name)
-  );
-  
   // Extract custom grid selectors
   const containerAnchorPointSchema = customSchema.find(s => s.name === 'containerAnchorPoint');
   const anchorPointSchema = customSchema.find(s => s.name === 'anchorPoint');
   const targetAnchorPointSchema = customSchema.find(s => s.name === 'targetAnchorPoint');
+
+  // --- Extract Button Property Schemas ---
+  const buttonEnabledSchema = standardSchema.find(s => s.name === 'button.enabled');
+  const buttonTextSchema = standardSchema.find(s => s.name === 'button.text');
+  const buttonCutoutTextSchema = standardSchema.find(s => s.name === 'button.cutout_text');
+
+  const buttonTextColorSchema = standardSchema.find(s => s.name === 'button.text_color');
+  const buttonFontFamilySchema = standardSchema.find(s => s.name === 'button.font_family');
+  const buttonFontSizeSchema = standardSchema.find(s => s.name === 'button.font_size');
+  const buttonFontWeightSchema = standardSchema.find(s => s.name === 'button.font_weight');
+  const buttonLetterSpacingSchema = standardSchema.find(s => s.name === 'button.letter_spacing');
+  const buttonTextTransformSchema = standardSchema.find(s => s.name === 'button.text_transform');
+  const buttonTextAnchorSchema = standardSchema.find(s => s.name === 'button.text_anchor');
+  const buttonDominantBaselineSchema = standardSchema.find(s => s.name === 'button.dominant_baseline');
+
+  const buttonHoverFillSchema = standardSchema.find(s => s.name === 'button.hover_fill');
+  const buttonActiveFillSchema = standardSchema.find(s => s.name === 'button.active_fill');
+
+  const buttonHoverTransformSchema = standardSchema.find(s => s.name === 'button.hover_transform');
+  const buttonActiveTransformSchema = standardSchema.find(s => s.name === 'button.active_transform');
+
+  const buttonActionTypeSchema = standardSchema.find(s => s.name === 'button.action_config.type');
+  const buttonActionServiceSchema = standardSchema.find(s => s.name === 'button.action_config.service');
+  const buttonActionServiceDataSchema = standardSchema.find(s => s.name === 'button.action_config.service_data');
+  const buttonActionNavPathSchema = standardSchema.find(s => s.name === 'button.action_config.navigation_path');
+  const buttonActionUrlPathSchema = standardSchema.find(s => s.name === 'button.action_config.url_path');
+  const buttonActionEntitySchema = standardSchema.find(s => s.name === 'button.action_config.entity');
+  const buttonActionConfirmSchema = standardSchema.find(s => s.name === 'button.action_config.confirmation');
   
   // Create schema arrays for ha-form based on which properties exist
   const widthHeightSchema = [widthSchema, heightSchema].filter(Boolean);
@@ -237,7 +245,26 @@ export function renderElement(
   const showStretchTarget = formData.stretchTo1 && formData.stretchTo1 !== '';
   const showSecondStretchTarget = formData.stretchTo2 && formData.stretchTo2 !== '';
 
-  // Helper function to render a single property form, closing over context, elementId, and formData
+  // Remove all handled schemas (including new button ones) from filteredStandardSchema
+  const filteredStandardSchema = standardSchema.filter(s => 
+    !['type', 'fill', 'direction', 'orientation', 'side',
+    'width', 'height', 'offsetX', 'offsetY', 
+    'text', 'fontFamily', 'fontSize', 'fontWeight', 'letterSpacing', 
+    'textAnchor', 'dominantBaseline', 'textTransform',
+    'horizontalWidth', 'verticalWidth', 'headerHeight', 'totalElbowHeight', 'outerCornerRadius',
+    'anchorTo', 'stretchTo1', 'stretchTo2', 'stretchPadding1', 'stretchPadding2',
+    'targetStretchAnchorPoint1', 'targetStretchAnchorPoint2', 'stretchDirection1', 'stretchDirection2',
+    'button.enabled', 'button.text', 'button.cutout_text',
+    'button.text_color', 'button.font_family', 'button.font_size', 'button.font_weight',
+    'button.letter_spacing', 'button.text_transform', 'button.text_anchor', 'button.dominant_baseline',
+    'button.hover_fill', 'button.active_fill',
+    'button.hover_transform', 'button.active_transform',
+    'button.action_config.type', 'button.action_config.service', 'button.action_config.service_data',
+    'button.action_config.navigation_path', 'button.action_config.url_path', 'button.action_config.entity',
+    'button.action_config.confirmation'
+    ].includes(s.name)
+  );
+  
   function renderProp(
     schema: HaFormSchema | undefined,
     sideClass: string
@@ -245,9 +272,6 @@ export function renderElement(
     if (!schema) return html``;
 
     const value = formData[schema.name];
-
-    // Create a refresh key containing the field name and value to force updates
-    // const refreshKey = `${schema.name}:${value}`; // No Date.now()
 
     return html`
       <div class=${sideClass}>
@@ -310,7 +334,6 @@ export function renderElement(
                   
                   <!-- Properties based on element type -->
                   ${(() => {
-                    // Layout for rectangle elements
                     if (element.type === 'rectangle') {
                       return html`
                         <!-- Fill Color -->
@@ -321,7 +344,6 @@ export function renderElement(
                         ${renderProp(heightSchema, 'property-right')}
                       `;
                     }
-                    // Layout for endcap elements (both endcap and chisel-endcap)
                     else if (element.type === 'endcap' || element.type === 'chisel-endcap') {
                       return html`
                         <!-- Fill Color and Direction -->
@@ -333,7 +355,6 @@ export function renderElement(
                         ${renderProp(heightSchema, 'property-right')}
                       `;
                     }
-                    // Layout for text elements
                     else if (element.type === 'text') {
                       return html`
                         <!-- Text Content and Fill Color -->
@@ -357,7 +378,6 @@ export function renderElement(
                         <div class="property-right"></div>
                       `;
                     }
-                    // Layout for elbow elements
                     else if (element.type === 'elbow') {
                       return html`
                         <!-- Fill Color and Orientation -->
@@ -380,7 +400,6 @@ export function renderElement(
                         <div class="property-right"></div>
                       `;
                     }
-                    // Default case for any other element types
                     else {
                       return html`
                         <!-- Fill Color -->
@@ -450,17 +469,67 @@ export function renderElement(
                     ${renderProp(offsetYSchema, 'property-right')}
                   ` : ''}
                   
-                  <!-- Remaining properties -->
+                  <!-- === BUTTON CONFIGURATION SECTION === -->
+                  ${renderFullWidthPropertyForm(context, elementId, formData, buttonEnabledSchema)}
+
+                  ${formData['button.enabled'] ? html`
+                    <div class="property-full-width section-header" style="font-weight: bold; margin-top: 16px; border-bottom: 1px solid var(--divider-color); padding-bottom: 4px;">Button Appearance</div>
+                    ${renderProp(buttonTextSchema, 'property-left')}
+                    ${renderProp(buttonCutoutTextSchema, 'property-right')}
+
+                    ${renderProp(buttonTextColorSchema, 'property-left')}
+                    ${renderProp(buttonFontFamilySchema, 'property-right')}
+                    
+                    ${renderProp(buttonFontSizeSchema, 'property-left')}
+                    ${renderProp(buttonFontWeightSchema, 'property-right')}
+
+                    ${renderProp(buttonLetterSpacingSchema, 'property-left')}
+                    ${renderProp(buttonTextTransformSchema, 'property-right')}
+                    ${renderProp(buttonTextAnchorSchema, 'property-left')}
+                    ${renderProp(buttonDominantBaselineSchema, 'property-right')}
+
+
+                    <div class="property-full-width section-header" style="font-weight: bold; margin-top: 16px; border-bottom: 1px solid var(--divider-color); padding-bottom: 4px;">Button State Styles</div>
+                    ${renderProp(buttonHoverFillSchema, 'property-left')}
+                    ${renderProp(buttonActiveFillSchema, 'property-right')}
+                    
+                    ${renderProp(buttonHoverTransformSchema, 'property-left')}
+                    ${renderProp(buttonActiveTransformSchema, 'property-right')}
+
+                    <div class="property-full-width section-header" style="font-weight: bold; margin-top: 16px; border-bottom: 1px solid var(--divider-color); padding-bottom: 4px;">Button Action</div>
+                    ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionTypeSchema)}
+
+                    ${formData['button.action_config.type'] === 'call-service' ? html`
+                      ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionServiceSchema)}
+                      ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionServiceDataSchema)}
+                    ` : ''}
+                    ${formData['button.action_config.type'] === 'navigate' ? html`
+                      ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionNavPathSchema)}
+                    ` : ''}
+                    ${formData['button.action_config.type'] === 'url' ? html`
+                      ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionUrlPathSchema)}
+                    ` : ''}
+                    ${formData['button.action_config.type'] === 'toggle' || formData['button.action_config.type'] === 'more-info' ? html`
+                      ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionEntitySchema)}
+                    ` : ''}
+                    ${formData['button.action_config.type'] && formData['button.action_config.type'] !== 'none' ? html`
+                      ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionConfirmSchema)}
+                    ` : ''}
+                  ` : ''}
+                  <!-- === END BUTTON CONFIGURATION SECTION === -->
+
+
                   ${filteredStandardSchema.length > 0 ? html`
-                     <div class="property-full-width">
-                       <ha-form
-                         .hass=${context.hass}
-                         .data=${formData}
-                         .schema=${filteredStandardSchema}
-                         .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                         @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                       ></ha-form>
-                     </div>
+                    <div class="property-full-width" style="margin-top:16px;">
+                      <div style="font-weight: bold; border-bottom: 1px solid var(--divider-color); padding-bottom: 4px; margin-bottom: 8px;">Other Properties</div>
+                      <ha-form
+                        .hass=${context.hass}
+                        .data=${formData}
+                        .schema=${filteredStandardSchema}
+                        .computeLabel=${(s: HaFormSchema) => s.label || s.name}
+                        @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
+                      ></ha-form>
+                    </div>
                   ` : ''}
                </div>
                ${schema.length === 0 ? html`<p>No configurable properties for this element type.</p>` : ''} 
@@ -470,16 +539,12 @@ export function renderElement(
   `;
 }
 
-// Helper function to render custom selectors like grid selectors
 function renderCustomSelector(
   schema: HaFormSchema, 
   value: string, 
   onChange: (value: string) => void
 ): TemplateResult {
   if (schema.selector.lcars_grid) {
-    
-    // Add a timestamp to force rerender when values change
-    // const refreshKey = `${schema.name}:${value}:${Date.now()}`; // REMOVE Date.now()
     
     return html`
       <lcars-grid-selector
@@ -496,15 +561,14 @@ function renderCustomSelector(
       ></lcars-grid-selector>
     `;
   }
-  return html``; // Handle other custom types if needed
+  return html``;
 }
 
-// Helper function to wrap custom selectors in appropriate div (left/right/full-width)
 function renderCustomSelectorWrapper(
   schema: HaFormSchema | undefined,
   value: string,
   onChange: (value: string) => void,
-  sideClass: string // "property-left", "property-right", or "property-full-width"
+  sideClass: string
 ): TemplateResult {
   if (!schema) return html``;
 
@@ -515,7 +579,6 @@ function renderCustomSelectorWrapper(
   `;
 }
 
-// Helper function to render confirm and cancel action buttons
 function renderActionButtons(
   isValid: boolean,
   onConfirm: (e: Event) => void,
@@ -550,10 +613,9 @@ function renderActionButtons(
   `;
 }
 
-// Renders the input fields for editing an element's base ID
 export function renderElementIdEditForm(
   elementId: string, 
-  elementInstance: LcarsElementBase,
+  elementInstance: EditorElement,
   context: EditorContext
 ): TemplateResult {
     const currentInput = context.editingElementIdInput;
@@ -569,14 +631,14 @@ export function renderElementIdEditForm(
         elementInstance.updateIdInput(newValue);
         context.updateElementIdInput(newValue);
       },
-      (e) => { // onKeydown
+      (e) => {
         if (e.key === 'Enter' && isValid) {
           e.stopPropagation();
           context.handleConfirmEditElementId(elementInstance);
         }
       },
-      () => context.handleConfirmEditElementId(elementInstance), // onConfirm
-      () => { // onCancel
+      () => context.handleConfirmEditElementId(elementInstance),
+      () => {
         elementInstance.cancelEditingId();
         context.cancelEditElementId();
       },
@@ -585,7 +647,6 @@ export function renderElementIdEditForm(
     );
 }
 
-// Generic helper function to render a text input form with validation and actions
 function renderInputForm(
   label: string,
   currentInput: string,
@@ -599,7 +660,7 @@ function renderInputForm(
   cancelTitle: string
 ): TemplateResult {
   return html`
-    <div class="element-name-input"> // Re-using class, consider making it more generic if needed
+    <div class="element-name-input">
       <ha-textfield
         .label=${label}
         .value=${currentInput}
@@ -615,7 +676,6 @@ function renderInputForm(
   `;
 }
 
-// Renders a single group container and its elements
 export function renderGroup(
   groupId: string, 
   elementsInGroup: any[],
@@ -681,13 +741,11 @@ export function renderGroup(
     `;
 }
 
-// Renders the form for adding a new group
 export function renderNewGroupForm(groupContext: GroupEditorContext): TemplateResult {
     const currentInput = groupContext.newGroupInput;
     const warningMessage = groupContext.groupIdWarning;
     const isValid = !!currentInput.trim() && !warningMessage;
 
-    // Wrapping the form in the standard group structure for consistency
     return html`
       <div class="group-editor new-group">
         <div class="group-header editing">
@@ -698,14 +756,14 @@ export function renderNewGroupForm(groupContext: GroupEditorContext): TemplateRe
             warningMessage,
             isValid,
             (newValue) => groupContext.updateGroupNameInput(newValue),
-            (e) => { // onKeydown
+            (e) => {
               if (e.key === 'Enter' && isValid) {
                 e.stopPropagation();
                 groupContext.confirmNewGroup();
               }
             },
-            () => groupContext.confirmNewGroup(), // onConfirm
-            () => groupContext.cancelNewGroup(), // onCancel
+            () => groupContext.confirmNewGroup(),
+            () => groupContext.cancelNewGroup(),
             "Create Group",
             "Cancel"
           )}
@@ -714,7 +772,6 @@ export function renderNewGroupForm(groupContext: GroupEditorContext): TemplateRe
     `;
 }
 
-// Renders the input fields when editing a group name
 export function renderGroupEditForm(
   groupId: string,
   groupContext: GroupEditorContext
@@ -735,20 +792,19 @@ export function renderGroupEditForm(
         }
         groupContext.updateGroupNameInput(newValue);
       },
-      (e) => { // onKeydown
+      (e) => {
         if (e.key === 'Enter' && isValid) {
           e.stopPropagation();
           groupContext.handleConfirmEditGroup(groupId);
         }
       },
-      () => groupContext.handleConfirmEditGroup(groupId), // onConfirm
-      () => groupContext.cancelEditGroup(), // onCancel
+      () => groupContext.handleConfirmEditGroup(groupId),
+      () => groupContext.cancelEditGroup(),
       "Rename Group",
       "Cancel"
     );
 }
 
-// Renders the confirmation dialog for deleting a group
 export function renderGroupDeleteWarning(
   groupId: string,
   groupContext: GroupEditorContext
@@ -763,7 +819,6 @@ export function renderGroupDeleteWarning(
   `;
 }
 
-// Renders the form for adding a new element within a group
 export function renderAddElementForm(groupContext: GroupEditorContext): TemplateResult {
     const groupId = groupContext.addElementDraftGroup;
     if (!groupId) return html``;
@@ -772,7 +827,6 @@ export function renderAddElementForm(groupContext: GroupEditorContext): Template
     const warningMessage = groupContext.addElementWarning;
     const isValid = !!currentInput.trim() && !warningMessage;
 
-    // Wrapping the form in the standard structure
     return html`
       <div class="add-element-form">
         ${renderInputForm(
@@ -781,14 +835,14 @@ export function renderAddElementForm(groupContext: GroupEditorContext): Template
           warningMessage,
           isValid,
           (newValue) => groupContext.updateNewElementInput(newValue),
-          (e) => { // onKeydown
+          (e) => {
             if (e.key === 'Enter' && isValid) {
               e.stopPropagation();
               groupContext.confirmAddElement();
             }
           },
-          () => groupContext.confirmAddElement(), // onConfirm
-          () => groupContext.cancelAddElement(), // onCancel
+          () => groupContext.confirmAddElement(),
+          () => groupContext.cancelAddElement(),
           "Add Element",
           "Cancel"
         )}
@@ -796,14 +850,11 @@ export function renderAddElementForm(groupContext: GroupEditorContext): Template
     `;
 }
 
-// Main render function for group list
 export function renderGroupList(
-  groups: string[],
   groupedElements: { [groupId: string]: any[] },
   editorContext: EditorContext,
   groupContext: GroupEditorContext
 ): TemplateResult {
-    // Get sorted list of group IDs to render
     const groupIdsToRender = Object.keys(groupedElements).sort();
 
     return html`
@@ -823,7 +874,6 @@ export function renderGroupList(
     `;
 }
 
-// Helper function to render a single property form full width
 function renderFullWidthPropertyForm(
   context: EditorContext,
   elementId: string,
@@ -834,7 +884,6 @@ function renderFullWidthPropertyForm(
   
   const value = formData[schema.name];
   
-  // Create a refresh key containing the field name and value to force updates
   const refreshKey = `${schema.name}:${value}:${Date.now()}`;
   
   return html`
@@ -851,7 +900,6 @@ function renderFullWidthPropertyForm(
   `;
 }
 
-// Helper function to render a stretch section (primary or secondary)
 function renderStretchSection(
   context: EditorContext,
   elementId: string,
@@ -866,15 +914,11 @@ function renderStretchSection(
   const targetKey = targetAnchorPointSchema?.name;
   const targetValue = targetKey ? formData[targetKey] : '';
   const paddingValue = stretchPaddingSchema ? formData[stretchPaddingSchema.name] : '';
-  // const paddingRefreshKey = stretchPaddingSchema ? `${stretchPaddingSchema.name}:${paddingValue}:${Date.now()}` : '';
   const stretchToValue = formData[stretchToSchema.name];
-  // const stretchToRefreshKey = `${stretchToSchema.name}:${stretchToValue}:${Date.now()}`;
 
   if (!showTarget) {
-    // No stretch target selected: single row full-width for the dropdown
     return renderFullWidthPropertyForm(context, elementId, formData, stretchToSchema);
   } else {
-    // Stretch target selected: Render left and right columns for the main grid
     return html`
       <div class="property-left stretch-column-left">
         <!-- Stretch To Dropdown -->

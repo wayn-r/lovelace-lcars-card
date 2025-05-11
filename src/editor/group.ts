@@ -1,21 +1,16 @@
-import { LcarsElementBase, RectangleElement } from "./properties/element";
-
 export class LcarsGroup {
     id: string;
 
-    // --- UI State Properties ---
     isCollapsed: boolean = true;
     isEditingName: boolean = false;
     isDeleteWarningVisible: boolean = false;
     currentNameInput: string = '';
-    editErrorMessage: string = ''; // For validation feedback
+    editErrorMessage: string = '';
 
     constructor(id: string) {
         this.id = id;
-        this.currentNameInput = id; // Initialize input with current ID
+        this.currentNameInput = id;
     }
-
-    // --- State Management Methods ---
 
     toggleCollapse(): void {
         this.isCollapsed = !this.isCollapsed;
@@ -23,113 +18,75 @@ export class LcarsGroup {
 
     startEditingName(): void {
         this.isEditingName = true;
-        this.currentNameInput = this.id; // Reset input to current ID
+        this.currentNameInput = this.id;
         this.editErrorMessage = '';
-        // Note: Need to trigger re-render in the main editor
     }
 
     cancelEditingName(): void {
         this.isEditingName = false;
         this.editErrorMessage = '';
-        // Note: Need to trigger re-render
     }
 
     updateNameInput(value: string): void {
         this.currentNameInput = value;
-        // Perform validation inline? Or wait until confirm?
-        this.validateNameInput(); // Example validation on change
-        // Note: Need to trigger re-render
-    }
-
-    validateNameInput(): boolean {
-        // Check for empty string after trimming
-        const trimmed = this.currentNameInput.trim();
-        if (!trimmed) {
-             this.editErrorMessage = 'Group ID cannot be empty.';
-             return false;
-        }
-        
-        // Check if the original input contains spaces (different from trimmed length)
-        if (this.currentNameInput !== trimmed) {
-            this.editErrorMessage = 'Group ID cannot contain spaces.';
-            return false;
-        }
-        
-        // Check for valid characters
-        if (!/^[a-zA-Z0-9_-]+$/.test(this.currentNameInput)) {
-            this.editErrorMessage = 'Group ID must be letters, numbers, _, -.';
-            return false;
-        }
-        
-        // Instance validation doesn't check for duplicates against the global list here
-        this.editErrorMessage = ''; 
-        return true;
+        const validationResult = LcarsGroup.validateIdentifier(this.currentNameInput, "Group ID");
+        this.editErrorMessage = validationResult.error || '';
     }
 
     requestDelete(): void {
         this.isDeleteWarningVisible = true;
-        // Note: Need to trigger re-render
     }
 
     cancelDelete(): void {
         this.isDeleteWarningVisible = false;
-        // Note: Need to trigger re-render
     }
 
-    // --- Methods Requiring Interaction with Main Editor --- 
-
-    // These methods would typically accept callbacks or dispatch events
-    // to inform LcarsCardEditor to update the central config.
-
-    /** Placeholder: Signals intent to finalize the name change */
-    confirmEditName(): { oldId: string, newId: string } | null {
-        if (!this.isEditingName || !this.validateNameInput()) {
-            return null; // Do nothing if not editing or invalid
+    confirmEditName(existingGroupIds: Set<string>): { oldId: string, newId: string } | null {
+        const validationResult = LcarsGroup.validateIdentifier(this.currentNameInput, "Group ID", existingGroupIds);
+        if (!this.isEditingName || !validationResult.isValid) {
+             this.editErrorMessage = validationResult.error || 'Validation failed.'; 
+            return null;
         }
-        // Use the current input without trimming since validateNameInput already checks for spaces
         const newId = this.currentNameInput;
-        if (newId === this.id) { // No actual change
+        if (newId === this.id) {
             this.cancelEditingName();
             return null;
         }
-        // Return necessary info for the main editor to handle the update
-        // The main editor will check for name conflicts before proceeding
+
         const result = { oldId: this.id, newId: newId };
-        this.isEditingName = false; // Reset state locally
+        this.isEditingName = false;
         this.editErrorMessage = '';
-        // Main editor needs to handle config update & re-render
         return result;
     }
 
-    /** Placeholder: Signals intent to finalize deletion */
     confirmDelete(): { groupId: string } {
-         // Return group ID for main editor to handle deletion
          const result = { groupId: this.id };
-         this.isDeleteWarningVisible = false; // Reset state locally
-         // Main editor needs to handle config update & re-render
+         this.isDeleteWarningVisible = false;
          return result;
     }
-
-    // --- Element Addition Logic ---
+    
     requestAddElement(baseId: string, existingElementIdsInGroup: Set<string>): { newElementConfig?: any, error?: string } {
         const trimmedBaseId = baseId.trim();
 
-        // Use LcarsElementBase validation for format check
-        const tempElement = new RectangleElement({ id: '', type: 'rectangle' }); // Dummy instance
-        tempElement.currentIdInput = trimmedBaseId;
-        if (!tempElement.validateIdInput()) {
-            return { error: tempElement.idEditErrorMessage };
+        // Use the new generalized validation for the base ID part
+        // For element base IDs, uniqueness is checked against other base IDs *within the group context later*,
+        // or against fully qualified names if `existingElementIdsInGroup` contains them.
+        // Here, we're primarily checking format of the baseId.
+        const baseIdValidation = LcarsGroup.validateIdentifier(trimmedBaseId, "Element base ID");
+        if (!baseIdValidation.isValid) {
+            return { error: baseIdValidation.error };
         }
 
-        // Check for duplicates within the group
+        // The old duplicate check, now using the generalized uniqueness validator
+        // We need to ensure the `existingElementIdsInGroup` contains fully qualified names.
         const fullId = `${this.id}.${trimmedBaseId}`;
-        if (existingElementIdsInGroup.has(fullId)) {
-            return { error: 'Element ID already exists in this group.' };
+        const uniquenessValidation = LcarsGroup._validateIsUnique(fullId, "Element ID", existingElementIdsInGroup);
+        if (!uniquenessValidation.isValid) {
+            return { error: uniquenessValidation.error };
         }
 
-        // Create default config
         const newElementConfig = {
-            id: fullId,
+            id: `${this.id}.${trimmedBaseId}`,
             type: 'rectangle', 
             props: { fill: '#FF9900' },
             layout: { width: 100, height: 30 },
@@ -137,29 +94,54 @@ export class LcarsGroup {
 
         return { newElementConfig };
     }
+    
+    private static _validateNotEmpty(name: string, entityType: string): { isValid: boolean, error?: string } {
+        if (!name.trim()) {
+            return { isValid: false, error: `${entityType} cannot be empty.` };
+        }
+        return { isValid: true };
+    }
 
-    // --- Static Validation for New Groups ---
-    static validateNewGroupName(name: string, existingGroupIds: Set<string>): { isValid: boolean, error?: string } {
-        // Check for empty string after trimming
-        const trimmed = name.trim();
-        if (!trimmed) {
-            return { isValid: false, error: 'Group ID cannot be empty.' };
+    private static _validateNoLeadingTrailingSpaces(name: string, entityType: string): { isValid: boolean, error?: string } {
+        if (name !== name.trim()) {
+            return { isValid: false, error: `${entityType} cannot have leading or trailing spaces.` };
         }
-        
-        // Check if the original input contains spaces (different from trimmed length)
-        if (name !== trimmed) {
-            return { isValid: false, error: 'Group ID cannot contain spaces.' };
-        }
-        
-        // Check for valid characters
+        return { isValid: true };
+    }
+
+    private static _validateAllowedCharacters(name: string, entityType: string): { isValid: boolean, error?: string } {
         if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-            return { isValid: false, error: 'Group ID must be letters, numbers, _, -.' };
+            return { isValid: false, error: `${entityType} must only contain letters, numbers, underscores (_), or hyphens (-).` };
         }
+        return { isValid: true };
+    }
+
+    private static _validateIsUnique(name: string, entityType: string, existingIds?: Set<string>): { isValid: boolean, error?: string } {
+        if (existingIds && existingIds.has(name)) {
+            return { isValid: false, error: `${entityType} '${name}' already exists.` };
+        }
+        return { isValid: true };
+    }
+    
+    static validateIdentifier(name: string, entityType: string, existingIds?: Set<string>): { isValid: boolean, error?: string } {
+        const trimmedName = name.trim();
+
+        let validationResult = LcarsGroup._validateNotEmpty(trimmedName, entityType);
+        if (!validationResult.isValid) return validationResult;
+
+        // Note: The original check was `name !== trimmedName`. If `trimmedName` is used for subsequent checks,
+        // this effectively means we're checking against a version of the name that *would* be valid
+        // regarding leading/trailing spaces. If the intent is to fail if the *original* input `name`
+        // had leading/trailing spaces, this check should use `name`.
+        // For now, assuming we validate the original `name` for spaces.
+        validationResult = LcarsGroup._validateNoLeadingTrailingSpaces(name, entityType);
+        if (!validationResult.isValid) return validationResult;
         
-        // Check for duplicates
-        if (existingGroupIds.has(name)) {
-            return { isValid: false, error: 'Group name already exists.' };
-        }
+        validationResult = LcarsGroup._validateAllowedCharacters(trimmedName, entityType);
+        if (!validationResult.isValid) return validationResult;
+        
+        validationResult = LcarsGroup._validateIsUnique(trimmedName, entityType, existingIds);
+        if (!validationResult.isValid) return validationResult;
         
         return { isValid: true };
     }

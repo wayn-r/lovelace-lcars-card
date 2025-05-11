@@ -6,7 +6,9 @@
     "module": "dist/lovelace-lcars-card.js",
     "type": "module",
     "scripts": {
+        "predev": "powershell -File ./export-flattened.ps1",
         "dev": "vite",
+        "prestart": "powershell -File ./export-flattened.ps1",
         "start": "vite",
         "build": "tsc && vite build",
         "preview": "vite preview"

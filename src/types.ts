@@ -1,4 +1,3 @@
-// Extend the Window interface
 declare global {
   interface Window {
     customCards: Array<{
@@ -8,7 +7,6 @@ declare global {
     }>;
   }
   
-  // Extend HTMLInputElement to include configValue
   interface HTMLInputElement {
     configValue?: string;
   }
