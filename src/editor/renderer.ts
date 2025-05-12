@@ -174,15 +174,12 @@ export function renderElement(
   const textTransformSchema = standardSchema.find(s => s.name === 'textTransform');
   
   // Elbow element specific properties
-  const horizontalWidthSchema = standardSchema.find(s => s.name === 'horizontalWidth');
-  const verticalWidthSchema = standardSchema.find(s => s.name === 'verticalWidth');
-  const headerHeightSchema = standardSchema.find(s => s.name === 'headerHeight');
-  const totalElbowHeightSchema = standardSchema.find(s => s.name === 'totalElbowHeight');
-  const outerCornerRadiusSchema = standardSchema.find(s => s.name === 'outerCornerRadius');
+  const elbowWidthSchema = standardSchema.find(s => s.name === 'width');
+  const elbowHeightSchema = standardSchema.find(s => s.name === 'height');
+  const bodyWidthSchema = standardSchema.find(s => s.name === 'bodyWidth');
+  const armHeightSchema = standardSchema.find(s => s.name === 'armHeight');
   
   // Width/Height/Offset properties (shared by many elements)
-  const widthSchema = standardSchema.find(s => s.name === 'width');
-  const heightSchema = standardSchema.find(s => s.name === 'height');
   const offsetXSchema = standardSchema.find(s => s.name === 'offsetX');
   const offsetYSchema = standardSchema.find(s => s.name === 'offsetY');
   
@@ -235,7 +232,7 @@ export function renderElement(
   const buttonActionConfirmSchema = standardSchema.find(s => s.name === 'button.action_config.confirmation');
   
   // Create schema arrays for ha-form based on which properties exist
-  const widthHeightSchema = [widthSchema, heightSchema].filter(Boolean);
+  const widthHeightSchema = [elbowWidthSchema, elbowHeightSchema].filter(Boolean);
   const offsetSchema = [offsetXSchema, offsetYSchema].filter(Boolean);
   
   // Use these variables for the existing anchor/stretch logic
@@ -251,7 +248,7 @@ export function renderElement(
     'width', 'height', 'offsetX', 'offsetY', 
     'text', 'fontFamily', 'fontSize', 'fontWeight', 'letterSpacing', 
     'textAnchor', 'dominantBaseline', 'textTransform',
-    'horizontalWidth', 'verticalWidth', 'headerHeight', 'totalElbowHeight', 'outerCornerRadius',
+    'bodyWidth', 'armHeight',
     'anchorTo', 'stretchTo1', 'stretchTo2', 'stretchPadding1', 'stretchPadding2',
     'targetStretchAnchorPoint1', 'targetStretchAnchorPoint2', 'stretchDirection1', 'stretchDirection2',
     'button.enabled', 'button.text', 'button.cutout_text',
@@ -340,8 +337,8 @@ export function renderElement(
                         ${renderFullWidthPropertyForm(context, elementId, formData, fillSchema)}
 
                         <!-- Width and Height -->
-                        ${renderProp(widthSchema, 'property-left')}
-                        ${renderProp(heightSchema, 'property-right')}
+                        ${renderProp(elbowWidthSchema, 'property-left')}
+                        ${renderProp(elbowHeightSchema, 'property-right')}
                       `;
                     }
                     else if (element.type === 'endcap' || element.type === 'chisel-endcap') {
@@ -351,8 +348,8 @@ export function renderElement(
                         ${renderProp(directionSchema, 'property-right')}
 
                         <!-- Width and Height -->
-                        ${renderProp(widthSchema, 'property-left')}
-                        ${renderProp(heightSchema, 'property-right')}
+                        ${renderProp(elbowWidthSchema, 'property-left')}
+                        ${renderProp(elbowHeightSchema, 'property-right')}
                       `;
                     }
                     else if (element.type === 'text') {
@@ -387,17 +384,13 @@ export function renderElement(
                         <!-- Side property -->
                         ${renderFullWidthPropertyForm(context, elementId, formData, sideSchema)}
 
-                        <!-- Horizontal Width and Vertical Width -->
-                        ${renderProp(horizontalWidthSchema, 'property-left')}
-                        ${renderProp(verticalWidthSchema, 'property-right')}
+                        <!-- Width and Body Width -->
+                        ${renderProp(elbowWidthSchema, 'property-left')}
+                        ${renderProp(bodyWidthSchema, 'property-right')}
 
-                        <!-- Header Height and Total Height -->
-                        ${renderProp(headerHeightSchema, 'property-left')}
-                        ${renderProp(totalElbowHeightSchema, 'property-right')}
-
-                        <!-- Outer Corner Radius -->
-                        ${renderProp(outerCornerRadiusSchema, 'property-left')}
-                        <div class="property-right"></div>
+                        <!-- Arm Height and Height -->
+                        ${renderProp(armHeightSchema, 'property-left')}
+                        ${renderProp(elbowHeightSchema, 'property-right')}
                       `;
                     }
                     else {
@@ -406,8 +399,8 @@ export function renderElement(
                         ${renderFullWidthPropertyForm(context, elementId, formData, fillSchema)}
 
                         <!-- Width and Height -->
-                        ${renderProp(widthSchema, 'property-left')}
-                        ${renderProp(heightSchema, 'property-right')}
+                        ${renderProp(elbowWidthSchema, 'property-left')}
+                        ${renderProp(elbowHeightSchema, 'property-right')}
                       `;
                     }
                   })()}

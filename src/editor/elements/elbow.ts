@@ -1,13 +1,10 @@
 import { EditorElement, PropertyClass } from './element';
 import {
     Orientation, 
-    HorizontalWidth, 
-    VerticalWidth, 
-    HeaderHeight, 
-    TotalElbowHeight, 
-    OuterCornerRadius,    
     Width, 
     Height,
+    BodyWidth, 
+    ArmHeight, 
     ElbowTextPosition
 } from '../properties/properties';
 
@@ -17,11 +14,8 @@ export class Elbow extends EditorElement {
             Width, 
             Height, 
             Orientation, 
-            HorizontalWidth, 
-            VerticalWidth, 
-            HeaderHeight, 
-            TotalElbowHeight, 
-            OuterCornerRadius,
+            BodyWidth, 
+            ArmHeight, 
             ElbowTextPosition
         ];
     }

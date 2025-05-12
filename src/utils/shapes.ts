@@ -163,36 +163,41 @@ export function generateChiselEndcapPath(
 }
 
 /**
- * Generates the SVG path data (`d` attribute) for an elbow shape using `buildShape`.
+ * Generates SVG path data (`d` attribute) for an elbow shape using `buildShape`.
+ * An elbow is a shape with a "header" along one edge, and a vertical bar on a corner.
+ * It forms an L with rounded corners.
+ * 
+ * The path will have a rounded inner corner where the horizontal and vertical parts meet.
+ * 
  * @param x The starting X coordinate.
- * @param horizontalWidth Width of the horizontal leg.
- * @param verticalWidth Width (thickness) of the vertical leg.
- * @param headerHeight Height (thickness) of the horizontal leg.
- * @param totalElbowHeight Total height spanned by the vertical leg.
- * @param orientation Location of the inner curved corner ('top-right', 'top-left', 'bottom-right', 'bottom-left').
+ * @param width Width of the horizontal leg.
+ * @param bodyWidth Width (thickness) of the vertical leg.
+ * @param armHeight Height (thickness) of the horizontal leg.
+ * @param height Total height spanned by the vertical leg.
+ * @param orientation Which corner the elbow is based in: 'top-left', 'top-right', 'bottom-left', 'bottom-right'.
  * @param y The starting Y coordinate. Default 0.
  * @param outerCornerRadius Optional radius for the *outer* sharp corners. Default 0.
  * @returns SVG path data string (`d` attribute).
  */
 export function generateElbowPath(
     x: number,
-    horizontalWidth: number,
-    verticalWidth: number,
-    headerHeight: number,
-    totalElbowHeight: number,
+    width: number,
+    bodyWidth: number,
+    armHeight: number,
+    height: number,
     orientation: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left',
     y: number = 0,
-    outerCornerRadius: number = headerHeight
+    outerCornerRadius: number = armHeight
 ): string {
     let points: [number, number, number][];
-    if (headerHeight <= 0 || horizontalWidth <= 0 || verticalWidth <= 0 || totalElbowHeight <= headerHeight) {
+    if (armHeight <= 0 || width <= 0 || bodyWidth <= 0 || height <= armHeight) {
         console.warn("LCARS Card: Invalid dimensions provided to generateElbowPath.");
         points = [[x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0]];
     } else {
-    const h = headerHeight;
-    const wH = horizontalWidth;
-    const wV = verticalWidth;
-    const totalH = totalElbowHeight;
+    const h = armHeight;
+    const wH = width;
+    const wV = bodyWidth;
+    const totalH = height;
     const innerRadius = Math.min(h / 2, wV);
     const maxOuterRadius = Math.min(wH, totalH);
     const safeOuterCornerRadius = Math.min(outerCornerRadius, maxOuterRadius);

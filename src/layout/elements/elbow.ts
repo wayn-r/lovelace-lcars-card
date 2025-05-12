@@ -12,8 +12,8 @@ export class ElbowElement extends LayoutElement {
     }
   
     calculateIntrinsicSize(container: SVGElement): void {
-      this.intrinsicSize.width = this.props.horizontalWidth || this.layoutConfig.horizontalWidth || 100;
-      this.intrinsicSize.height = this.props.totalElbowHeight || this.layoutConfig.totalElbowHeight || 100;
+      this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 100;
+      this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 100;
       this.intrinsicSize.calculated = true;
     }
   
@@ -32,17 +32,16 @@ export class ElbowElement extends LayoutElement {
       const stroke = this.props.stroke || 'none';
       const strokeWidth = this.props.strokeWidth || '0';
       const orientation = this.props.orientation || 'top-left';
-      const horizontalWidth = this.props.horizontalWidth || width;
-      const verticalWidth = this.props.verticalWidth || 30;
-      const headerHeight = this.props.headerHeight || 30;
-      const totalElbowHeight = this.props.totalElbowHeight || height;
-      const outerCornerRadius = this.props.outerCornerRadius || headerHeight;
+      const elbowWidth = this.props.width || width;
+      const bodyWidth = this.props.bodyWidth || 30;
+      const armHeight = this.props.armHeight || 30;
+      const outerCornerRadius = armHeight;
       const pathData = generateElbowPath(
         x,
-        horizontalWidth,
-        verticalWidth,
-        headerHeight,
-        totalElbowHeight,
+        elbowWidth,
+        bodyWidth,
+        armHeight,
+        height,
         orientation,
         y,
         outerCornerRadius
@@ -61,23 +60,23 @@ export class ElbowElement extends LayoutElement {
         
         if (textPosition === 'top') {
           // Center text in the horizontal header section
-          textX = x + horizontalWidth / 2;
-          textY = y + headerHeight / 2;
+          textX = x + elbowWidth / 2;
+          textY = y + armHeight / 2;
         } else { // 'side'
           // Center text in the vertical section
           // Position depends on orientation
           if (orientation === 'top-left') {
-            textX = x + verticalWidth / 2;
-            textY = y + headerHeight + (totalElbowHeight - headerHeight) / 2;
+            textX = x + bodyWidth / 2;
+            textY = y + armHeight + (height - armHeight) / 2;
           } else if (orientation === 'top-right') {
-            textX = x + horizontalWidth - verticalWidth / 2;
-            textY = y + headerHeight + (totalElbowHeight - headerHeight) / 2;
+            textX = x + elbowWidth - bodyWidth / 2;
+            textY = y + armHeight + (height - armHeight) / 2;
           } else if (orientation === 'bottom-left') {
-            textX = x + verticalWidth / 2;
-            textY = y + (totalElbowHeight - headerHeight) / 2;
+            textX = x + bodyWidth / 2;
+            textY = y + (height - armHeight) / 2;
           } else { // 'bottom-right'
-            textX = x + horizontalWidth - verticalWidth / 2;
-            textY = y + (totalElbowHeight - headerHeight) / 2;
+            textX = x + elbowWidth - bodyWidth / 2;
+            textY = y + (height - armHeight) / 2;
           }
         }
         

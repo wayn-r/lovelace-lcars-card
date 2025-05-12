@@ -450,10 +450,10 @@ export class Orientation implements LcarsPropertyBase {
         };
     }
 }
-export class HorizontalWidth implements LcarsPropertyBase {
-    name = 'horizontalWidth';
-    label = 'Horizontal Width (px)';
-    configPath = 'props.horizontalWidth';
+export class BodyWidth implements LcarsPropertyBase {
+    name = 'bodyWidth';
+    label = 'Body Width (px)';
+    configPath = 'props.bodyWidth';
 
     getSchema(): HaFormSchema {
         return {
@@ -463,49 +463,10 @@ export class HorizontalWidth implements LcarsPropertyBase {
         };
     }
 }
-export class VerticalWidth implements LcarsPropertyBase {
-    name = 'verticalWidth';
-    label = 'Vertical Width (px)';
-    configPath = 'props.verticalWidth';
-
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            selector: { number: { mode: 'box', step: 1, min: 0 } }
-        };
-    }
-}
-export class HeaderHeight implements LcarsPropertyBase {
-    name = 'headerHeight';
-    label = 'Header Height (px)';
-    configPath = 'props.headerHeight';
-
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            selector: { number: { mode: 'box', step: 1, min: 0 } }
-        };
-    }
-}
-export class TotalElbowHeight implements LcarsPropertyBase {
-    name = 'totalElbowHeight';
-    label = 'Total Elbow Height (px)';
-    configPath = 'props.totalElbowHeight';
-
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            selector: { number: { mode: 'box', step: 1, min: 0 } }
-        };
-    }
-}
-export class OuterCornerRadius implements LcarsPropertyBase {
-    name = 'outerCornerRadius';
-    label = 'Outer Corner Radius (px)';
-    configPath = 'props.outerCornerRadius';
+export class ArmHeight implements LcarsPropertyBase {
+    name = 'armHeight';
+    label = 'Arm Height (px)';
+    configPath = 'props.armHeight';
 
     getSchema(): HaFormSchema {
         return {
