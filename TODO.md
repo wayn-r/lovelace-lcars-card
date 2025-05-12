@@ -3,7 +3,6 @@
 ## TODOs:
 
 ### Components
-- implement buttons
 - implement headerbar as a standalone element
 
 ### Layout

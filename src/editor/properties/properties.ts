@@ -135,7 +135,7 @@ export class StretchPadding implements LcarsPropertyBase {
 
 export class Width implements LcarsPropertyBase {
     name = 'width';
-    label = 'Width (px or %)';
+    label = 'Width (px)';
     configPath = 'layout.width';
 
     getSchema(): HaFormSchema {
@@ -148,7 +148,7 @@ export class Width implements LcarsPropertyBase {
 }
 export class Height implements LcarsPropertyBase {
     name = 'height';
-    label = 'Height (px or %)';
+    label = 'Height (px)';
     configPath = 'layout.height';
 
     getSchema(): HaFormSchema {
