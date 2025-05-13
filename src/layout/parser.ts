@@ -7,6 +7,7 @@ import { TextElement } from './elements/text.js';
 import { EndcapElement } from './elements/endcap.js';
 import { ElbowElement } from './elements/elbow.js';
 import { ChiselEndcapElement } from './elements/chisel_endcap.js';
+import { TopHeaderElement } from './elements/top_header.js';
 
 export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant, requestUpdateCallback?: () => void): Group[] {
   if (!config.elements || config.elements.length === 0) {
@@ -122,6 +123,8 @@ function createLayoutElement(
       return new ElbowElement(id, props, layoutConfig, hass, requestUpdateCallback);
     case 'chisel-endcap':
       return new ChiselEndcapElement(id, props, layoutConfig, hass, requestUpdateCallback);
+    case 'top_header':
+      return new TopHeaderElement(id, props, layoutConfig, hass, requestUpdateCallback);
     default:
       console.warn(`LCARS Card Parser: Unknown element type "${type}". Defaulting to Rectangle.`);
       return new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback);

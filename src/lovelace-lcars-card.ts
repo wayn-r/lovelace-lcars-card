@@ -119,6 +119,9 @@ export class LcarsCard extends LitElement {
   private _layoutCalculationPending: boolean = false;
   private _hasRenderedOnce: boolean = false;
   @state() private _hasMeasuredRenderedText: boolean = false;
+  private _fontsLoaded: boolean = false;
+  private _fontLoadAttempts: number = 0;
+  private _maxFontLoadAttempts: number = 3;
 
   static styles = [editorStyles];
 
@@ -164,32 +167,90 @@ export class LcarsCard extends LitElement {
     const container = this.shadowRoot?.querySelector('.card-container');
     if (container && this._resizeObserver) {
       this._resizeObserver.observe(container);
-      const fontLoadPromises: Promise<FontFace[]>[] = [];
-      if (this._config.elements) {
-        this._config.elements.forEach(el => {
-          if (el.type?.toLowerCase() === 'text' && el.props) {
-            const ff = (el.props.fontFamily || 'sans-serif').toString();
-            const fs = (el.props.fontSize || DEFAULT_FONT_SIZE).toString();
-            const fw = (el.props.fontWeight || 'normal').toString();
-            try {
-              fontLoadPromises.push(document.fonts.load(`${fw} ${fs}px ${ff}`));
-            } catch (_e) {
-            }
-          }
-        });
-      }
-      const fontsLoaded = fontLoadPromises.length ? Promise.all(fontLoadPromises) : Promise.resolve();
-      Promise.all([this.updateComplete, fontsLoaded]).then(() => {
-        requestAnimationFrame(() => this._scheduleInitialCalculation());
-      }).catch(() => {
-        requestAnimationFrame(() => this._scheduleInitialCalculation());
-      });
+      this._loadFontsAndInitialize();
     } else {
       console.error("[firstUpdated] Could not find .card-container to observe.");
     }
     this._hasRenderedOnce = true;
   }
-  
+
+  private _loadFontsAndInitialize(): void {
+    // Collect all fonts used in the card
+    const fontLoadPromises: Promise<FontFace[]>[] = [];
+    const fontFamilies = new Set<string>();
+    
+    // Add fonts from text elements
+    if (this._config.elements) {
+      this._config.elements.forEach(el => {
+        if (el.type?.toLowerCase() === 'text' && el.props) {
+          const ff = (el.props.fontFamily || 'sans-serif').toString();
+          fontFamilies.add(ff);
+          const fs = (el.props.fontSize || DEFAULT_FONT_SIZE).toString();
+          const fw = (el.props.fontWeight || 'normal').toString();
+          try {
+            fontLoadPromises.push(document.fonts.load(`${fw} ${fs}px ${ff}`));
+          } catch (_e) {
+            console.warn(`Failed to load font: ${fw} ${fs}px ${ff}`, _e);
+          }
+        } else if (el.type?.toLowerCase() === 'top_header' && el.props) {
+          const ff = (el.props.fontFamily || 'Antonio').toString();
+          fontFamilies.add(ff);
+          const fw = (el.props.fontWeight || 'normal').toString();
+          // Load at multiple sizes to ensure proper metrics
+          try {
+            fontLoadPromises.push(document.fonts.load(`${fw} 16px ${ff}`));
+            fontLoadPromises.push(document.fonts.load(`${fw} 24px ${ff}`));
+            fontLoadPromises.push(document.fonts.load(`${fw} 32px ${ff}`));
+            fontLoadPromises.push(document.fonts.load(`${fw} 48px ${ff}`));
+            fontLoadPromises.push(document.fonts.load(`${fw} 64px ${ff}`));
+            fontLoadPromises.push(document.fonts.load(`${fw} 200px ${ff}`)); // For metrics calculation
+          } catch (_e) {
+            console.warn(`Failed to load font: ${fw} <size>px ${ff}`, _e);
+          }
+        }
+      });
+    }
+    
+    // If no specific fonts, ensure system fonts are ready
+    if (fontLoadPromises.length === 0) {
+      fontLoadPromises.push(document.fonts.load('normal 16px sans-serif'));
+    }
+    
+    // Wait for fonts to load before calculating layout
+    const fontsLoaded = Promise.all(fontLoadPromises);
+    
+    Promise.all([this.updateComplete, fontsLoaded])
+      .then(() => {
+        this._fontsLoaded = true;
+        this._fontLoadAttempts = 0;
+        console.log(`Fonts loaded successfully: ${Array.from(fontFamilies).join(', ')}`);
+        // Use double requestAnimationFrame to ensure browser has time to process font loading
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            this._scheduleInitialCalculation();
+          });
+        });
+      })
+      .catch((error) => {
+        console.warn('Font loading error:', error);
+        this._fontLoadAttempts++;
+        
+        if (this._fontLoadAttempts < this._maxFontLoadAttempts) {
+          // Retry loading fonts with a delay
+          setTimeout(() => {
+            this._loadFontsAndInitialize();
+          }, 200 * this._fontLoadAttempts); // Increasing delay for each attempt
+        } else {
+          // Proceed anyway after max attempts
+          this._fontsLoaded = true;
+          console.warn(`Proceeding with layout after ${this._maxFontLoadAttempts} font load attempts`);
+          requestAnimationFrame(() => {
+            this._scheduleInitialCalculation();
+          });
+        }
+      });
+  }
+
   disconnectedCallback(): void {
     this._resizeObserver?.disconnect();
     super.disconnectedCallback();
@@ -364,8 +425,23 @@ export class LcarsCard extends LitElement {
   }
 
   private _measureAndRecalc(): void {
+    // Skip if fonts aren't loaded yet
+    if (!this._fontsLoaded) {
+      console.warn('Skipping measurement - fonts not fully loaded yet');
+      // Schedule another attempt
+      setTimeout(() => this._loadFontsAndInitialize(), 100);
+      return;
+    }
+    
     const svg = this.shadowRoot?.querySelector<SVGSVGElement>('.card-container svg');
     if (!svg || !this._containerRect) return;
+    
+    // Force a reflow to ensure accurate measurements
+    svg.style.display = 'none';
+    // Use getBoundingClientRect to force reflow without TypeScript errors
+    void svg.getBoundingClientRect();
+    svg.style.display = '';
+    
     const measured: Record<string, {w: number; h: number}> = {};
     svg.querySelectorAll<SVGTextElement>('text[id]').forEach(el => {
       try {
@@ -373,11 +449,15 @@ export class LcarsCard extends LitElement {
         if (bbox.width > 0 && bbox.height > 0) {
           measured[el.id] = { w: bbox.width, h: bbox.height };
         }
-      } catch {}
+      } catch (e) {
+        console.warn(`Error measuring text element ${el.id}:`, e);
+      }
     });
+    
     const engineAny = this._layoutEngine as any;
     const elementsMap: Map<string, any> = engineAny.elements;
     let changed = false;
+    
     elementsMap.forEach((el: any, id: string) => {
       const m = measured[id];
       if (m && (el.intrinsicSize.width !== m.w || el.intrinsicSize.height !== m.h)) {
@@ -387,6 +467,7 @@ export class LcarsCard extends LitElement {
         changed = true;
       }
     });
+    
     if (changed) {
       this._layoutCalculationPending = true;
       this._performLayoutCalculation(this._containerRect);

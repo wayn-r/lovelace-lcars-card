@@ -3,9 +3,11 @@ import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant, handleAction } from "custom-card-helpers";
 import { LcarsButtonElementConfig } from "../../lovelace-lcars-card.js";
 import { svg, SVGTemplateResult } from "lit";
-import { getTextWidth, measureTextBBox, getFontMetrics } from "../../utils/shapes.js";
+import { getFontMetrics, measureTextBBox, getSvgTextWidth, getTextWidth } from "../../utils/shapes.js";
 
 export class TextElement extends LayoutElement {
+    // Cache font metrics to maintain consistency across renders
+    private _cachedMetrics: any = null;
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
       super(id, props, layoutConfig, hass, requestUpdateCallback);
       this.resetLayout();
@@ -57,8 +59,11 @@ export class TextElement extends LayoutElement {
           this.intrinsicSize.height = bbox.height;
         }
       } else {
-        this.intrinsicSize.width = getTextWidth(this.props.text || '', 
-          `${this.props.fontWeight || ''} ${this.props.fontSize || 16}px ${this.props.fontFamily || 'Arial'}`);
+        this.intrinsicSize.width = getSvgTextWidth(this.props.text || '', 
+          `${this.props.fontWeight || ''} ${this.props.fontSize || 16}px ${this.props.fontFamily || 'Arial'}`,
+          this.props.letterSpacing || undefined,
+          this.props.textTransform || undefined
+        );
         this.intrinsicSize.height = this.props.fontSize ? parseInt(this.props.fontSize.toString()) * 1.2 : 20;
       }
       
@@ -82,7 +87,8 @@ export class TextElement extends LayoutElement {
         textX += width;
       }
       
-      let metrics: any = (this as any)._fontMetrics;
+      // Use cached metrics first, then fall back to _fontMetrics (set during calculateIntrinsicSize), then fetch new metrics if needed
+      let metrics: any = this._cachedMetrics || (this as any)._fontMetrics;
       if (!metrics && this.props.fontFamily) {
         metrics = getFontMetrics({
           fontFamily: this.props.fontFamily,
@@ -90,6 +96,11 @@ export class TextElement extends LayoutElement {
           fontSize: this.props.fontSize || 16,
           origin: 'baseline',
         });
+        
+        // Cache metrics for consistent rendering across lifecycle
+        if (metrics) {
+          this._cachedMetrics = metrics;
+        }
       }
       if (metrics) {
         textY += -metrics.ascent * (this.props.fontSize || 16);

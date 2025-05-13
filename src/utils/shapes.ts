@@ -359,6 +359,83 @@ export function generateTrianglePath(
 let canvasContext: CanvasRenderingContext2D | null = null;
 
 /**
+ * Measures the width of text using SVG's native text measurement capabilities,
+ * which account for font kerning and exact glyph widths.
+ * Falls back to canvas measurement if SVG measurement fails.
+ * @param text The text string to measure
+ * @param font The CSS font string (e.g. "bold 16px Arial")
+ * @param letterSpacing Optional letter-spacing value (e.g. "0.1em" or "1px")
+ * @param textTransform Optional text-transform value (e.g. "uppercase")
+ * @returns The measured width in pixels
+ */
+export function getSvgTextWidth(text: string, font: string, letterSpacing?: string, textTransform?: string): number {
+    // Apply text transform if specified
+    let transformedText = text;
+    if (textTransform) {
+        switch (textTransform.toLowerCase()) {
+            case 'uppercase': transformedText = text.toUpperCase(); break;
+            case 'lowercase': transformedText = text.toLowerCase(); break;
+            case 'capitalize': 
+                transformedText = text.replace(/\b\w/g, c => c.toUpperCase());
+                break;
+        }
+    }
+
+    try {
+        if (typeof document !== 'undefined' && document.createElementNS) {
+            // Create a temporary SVG element
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("width", "0");
+            svg.setAttribute("height", "0");
+            svg.style.position = "absolute";
+            svg.style.visibility = "hidden";
+            document.body.appendChild(svg);
+            
+            // Create a text element with the specified font and text
+            const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            textElement.textContent = transformedText;
+            
+            // Parse and apply font properties
+            const fontWeight = font.match(/^(bold|normal|[1-9]00)\s+/) ? 
+                font.match(/^(bold|normal|[1-9]00)\s+/)?.[1] || 'normal' : 'normal';
+            const fontSizeMatch = font.match(/(\d+(?:\.\d+)?)(?:px|pt|em|rem)/);
+            const fontSize = fontSizeMatch ? parseFloat(fontSizeMatch[1]) : 16;
+            const fontFamily = font.includes(' ') ? 
+                font.substring(font.lastIndexOf(' ') + 1) : font;
+            
+            textElement.setAttribute("font-family", fontFamily);
+            textElement.setAttribute("font-size", `${fontSize}px`);
+            textElement.setAttribute("font-weight", fontWeight);
+            
+            // Apply letter spacing if specified
+            if (letterSpacing) {
+                textElement.setAttribute("letter-spacing", letterSpacing);
+            }
+            
+            svg.appendChild(textElement);
+            
+            // Use SVG's native getComputedTextLength method
+            const textWidth = textElement.getComputedTextLength();
+            
+            // Clean up
+            document.body.removeChild(svg);
+            
+            if (isNaN(textWidth)) {
+                throw new Error("Invalid text width measurement");
+            }
+            
+            return textWidth;
+        }
+    } catch (e) {
+        console.warn("LCARS Card: SVG text measurement failed, falling back to canvas:", e);
+        // Fall back to canvas-based measurement
+        return getTextWidth(transformedText, font);
+    }
+    
+    return getTextWidth(transformedText, font);
+}
+
+/**
  * Measures the width of a text string using the 2D Canvas API.
  * Caches the canvas context for efficiency. Provides a rough fallback if canvas is unavailable.
  * @param text The text string to measure.

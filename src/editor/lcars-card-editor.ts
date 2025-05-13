@@ -16,6 +16,7 @@ import './elements/text.js';
 import './elements/elbow.js';
 import './elements/endcap.js';
 import './elements/chisel_endcap.js';
+import './elements/top_header.js';
 
 import { LcarsGroup } from './group.js';
 import { Rectangle } from './elements/rectangle.js';

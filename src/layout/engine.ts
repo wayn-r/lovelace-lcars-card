@@ -6,6 +6,7 @@ import { LayoutElement } from './elements/element.js';
 export interface LayoutElementProps {
   [key: string]: any;
   button?: any;
+  textPadding?: number; // Padding to apply to text elements (used for equal spacing)
 }
 
 export interface LayoutConfigOptions {

@@ -283,6 +283,35 @@ export class Fill implements LcarsPropertyBase {
     }
 }
 
+// --- Top Header Element Props ---
+
+export class LeftTextContent implements LcarsPropertyBase {
+    name = 'leftText';
+    label = 'Left Text Content';
+    configPath = 'props.leftText';
+
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { text: {} }
+        };
+    }
+}
+export class RightTextContent implements LcarsPropertyBase {
+    name = 'rightText';
+    label = 'Right Text Content';
+    configPath = 'props.rightText';
+
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { text: {} }
+        };
+    }
+}
+
 // --- Text Element Props ---
 
 export class TextContent implements LcarsPropertyBase {
@@ -495,6 +524,7 @@ export class Type implements LcarsPropertyBase {
                         { value: 'endcap', label: 'Endcap' },
                         { value: 'elbow', label: 'Elbow' },
                         { value: 'chisel-endcap', label: 'Chisel Endcap' },
+                        { value: 'top_header', label: 'Top Header' },
                     ],
                     mode: 'dropdown'
                 },
@@ -637,20 +667,40 @@ export class ButtonActiveFill implements LcarsPropertyBase {
     getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { color_rgb: {} } }; }
     formatValueForForm = Fill.prototype.formatValueForForm;
 }
-
 export class ButtonHoverTransform implements LcarsPropertyBase {
     name = 'button.hover_transform';
     label = 'Hover Transform (CSS)';
     configPath = 'button.hover_transform';
     getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { text: {} } }; }
 }
-
 export class ButtonActiveTransform implements LcarsPropertyBase {
     name = 'button.active_transform';
     label = 'Active Transform (CSS)';
     configPath = 'button.active_transform';
     getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { text: {} } }; }
 }
+export class ElbowTextPosition implements LcarsPropertyBase {
+    name = 'elbow_text_position';
+    label = 'Text Position';
+    configPath = 'props.elbow_text_position';
+    
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: {
+                select: {
+                    options: [
+                        { value: 'top', label: 'Top (Horizontal Section)' },
+                        { value: 'side', label: 'Side (Vertical Section)' }
+                    ],
+                    mode: 'dropdown'
+                }
+            },
+            default: 'top'
+        };
+    }
+} 
 
 // --- Button Action Properties ---
 export class ButtonActionType implements LcarsPropertyBase {
@@ -720,26 +770,3 @@ export class ButtonActionConfirmation implements LcarsPropertyBase {
         };
     }
 }
-
-export class ElbowTextPosition implements LcarsPropertyBase {
-    name = 'elbow_text_position';
-    label = 'Text Position';
-    configPath = 'props.elbow_text_position';
-    
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            selector: {
-                select: {
-                    options: [
-                        { value: 'top', label: 'Top (Horizontal Section)' },
-                        { value: 'side', label: 'Side (Vertical Section)' }
-                    ],
-                    mode: 'dropdown'
-                }
-            },
-            default: 'top'
-        };
-    }
-} 

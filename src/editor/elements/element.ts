@@ -1,14 +1,8 @@
 import {
-    Type, Fill, OffsetX, OffsetY,
+    Type,
     AnchorTo, AnchorPoint, TargetAnchorPoint,
     StretchTarget, StretchDirection, StretchPadding,
-    ButtonEnabled, ButtonText, ButtonCutoutText,
-    ButtonTextColor, ButtonFontFamily, ButtonFontSize, ButtonFontWeight, ButtonLetterSpacing, ButtonTextTransform,
-    ButtonTextAnchor, ButtonDominantBaseline,
-    ButtonHoverFill, ButtonActiveFill,
-    ButtonHoverTransform, ButtonActiveTransform,
-    ButtonActionType, ButtonActionService, ButtonActionServiceData,
-    ButtonActionNavigationPath, ButtonActionUrlPath, ButtonActionEntity, ButtonActionConfirmation,
+    ButtonEnabled, 
     PropertySchemaContext, HaFormSchema, LcarsPropertyBase
 } from '../properties/properties';
 import { LcarsGroup } from '../group';
@@ -17,6 +11,24 @@ export type PropertyClass = new () => LcarsPropertyBase;
 export type PropertyClassOrFactory = (new () => LcarsPropertyBase) | (() => LcarsPropertyBase);
 
 const editorElementRegistry: Record<string, new (config: any) => EditorElement> = {};
+
+// Define PropertyGroup enum for readability and type safety
+export enum PropertyGroup {
+    ANCHOR = 'anchor',
+    STRETCH = 'stretch',
+    BUTTON = 'button',
+    POSITIONING = 'positioning',
+    DIMENSIONS = 'dimensions',
+    APPEARANCE = 'appearance',
+    TEXT = 'text',
+}
+
+// Helper interface for defining property group requirements
+export interface PropertyGroupDefinition {
+    properties: PropertyClassOrFactory[];
+    // For conditional groups based on config values
+    isEnabled?: (config: any) => boolean;
+}
 
 export abstract class EditorElement {
     id: string;
@@ -50,22 +62,8 @@ export abstract class EditorElement {
         return parts.length > 1 ? parts[0] : '__ungrouped__';
     }
 
-    /**
-     * Properties common to ALL elements, managed by the base class.
-     * Includes essential identification, basic layout, and all potential button properties.
-     */
-    get commonProperties(): PropertyClass[] {
-        return [
-            Type, Fill, OffsetX, OffsetY,
-            ButtonEnabled, ButtonText, ButtonCutoutText,
-            ButtonTextColor, ButtonFontFamily, ButtonFontSize, ButtonFontWeight,
-            ButtonLetterSpacing, ButtonTextTransform, ButtonTextAnchor, ButtonDominantBaseline,
-            ButtonHoverFill, ButtonActiveFill,
-            ButtonHoverTransform, ButtonActiveTransform,
-            ButtonActionType, ButtonActionService, ButtonActionServiceData,
-            ButtonActionNavigationPath, ButtonActionUrlPath, ButtonActionEntity, ButtonActionConfirmation,
-            AnchorTo, AnchorPoint, TargetAnchorPoint,
-        ];
+    getPropertyGroups(): Partial<Record<PropertyGroup, PropertyGroupDefinition | null>> {
+        return {};
     }
 
     /**
@@ -83,111 +81,112 @@ export abstract class EditorElement {
         ];
     }
 
+    private getButtonProperties(groupDef: PropertyGroupDefinition | null): PropertyClassOrFactory[] {
+        if (!this.config.button?.enabled) {
+            return [ButtonEnabled];
+        }
+        
+        // If custom properties are defined, use those
+        if (groupDef && groupDef.properties && groupDef.properties.length > 0) {
+            // Make sure ButtonEnabled is included
+            if (!groupDef.properties.includes(ButtonEnabled)) {
+                return [ButtonEnabled, ...groupDef.properties];
+            }
+            return groupDef.properties;
+        }
+
+        // Otherwise return only ButtonEnabled (no default button properties)
+        return [ButtonEnabled];
+    }
 
     /**
-     * Defines property classes specific to THIS element type (e.g., Width/Height for Rectangle, TextContent for Text).
-     * To be implemented by subclasses.
+     * Helper to get stretch-related properties based on the element's config
      */
-    abstract get specificProperties(): PropertyClass[];
+    private getStretchProperties(): PropertyClassOrFactory[] {
+        const stretchProps: PropertyClassOrFactory[] = [];
+        const layoutData = this.config.layout || {};
+        const stretch = layoutData.stretch || {};
+        const factories = this.stretchPropertyFactories;
 
+        // Always add the first stretch target to allow setting it
+        stretchProps.push(factories[0]); // StretchTarget(0)
+        
+        // Add first stretch direction and padding if target is set
+        if (stretch.stretchTo1) {
+            stretchProps.push(factories[1]); // StretchDirection(0)
+            stretchProps.push(factories[2]); // StretchPadding(0)
+            
+            // Add second stretch target if first one is configured
+            stretchProps.push(factories[3]); // StretchTarget(1)
+            
+            // Add second stretch direction and padding if second target is set
+            if (stretch.stretchTo2) {
+                stretchProps.push(factories[4]); // StretchDirection(1)
+                stretchProps.push(factories[5]); // StretchPadding(1)
+            }
+        }
+
+        return stretchProps;
+    }
+
+    /**
+     * Collects all property classes from the enabled property groups
+     */
+    private getAllPropertyClasses(): PropertyClassOrFactory[] {
+        // Always include Type property at the beginning
+        let allProperties: PropertyClassOrFactory[] = [Type];
+        
+        // Get property groups as defined by the element
+        const groups = this.getPropertyGroups();
+        
+        // Add properties from each group
+        for (const [groupKey, groupDef] of Object.entries(groups)) {
+            const propertyGroup = groupKey as PropertyGroup;
+
+            if (propertyGroup === PropertyGroup.ANCHOR) {
+                if (groupDef === null || groupDef) {
+                    allProperties.push(AnchorTo, AnchorPoint, TargetAnchorPoint);
+                }
+                continue;
+            }
+            if (propertyGroup === PropertyGroup.STRETCH) {
+                if (groupDef === null || groupDef) {
+                    allProperties.push(...this.getStretchProperties());
+                }
+                continue;
+            }
+            // Handle BUTTON group
+            if (propertyGroup === PropertyGroup.BUTTON) {
+                allProperties.push(...this.getButtonProperties(groupDef));
+                continue;
+            }
+            
+            // Handle all other groups - only include if defined with properties
+            if (groupDef && groupDef.properties.length > 0) {
+                // Check custom isEnabled condition if provided
+                if (groupDef.isEnabled && !groupDef.isEnabled(this.config)) {
+                    continue;
+                }
+                
+                allProperties.push(...groupDef.properties);
+            }
+        }
+        
+        // Ensure uniqueness
+        return Array.from(new Set(allProperties));
+    }
 
     getSchema(context?: PropertySchemaContext): HaFormSchema[] {
         const layoutData = this.config.layout || {};
         const propsData = this.config.props || {};
         const buttonData = this.config.button || {};
         const fullContext = { ...context, layoutData, propsData, buttonData };
-
-        const allPropTypes: PropertyClassOrFactory[] = [
-            ...this.commonProperties,
-            ...this.specificProperties,
-            ...this.stretchPropertyFactories
-        ];
-
-        let applicablePropTypes: PropertyClassOrFactory[] = [];
-
-        const typeProperty = allPropTypes.find(clsOrFactory => {
-            const name = (typeof clsOrFactory === 'function' && clsOrFactory.prototype) ? (clsOrFactory as any).name : 'factory';
-            return name === Type.name || (clsOrFactory instanceof Function && new (clsOrFactory as any)() instanceof Type);
-        });
-
-        if (typeProperty) applicablePropTypes.push(typeProperty);
-
-        applicablePropTypes.push(...this.commonProperties.filter(cls =>
-            [Fill, OffsetX, OffsetY, AnchorTo].some(commonCls => cls === commonCls)
-        ));
         
-        applicablePropTypes.push(...this.specificProperties);
-
-        if (layoutData.anchor?.anchorTo && layoutData.anchor.anchorTo !== '') {
-            const anchorPointProp = this.commonProperties.find(cls => cls === AnchorPoint);
-            const targetAnchorPointProp = this.commonProperties.find(cls => cls === TargetAnchorPoint);
-            if (anchorPointProp) applicablePropTypes.push(anchorPointProp);
-            if (targetAnchorPointProp) applicablePropTypes.push(targetAnchorPointProp);
-        }
+        // Get all property classes from enabled groups
+        const propertyClasses = this.getAllPropertyClasses();
         
-        const stretchFactories = this.stretchPropertyFactories;
-        applicablePropTypes.push(stretchFactories[0]);
-
-        const firstStretchValue = layoutData?.stretch?.stretchTo1;
-        const secondStretchValue = layoutData?.stretch?.stretchTo2;
-
-        if ((firstStretchValue && firstStretchValue !== '') || (secondStretchValue && secondStretchValue !== '')) {
-            if (firstStretchValue && firstStretchValue !== '') {
-                applicablePropTypes.push(stretchFactories[1]);
-                applicablePropTypes.push(stretchFactories[2]);
-            }
-            applicablePropTypes.push(stretchFactories[3]);
-            if (secondStretchValue && secondStretchValue !== '') {
-                applicablePropTypes.push(stretchFactories[4]);
-                applicablePropTypes.push(stretchFactories[5]);
-            }
-        }
-
-        const buttonEnabledProp = this.commonProperties.find(cls => cls === ButtonEnabled);
-        if (buttonEnabledProp) {
-            applicablePropTypes.push(buttonEnabledProp);
-        }
-
-        if (this.config.button?.enabled) {
-            const buttonDetailPropTypes = this.commonProperties.filter(cls =>
-                [
-                    ButtonText, ButtonCutoutText, ButtonTextColor, ButtonFontFamily, ButtonFontSize, ButtonFontWeight,
-                    ButtonLetterSpacing, ButtonTextTransform, ButtonTextAnchor, ButtonDominantBaseline,
-                    ButtonHoverFill, ButtonActiveFill, ButtonActionType,
-                    ButtonHoverTransform, ButtonActiveTransform
-                ].some(btnCls => cls === btnCls)
-            );
-            applicablePropTypes.push(...buttonDetailPropTypes);
-
-            const actionType = this.config.button?.action_config?.type;
-            if (actionType) {
-                const actionServiceProp = this.commonProperties.find(cls => cls === ButtonActionService);
-                const actionServiceDataProp = this.commonProperties.find(cls => cls === ButtonActionServiceData);
-                const actionNavPathProp = this.commonProperties.find(cls => cls === ButtonActionNavigationPath);
-                const actionUrlPathProp = this.commonProperties.find(cls => cls === ButtonActionUrlPath);
-                const actionEntityProp = this.commonProperties.find(cls => cls === ButtonActionEntity);
-                const actionConfirmProp = this.commonProperties.find(cls => cls === ButtonActionConfirmation);
-
-                if (actionType === 'call-service') {
-                    if (actionServiceProp) applicablePropTypes.push(actionServiceProp);
-                    if (actionServiceDataProp) applicablePropTypes.push(actionServiceDataProp);
-                } else if (actionType === 'navigate') {
-                    if (actionNavPathProp) applicablePropTypes.push(actionNavPathProp);
-                } else if (actionType === 'url') {
-                    if (actionUrlPathProp) applicablePropTypes.push(actionUrlPathProp);
-                } else if (actionType === 'toggle' || actionType === 'more-info') {
-                    if (actionEntityProp) applicablePropTypes.push(actionEntityProp);
-                }
-                if (actionType !== 'none' && actionConfirmProp) {
-                    applicablePropTypes.push(actionConfirmProp);
-                }
-            }
-        }
-        // --- End Conditional Button Properties ---
-
-        const uniquePropTypes = Array.from(new Set(applicablePropTypes)); // Ensure uniqueness
-
-        const schema = uniquePropTypes.map(PropClassOrFactory => {
+        // Generate schema from property instances
+        const schema = propertyClasses.map(PropClassOrFactory => {
             try {
                 let instance: LcarsPropertyBase;
                 // Check if it's a class constructor or a factory function
@@ -202,19 +201,17 @@ export abstract class EditorElement {
                 return null;
             }
         }).filter((item): item is HaFormSchema => item !== null);
+        
         return schema;
     }
 
-
     getPropertiesMap(): Map<string, LcarsPropertyBase> {
         const map = new Map<string, LcarsPropertyBase>();
-        const allPropTypes: PropertyClassOrFactory[] = [
-            ...this.commonProperties,
-            ...this.specificProperties,
-            ...this.stretchPropertyFactories,
-        ];
+        
+        // Get all property classes from enabled groups
+        const propertyClasses = this.getAllPropertyClasses();
 
-        allPropTypes.forEach(PropClassOrFactory => {
+        propertyClasses.forEach(PropClassOrFactory => {
             try {
                 let instance: LcarsPropertyBase;
                 if (PropClassOrFactory.prototype && typeof PropClassOrFactory.prototype.getSchema === 'function') {
