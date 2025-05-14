@@ -3,7 +3,8 @@ import {
     AnchorTo, AnchorPoint, TargetAnchorPoint,
     StretchTarget, StretchDirection, StretchPadding,
     ButtonEnabled, 
-    PropertySchemaContext, HaFormSchema, LcarsPropertyBase
+    PropertySchemaContext, HaFormSchema, LcarsPropertyBase,
+    PropertyGroup, Layout
 } from '../properties/properties';
 import { LcarsGroup } from '../group';
 
@@ -13,15 +14,7 @@ export type PropertyClassOrFactory = (new () => LcarsPropertyBase) | (() => Lcar
 const editorElementRegistry: Record<string, new (config: any) => EditorElement> = {};
 
 // Define PropertyGroup enum for readability and type safety
-export enum PropertyGroup {
-    ANCHOR = 'anchor',
-    STRETCH = 'stretch',
-    BUTTON = 'button',
-    POSITIONING = 'positioning',
-    DIMENSIONS = 'dimensions',
-    APPEARANCE = 'appearance',
-    TEXT = 'text',
-}
+export { PropertyGroup } from '../properties/properties';
 
 // Helper interface for defining property group requirements
 export interface PropertyGroupDefinition {

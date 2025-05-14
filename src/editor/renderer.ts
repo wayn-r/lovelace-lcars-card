@@ -1,7 +1,7 @@
 import { html, TemplateResult } from 'lit';
 import { EditorElement } from './elements/element.js';
 import { LcarsGroup } from './group.js';
-import { HaFormSchema, PropertySchemaContext, Type } from './properties/properties.js';
+import { HaFormSchema, PropertySchemaContext, Type, PropertyGroup, Layout } from './properties/properties.js';
 import { repeat } from 'lit/directives/repeat.js';
 
 // Types
@@ -147,141 +147,248 @@ export function renderElement(
       : [];
   
   const schemaContext: PropertySchemaContext = { otherElementIds };
-
-  const schema = elementInstance.getSchema(schemaContext);
-
+  const allSchemas = elementInstance.getSchema(schemaContext);
+  const propertiesMap = elementInstance.getPropertiesMap();
   const formData = elementInstance.getFormData();
   
-  // Filter schema to separate standard fields from custom ones (like grid selector)
-  const standardSchema = schema.filter(s => s.type !== 'custom');
-  const customSchema = schema.filter(s => s.type === 'custom');
+  const renderedPropertyNames = new Set<string>();
 
-  // Extract properties for specific elements
-  const typeSchema = standardSchema.find(s => s.name === 'type');
-  const fillSchema = standardSchema.find(s => s.name === 'fill');
-  const directionSchema = standardSchema.find(s => s.name === 'direction');
-  const orientationSchema = standardSchema.find(s => s.name === 'orientation');
-  const sideSchema = standardSchema.find(s => s.name === 'side');
-  
-  // Text element specific properties
-  const textContentSchema = standardSchema.find(s => s.name === 'text');
-  const fontFamilySchema = standardSchema.find(s => s.name === 'fontFamily');
-  const fontSizeSchema = standardSchema.find(s => s.name === 'fontSize');
-  const fontWeightSchema = standardSchema.find(s => s.name === 'fontWeight');
-  const letterSpacingSchema = standardSchema.find(s => s.name === 'letterSpacing');
-  const textAnchorSchema = standardSchema.find(s => s.name === 'textAnchor');
-  const dominantBaselineSchema = standardSchema.find(s => s.name === 'dominantBaseline');
-  const textTransformSchema = standardSchema.find(s => s.name === 'textTransform');
-  
-  // Elbow element specific properties
-  const elbowWidthSchema = standardSchema.find(s => s.name === 'width');
-  const elbowHeightSchema = standardSchema.find(s => s.name === 'height');
-  const bodyWidthSchema = standardSchema.find(s => s.name === 'bodyWidth');
-  const armHeightSchema = standardSchema.find(s => s.name === 'armHeight');
-  
-  // Width/Height/Offset properties (shared by many elements)
-  const offsetXSchema = standardSchema.find(s => s.name === 'offsetX');
-  const offsetYSchema = standardSchema.find(s => s.name === 'offsetY');
-  
-  // Find all anchor and stretch related schemas (preserve these for the existing logic)
-  const anchorToSchema = standardSchema.find(s => s.name === 'anchorTo');
-  
-  // Extract the first and second stretch schemas
-  const primaryStretchSchema = standardSchema.find(s => s.name === 'stretchTo1');
-  const secondaryStretchSchema = standardSchema.find(s => s.name === 'stretchTo2');
-  
-  // Get the right padding schemas, prioritizing the indexed ones first
-  const stretchPadding1Schema = standardSchema.find(s => s.name === 'stretchPadding1');
-  const stretchPadding2Schema = standardSchema.find(s => s.name === 'stretchPadding2');
+  const getSchemaByName = (name: string): HaFormSchema | undefined => allSchemas.find(s => s.name === name);
 
-  // Find direction/target anchor point schemas
-  const targetStretchAnchorPoint1Schema = customSchema.find(s => s.name === 'targetStretchAnchorPoint1' || s.name === 'stretchDirection1');
-  const targetStretchAnchorPoint2Schema = customSchema.find(s => s.name === 'targetStretchAnchorPoint2' || s.name === 'stretchDirection2');
+  // --- Render Type Property (Always First) ---
+  const typeSchema = getSchemaByName('type');
+  if (typeSchema) {
+    renderedPropertyNames.add('type');
+  }
+
+  // --- Prepare Anchor Properties (Rendered Conditionally Later) ---
+  const anchorToSchema = getSchemaByName('anchorTo');
+  const containerAnchorPointSchema = getSchemaByName('containerAnchorPoint'); // This name needs to be consistent with properties.ts
+  const anchorPointSchema = getSchemaByName('anchorPoint');
+  const targetAnchorPointSchema = getSchemaByName('targetAnchorPoint');
+
+  if (anchorToSchema) renderedPropertyNames.add(anchorToSchema.name);
+  if (containerAnchorPointSchema) renderedPropertyNames.add(containerAnchorPointSchema.name);
+  if (anchorPointSchema) renderedPropertyNames.add(anchorPointSchema.name);
+  if (targetAnchorPointSchema) renderedPropertyNames.add(targetAnchorPointSchema.name);
   
-  // Extract custom grid selectors
-  const containerAnchorPointSchema = customSchema.find(s => s.name === 'containerAnchorPoint');
-  const anchorPointSchema = customSchema.find(s => s.name === 'anchorPoint');
-  const targetAnchorPointSchema = customSchema.find(s => s.name === 'targetAnchorPoint');
+  // --- Prepare Stretch Properties (Rendered Conditionally Later) ---
+  const primaryStretchSchema = getSchemaByName('stretchTo1');
+  const stretchPadding1Schema = getSchemaByName('stretchPadding1');
+  const targetStretchAnchorPoint1Schema = getSchemaByName('stretchDirection1'); // Or targetStretchAnchorPoint1
 
-  // --- Extract Button Property Schemas ---
-  const buttonEnabledSchema = standardSchema.find(s => s.name === 'button.enabled');
-  const buttonTextSchema = standardSchema.find(s => s.name === 'button.text');
-  const buttonCutoutTextSchema = standardSchema.find(s => s.name === 'button.cutout_text');
+  const secondaryStretchSchema = getSchemaByName('stretchTo2');
+  const stretchPadding2Schema = getSchemaByName('stretchPadding2');
+  const targetStretchAnchorPoint2Schema = getSchemaByName('stretchDirection2'); // Or targetStretchAnchorPoint2
 
-  const buttonTextColorSchema = standardSchema.find(s => s.name === 'button.text_color');
-  const buttonFontFamilySchema = standardSchema.find(s => s.name === 'button.font_family');
-  const buttonFontSizeSchema = standardSchema.find(s => s.name === 'button.font_size');
-  const buttonFontWeightSchema = standardSchema.find(s => s.name === 'button.font_weight');
-  const buttonLetterSpacingSchema = standardSchema.find(s => s.name === 'button.letter_spacing');
-  const buttonTextTransformSchema = standardSchema.find(s => s.name === 'button.text_transform');
-  const buttonTextAnchorSchema = standardSchema.find(s => s.name === 'button.text_anchor');
-  const buttonDominantBaselineSchema = standardSchema.find(s => s.name === 'button.dominant_baseline');
+  if (primaryStretchSchema) renderedPropertyNames.add(primaryStretchSchema.name);
+  if (stretchPadding1Schema) renderedPropertyNames.add(stretchPadding1Schema.name);
+  if (targetStretchAnchorPoint1Schema) renderedPropertyNames.add(targetStretchAnchorPoint1Schema.name);
+  if (secondaryStretchSchema) renderedPropertyNames.add(secondaryStretchSchema.name);
+  if (stretchPadding2Schema) renderedPropertyNames.add(stretchPadding2Schema.name);
+  if (targetStretchAnchorPoint2Schema) renderedPropertyNames.add(targetStretchAnchorPoint2Schema.name);
 
-  const buttonHoverFillSchema = standardSchema.find(s => s.name === 'button.hover_fill');
-  const buttonActiveFillSchema = standardSchema.find(s => s.name === 'button.active_fill');
+  // --- Prepare Button Properties (Rendered Conditionally Later) ---
+  const buttonEnabledSchema = getSchemaByName('button.enabled');
+  if (buttonEnabledSchema) renderedPropertyNames.add(buttonEnabledSchema.name);
 
-  const buttonHoverTransformSchema = standardSchema.find(s => s.name === 'button.hover_transform');
-  const buttonActiveTransformSchema = standardSchema.find(s => s.name === 'button.active_transform');
-
-  const buttonActionTypeSchema = standardSchema.find(s => s.name === 'button.action_config.type');
-  const buttonActionServiceSchema = standardSchema.find(s => s.name === 'button.action_config.service');
-  const buttonActionServiceDataSchema = standardSchema.find(s => s.name === 'button.action_config.service_data');
-  const buttonActionNavPathSchema = standardSchema.find(s => s.name === 'button.action_config.navigation_path');
-  const buttonActionUrlPathSchema = standardSchema.find(s => s.name === 'button.action_config.url_path');
-  const buttonActionEntitySchema = standardSchema.find(s => s.name === 'button.action_config.entity');
-  const buttonActionConfirmSchema = standardSchema.find(s => s.name === 'button.action_config.confirmation');
-  
-  // Create schema arrays for ha-form based on which properties exist
-  const widthHeightSchema = [elbowWidthSchema, elbowHeightSchema].filter(Boolean);
-  const offsetSchema = [offsetXSchema, offsetYSchema].filter(Boolean);
-  
-  // Use these variables for the existing anchor/stretch logic
   const showAnchorPoints = formData.anchorTo && formData.anchorTo !== '';
-  
-  // Determine if we need to show stretch target selectors
   const showStretchTarget = formData.stretchTo1 && formData.stretchTo1 !== '';
   const showSecondStretchTarget = formData.stretchTo2 && formData.stretchTo2 !== '';
-
-  // Remove all handled schemas (including new button ones) from filteredStandardSchema
-  const filteredStandardSchema = standardSchema.filter(s => 
-    !['type', 'fill', 'direction', 'orientation', 'side',
-    'width', 'height', 'offsetX', 'offsetY', 
-    'text', 'fontFamily', 'fontSize', 'fontWeight', 'letterSpacing', 
-    'textAnchor', 'dominantBaseline', 'textTransform',
-    'bodyWidth', 'armHeight',
-    'anchorTo', 'stretchTo1', 'stretchTo2', 'stretchPadding1', 'stretchPadding2',
-    'targetStretchAnchorPoint1', 'targetStretchAnchorPoint2', 'stretchDirection1', 'stretchDirection2',
-    'button.enabled', 'button.text', 'button.cutout_text',
-    'button.text_color', 'button.font_family', 'button.font_size', 'button.font_weight',
-    'button.letter_spacing', 'button.text_transform', 'button.text_anchor', 'button.dominant_baseline',
-    'button.hover_fill', 'button.active_fill',
-    'button.hover_transform', 'button.active_transform',
-    'button.action_config.type', 'button.action_config.service', 'button.action_config.service_data',
-    'button.action_config.navigation_path', 'button.action_config.url_path', 'button.action_config.entity',
-    'button.action_config.confirmation'
-    ].includes(s.name)
-  );
   
-  function renderProp(
-    schema: HaFormSchema | undefined,
-    sideClass: string
-  ): TemplateResult {
-    if (!schema) return html``;
+  // Note: The renderProp function has been replaced by renderHalfWidthPropertyForm for more consistent rendering
+  
+  const renderStandardPropertyGroups = () => {
+    const groupOrder = [
+        PropertyGroup.APPEARANCE,
+        PropertyGroup.DIMENSIONS,
+        PropertyGroup.TEXT, // For general text properties, not button text
+        PropertyGroup.POSITIONING,
+    ];
+    
+    let propertiesToRender: {schema: HaFormSchema, layout: Layout}[] = [];
 
-    const value = formData[schema.name];
+    for (const schema of allSchemas) {
+        if (renderedPropertyNames.has(schema.name)) continue;
+        const propMeta = propertiesMap.get(schema.name);
+        if (propMeta && groupOrder.includes(propMeta.propertyGroup)) {
+            propertiesToRender.push({schema, layout: propMeta.layout});
+        }
+    }
+    
+    // Sort by group order, then by original schema order (implicit)
+    propertiesToRender.sort((a, b) => {
+        const groupA = propertiesMap.get(a.schema.name)?.propertyGroup;
+        const groupB = propertiesMap.get(b.schema.name)?.propertyGroup;
+        if (groupA && groupB) {
+            const indexA = groupOrder.indexOf(groupA);
+            const indexB = groupOrder.indexOf(groupB);
+            if (indexA !== indexB) return indexA - indexB;
+        }
+        return 0; 
+    });
 
+    // Create pairs of properties for half-width rendering
+    let pairs: TemplateResult[] = [];
+    let fullWidthItems: TemplateResult[] = [];
+    let halfWidthBuffer: {schema: HaFormSchema, layout: Layout} | null = null;
+
+    for (const item of propertiesToRender) {
+        const { schema, layout } = item;
+        if (renderedPropertyNames.has(schema.name)) continue; // Double check
+
+        renderedPropertyNames.add(schema.name);
+
+        console.log(`Property ${schema.name} - layout: ${layout}, Layout.FULL: ${Layout.FULL}, Layout.HALF: ${Layout.HALF}, isEqual: ${layout === Layout.HALF}`);
+
+        if (layout === Layout.FULL) {
+            if (halfWidthBuffer) { // Render pending half-width if any
+                // Create a pair with an empty right side
+                pairs.push(html`
+                    ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
+                    <div class="property-right"></div>
+                `);
+                halfWidthBuffer = null;
+            }
+            fullWidthItems.push(renderFullWidthPropertyForm(context, elementId, formData, schema));
+        } else if (layout === Layout.HALF || layout === Layout.HALF_LEFT || layout === Layout.HALF_RIGHT) {
+            if (!halfWidthBuffer) {
+                halfWidthBuffer = item;
+            } else {
+                // We have a pair - create a row with both properties
+                pairs.push(html`
+                    ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
+                    ${renderHalfWidthPropertyForm(context, elementId, formData, schema, 'property-right')}
+                `);
+                halfWidthBuffer = null;
+            }
+        }
+    }
+    
+    // Handle any remaining half-width property
+    if (halfWidthBuffer) {
+        pairs.push(html`
+            ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
+            <div class="property-right"></div>
+        `);
+    }
+    
+    // Combine all items
     return html`
-      <div class=${sideClass}>
-        <ha-form
-          .hass=${context.hass}
-          .data=${formData}
-          .schema=${[schema]}
-          .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-          @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-        ></ha-form>
-      </div>
+        ${fullWidthItems}
+        ${pairs}
     `;
-  }
+  };
+
+
+  const renderButtonProperties = () => {
+    if (!formData['button.enabled']) return html``;
+
+    const buttonProperties = allSchemas.filter(s => {
+        const propMeta = propertiesMap.get(s.name);
+        return propMeta?.propertyGroup === PropertyGroup.BUTTON && s.name !== 'button.enabled' && !renderedPropertyNames.has(s.name);
+    });
+
+    // Define sub-sections for buttons
+    const appearancePropsNames = ['button.text', 'button.cutout_text', 'button.text_color', 'button.font_family', 'button.font_size', 'button.font_weight', 'button.letter_spacing', 'button.text_transform', 'button.text_anchor', 'button.dominant_baseline', 'elbow_text_position'];
+    const stateStylePropsNames = ['button.hover_fill', 'button.active_fill', 'button.hover_transform', 'button.active_transform'];
+    const actionPropsNames = ['button.action_config.type', 'button.action_config.service', 'button.action_config.service_data', 'button.action_config.navigation_path', 'button.action_config.url_path', 'button.action_config.entity', 'button.action_config.confirmation'];
+
+    const renderSubGroup = (title: string, propNames: string[]) => {
+        // Create pairs of properties for half-width rendering
+        let pairs: TemplateResult[] = [];
+        let fullWidthItems: TemplateResult[] = [];
+        let halfWidthBuffer: HaFormSchema | null = null;
+        
+        const relevantProps = buttonProperties.filter(s => propNames.includes(s.name));
+
+        for (const schema of relevantProps) {
+            if (renderedPropertyNames.has(schema.name)) continue;
+            
+            // Conditional rendering for action_config
+            if (schema.name === 'button.action_config.service' || schema.name === 'button.action_config.service_data') {
+                if (formData['button.action_config.type'] !== 'call-service') continue;
+            } else if (schema.name === 'button.action_config.navigation_path') {
+                if (formData['button.action_config.type'] !== 'navigate') continue;
+            } else if (schema.name === 'button.action_config.url_path') {
+                if (formData['button.action_config.type'] !== 'url') continue;
+            } else if (schema.name === 'button.action_config.entity') {
+                if (formData['button.action_config.type'] !== 'toggle' && formData['button.action_config.type'] !== 'more-info') continue;
+            } else if (schema.name === 'button.action_config.confirmation') {
+                if (!formData['button.action_config.type'] || formData['button.action_config.type'] === 'none') continue;
+            }
+
+            renderedPropertyNames.add(schema.name);
+            const propMeta = propertiesMap.get(schema.name);
+
+            if (propMeta?.layout === Layout.FULL) {
+                if (halfWidthBuffer) {
+                    // Create a pair with an empty right side
+                    pairs.push(html`
+                        ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer, 'property-left')}
+                        <div class="property-right"></div>
+                    `);
+                    halfWidthBuffer = null;
+                }
+                fullWidthItems.push(renderFullWidthPropertyForm(context, elementId, formData, schema));
+            } else if (propMeta?.layout === Layout.HALF || propMeta?.layout === Layout.HALF_LEFT || propMeta?.layout === Layout.HALF_RIGHT) {
+                if (!halfWidthBuffer) {
+                    halfWidthBuffer = schema;
+                } else {
+                    // We have a pair - create a row with both properties
+                    pairs.push(html`
+                        ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer, 'property-left')}
+                        ${renderHalfWidthPropertyForm(context, elementId, formData, schema, 'property-right')}
+                    `);
+                    halfWidthBuffer = null;
+                }
+            }
+        }
+        
+        // Handle any remaining half-width property
+        if (halfWidthBuffer) {
+            pairs.push(html`
+                ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer, 'property-left')}
+                <div class="property-right"></div>
+            `);
+        }
+        
+        if (fullWidthItems.length > 0 || pairs.length > 0) {
+            return html`
+                <div class="property-full-width section-header" style="font-weight: bold; margin-top: 16px; border-bottom: 1px solid var(--divider-color); padding-bottom: 4px;">${title}</div>
+                ${fullWidthItems}
+                ${pairs}
+            `;
+        }
+        return html``;
+    };
+
+    const appearanceSection = renderSubGroup('Button Appearance', appearancePropsNames);
+    const styleSection = renderSubGroup('Button State Styles', stateStylePropsNames);
+    const actionSection = renderSubGroup('Button Action', actionPropsNames);
+    
+    return html`${appearanceSection}${styleSection}${actionSection}`;
+  };
+
+  const renderOtherProperties = () => {
+    const otherPropsSchemas = allSchemas.filter(s => !renderedPropertyNames.has(s.name));
+    if (otherPropsSchemas.length > 0) {
+        return html`
+            <div class="property-full-width" style="margin-top:16px;">
+                <div style="font-weight: bold; border-bottom: 1px solid var(--divider-color); padding-bottom: 4px; margin-bottom: 8px;">Other Properties</div>
+                <ha-form
+                    .hass=${context.hass}
+                    .data=${formData}
+                    .schema=${otherPropsSchemas}
+                    .computeLabel=${(s: HaFormSchema) => s.label || s.name}
+                    @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
+                ></ha-form>
+            </div>
+        `;
+    }
+    return html``;
+  };
+
 
   return html`
     <div class="element-editor ${isDragOver ? 'drag-over' : ''}"
@@ -324,208 +431,83 @@ export function renderElement(
 
       ${!isCollapsed ? html`
           <div class="element-body">
-               <!-- Property Container with 2-column layout -->
                <div class="property-container">
                   <!-- Type Property (Always show first) -->
-                  ${renderFullWidthPropertyForm(context, elementId, formData, typeSchema)}
+                  ${typeSchema ? renderFullWidthPropertyForm(context, elementId, formData, typeSchema) : ''}
                   
-                  <!-- Properties based on element type -->
-                  ${(() => {
-                    if (element.type === 'rectangle') {
-                      return html`
-                        <!-- Fill Color -->
-                        ${renderFullWidthPropertyForm(context, elementId, formData, fillSchema)}
-
-                        <!-- Width and Height -->
-                        ${renderProp(elbowWidthSchema, 'property-left')}
-                        ${renderProp(elbowHeightSchema, 'property-right')}
-                      `;
-                    }
-                    else if (element.type === 'endcap' || element.type === 'chisel-endcap') {
-                      return html`
-                        <!-- Fill Color and Direction -->
-                        ${renderProp(fillSchema, 'property-left')}
-                        ${renderProp(directionSchema, 'property-right')}
-
-                        <!-- Width and Height -->
-                        ${renderProp(elbowWidthSchema, 'property-left')}
-                        ${renderProp(elbowHeightSchema, 'property-right')}
-                      `;
-                    }
-                    else if (element.type === 'text') {
-                      return html`
-                        <!-- Text Content and Fill Color -->
-                        ${renderProp(textContentSchema, 'property-left')}
-                        ${renderProp(fillSchema, 'property-right')}
-
-                        <!-- Font Family and Font Size -->
-                        ${renderProp(fontFamilySchema, 'property-left')}
-                        ${renderProp(fontSizeSchema, 'property-right')}
-
-                        <!-- Font Weight and Letter Spacing -->
-                        ${renderProp(fontWeightSchema, 'property-left')}
-                        ${renderProp(letterSpacingSchema, 'property-right')}
-
-                        <!-- Text Anchor and Dominant Baseline -->
-                        ${renderProp(textAnchorSchema, 'property-left')}
-                        ${renderProp(dominantBaselineSchema, 'property-right')}
-
-                        <!-- Text Transform -->
-                        ${renderProp(textTransformSchema, 'property-left')}
-                        <div class="property-right"></div>
-                      `;
-                    }
-                    else if (element.type === 'elbow') {
-                      return html`
-                        <!-- Fill Color and Orientation -->
-                        ${renderProp(fillSchema, 'property-left')}
-                        ${renderProp(orientationSchema, 'property-right')}
-
-                        <!-- Side property -->
-                        ${renderFullWidthPropertyForm(context, elementId, formData, sideSchema)}
-
-                        <!-- Width and Body Width -->
-                        ${renderProp(elbowWidthSchema, 'property-left')}
-                        ${renderProp(bodyWidthSchema, 'property-right')}
-
-                        <!-- Arm Height and Height -->
-                        ${renderProp(armHeightSchema, 'property-left')}
-                        ${renderProp(elbowHeightSchema, 'property-right')}
-                      `;
-                    }
-                    else {
-                      return html`
-                        <!-- Fill Color -->
-                        ${renderFullWidthPropertyForm(context, elementId, formData, fillSchema)}
-
-                        <!-- Width and Height -->
-                        ${renderProp(elbowWidthSchema, 'property-left')}
-                        ${renderProp(elbowHeightSchema, 'property-right')}
-                      `;
-                    }
-                  })()}
+                  <!-- Standard Property Groups -->
+                  ${renderStandardPropertyGroups()}
                   
                   <!-- Anchor To Row -->
-                  ${renderFullWidthPropertyForm(context, elementId, formData, anchorToSchema)}
+                  ${anchorToSchema ? renderFullWidthPropertyForm(context, elementId, formData, anchorToSchema) : ''}
                   
                   <!-- Container Anchor Point Selector (show when no specific anchor is selected) -->
                   ${!showAnchorPoints && containerAnchorPointSchema ? html`
-                     ${renderCustomSelectorWrapper(containerAnchorPointSchema, formData[containerAnchorPointSchema.name],
+                    <div class="property-full-width">
+                      ${renderCustomSelector(containerAnchorPointSchema, formData[containerAnchorPointSchema.name],
                         (value: string) => {
                           const detail = { value: { ...formData, [containerAnchorPointSchema.name]: value } };
                           const customEvent = new CustomEvent('value-changed', { detail });
                           context.handleFormValueChanged(customEvent, elementId);
-                        }, 'property-full-width')}
+                        }
+                      )}
+                    </div>
                   ` : ''}
                   
                   <!-- Anchor Point Selectors (always show when anchor is selected) -->
                   ${showAnchorPoints && anchorPointSchema && targetAnchorPointSchema ? html`
-                     ${renderCustomSelectorWrapper(anchorPointSchema, formData[anchorPointSchema.name],
+                    <div class="property-left">
+                      ${renderCustomSelector(anchorPointSchema, formData[anchorPointSchema.name],
                         (value: string) => {
                           const detail = { value: { ...formData, [anchorPointSchema.name]: value } };
                           const customEvent = new CustomEvent('value-changed', { detail });
                           context.handleFormValueChanged(customEvent, elementId);
-                        }, 'property-left')}
-                     ${renderCustomSelectorWrapper(targetAnchorPointSchema, formData[targetAnchorPointSchema.name],
+                        }
+                      )}
+                    </div>
+                    <div class="property-right">
+                      ${renderCustomSelector(targetAnchorPointSchema, formData[targetAnchorPointSchema.name],
                         (value: string) => {
                           const detail = { value: { ...formData, [targetAnchorPointSchema.name]: value } };
                           const customEvent = new CustomEvent('value-changed', { detail });
                           context.handleFormValueChanged(customEvent, elementId);
-                        }, 'property-right')}
+                        }
+                      )}
+                    </div>
                   ` : ''}
                   
                   <!-- Primary Stretch To Row -->
-                  ${renderStretchSection(
+                  ${primaryStretchSchema ? renderStretchSection(
                     context,
                     elementId,
                     formData,
                     primaryStretchSchema,
                     stretchPadding1Schema,
-                    targetStretchAnchorPoint1Schema,
+                    targetStretchAnchorPoint1Schema, // This is StretchDirection schema
                     showStretchTarget
-                  )}
+                  ) : ''}
 
                   <!-- Second Stretch Target Dropdown (only shown if a primary target is selected) -->
-                  ${showStretchTarget ? renderStretchSection(
+                  ${showStretchTarget && secondaryStretchSchema ? renderStretchSection(
                     context,
                     elementId,
                     formData,
                     secondaryStretchSchema,
                     stretchPadding2Schema,
-                    targetStretchAnchorPoint2Schema,
+                    targetStretchAnchorPoint2Schema, // This is StretchDirection schema
                     showSecondStretchTarget
                   ) : ''}
                   
-                  <!-- Offset X and Y Row -->
-                  ${offsetSchema.length > 0 ? html`
-                    ${renderProp(offsetXSchema, 'property-left')}
-                    ${renderProp(offsetYSchema, 'property-right')}
-                  ` : ''}
-                  
                   <!-- === BUTTON CONFIGURATION SECTION === -->
-                  ${renderFullWidthPropertyForm(context, elementId, formData, buttonEnabledSchema)}
-
-                  ${formData['button.enabled'] ? html`
-                    <div class="property-full-width section-header" style="font-weight: bold; margin-top: 16px; border-bottom: 1px solid var(--divider-color); padding-bottom: 4px;">Button Appearance</div>
-                    ${renderProp(buttonTextSchema, 'property-left')}
-                    ${renderProp(buttonCutoutTextSchema, 'property-right')}
-
-                    ${renderProp(buttonTextColorSchema, 'property-left')}
-                    ${renderProp(buttonFontFamilySchema, 'property-right')}
-                    
-                    ${renderProp(buttonFontSizeSchema, 'property-left')}
-                    ${renderProp(buttonFontWeightSchema, 'property-right')}
-
-                    ${renderProp(buttonLetterSpacingSchema, 'property-left')}
-                    ${renderProp(buttonTextTransformSchema, 'property-right')}
-                    ${renderProp(buttonTextAnchorSchema, 'property-left')}
-                    ${renderProp(buttonDominantBaselineSchema, 'property-right')}
-
-
-                    <div class="property-full-width section-header" style="font-weight: bold; margin-top: 16px; border-bottom: 1px solid var(--divider-color); padding-bottom: 4px;">Button State Styles</div>
-                    ${renderProp(buttonHoverFillSchema, 'property-left')}
-                    ${renderProp(buttonActiveFillSchema, 'property-right')}
-                    
-                    ${renderProp(buttonHoverTransformSchema, 'property-left')}
-                    ${renderProp(buttonActiveTransformSchema, 'property-right')}
-
-                    <div class="property-full-width section-header" style="font-weight: bold; margin-top: 16px; border-bottom: 1px solid var(--divider-color); padding-bottom: 4px;">Button Action</div>
-                    ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionTypeSchema)}
-
-                    ${formData['button.action_config.type'] === 'call-service' ? html`
-                      ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionServiceSchema)}
-                      ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionServiceDataSchema)}
-                    ` : ''}
-                    ${formData['button.action_config.type'] === 'navigate' ? html`
-                      ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionNavPathSchema)}
-                    ` : ''}
-                    ${formData['button.action_config.type'] === 'url' ? html`
-                      ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionUrlPathSchema)}
-                    ` : ''}
-                    ${formData['button.action_config.type'] === 'toggle' || formData['button.action_config.type'] === 'more-info' ? html`
-                      ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionEntitySchema)}
-                    ` : ''}
-                    ${formData['button.action_config.type'] && formData['button.action_config.type'] !== 'none' ? html`
-                      ${renderFullWidthPropertyForm(context, elementId, formData, buttonActionConfirmSchema)}
-                    ` : ''}
-                  ` : ''}
+                  ${buttonEnabledSchema ? renderFullWidthPropertyForm(context, elementId, formData, buttonEnabledSchema) : ''}
+                  ${renderButtonProperties()}
                   <!-- === END BUTTON CONFIGURATION SECTION === -->
 
-
-                  ${filteredStandardSchema.length > 0 ? html`
-                    <div class="property-full-width" style="margin-top:16px;">
-                      <div style="font-weight: bold; border-bottom: 1px solid var(--divider-color); padding-bottom: 4px; margin-bottom: 8px;">Other Properties</div>
-                      <ha-form
-                        .hass=${context.hass}
-                        .data=${formData}
-                        .schema=${filteredStandardSchema}
-                        .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                        @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                      ></ha-form>
-                    </div>
-                  ` : ''}
+                  <!-- Other Unrendered Properties -->
+                  ${renderOtherProperties()}
+                  
                </div>
-               ${schema.length === 0 ? html`<p>No configurable properties for this element type.</p>` : ''} 
+               ${allSchemas.length === 0 ? html`<p>No configurable properties for this element type.</p>` : ''} 
           </div>
           ` : ''}
     </div>
@@ -555,21 +537,6 @@ function renderCustomSelector(
     `;
   }
   return html``;
-}
-
-function renderCustomSelectorWrapper(
-  schema: HaFormSchema | undefined,
-  value: string,
-  onChange: (value: string) => void,
-  sideClass: string
-): TemplateResult {
-  if (!schema) return html``;
-
-  return html`
-    <div class="${sideClass}">
-      ${renderCustomSelector(schema, value, onChange)}
-    </div>
-  `;
 }
 
 function renderActionButtons(
@@ -875,10 +842,6 @@ function renderFullWidthPropertyForm(
 ): TemplateResult {
   if (!schema) return html``;
   
-  const value = formData[schema.name];
-  
-  const refreshKey = `${schema.name}:${value}:${Date.now()}`;
-  
   return html`
     <div class="property-full-width">
       <ha-form
@@ -887,7 +850,28 @@ function renderFullWidthPropertyForm(
         .schema=${[schema]}
         .computeLabel=${(s: HaFormSchema) => s.label || s.name}
         @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-        .key=${refreshKey}
+      ></ha-form>
+    </div>
+  `;
+}
+
+function renderHalfWidthPropertyForm(
+  context: EditorContext,
+  elementId: string,
+  formData: any,
+  schema: HaFormSchema | undefined,
+  sideClass: "property-left" | "property-right"
+): TemplateResult {
+  if (!schema) return html``;
+  
+  return html`
+    <div class="${sideClass}">
+      <ha-form
+        .hass=${context.hass}
+        .data=${formData}
+        .schema=${[schema]}
+        .computeLabel=${(s: HaFormSchema) => s.label || s.name}
+        @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
       ></ha-form>
     </div>
   `;
@@ -951,4 +935,4 @@ function renderStretchSection(
       </div>
     `;
   }
-} 
+}

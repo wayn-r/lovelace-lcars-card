@@ -21,7 +21,8 @@ import {
     ButtonActionType,
     ButtonText,
     OffsetX,
-    OffsetY
+    OffsetY,
+    Layout
 } from '../properties/properties';
 
 export class ChiselEndcap extends EditorElement {

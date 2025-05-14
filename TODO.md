@@ -2,6 +2,9 @@
 
 ## TODOs:
 
+### Currently working on:
+- Just fixed half-width property rendering, need to organize them and add expandable groups for them.
+
 ### Components
 - implement headerbar as a standalone element
 
