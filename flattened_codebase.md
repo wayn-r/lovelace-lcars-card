@@ -1488,6 +1488,7 @@ import './elements/top_header.js';
 
 import { LcarsGroup } from './group.js';
 import { Rectangle } from './elements/rectangle.js';
+import { PropertyGroup } from './properties/properties.js';
 
 function setDeep(obj: any, path: string | string[], value: any): void {
     const pathArray = Array.isArray(path) ? path : path.split('.');
@@ -1547,6 +1548,8 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   @state() private _addElementInput: string = '';
   @state() private _addElementWarning: string = '';
 
+  @state() private _collapsedPropertyGroups: { [elementId: string]: { [groupKey: string]: boolean } } = {};
+
   private _draggedElementId: string | null = null;
   private _dragOverElementId: string | null = null;
 
@@ -1565,6 +1568,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         this._groupInstances.clear();
         this._collapsedGroups = {};
         this._collapsedElements = {};
+        this._collapsedPropertyGroups = {};
         return;
     }
 
@@ -1586,6 +1590,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     const newGroupInstances = new Map<string, LcarsGroup>();
     const newCollapsedGroups: { [groupId: string]: boolean } = {};
     const newCollapsedElements: { [elementId: string]: boolean } = {};
+    const newCollapsedPropertyGroups: { [elementId: string]: { [groupKey: string]: boolean } } = {};
 
     newGroups.forEach(gid => {
         let instance = this._groupInstances.get(gid);
@@ -1595,13 +1600,19 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
              instance.id = gid;
         }
         newGroupInstances.set(gid, instance);
-        newCollapsedGroups[gid] = this._collapsedGroups[gid] ?? instance.isCollapsed; 
+        newCollapsedGroups[gid] = this._collapsedGroups[gid] ?? instance.isCollapsed;
         instance.isCollapsed = newCollapsedGroups[gid];
     });
 
     currentElements.forEach(el => {
         if (el?.id) {
             newCollapsedElements[el.id] = this._collapsedElements[el.id] ?? true;
+
+            const existingPropGroupState = this._collapsedPropertyGroups[el.id];
+            newCollapsedPropertyGroups[el.id] = {};
+            Object.values(PropertyGroup).forEach(pgKey => {
+                newCollapsedPropertyGroups[el.id][pgKey] = existingPropGroupState?.[pgKey] ?? true;
+            });
         }
     });
 
@@ -1609,6 +1620,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     this._groupInstances = newGroupInstances;
     this._collapsedGroups = newCollapsedGroups;
     this._collapsedElements = newCollapsedElements;
+    this._collapsedPropertyGroups = newCollapsedPropertyGroups;
   }
 
   private _updateConfig(newElements: any[]): void {
@@ -1850,7 +1862,14 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           const currentElements = this._config?.elements || [];
           const newElements = [...currentElements, result.newElementConfig];
           
-          this._collapsedElements = { ...(this._collapsedElements || {}), [result.newElementConfig.id]: false }; 
+          const newElementId = result.newElementConfig.id;
+          this._collapsedElements = { ...(this._collapsedElements || {}), [newElementId]: false }; 
+ this._collapsedPropertyGroups = {
+   ...this._collapsedPropertyGroups,
+   [newElementId]: Object.fromEntries(
+     Object.values(PropertyGroup).map((pgKey) => [pgKey, true])
+   ),
+ };
           this._addElementDraftGroup = null;
           this._addElementInput = '';
           this._addElementWarning = '';
@@ -1877,6 +1896,9 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
 
       const { [elementId]: _r, ...restCol } = this._collapsedElements;
       this._collapsedElements = restCol;
+
+      const { [elementId]: _rProp, ...restPropColDel } = this._collapsedPropertyGroups;
+      this._collapsedPropertyGroups = restPropColDel;
 
       if (this._editingElementId === elementId) {
           this._cancelEditElementId();
@@ -1977,6 +1999,14 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       const { [oldId]: oldCollapseVal, ...restCol } = this._collapsedElements;
       this._collapsedElements = { ...restCol, [newId]: oldCollapseVal ?? false }; 
       
+      const oldPropGroupState = this._collapsedPropertyGroups[oldId] || {};
+      const { [oldId]: _rOldProp, ...restPropGroupStates } = this._collapsedPropertyGroups;
+      this._collapsedPropertyGroups = { ...restPropGroupStates };
+      this._collapsedPropertyGroups[newId] = {};
+      Object.values(PropertyGroup).forEach(pgKey => {
+          this._collapsedPropertyGroups[newId][pgKey] = oldPropGroupState[pgKey] ?? true;
+      });
+
       this._editingElementId = null;
       this._editingElementIdInput = '';
       this._elementIdWarning = '';
@@ -2140,6 +2170,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         onDrop: this._onDrop.bind(this),
         onDragEnd: this._onDragEnd.bind(this),
         toggleElementCollapse: this._toggleElementCollapse.bind(this),
+        togglePropertyGroupCollapse: this._togglePropertyGroupCollapse.bind(this),
         startEditElementId: this._startEditElementId.bind(this),
         handleDeleteElement: this._handleDeleteElement.bind(this),
         handleConfirmEditElementId: this._handleConfirmEditElementId.bind(this),
@@ -2151,6 +2182,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         editingElementIdInput: this._editingElementIdInput,
         elementIdWarning: this._elementIdWarning,
         collapsedElements: this._collapsedElements,
+        collapsedPropertyGroups: this._collapsedPropertyGroups,
         draggedElementId: this._draggedElementId,
         dragOverElementId: this._dragOverElementId
     };
@@ -2354,6 +2386,26 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
     tempElement.validateIdInput();
     this._addElementWarning = tempElement.idEditErrorMessage;
     
+    this.requestUpdate();
+  }
+
+  private _togglePropertyGroupCollapse(elementId: string, groupKey: string): void {
+    if (!this._collapsedPropertyGroups[elementId]) {
+        this._collapsedPropertyGroups[elementId] = {};
+    }
+    Object.values(PropertyGroup).forEach(pgKey => {
+        if (this._collapsedPropertyGroups[elementId][pgKey] === undefined) {
+            this._collapsedPropertyGroups[elementId][pgKey] = true;
+        }
+    });
+
+    this._collapsedPropertyGroups = {
+        ...this._collapsedPropertyGroups,
+        [elementId]: {
+            ...this._collapsedPropertyGroups[elementId],
+            [groupKey]: !this._collapsedPropertyGroups[elementId][groupKey],
+        },
+    };
     this.requestUpdate();
   }
 }
@@ -3285,7 +3337,7 @@ export class ButtonActionConfirmation implements LcarsPropertyBase {
 import { html, TemplateResult } from 'lit';
 import { EditorElement } from './elements/element.js';
 import { LcarsGroup } from './group.js';
-import { HaFormSchema, PropertySchemaContext, Type, PropertyGroup, Layout } from './properties/properties.js';
+import { HaFormSchema, PropertySchemaContext, Type, PropertyGroup, Layout, LcarsPropertyBase } from './properties/properties.js';
 import { repeat } from 'lit/directives/repeat.js';
 
 // Types
@@ -3304,6 +3356,10 @@ interface EditorContext {
   handleConfirmEditElementId: (elementInstance: EditorElement) => void;
   cancelEditElementId: () => void;
   updateElementIdInput: (value: string) => void;
+  
+  // Add new properties for property group collapsing
+  togglePropertyGroupCollapse: (elementId: string, groupKey: string) => void;
+  collapsedPropertyGroups: { [elementId: string]: { [groupKey: string]: boolean } };
   
   // State variables
   editingElementId: string | null;
@@ -3344,11 +3400,225 @@ interface GroupEditorContext {
   newGroupInput: string;
 }
 
+// Define the desired order of property groups
+const PropertyGroupOrder: PropertyGroup[] = [
+  PropertyGroup.TYPE,
+  PropertyGroup.POSITIONING,
+  PropertyGroup.DIMENSIONS,
+  PropertyGroup.APPEARANCE,
+  PropertyGroup.TEXT,
+  PropertyGroup.ANCHOR,
+  PropertyGroup.STRETCH,
+  PropertyGroup.BUTTON,
+];
+
+// Helper function to get a human-readable name for a property group
+function getPropertyGroupName(groupKey: PropertyGroup): string {
+  switch (groupKey) {
+    case PropertyGroup.TYPE: return "Element Type";
+    case PropertyGroup.POSITIONING: return "Positioning";
+    case PropertyGroup.DIMENSIONS: return "Dimensions";
+    case PropertyGroup.APPEARANCE: return "Appearance";
+    case PropertyGroup.TEXT: return "Text Styling";
+    case PropertyGroup.ANCHOR: return "Anchoring";
+    case PropertyGroup.STRETCH: return "Stretching";
+    case PropertyGroup.BUTTON: return "Button Configuration";
+    default:
+      // Handle the case where groupKey is not one of the expected enum values
+      return String(groupKey).charAt(0).toUpperCase() + String(groupKey).slice(1);
+  }
+}
+
+// Helper function to render a property group header with collapse icon
+function renderPropertyGroupHeader(
+  groupKey: PropertyGroup,
+  isCollapsed: boolean,
+  onToggle: () => void
+): TemplateResult {
+      return html`
+    <div class="property-group-header" @click=${onToggle}>
+                  <ha-icon class="collapse-icon" icon="mdi:${isCollapsed ? 'chevron-right' : 'chevron-down'}"></ha-icon>
+      <span class="property-group-name">${getPropertyGroupName(groupKey)}</span>
+          </div>
+      `;
+  }
+
+// Helper function to render a list of properties, arranging them into half-width rows or full-width items
+function renderPropertiesInRows(
+  properties: HaFormSchema[],
+  context: EditorContext,
+  elementId: string,
+  formData: any,
+  propertiesMap: Map<string, LcarsPropertyBase>,
+  isButtonContext: boolean = false // For conditional rendering within buttons
+): TemplateResult {
+  let pairs: TemplateResult[] = [];
+  let fullWidthItems: TemplateResult[] = [];
+  let halfWidthBuffer: { schema: HaFormSchema, layout: Layout } | null = null;
+
+  for (const schema of properties) {
+    // Conditional rendering for button action_config properties
+    if (isButtonContext) {
+      if (schema.name === 'button.action_config.service' || schema.name === 'button.action_config.service_data') {
+        if (formData['button.action_config.type'] !== 'call-service') continue;
+      } else if (schema.name === 'button.action_config.navigation_path') {
+        if (formData['button.action_config.type'] !== 'navigate') continue;
+      } else if (schema.name === 'button.action_config.url_path') {
+        if (formData['button.action_config.type'] !== 'url') continue;
+      } else if (schema.name === 'button.action_config.entity') {
+        if (formData['button.action_config.type'] !== 'toggle' && formData['button.action_config.type'] !== 'more-info') continue;
+      } else if (schema.name === 'button.action_config.confirmation') {
+        if (!formData['button.action_config.type'] || formData['button.action_config.type'] === 'none') continue;
+      }
+    }
+
+        const propMeta = propertiesMap.get(schema.name);
+    const layout = propMeta?.layout || Layout.FULL; // Default to full if not specified
+
+        if (layout === Layout.FULL) {
+      if (halfWidthBuffer) {
+        // If a half-width property is pending, render it with an empty right side before a full-width item
+                pairs.push(html`
+          <div class="property-row">
+                    ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
+                    <div class="property-right"></div>
+          </div>
+                `);
+                halfWidthBuffer = null;
+            }
+            fullWidthItems.push(renderFullWidthPropertyForm(context, elementId, formData, schema));
+        } else if (layout === Layout.HALF || layout === Layout.HALF_LEFT || layout === Layout.HALF_RIGHT) {
+            if (!halfWidthBuffer) {
+        // Start a new pair with the current half-width property
+        halfWidthBuffer = { schema, layout };
+            } else {
+        // Complete a pair with the current half-width property
+                pairs.push(html`
+          <div class="property-row">
+                    ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
+                    ${renderHalfWidthPropertyForm(context, elementId, formData, schema, 'property-right')}
+          </div>
+                `);
+                halfWidthBuffer = null;
+            }
+        }
+    }
+    
+  // After the loop, handle any remaining half-width property
+    if (halfWidthBuffer) {
+        pairs.push(html`
+      <div class="property-row">
+            ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
+            <div class="property-right"></div>
+      </div>
+    `);
+  }
+
+  return html`${fullWidthItems}${pairs}`;
+}
+
+// Helper function specifically for rendering stretch properties in a row
+function renderStretchRow(
+  context: EditorContext,
+  elementId: string,
+  formData: any,
+  stretchToSchema: HaFormSchema | undefined,
+  stretchDirectionSchema: HaFormSchema | undefined,
+  stretchPaddingSchema: HaFormSchema | undefined,
+  showDetails: boolean // This is true if stretchTo is selected
+): TemplateResult {
+  if (!stretchToSchema) return html``;
+
+  if (!showDetails) {
+    // If no stretch target is selected, just show the stretchTo dropdown
+    return renderFullWidthPropertyForm(context, elementId, formData, stretchToSchema);
+  } else {
+    // If a stretch target is selected, show the full row with padding and direction
+    return html`
+      <div class="property-row stretch-layout"> <!-- Use a specific class for stretch if needed for styling -->
+        <div class="property-left stretch-column-left">
+          ${renderFullWidthPropertyForm(context, elementId, formData, stretchToSchema)} <!-- StretchTo takes full width of this column -->
+          ${stretchPaddingSchema ? renderFullWidthPropertyForm(context, elementId, formData, stretchPaddingSchema) : ''} <!-- Padding below it -->
+        </div>
+        <div class="property-right stretch-column-right">
+          ${stretchDirectionSchema ? renderHalfWidthPropertyForm(context, elementId, formData, stretchDirectionSchema, "", true) : ''} <!-- Direction custom selector -->
+        </div>
+      </div>
+    `;
+  }
+}
+
+// Helper function to render the content within a property group based on its key
+function renderGroupContent(
+  groupKey: PropertyGroup,
+  propertiesInGroup: HaFormSchema[],
+  context: EditorContext,
+  elementId: string,
+  formData: any,
+  propertiesMap: Map<string, LcarsPropertyBase>
+): TemplateResult {
+  // Handle specific group layouts like Anchor and Stretch
+  if (groupKey === PropertyGroup.ANCHOR) {
+    const anchorToSchema = propertiesInGroup.find(s => s.name === 'anchorTo');
+    const anchorPointSchema = propertiesInGroup.find(s => s.name === 'anchorPoint');
+    const targetAnchorPointSchema = propertiesInGroup.find(s => s.name === 'targetAnchorPoint');
+
+    const showAnchorPoints = formData.anchorTo && formData.anchorTo !== '';
+
+    return html`
+      ${anchorToSchema ? renderFullWidthPropertyForm(context, elementId, formData, anchorToSchema) : ''}
+      ${showAnchorPoints && anchorPointSchema && targetAnchorPointSchema ? html`
+        <div class="property-row">
+          ${renderHalfWidthPropertyForm(context, elementId, formData, anchorPointSchema, 'property-left', true)}
+          ${renderHalfWidthPropertyForm(context, elementId, formData, targetAnchorPointSchema, 'property-right', true)}
+        </div>
+      ` : ''}
+    `;
+  }
+
+  if (groupKey === PropertyGroup.STRETCH) {
+    const stretchTo1Schema = propertiesInGroup.find(s => s.name === 'stretchTo1');
+    const stretchDirection1Schema = propertiesInGroup.find(s => s.name === 'stretchDirection1');
+    const stretchPadding1Schema = propertiesInGroup.find(s => s.name === 'stretchPadding1');
+
+    const stretchTo2Schema = propertiesInGroup.find(s => s.name === 'stretchTo2');
+    const stretchDirection2Schema = propertiesInGroup.find(s => s.name === 'stretchDirection2');
+    const stretchPadding2Schema = propertiesInGroup.find(s => s.name === 'stretchPadding2');
+
+    const showStretch1Details = formData.stretchTo1 && formData.stretchTo1 !== '';
+    const showStretch2Details = formData.stretchTo2 && formData.stretchTo2 !== '';
+
+    return html`
+      ${stretchTo1Schema ? renderStretchRow(context, elementId, formData, stretchTo1Schema, stretchDirection1Schema, stretchPadding1Schema, showStretch1Details) : ''}
+      ${showStretch1Details && stretchTo2Schema ? renderStretchRow(context, elementId, formData, stretchTo2Schema, stretchDirection2Schema, stretchPadding2Schema, showStretch2Details) : ''}
+    `;
+  }
+
+  // Handle the Button group specifically
+  if (groupKey === PropertyGroup.BUTTON) {
+    const buttonEnabledSchema = propertiesInGroup.find(s => s.name === 'button.enabled');
+    // Filter out button.enabled from the rest of button properties for renderPropertiesInRows
+    const otherButtonProps = propertiesInGroup.filter(s => s.name !== 'button.enabled');
+
+    return html`
+      ${buttonEnabledSchema ? renderFullWidthPropertyForm(context, elementId, formData, buttonEnabledSchema) : ''}
+      ${formData['button.enabled'] ?
+        // Render other button properties in rows, passing isButtonContext = true
+        renderPropertiesInRows(otherButtonProps, context, elementId, formData, propertiesMap, true)
+        : ''}
+    `;
+  }
+
+  // For all other groups, use the standard row rendering
+  return renderPropertiesInRows(propertiesInGroup, context, elementId, formData, propertiesMap);
+}
+
+// The main renderElement function
 export function renderElement(
-  element: any, 
+  element: any,
   context: EditorContext
 ): TemplateResult {
-  if (!element || !element.id) return html``; 
+  if (!element || !element.id) return html``;
 
   const elementId = element.id;
   const elementInstance = context.getElementInstance(elementId);
@@ -3362,67 +3632,45 @@ export function renderElement(
   if (!elementInstance) {
       const typeProperty = new Type();
       const typeSchema = typeProperty.getSchema();
-      const minimalFormData = { type: element.type || '' }; 
+      const minimalFormData = { type: element.type || '' };
 
-      return html`
+        return html`
           <div class="element-editor error" data-element-id=${elementId}>
               <div class="element-header ${isEditingId ? 'editing' : ''}" @click=${() => !isEditingId && context.toggleElementCollapse(elementId)}>
                   <ha-icon class="collapse-icon" icon="mdi:${isCollapsed ? 'chevron-right' : 'chevron-down'}"></ha-icon>
                   ${isEditingId
-                      ? html`<!-- ID Editing might be problematic without instance, handle carefully or disable -->
-                         <span class="element-name">Editing ID: ${baseId || '(no base id)'}</span> 
-                         <span class="element-type" style="color: var(--error-color);">(invalid type)</span>
-                         <!-- Disable confirm/cancel or show simplified form without instance dependency? -->
-                         <!-- For now, let's just show text and rely on cancel -->
-                         <span class="spacer"></span>
-                         <div class="editing-actions">
-                            <ha-icon-button
-                                class="cancel-button"
-                                @click=${(e: Event) => { 
-                                    e.stopPropagation(); 
-                                    context.cancelEditElementId(); 
-                                }}
-                                title="Cancel"
-                            >
-                                <ha-icon icon="mdi:close"></ha-icon>
-                            </ha-icon-button>
-                         </div>
-                      `
+                      ? renderElementIdEditForm(elementId, null as any, context) // Use null as any since we can't create an EditorElement instance
                       : html`
                          <span class="element-name">${baseId || '(no base id)'}</span>
                          <span class="element-type" style="color: var(--error-color);">(invalid type: "${element.type || ''}")</span>
-                         <span class="spacer"></span>
-                         <!-- Allow editing ID even in error state -->
-                         <div class="edit-button icon-button" @click=${(e: Event) => { e.stopPropagation(); context.startEditElementId(elementId); }} title="Edit Element ID">
-                            <ha-icon icon="mdi:pencil"></ha-icon>
-                         </div>
-                         <!-- Allow deletion -->
-                         <div class="delete-button icon-button" @click=${(e: Event) => { e.stopPropagation(); context.handleDeleteElement(elementId); }} title="Delete Element">
-                            <ha-icon icon="mdi:delete"></ha-icon>
-                         </div>
                       `
                   }
+                  <span class="spacer"></span>
+                   ${!isEditingId ? html`
+                        <div class="edit-button icon-button" @click=${(e: Event) => { e.stopPropagation(); context.startEditElementId(elementId); }} title="Edit Element ID">
+                            <ha-icon icon="mdi:pencil"></ha-icon>
+                        </div>
+                        <div class="delete-button icon-button" @click=${(e: Event) => { e.stopPropagation(); context.handleDeleteElement(elementId); }} title="Delete Element">
+                            <ha-icon icon="mdi:delete"></ha-icon>
+                        </div>
+                   `: ''}
               </div>
 
               ${!isCollapsed ? html`
                   <div class="element-body">
-                      <div class="property-container">
-                          <div class="property-full-width">
-                               <p style="color: var(--error-color);">Please select a valid element type:</p>
-                               <ha-form
-                                 .hass=${context.hass}
-                                 .data=${minimalFormData} 
-                                 .schema=${[typeSchema]} 
-                                 .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                                 @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                               ></ha-form>
+                      <div class="property-container-groups">
+                          <div class="property-group">
+                              <div class="property-group-content">
+                                  <p style="color: var(--error-color); margin-bottom: 8px;">Please select a valid element type:</p>
+                                  ${renderFullWidthPropertyForm(context, elementId, minimalFormData, typeSchema)}
+                              </div>
                           </div>
                       </div>
                   </div>
               ` : ''}
-          </div>
-      `;
-  }
+            </div>
+        `;
+    }
 
   const otherElementIds = Array.isArray(context.cardConfig?.elements) 
       ? context.cardConfig.elements
@@ -3435,244 +3683,13 @@ export function renderElement(
   const propertiesMap = elementInstance.getPropertiesMap();
   const formData = elementInstance.getFormData();
   
-  const renderedPropertyNames = new Set<string>();
+  // Get the collapse state for property groups within this element
+  const collapsedPropertyGroupsForElement = context.collapsedPropertyGroups[elementId] || {};
 
-  const getSchemaByName = (name: string): HaFormSchema | undefined => allSchemas.find(s => s.name === name);
-
-  // --- Render Type Property (Always First) ---
-  const typeSchema = getSchemaByName('type');
-  if (typeSchema) {
-    renderedPropertyNames.add('type');
-  }
-
-  // --- Prepare Anchor Properties (Rendered Conditionally Later) ---
-  const anchorToSchema = getSchemaByName('anchorTo');
-  const containerAnchorPointSchema = getSchemaByName('containerAnchorPoint'); // This name needs to be consistent with properties.ts
-  const anchorPointSchema = getSchemaByName('anchorPoint');
-  const targetAnchorPointSchema = getSchemaByName('targetAnchorPoint');
-
-  if (anchorToSchema) renderedPropertyNames.add(anchorToSchema.name);
-  if (containerAnchorPointSchema) renderedPropertyNames.add(containerAnchorPointSchema.name);
-  if (anchorPointSchema) renderedPropertyNames.add(anchorPointSchema.name);
-  if (targetAnchorPointSchema) renderedPropertyNames.add(targetAnchorPointSchema.name);
-  
-  // --- Prepare Stretch Properties (Rendered Conditionally Later) ---
-  const primaryStretchSchema = getSchemaByName('stretchTo1');
-  const stretchPadding1Schema = getSchemaByName('stretchPadding1');
-  const targetStretchAnchorPoint1Schema = getSchemaByName('stretchDirection1'); // Or targetStretchAnchorPoint1
-
-  const secondaryStretchSchema = getSchemaByName('stretchTo2');
-  const stretchPadding2Schema = getSchemaByName('stretchPadding2');
-  const targetStretchAnchorPoint2Schema = getSchemaByName('stretchDirection2'); // Or targetStretchAnchorPoint2
-
-  if (primaryStretchSchema) renderedPropertyNames.add(primaryStretchSchema.name);
-  if (stretchPadding1Schema) renderedPropertyNames.add(stretchPadding1Schema.name);
-  if (targetStretchAnchorPoint1Schema) renderedPropertyNames.add(targetStretchAnchorPoint1Schema.name);
-  if (secondaryStretchSchema) renderedPropertyNames.add(secondaryStretchSchema.name);
-  if (stretchPadding2Schema) renderedPropertyNames.add(stretchPadding2Schema.name);
-  if (targetStretchAnchorPoint2Schema) renderedPropertyNames.add(targetStretchAnchorPoint2Schema.name);
-
-  // --- Prepare Button Properties (Rendered Conditionally Later) ---
-  const buttonEnabledSchema = getSchemaByName('button.enabled');
-  if (buttonEnabledSchema) renderedPropertyNames.add(buttonEnabledSchema.name);
-
-  const showAnchorPoints = formData.anchorTo && formData.anchorTo !== '';
-  const showStretchTarget = formData.stretchTo1 && formData.stretchTo1 !== '';
-  const showSecondStretchTarget = formData.stretchTo2 && formData.stretchTo2 !== '';
-  
-  // Note: The renderProp function has been replaced by renderHalfWidthPropertyForm for more consistent rendering
-  
-  const renderStandardPropertyGroups = () => {
-    const groupOrder = [
-        PropertyGroup.APPEARANCE,
-        PropertyGroup.DIMENSIONS,
-        PropertyGroup.TEXT, // For general text properties, not button text
-        PropertyGroup.POSITIONING,
-    ];
-    
-    let propertiesToRender: {schema: HaFormSchema, layout: Layout}[] = [];
-
-    for (const schema of allSchemas) {
-        if (renderedPropertyNames.has(schema.name)) continue;
-        const propMeta = propertiesMap.get(schema.name);
-        if (propMeta && groupOrder.includes(propMeta.propertyGroup)) {
-            propertiesToRender.push({schema, layout: propMeta.layout});
-        }
-    }
-    
-    // Sort by group order, then by original schema order (implicit)
-    propertiesToRender.sort((a, b) => {
-        const groupA = propertiesMap.get(a.schema.name)?.propertyGroup;
-        const groupB = propertiesMap.get(b.schema.name)?.propertyGroup;
-        if (groupA && groupB) {
-            const indexA = groupOrder.indexOf(groupA);
-            const indexB = groupOrder.indexOf(groupB);
-            if (indexA !== indexB) return indexA - indexB;
-        }
-        return 0; 
-    });
-
-    // Create pairs of properties for half-width rendering
-    let pairs: TemplateResult[] = [];
-    let fullWidthItems: TemplateResult[] = [];
-    let halfWidthBuffer: {schema: HaFormSchema, layout: Layout} | null = null;
-
-    for (const item of propertiesToRender) {
-        const { schema, layout } = item;
-        if (renderedPropertyNames.has(schema.name)) continue; // Double check
-
-        renderedPropertyNames.add(schema.name);
-
-        console.log(`Property ${schema.name} - layout: ${layout}, Layout.FULL: ${Layout.FULL}, Layout.HALF: ${Layout.HALF}, isEqual: ${layout === Layout.HALF}`);
-
-        if (layout === Layout.FULL) {
-            if (halfWidthBuffer) { // Render pending half-width if any
-                // Create a pair with an empty right side
-                pairs.push(html`
-                    ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
-                    <div class="property-right"></div>
-                `);
-                halfWidthBuffer = null;
-            }
-            fullWidthItems.push(renderFullWidthPropertyForm(context, elementId, formData, schema));
-        } else if (layout === Layout.HALF || layout === Layout.HALF_LEFT || layout === Layout.HALF_RIGHT) {
-            if (!halfWidthBuffer) {
-                halfWidthBuffer = item;
-            } else {
-                // We have a pair - create a row with both properties
-                pairs.push(html`
-                    ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
-                    ${renderHalfWidthPropertyForm(context, elementId, formData, schema, 'property-right')}
-                `);
-                halfWidthBuffer = null;
-            }
-        }
-    }
-    
-    // Handle any remaining half-width property
-    if (halfWidthBuffer) {
-        pairs.push(html`
-            ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
-            <div class="property-right"></div>
-        `);
-    }
-    
-    // Combine all items
-    return html`
-        ${fullWidthItems}
-        ${pairs}
-    `;
-  };
-
-
-  const renderButtonProperties = () => {
-    if (!formData['button.enabled']) return html``;
-
-    const buttonProperties = allSchemas.filter(s => {
-        const propMeta = propertiesMap.get(s.name);
-        return propMeta?.propertyGroup === PropertyGroup.BUTTON && s.name !== 'button.enabled' && !renderedPropertyNames.has(s.name);
-    });
-
-    // Define sub-sections for buttons
-    const appearancePropsNames = ['button.text', 'button.cutout_text', 'button.text_color', 'button.font_family', 'button.font_size', 'button.font_weight', 'button.letter_spacing', 'button.text_transform', 'button.text_anchor', 'button.dominant_baseline', 'elbow_text_position'];
-    const stateStylePropsNames = ['button.hover_fill', 'button.active_fill', 'button.hover_transform', 'button.active_transform'];
-    const actionPropsNames = ['button.action_config.type', 'button.action_config.service', 'button.action_config.service_data', 'button.action_config.navigation_path', 'button.action_config.url_path', 'button.action_config.entity', 'button.action_config.confirmation'];
-
-    const renderSubGroup = (title: string, propNames: string[]) => {
-        // Create pairs of properties for half-width rendering
-        let pairs: TemplateResult[] = [];
-        let fullWidthItems: TemplateResult[] = [];
-        let halfWidthBuffer: HaFormSchema | null = null;
-        
-        const relevantProps = buttonProperties.filter(s => propNames.includes(s.name));
-
-        for (const schema of relevantProps) {
-            if (renderedPropertyNames.has(schema.name)) continue;
-            
-            // Conditional rendering for action_config
-            if (schema.name === 'button.action_config.service' || schema.name === 'button.action_config.service_data') {
-                if (formData['button.action_config.type'] !== 'call-service') continue;
-            } else if (schema.name === 'button.action_config.navigation_path') {
-                if (formData['button.action_config.type'] !== 'navigate') continue;
-            } else if (schema.name === 'button.action_config.url_path') {
-                if (formData['button.action_config.type'] !== 'url') continue;
-            } else if (schema.name === 'button.action_config.entity') {
-                if (formData['button.action_config.type'] !== 'toggle' && formData['button.action_config.type'] !== 'more-info') continue;
-            } else if (schema.name === 'button.action_config.confirmation') {
-                if (!formData['button.action_config.type'] || formData['button.action_config.type'] === 'none') continue;
-            }
-
-            renderedPropertyNames.add(schema.name);
-            const propMeta = propertiesMap.get(schema.name);
-
-            if (propMeta?.layout === Layout.FULL) {
-                if (halfWidthBuffer) {
-                    // Create a pair with an empty right side
-                    pairs.push(html`
-                        ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer, 'property-left')}
-                        <div class="property-right"></div>
-                    `);
-                    halfWidthBuffer = null;
-                }
-                fullWidthItems.push(renderFullWidthPropertyForm(context, elementId, formData, schema));
-            } else if (propMeta?.layout === Layout.HALF || propMeta?.layout === Layout.HALF_LEFT || propMeta?.layout === Layout.HALF_RIGHT) {
-                if (!halfWidthBuffer) {
-                    halfWidthBuffer = schema;
-                } else {
-                    // We have a pair - create a row with both properties
-                    pairs.push(html`
-                        ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer, 'property-left')}
-                        ${renderHalfWidthPropertyForm(context, elementId, formData, schema, 'property-right')}
-                    `);
-                    halfWidthBuffer = null;
-                }
-            }
-        }
-        
-        // Handle any remaining half-width property
-        if (halfWidthBuffer) {
-            pairs.push(html`
-                ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer, 'property-left')}
-                <div class="property-right"></div>
-            `);
-        }
-        
-        if (fullWidthItems.length > 0 || pairs.length > 0) {
-            return html`
-                <div class="property-full-width section-header" style="font-weight: bold; margin-top: 16px; border-bottom: 1px solid var(--divider-color); padding-bottom: 4px;">${title}</div>
-                ${fullWidthItems}
-                ${pairs}
-            `;
-        }
-        return html``;
-    };
-
-    const appearanceSection = renderSubGroup('Button Appearance', appearancePropsNames);
-    const styleSection = renderSubGroup('Button State Styles', stateStylePropsNames);
-    const actionSection = renderSubGroup('Button Action', actionPropsNames);
-    
-    return html`${appearanceSection}${styleSection}${actionSection}`;
-  };
-
-  const renderOtherProperties = () => {
-    const otherPropsSchemas = allSchemas.filter(s => !renderedPropertyNames.has(s.name));
-    if (otherPropsSchemas.length > 0) {
-        return html`
-            <div class="property-full-width" style="margin-top:16px;">
-                <div style="font-weight: bold; border-bottom: 1px solid var(--divider-color); padding-bottom: 4px; margin-bottom: 8px;">Other Properties</div>
-                <ha-form
-                    .hass=${context.hass}
-                    .data=${formData}
-                    .schema=${otherPropsSchemas}
-                    .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-                    @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-                ></ha-form>
-            </div>
-        `;
-    }
-    return html``;
-  };
-
+  // Find the type property schema
+  const typeSchema = allSchemas.find(
+    s => propertiesMap.get(s.name)?.propertyGroup === PropertyGroup.TYPE
+  );
 
   return html`
     <div class="element-editor ${isDragOver ? 'drag-over' : ''}"
@@ -3715,85 +3732,49 @@ export function renderElement(
 
       ${!isCollapsed ? html`
           <div class="element-body">
-               <div class="property-container">
-                  <!-- Type Property (Always show first) -->
-                  ${typeSchema ? renderFullWidthPropertyForm(context, elementId, formData, typeSchema) : ''}
-                  
-                  <!-- Standard Property Groups -->
-                  ${renderStandardPropertyGroups()}
-                  
-                  <!-- Anchor To Row -->
-                  ${anchorToSchema ? renderFullWidthPropertyForm(context, elementId, formData, anchorToSchema) : ''}
-                  
-                  <!-- Container Anchor Point Selector (show when no specific anchor is selected) -->
-                  ${!showAnchorPoints && containerAnchorPointSchema ? html`
-                    <div class="property-full-width">
-                      ${renderCustomSelector(containerAnchorPointSchema, formData[containerAnchorPointSchema.name],
-                        (value: string) => {
-                          const detail = { value: { ...formData, [containerAnchorPointSchema.name]: value } };
-                          const customEvent = new CustomEvent('value-changed', { detail });
-                          context.handleFormValueChanged(customEvent, elementId);
-                        }
-                      )}
-                    </div>
-                  ` : ''}
-                  
-                  <!-- Anchor Point Selectors (always show when anchor is selected) -->
-                  ${showAnchorPoints && anchorPointSchema && targetAnchorPointSchema ? html`
-                    <div class="property-left">
-                      ${renderCustomSelector(anchorPointSchema, formData[anchorPointSchema.name],
-                        (value: string) => {
-                          const detail = { value: { ...formData, [anchorPointSchema.name]: value } };
-                          const customEvent = new CustomEvent('value-changed', { detail });
-                          context.handleFormValueChanged(customEvent, elementId);
-                        }
-                      )}
-                    </div>
-                    <div class="property-right">
-                      ${renderCustomSelector(targetAnchorPointSchema, formData[targetAnchorPointSchema.name],
-                        (value: string) => {
-                          const detail = { value: { ...formData, [targetAnchorPointSchema.name]: value } };
-                          const customEvent = new CustomEvent('value-changed', { detail });
-                          context.handleFormValueChanged(customEvent, elementId);
-                        }
-                      )}
-                    </div>
-                  ` : ''}
-                  
-                  <!-- Primary Stretch To Row -->
-                  ${primaryStretchSchema ? renderStretchSection(
-                    context,
-                    elementId,
-                    formData,
-                    primaryStretchSchema,
-                    stretchPadding1Schema,
-                    targetStretchAnchorPoint1Schema, // This is StretchDirection schema
-                    showStretchTarget
-                  ) : ''}
+               <div class="property-container-groups">
+                    ${/* Render type property directly without header and always expanded */
+                    typeSchema ? html`
+                      <div class="property-group type-property-group">
+                        <div class="property-group-content">
+                          ${renderFullWidthPropertyForm(context, elementId, formData, typeSchema)}
+                        </div>
+                      </div>
+                    ` : ''}
+                    
+                    ${/* Render all other property groups normally */
+                    PropertyGroupOrder.filter(groupKey => groupKey !== PropertyGroup.TYPE).map(groupKey => {
+                        // Check if this element has any properties belonging to this group
+                        const propertiesForThisGroup = allSchemas.filter(
+                            s => propertiesMap.get(s.name)?.propertyGroup === groupKey
+                        );
 
-                  <!-- Second Stretch Target Dropdown (only shown if a primary target is selected) -->
-                  ${showStretchTarget && secondaryStretchSchema ? renderStretchSection(
-                    context,
-                    elementId,
-                    formData,
-                    secondaryStretchSchema,
-                    stretchPadding2Schema,
-                    targetStretchAnchorPoint2Schema, // This is StretchDirection schema
-                    showSecondStretchTarget
-                  ) : ''}
-                  
-                  <!-- === BUTTON CONFIGURATION SECTION === -->
-                  ${buttonEnabledSchema ? renderFullWidthPropertyForm(context, elementId, formData, buttonEnabledSchema) : ''}
-                  ${renderButtonProperties()}
-                  <!-- === END BUTTON CONFIGURATION SECTION === -->
+                        if (propertiesForThisGroup.length === 0) {
+                            return html``; // Don't render the group if there are no properties in it
+                        }
 
-                  <!-- Other Unrendered Properties -->
-                  ${renderOtherProperties()}
-                  
+                        // Determine collapse state for this specific group
+                        const isGroupCurrentlyCollapsed = collapsedPropertyGroupsForElement[groupKey] ?? true; // Default to collapsed
+
+                        return html`
+                            <div class="property-group">
+                                ${renderPropertyGroupHeader(
+                                    groupKey,
+                                    isGroupCurrentlyCollapsed,
+                                    () => context.togglePropertyGroupCollapse(elementId, groupKey)
+                                )}
+                                ${!isGroupCurrentlyCollapsed ? html`
+                                    <div class="property-group-content">
+                                        ${renderGroupContent(groupKey, propertiesForThisGroup, context, elementId, formData, propertiesMap)}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    })}
                </div>
                ${allSchemas.length === 0 ? html`<p>No configurable properties for this element type.</p>` : ''} 
           </div>
-          ` : ''}
+      ` : ''}
     </div>
   `;
 }
@@ -3803,19 +3784,21 @@ function renderCustomSelector(
   value: string, 
   onChange: (value: string) => void
 ): TemplateResult {
-  if (schema.selector.lcars_grid) {
+  if (schema.selector && (schema.selector as any).lcars_grid) {
+    // Cast to access lcars_grid properties
+    const lcarsGridSelector = schema.selector as any;
     
     return html`
       <lcars-grid-selector
         .label=${schema.label || schema.name}
         .value=${value || ''}
-        ?labelCenter=${schema.selector.lcars_grid.labelCenter}
-        ?disableCorners=${schema.selector.lcars_grid.disableCorners}
-        ?disableCenter=${schema.selector.lcars_grid.disableCenter}
-        ?onlyCardinalDirections=${schema.selector.lcars_grid.onlyCardinalDirections}
-        ?stretchMode=${schema.selector.lcars_grid.stretchMode}
-        ?clearable=${schema.selector.lcars_grid.clearable}
-        ?required=${schema.selector.lcars_grid.required}
+        ?labelCenter=${lcarsGridSelector.lcars_grid.labelCenter}
+        ?disableCorners=${lcarsGridSelector.lcars_grid.disableCorners}
+        ?disableCenter=${lcarsGridSelector.lcars_grid.disableCenter}
+        ?onlyCardinalDirections=${lcarsGridSelector.lcars_grid.onlyCardinalDirections}
+        ?stretchMode=${lcarsGridSelector.lcars_grid.stretchMode}
+        ?clearable=${lcarsGridSelector.lcars_grid.clearable}
+        ?required=${lcarsGridSelector.lcars_grid.required}
         @value-changed=${(e: CustomEvent) => onChange(e.detail.value)}
       ></lcars-grid-selector>
     `;
@@ -4144,12 +4127,21 @@ function renderHalfWidthPropertyForm(
   elementId: string,
   formData: any,
   schema: HaFormSchema | undefined,
-  sideClass: "property-left" | "property-right"
+  sideClass: "property-left" | "property-right" | "",
+  isCustom: boolean = false // Added parameter to indicate if it's a custom selector
 ): TemplateResult {
   if (!schema) return html``;
   
-  return html`
-    <div class="${sideClass}">
+  // Check if the schema has a custom selector (like lcars_grid)
+  const content = isCustom && schema.selector && (schema.selector as any).lcars_grid ?
+    // If it's a custom selector, render it using renderCustomSelector
+    renderCustomSelector(schema, formData[schema.name], (value: string) => {
+      const detail = { value: { ...formData, [schema.name]: value } };
+      const customEvent = new CustomEvent('value-changed', { detail, bubbles: true, composed: true });
+      context.handleFormValueChanged(customEvent, elementId);
+    })
+    : // Otherwise, render a standard ha-form for this schema
+    html`
       <ha-form
         .hass=${context.hass}
         .data=${formData}
@@ -4157,68 +4149,10 @@ function renderHalfWidthPropertyForm(
         .computeLabel=${(s: HaFormSchema) => s.label || s.name}
         @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
       ></ha-form>
-    </div>
-  `;
-}
-
-function renderStretchSection(
-  context: EditorContext,
-  elementId: string,
-  formData: any,
-  stretchToSchema: HaFormSchema | undefined,
-  stretchPaddingSchema: HaFormSchema | undefined,
-  targetAnchorPointSchema: HaFormSchema | undefined,
-  showTarget: boolean
-): TemplateResult {
-  if (!stretchToSchema) return html``;
-
-  const targetKey = targetAnchorPointSchema?.name;
-  const targetValue = targetKey ? formData[targetKey] : '';
-  const paddingValue = stretchPaddingSchema ? formData[stretchPaddingSchema.name] : '';
-  const stretchToValue = formData[stretchToSchema.name];
-
-  if (!showTarget) {
-    return renderFullWidthPropertyForm(context, elementId, formData, stretchToSchema);
-  } else {
-    return html`
-      <div class="property-left stretch-column-left">
-        <!-- Stretch To Dropdown -->
-        <ha-form
-          .hass=${context.hass}
-          .data=${formData}
-          .schema=${[stretchToSchema]} /* Pass schema as array */
-          .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-          @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-        ></ha-form>
-
-        <!-- Stretch Padding Input -->
-        ${stretchPaddingSchema ? html`
-          <ha-form
-            .hass=${context.hass}
-            .data=${formData}
-            .schema=${[stretchPaddingSchema]} /* Pass schema as array */
-            .computeLabel=${(s: HaFormSchema) => s.label || s.name}
-            @value-changed=${(ev: CustomEvent) => context.handleFormValueChanged(ev, elementId)}
-          ></ha-form>
-        ` : ''}
-      </div>
-
-      <div class="property-right stretch-column-right">
-        <!-- Direction Selector Grid -->
-        ${targetAnchorPointSchema ? html`
-          ${renderCustomSelector(targetAnchorPointSchema, targetValue,
-            (value: string) => {
-              if (targetKey) {
-                const detail = { value: { ...formData, [targetKey]: value } };
-                const customEvent = new CustomEvent('value-changed', { detail });
-                context.handleFormValueChanged(customEvent, elementId);
-              }
-            }
-          )}
-        ` : ''}
-      </div>
     `;
-  }
+
+  // Wrap the content in the appropriate side class div if specified
+  return sideClass ? html`<div class="${sideClass}">${content}</div>` : content;
 }
 ```
 
@@ -7071,65 +7005,128 @@ export const editorStyles = css`
   }
 
   /* Property layout styles */
-  .property-container {
+  /* Remove or comment out old .property-container if it was a grid */
+  /* .property-container {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); /* Use minmax to prevent overflow */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 12px 16px;
     margin-bottom: 16px;
-    /* overflow: hidden; /* Consider removing temporarily to debug overflow */
+  } */
+
+  .property-container-groups {
+    /* This is the new top-level container within .element-body */
+    /* It doesn't need to be a grid itself, groups will flow vertically */
+  }
+
+  .property-group {
+    margin-bottom: 8px;
+    border: 1px solid var(--divider-color);
+    border-radius: var(--ha-card-border-radius, 4px);
+    background-color: var(--ha-card-background, var(--card-background-color, white)); /* Match card bg or similar */
+  }
+
+  /* Special styling for the type property group */
+  .type-property-group {
+    margin-bottom: 16px;
+    border: none;
+    background-color: transparent;
+  }
+
+  .property-group-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    background-color: var(--secondary-background-color);
+    border-bottom: 1px solid var(--divider-color);
+    font-weight: bold;
+    user-select: none;
+  }
+  .property-group-header.static { /* For the error case */
+      cursor: default;
+  }
+
+  .property-group-header .collapse-icon {
+    margin-right: 8px;
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .property-group-name {
+      /* Style for the name text if needed */
+  }
+
+  .property-group-content {
+    padding: 12px;
+  }
+
+  .property-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px 16px;
+    margin-bottom: 12px;
+  }
+  .property-row:last-child {
+    margin-bottom: 0;
   }
 
   .property-full-width {
-    grid-column: 1 / -1;
+    grid-column: 1 / -1; /* Ensure it spans if inside a .property-row accidentally, or use directly */
+    margin-bottom: 12px;
+  }
+  .property-full-width:last-child {
+    margin-bottom: 0;
   }
 
   .property-left, .property-right {
     display: flex;
     flex-direction: column;
-    gap: 12px; /* Add spacing between items in the same column */
-    min-width: 0; /* Prevent content from expanding the grid cell */
-  }
-
-  .property-left {
-    grid-column: 1;
-  }
-
-  .property-right {
-    grid-column: 2;
+    gap: 12px;
+    min-width: 0;
   }
 
   /* Ensure ha-form and its contents respect the grid structure */
-  .property-container ha-form {
-    display: block; /* Ensure ha-form behaves as a block */
-    width: 100%; /* Make ha-form fill its grid cell */
+  .property-row ha-form,
+  .property-full-width ha-form {
+    display: block;
+    width: 100%;
     box-sizing: border-box;
   }
 
   /* Target common elements within ha-form to ensure they don't overflow */
-  .property-container ha-form ha-textfield,
-  .property-container ha-form ha-select,
-  .property-container ha-form ha-color-picker { /* Add other ha-form elements as needed */
-    display: block; /* Ensure they take block layout */
-    width: 100%; /* Make them fill the width of ha-form */
-    box-sizing: border-box; /* Include padding/border in width */
+  .property-row ha-form ha-textfield,
+  .property-row ha-form ha-select,
+  .property-row ha-form ha-color-picker,
+  .property-full-width ha-form ha-textfield,
+  .property-full-width ha-form ha-select,
+  .property-full-width ha-form ha-color-picker {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   /* Ensure custom grid selector behaves correctly */
-  .property-container lcars-grid-selector {
+  .property-row lcars-grid-selector,
+  .property-full-width lcars-grid-selector {
     display: block;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
   }
 
-  ha-form {
-      /* Add styles if needed */
+  /* For Stretch layout specifically */
+  .stretch-layout {
+    /* uses property-row's grid */
   }
-
-  .editing-actions {
-      display: flex;
-      margin-left: auto;
-      gap: 4px;
+  .stretch-column-left, .stretch-column-right {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Space between items within the stretch column */
+  }
+  .stretch-column-left ha-form, .stretch-column-right ha-form { /* Ensure ha-form itself takes width */
+    width: 100%;
+  }
+  .stretch-column-right lcars-grid-selector { /* Ensure grid selector behaves in its column */
+     margin-top: 0; /* Adjust if needed, was 8px */
   }
 
   /* Common styles for div-based icon buttons */

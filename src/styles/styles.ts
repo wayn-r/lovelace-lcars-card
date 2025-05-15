@@ -283,65 +283,124 @@ export const editorStyles = css`
   }
 
   /* Property layout styles */
-  .property-container {
+  /* Remove or comment out old .property-container if it was a grid */
+  /* .property-container {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); /* Use minmax to prevent overflow */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 12px 16px;
     margin-bottom: 16px;
-    /* overflow: hidden; /* Consider removing temporarily to debug overflow */
+  } */
+
+  .property-container-groups {
+    /* This is the new top-level container within .element-body */
+    /* It doesn't need to be a grid itself, groups will flow vertically */
+  }
+
+  .property-group {
+    margin-bottom: 8px;
+  }
+
+  /* Special styling for the type property group */
+  .type-property-group {
+    margin-bottom: 16px;
+    border: none;
+    background-color: transparent;
+  }
+
+  .property-group-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--divider-color);
+    font-weight: bold;
+    user-select: none;
+  }
+  .property-group-header.static { /* For the error case */
+      cursor: default;
+  }
+
+  .property-group-header .collapse-icon {
+    margin-right: 8px;
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .property-group-name {
+      /* Style for the name text if needed */
+  }
+
+  .property-group-content {
+    padding: 12px;
+  }
+
+  .property-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px 16px;
+    margin-bottom: 12px;
+  }
+  .property-row:last-child {
+    margin-bottom: 0;
   }
 
   .property-full-width {
-    grid-column: 1 / -1;
+    grid-column: 1 / -1; /* Ensure it spans if inside a .property-row accidentally, or use directly */
+    margin-bottom: 12px;
+  }
+  .property-full-width:last-child {
+    margin-bottom: 0;
   }
 
   .property-left, .property-right {
     display: flex;
     flex-direction: column;
-    gap: 12px; /* Add spacing between items in the same column */
-    min-width: 0; /* Prevent content from expanding the grid cell */
-  }
-
-  .property-left {
-    grid-column: 1;
-  }
-
-  .property-right {
-    grid-column: 2;
+    gap: 12px;
+    min-width: 0;
   }
 
   /* Ensure ha-form and its contents respect the grid structure */
-  .property-container ha-form {
-    display: block; /* Ensure ha-form behaves as a block */
-    width: 100%; /* Make ha-form fill its grid cell */
+  .property-row ha-form,
+  .property-full-width ha-form {
+    display: block;
+    width: 100%;
     box-sizing: border-box;
   }
 
   /* Target common elements within ha-form to ensure they don't overflow */
-  .property-container ha-form ha-textfield,
-  .property-container ha-form ha-select,
-  .property-container ha-form ha-color-picker { /* Add other ha-form elements as needed */
-    display: block; /* Ensure they take block layout */
-    width: 100%; /* Make them fill the width of ha-form */
-    box-sizing: border-box; /* Include padding/border in width */
+  .property-row ha-form ha-textfield,
+  .property-row ha-form ha-select,
+  .property-row ha-form ha-color-picker,
+  .property-full-width ha-form ha-textfield,
+  .property-full-width ha-form ha-select,
+  .property-full-width ha-form ha-color-picker {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   /* Ensure custom grid selector behaves correctly */
-  .property-container lcars-grid-selector {
+  .property-row lcars-grid-selector,
+  .property-full-width lcars-grid-selector {
     display: block;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
   }
 
-  ha-form {
-      /* Add styles if needed */
+  /* For Stretch layout specifically */
+  .stretch-layout {
+    /* uses property-row's grid */
   }
-
-  .editing-actions {
-      display: flex;
-      margin-left: auto;
-      gap: 4px;
+  .stretch-column-left, .stretch-column-right {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Space between items within the stretch column */
+  }
+  .stretch-column-left ha-form, .stretch-column-right ha-form { /* Ensure ha-form itself takes width */
+    width: 100%;
+  }
+  .stretch-column-right lcars-grid-selector { /* Ensure grid selector behaves in its column */
+     margin-top: 0; /* Adjust if needed, was 8px */
   }
 
   /* Common styles for div-based icon buttons */

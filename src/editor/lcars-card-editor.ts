@@ -20,6 +20,7 @@ import './elements/top_header.js';
 
 import { LcarsGroup } from './group.js';
 import { Rectangle } from './elements/rectangle.js';
+import { PropertyGroup } from './properties/properties.js';
 
 function setDeep(obj: any, path: string | string[], value: any): void {
     const pathArray = Array.isArray(path) ? path : path.split('.');
@@ -79,6 +80,8 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   @state() private _addElementInput: string = '';
   @state() private _addElementWarning: string = '';
 
+  @state() private _collapsedPropertyGroups: { [elementId: string]: { [groupKey: string]: boolean } } = {};
+
   private _draggedElementId: string | null = null;
   private _dragOverElementId: string | null = null;
 
@@ -97,6 +100,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         this._groupInstances.clear();
         this._collapsedGroups = {};
         this._collapsedElements = {};
+        this._collapsedPropertyGroups = {};
         return;
     }
 
@@ -118,6 +122,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     const newGroupInstances = new Map<string, LcarsGroup>();
     const newCollapsedGroups: { [groupId: string]: boolean } = {};
     const newCollapsedElements: { [elementId: string]: boolean } = {};
+    const newCollapsedPropertyGroups: { [elementId: string]: { [groupKey: string]: boolean } } = {};
 
     newGroups.forEach(gid => {
         let instance = this._groupInstances.get(gid);
@@ -127,13 +132,19 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
              instance.id = gid;
         }
         newGroupInstances.set(gid, instance);
-        newCollapsedGroups[gid] = this._collapsedGroups[gid] ?? instance.isCollapsed; 
+        newCollapsedGroups[gid] = this._collapsedGroups[gid] ?? instance.isCollapsed;
         instance.isCollapsed = newCollapsedGroups[gid];
     });
 
     currentElements.forEach(el => {
         if (el?.id) {
             newCollapsedElements[el.id] = this._collapsedElements[el.id] ?? true;
+
+            const existingPropGroupState = this._collapsedPropertyGroups[el.id];
+            newCollapsedPropertyGroups[el.id] = {};
+            Object.values(PropertyGroup).forEach(pgKey => {
+                newCollapsedPropertyGroups[el.id][pgKey] = existingPropGroupState?.[pgKey] ?? true;
+            });
         }
     });
 
@@ -141,6 +152,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     this._groupInstances = newGroupInstances;
     this._collapsedGroups = newCollapsedGroups;
     this._collapsedElements = newCollapsedElements;
+    this._collapsedPropertyGroups = newCollapsedPropertyGroups;
   }
 
   private _updateConfig(newElements: any[]): void {
@@ -382,7 +394,14 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           const currentElements = this._config?.elements || [];
           const newElements = [...currentElements, result.newElementConfig];
           
-          this._collapsedElements = { ...(this._collapsedElements || {}), [result.newElementConfig.id]: false }; 
+          const newElementId = result.newElementConfig.id;
+          this._collapsedElements = { ...(this._collapsedElements || {}), [newElementId]: false }; 
+ this._collapsedPropertyGroups = {
+   ...this._collapsedPropertyGroups,
+   [newElementId]: Object.fromEntries(
+     Object.values(PropertyGroup).map((pgKey) => [pgKey, true])
+   ),
+ };
           this._addElementDraftGroup = null;
           this._addElementInput = '';
           this._addElementWarning = '';
@@ -409,6 +428,9 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
 
       const { [elementId]: _r, ...restCol } = this._collapsedElements;
       this._collapsedElements = restCol;
+
+      const { [elementId]: _rProp, ...restPropColDel } = this._collapsedPropertyGroups;
+      this._collapsedPropertyGroups = restPropColDel;
 
       if (this._editingElementId === elementId) {
           this._cancelEditElementId();
@@ -509,6 +531,14 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       const { [oldId]: oldCollapseVal, ...restCol } = this._collapsedElements;
       this._collapsedElements = { ...restCol, [newId]: oldCollapseVal ?? false }; 
       
+      const oldPropGroupState = this._collapsedPropertyGroups[oldId] || {};
+      const { [oldId]: _rOldProp, ...restPropGroupStates } = this._collapsedPropertyGroups;
+      this._collapsedPropertyGroups = { ...restPropGroupStates };
+      this._collapsedPropertyGroups[newId] = {};
+      Object.values(PropertyGroup).forEach(pgKey => {
+          this._collapsedPropertyGroups[newId][pgKey] = oldPropGroupState[pgKey] ?? true;
+      });
+
       this._editingElementId = null;
       this._editingElementIdInput = '';
       this._elementIdWarning = '';
@@ -672,6 +702,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         onDrop: this._onDrop.bind(this),
         onDragEnd: this._onDragEnd.bind(this),
         toggleElementCollapse: this._toggleElementCollapse.bind(this),
+        togglePropertyGroupCollapse: this._togglePropertyGroupCollapse.bind(this),
         startEditElementId: this._startEditElementId.bind(this),
         handleDeleteElement: this._handleDeleteElement.bind(this),
         handleConfirmEditElementId: this._handleConfirmEditElementId.bind(this),
@@ -683,6 +714,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         editingElementIdInput: this._editingElementIdInput,
         elementIdWarning: this._elementIdWarning,
         collapsedElements: this._collapsedElements,
+        collapsedPropertyGroups: this._collapsedPropertyGroups,
         draggedElementId: this._draggedElementId,
         dragOverElementId: this._dragOverElementId
     };
@@ -886,6 +918,26 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
     tempElement.validateIdInput();
     this._addElementWarning = tempElement.idEditErrorMessage;
     
+    this.requestUpdate();
+  }
+
+  private _togglePropertyGroupCollapse(elementId: string, groupKey: string): void {
+    if (!this._collapsedPropertyGroups[elementId]) {
+        this._collapsedPropertyGroups[elementId] = {};
+    }
+    Object.values(PropertyGroup).forEach(pgKey => {
+        if (this._collapsedPropertyGroups[elementId][pgKey] === undefined) {
+            this._collapsedPropertyGroups[elementId][pgKey] = true;
+        }
+    });
+
+    this._collapsedPropertyGroups = {
+        ...this._collapsedPropertyGroups,
+        [elementId]: {
+            ...this._collapsedPropertyGroups[elementId],
+            [groupKey]: !this._collapsedPropertyGroups[elementId][groupKey],
+        },
+    };
     this.requestUpdate();
   }
 }

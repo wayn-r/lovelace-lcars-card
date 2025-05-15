@@ -633,7 +633,7 @@ export class Direction implements LcarsPropertyBase {
 
 export class ButtonEnabled implements LcarsPropertyBase {
     name = 'button.enabled';
-    label = 'Enable Button Behavior';
+    label = 'Enable Button';
     configPath = 'button.enabled';
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.FULL;
@@ -664,7 +664,7 @@ export class ButtonText implements LcarsPropertyBase {
 }
 export class ButtonCutoutText implements LcarsPropertyBase {
     name = 'button.cutout_text';
-    label = 'Cutout Text (Mask Effect)';
+    label = 'Cutout Text';
     configPath = 'button.cutout_text';
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
