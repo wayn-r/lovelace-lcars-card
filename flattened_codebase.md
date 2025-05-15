@@ -1548,7 +1548,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   @state() private _addElementInput: string = '';
   @state() private _addElementWarning: string = '';
 
-  @state() private _collapsedPropertyGroups: { [elementId: string]: { [groupKey: string]: boolean } } = {};
+  @state() private _collapsedPropertyGroups: { [elementId: string]: Record<PropertyGroup, boolean> } = {};
 
   private _draggedElementId: string | null = null;
   private _dragOverElementId: string | null = null;
@@ -1590,7 +1590,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     const newGroupInstances = new Map<string, LcarsGroup>();
     const newCollapsedGroups: { [groupId: string]: boolean } = {};
     const newCollapsedElements: { [elementId: string]: boolean } = {};
-    const newCollapsedPropertyGroups: { [elementId: string]: { [groupKey: string]: boolean } } = {};
+    const newCollapsedPropertyGroups: { [elementId: string]: Record<PropertyGroup, boolean> } = {};
 
     newGroups.forEach(gid => {
         let instance = this._groupInstances.get(gid);
@@ -1608,11 +1608,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         if (el?.id) {
             newCollapsedElements[el.id] = this._collapsedElements[el.id] ?? true;
 
-            const existingPropGroupState = this._collapsedPropertyGroups[el.id];
-            newCollapsedPropertyGroups[el.id] = {};
-            Object.values(PropertyGroup).forEach(pgKey => {
-                newCollapsedPropertyGroups[el.id][pgKey] = existingPropGroupState?.[pgKey] ?? true;
-            });
+            newCollapsedPropertyGroups[el.id] = this._initCollapsedPG(el.id, this._collapsedPropertyGroups[el.id]);
         }
     });
 
@@ -2002,10 +1998,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       const oldPropGroupState = this._collapsedPropertyGroups[oldId] || {};
       const { [oldId]: _rOldProp, ...restPropGroupStates } = this._collapsedPropertyGroups;
       this._collapsedPropertyGroups = { ...restPropGroupStates };
-      this._collapsedPropertyGroups[newId] = {};
-      Object.values(PropertyGroup).forEach(pgKey => {
-          this._collapsedPropertyGroups[newId][pgKey] = oldPropGroupState[pgKey] ?? true;
-      });
+      this._collapsedPropertyGroups[newId] = this._initCollapsedPG(newId, oldPropGroupState);
 
       this._editingElementId = null;
       this._editingElementIdInput = '';
@@ -2294,8 +2287,7 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
     // but it *was* in the original config, this preserves it.
     // Given that stretchTo2 is now part of getFormData and getSchema, it should be in formData.
     // Let's assume processDataUpdate and the loop above handle it correctly.
-    // This specific preservation might no longer be needed if stretchTo2 is always in `cleanedData` when appropriate.
-    // For safety, we can keep it, but if stretchTo2 is *cleared* via the form, this would incorrectly add it back.
+    // This specific preservation might no longer be needed if stretchTo2 is *cleared* via the form, this would incorrectly add it back.
     //
     // Revised approach: rely on `processDataUpdate` and `setDeep`.
     // If `currentElementConfig.layout?.stretch?.stretchTo2` existed and `cleanedData` doesn't clear it,
@@ -2389,13 +2381,32 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
     this.requestUpdate();
   }
 
-  private _togglePropertyGroupCollapse(elementId: string, groupKey: string): void {
+  /**
+   * Initializes the collapsed state for property groups of a given element.
+   * If previous state is provided, uses it, otherwise defaults to all true.
+   * @param elementId The ID of the element.
+   * @param prevCollapsedState Optional previous collapsed state for this element.
+   * @returns The initialized collapsed state map for property groups.
+   */
+  private _initCollapsedPG(elementId: string, prevCollapsedState?: Record<PropertyGroup, boolean>): Record<PropertyGroup, boolean> {
+      // Initialize with a temporary type that allows string keys, then populate
+      const newState: { [key: string]: boolean } = {};
+      Object.values(PropertyGroup).forEach(pgKey => {
+          newState[pgKey] = prevCollapsedState?.[pgKey] ?? true;
+      });
+      // The object now conforms to Record<PropertyGroup, boolean>, implicitly returned as such
+      return newState as Record<PropertyGroup, boolean>;
+  }
+
+  private _togglePropertyGroupCollapse(elementId: string, groupKey: PropertyGroup): void {
     if (!this._collapsedPropertyGroups[elementId]) {
-        this._collapsedPropertyGroups[elementId] = {};
+        // Use helper to initialize if element state doesn't exist
+        this._collapsedPropertyGroups[elementId] = this._initCollapsedPG(elementId);
     }
+    // Ensure all keys are present, even if not explicitly initialized before
     Object.values(PropertyGroup).forEach(pgKey => {
         if (this._collapsedPropertyGroups[elementId][pgKey] === undefined) {
-            this._collapsedPropertyGroups[elementId][pgKey] = true;
+             this._collapsedPropertyGroups[elementId][pgKey] = true;
         }
     });
 
@@ -3055,7 +3066,7 @@ export class Direction implements LcarsPropertyBase {
 
 export class ButtonEnabled implements LcarsPropertyBase {
     name = 'button.enabled';
-    label = 'Enable Button Behavior';
+    label = 'Enable Button';
     configPath = 'button.enabled';
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.FULL;
@@ -3086,7 +3097,7 @@ export class ButtonText implements LcarsPropertyBase {
 }
 export class ButtonCutoutText implements LcarsPropertyBase {
     name = 'button.cutout_text';
-    label = 'Cutout Text (Mask Effect)';
+    label = 'Cutout Text';
     configPath = 'button.cutout_text';
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
@@ -3340,7 +3351,6 @@ import { LcarsGroup } from './group.js';
 import { HaFormSchema, PropertySchemaContext, Type, PropertyGroup, Layout, LcarsPropertyBase } from './properties/properties.js';
 import { repeat } from 'lit/directives/repeat.js';
 
-// Types
 interface EditorContext {
   hass: any;
   cardConfig: any;
@@ -3357,11 +3367,9 @@ interface EditorContext {
   cancelEditElementId: () => void;
   updateElementIdInput: (value: string) => void;
   
-  // Add new properties for property group collapsing
-  togglePropertyGroupCollapse: (elementId: string, groupKey: string) => void;
-  collapsedPropertyGroups: { [elementId: string]: { [groupKey: string]: boolean } };
+  togglePropertyGroupCollapse: (elementId: string, groupKey: PropertyGroup) => void;
+  collapsedPropertyGroups: { [elementId: string]: Record<PropertyGroup, boolean> };
   
-  // State variables
   editingElementId: string | null;
   editingElementIdInput: string;
   elementIdWarning: string;
@@ -3387,7 +3395,6 @@ interface GroupEditorContext {
   cancelNewGroup: () => void;
   addGroup: () => void;
   
-  // State variables
   collapsedGroups: { [groupId: string]: boolean };
   editingGroup: string | null;
   editingGroupInput: string;
@@ -3400,7 +3407,6 @@ interface GroupEditorContext {
   newGroupInput: string;
 }
 
-// Define the desired order of property groups
 const PropertyGroupOrder: PropertyGroup[] = [
   PropertyGroup.TYPE,
   PropertyGroup.POSITIONING,
@@ -3412,7 +3418,6 @@ const PropertyGroupOrder: PropertyGroup[] = [
   PropertyGroup.BUTTON,
 ];
 
-// Helper function to get a human-readable name for a property group
 function getPropertyGroupName(groupKey: PropertyGroup): string {
   switch (groupKey) {
     case PropertyGroup.TYPE: return "Element Type";
@@ -3424,12 +3429,11 @@ function getPropertyGroupName(groupKey: PropertyGroup): string {
     case PropertyGroup.STRETCH: return "Stretching";
     case PropertyGroup.BUTTON: return "Button Configuration";
     default:
-      // Handle the case where groupKey is not one of the expected enum values
+      // if groupKey is not one of the expected enum values
       return String(groupKey).charAt(0).toUpperCase() + String(groupKey).slice(1);
   }
 }
 
-// Helper function to render a property group header with collapse icon
 function renderPropertyGroupHeader(
   groupKey: PropertyGroup,
   isCollapsed: boolean,
@@ -3443,21 +3447,18 @@ function renderPropertyGroupHeader(
       `;
   }
 
-// Helper function to render a list of properties, arranging them into half-width rows or full-width items
 function renderPropertiesInRows(
   properties: HaFormSchema[],
   context: EditorContext,
   elementId: string,
   formData: any,
   propertiesMap: Map<string, LcarsPropertyBase>,
-  isButtonContext: boolean = false // For conditional rendering within buttons
+  isButtonContext: boolean = false
 ): TemplateResult {
-  let pairs: TemplateResult[] = [];
-  let fullWidthItems: TemplateResult[] = [];
+  let renderedItems: TemplateResult[] = [];
   let halfWidthBuffer: { schema: HaFormSchema, layout: Layout } | null = null;
 
   for (const schema of properties) {
-    // Conditional rendering for button action_config properties
     if (isButtonContext) {
       if (schema.name === 'button.action_config.service' || schema.name === 'button.action_config.service_data') {
         if (formData['button.action_config.type'] !== 'call-service') continue;
@@ -3472,52 +3473,49 @@ function renderPropertiesInRows(
       }
     }
 
-        const propMeta = propertiesMap.get(schema.name);
-    const layout = propMeta?.layout || Layout.FULL; // Default to full if not specified
+    const propMeta = propertiesMap.get(schema.name);
+    const layout = propMeta?.layout || Layout.FULL;
 
-        if (layout === Layout.FULL) {
+    if (layout === Layout.FULL) {
       if (halfWidthBuffer) {
         // If a half-width property is pending, render it with an empty right side before a full-width item
-                pairs.push(html`
+        renderedItems.push(html`
           <div class="property-row">
-                    ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
-                    <div class="property-right"></div>
-          </div>
-                `);
-                halfWidthBuffer = null;
-            }
-            fullWidthItems.push(renderFullWidthPropertyForm(context, elementId, formData, schema));
-        } else if (layout === Layout.HALF || layout === Layout.HALF_LEFT || layout === Layout.HALF_RIGHT) {
-            if (!halfWidthBuffer) {
-        // Start a new pair with the current half-width property
-        halfWidthBuffer = { schema, layout };
-            } else {
-        // Complete a pair with the current half-width property
-                pairs.push(html`
-          <div class="property-row">
-                    ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
-                    ${renderHalfWidthPropertyForm(context, elementId, formData, schema, 'property-right')}
-          </div>
-                `);
-                halfWidthBuffer = null;
-            }
-        }
-    }
-    
-  // After the loop, handle any remaining half-width property
-    if (halfWidthBuffer) {
-        pairs.push(html`
-      <div class="property-row">
             ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
             <div class="property-right"></div>
+          </div>
+        `);
+        halfWidthBuffer = null;
+      }
+      renderedItems.push(renderFullWidthPropertyForm(context, elementId, formData, schema));
+    } else if (layout === Layout.HALF || layout === Layout.HALF_LEFT || layout === Layout.HALF_RIGHT) {
+      if (!halfWidthBuffer) {
+        // Start a new pair with the current half-width property
+        halfWidthBuffer = { schema, layout };
+      } else {
+        renderedItems.push(html`
+          <div class="property-row">
+            ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
+            ${renderHalfWidthPropertyForm(context, elementId, formData, schema, 'property-right')}
+          </div>
+        `);
+        halfWidthBuffer = null;
+      }
+    }
+  }
+
+  if (halfWidthBuffer) {
+    renderedItems.push(html`
+      <div class="property-row">
+        ${renderHalfWidthPropertyForm(context, elementId, formData, halfWidthBuffer.schema, 'property-left')}
+        <div class="property-right"></div>
       </div>
     `);
   }
 
-  return html`${fullWidthItems}${pairs}`;
+  return html`${renderedItems}`;
 }
 
-// Helper function specifically for rendering stretch properties in a row
 function renderStretchRow(
   context: EditorContext,
   elementId: string,
@@ -3525,15 +3523,13 @@ function renderStretchRow(
   stretchToSchema: HaFormSchema | undefined,
   stretchDirectionSchema: HaFormSchema | undefined,
   stretchPaddingSchema: HaFormSchema | undefined,
-  showDetails: boolean // This is true if stretchTo is selected
+  showDetails: boolean
 ): TemplateResult {
   if (!stretchToSchema) return html``;
 
   if (!showDetails) {
-    // If no stretch target is selected, just show the stretchTo dropdown
     return renderFullWidthPropertyForm(context, elementId, formData, stretchToSchema);
   } else {
-    // If a stretch target is selected, show the full row with padding and direction
     return html`
       <div class="property-row stretch-layout"> <!-- Use a specific class for stretch if needed for styling -->
         <div class="property-left stretch-column-left">
@@ -3548,7 +3544,6 @@ function renderStretchRow(
   }
 }
 
-// Helper function to render the content within a property group based on its key
 function renderGroupContent(
   groupKey: PropertyGroup,
   propertiesInGroup: HaFormSchema[],
@@ -3557,7 +3552,6 @@ function renderGroupContent(
   formData: any,
   propertiesMap: Map<string, LcarsPropertyBase>
 ): TemplateResult {
-  // Handle specific group layouts like Anchor and Stretch
   if (groupKey === PropertyGroup.ANCHOR) {
     const anchorToSchema = propertiesInGroup.find(s => s.name === 'anchorTo');
     const anchorPointSchema = propertiesInGroup.find(s => s.name === 'anchorPoint');
@@ -3594,26 +3588,21 @@ function renderGroupContent(
     `;
   }
 
-  // Handle the Button group specifically
   if (groupKey === PropertyGroup.BUTTON) {
     const buttonEnabledSchema = propertiesInGroup.find(s => s.name === 'button.enabled');
-    // Filter out button.enabled from the rest of button properties for renderPropertiesInRows
     const otherButtonProps = propertiesInGroup.filter(s => s.name !== 'button.enabled');
 
     return html`
       ${buttonEnabledSchema ? renderFullWidthPropertyForm(context, elementId, formData, buttonEnabledSchema) : ''}
       ${formData['button.enabled'] ?
-        // Render other button properties in rows, passing isButtonContext = true
         renderPropertiesInRows(otherButtonProps, context, elementId, formData, propertiesMap, true)
         : ''}
     `;
   }
 
-  // For all other groups, use the standard row rendering
   return renderPropertiesInRows(propertiesInGroup, context, elementId, formData, propertiesMap);
 }
 
-// The main renderElement function
 export function renderElement(
   element: any,
   context: EditorContext
@@ -3639,7 +3628,7 @@ export function renderElement(
               <div class="element-header ${isEditingId ? 'editing' : ''}" @click=${() => !isEditingId && context.toggleElementCollapse(elementId)}>
                   <ha-icon class="collapse-icon" icon="mdi:${isCollapsed ? 'chevron-right' : 'chevron-down'}"></ha-icon>
                   ${isEditingId
-                      ? renderElementIdEditForm(elementId, null as any, context) // Use null as any since we can't create an EditorElement instance
+                      ? renderElementIdEditForm(elementId, null as any, context)
                       : html`
                          <span class="element-name">${baseId || '(no base id)'}</span>
                          <span class="element-type" style="color: var(--error-color);">(invalid type: "${element.type || ''}")</span>
@@ -3683,10 +3672,8 @@ export function renderElement(
   const propertiesMap = elementInstance.getPropertiesMap();
   const formData = elementInstance.getFormData();
   
-  // Get the collapse state for property groups within this element
   const collapsedPropertyGroupsForElement = context.collapsedPropertyGroups[elementId] || {};
 
-  // Find the type property schema
   const typeSchema = allSchemas.find(
     s => propertiesMap.get(s.name)?.propertyGroup === PropertyGroup.TYPE
   );
@@ -3733,7 +3720,7 @@ export function renderElement(
       ${!isCollapsed ? html`
           <div class="element-body">
                <div class="property-container-groups">
-                    ${/* Render type property directly without header and always expanded */
+                    ${
                     typeSchema ? html`
                       <div class="property-group type-property-group">
                         <div class="property-group-content">
@@ -3742,19 +3729,17 @@ export function renderElement(
                       </div>
                     ` : ''}
                     
-                    ${/* Render all other property groups normally */
+                    ${
                     PropertyGroupOrder.filter(groupKey => groupKey !== PropertyGroup.TYPE).map(groupKey => {
-                        // Check if this element has any properties belonging to this group
                         const propertiesForThisGroup = allSchemas.filter(
                             s => propertiesMap.get(s.name)?.propertyGroup === groupKey
                         );
 
                         if (propertiesForThisGroup.length === 0) {
-                            return html``; // Don't render the group if there are no properties in it
+                            return html``;
                         }
 
-                        // Determine collapse state for this specific group
-                        const isGroupCurrentlyCollapsed = collapsedPropertyGroupsForElement[groupKey] ?? true; // Default to collapsed
+                        const isGroupCurrentlyCollapsed = collapsedPropertyGroupsForElement[groupKey] ?? true;
 
                         return html`
                             <div class="property-group">
@@ -3785,7 +3770,6 @@ function renderCustomSelector(
   onChange: (value: string) => void
 ): TemplateResult {
   if (schema.selector && (schema.selector as any).lcars_grid) {
-    // Cast to access lcars_grid properties
     const lcarsGridSelector = schema.selector as any;
     
     return html`
@@ -4128,19 +4112,17 @@ function renderHalfWidthPropertyForm(
   formData: any,
   schema: HaFormSchema | undefined,
   sideClass: "property-left" | "property-right" | "",
-  isCustom: boolean = false // Added parameter to indicate if it's a custom selector
+  isCustom: boolean = false
 ): TemplateResult {
   if (!schema) return html``;
   
-  // Check if the schema has a custom selector (like lcars_grid)
   const content = isCustom && schema.selector && (schema.selector as any).lcars_grid ?
-    // If it's a custom selector, render it using renderCustomSelector
     renderCustomSelector(schema, formData[schema.name], (value: string) => {
       const detail = { value: { ...formData, [schema.name]: value } };
       const customEvent = new CustomEvent('value-changed', { detail, bubbles: true, composed: true });
       context.handleFormValueChanged(customEvent, elementId);
     })
-    : // Otherwise, render a standard ha-form for this schema
+    :
     html`
       <ha-form
         .hass=${context.hass}
@@ -4151,7 +4133,6 @@ function renderHalfWidthPropertyForm(
       ></ha-form>
     `;
 
-  // Wrap the content in the appropriate side class div if specified
   return sideClass ? html`<div class="${sideClass}">${content}</div>` : content;
 }
 ```
@@ -7020,9 +7001,6 @@ export const editorStyles = css`
 
   .property-group {
     margin-bottom: 8px;
-    border: 1px solid var(--divider-color);
-    border-radius: var(--ha-card-border-radius, 4px);
-    background-color: var(--ha-card-background, var(--card-background-color, white)); /* Match card bg or similar */
   }
 
   /* Special styling for the type property group */
@@ -7037,7 +7015,6 @@ export const editorStyles = css`
     align-items: center;
     padding: 8px 12px;
     cursor: pointer;
-    background-color: var(--secondary-background-color);
     border-bottom: 1px solid var(--divider-color);
     font-weight: bold;
     user-select: none;

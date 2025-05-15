@@ -80,7 +80,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   @state() private _addElementInput: string = '';
   @state() private _addElementWarning: string = '';
 
-  @state() private _collapsedPropertyGroups: { [elementId: string]: { [groupKey: string]: boolean } } = {};
+  @state() private _collapsedPropertyGroups: { [elementId: string]: Record<PropertyGroup, boolean> } = {};
 
   private _draggedElementId: string | null = null;
   private _dragOverElementId: string | null = null;
@@ -122,7 +122,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     const newGroupInstances = new Map<string, LcarsGroup>();
     const newCollapsedGroups: { [groupId: string]: boolean } = {};
     const newCollapsedElements: { [elementId: string]: boolean } = {};
-    const newCollapsedPropertyGroups: { [elementId: string]: { [groupKey: string]: boolean } } = {};
+    const newCollapsedPropertyGroups: { [elementId: string]: Record<PropertyGroup, boolean> } = {};
 
     newGroups.forEach(gid => {
         let instance = this._groupInstances.get(gid);
@@ -140,11 +140,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         if (el?.id) {
             newCollapsedElements[el.id] = this._collapsedElements[el.id] ?? true;
 
-            const existingPropGroupState = this._collapsedPropertyGroups[el.id];
-            newCollapsedPropertyGroups[el.id] = {};
-            Object.values(PropertyGroup).forEach(pgKey => {
-                newCollapsedPropertyGroups[el.id][pgKey] = existingPropGroupState?.[pgKey] ?? true;
-            });
+            newCollapsedPropertyGroups[el.id] = this._initCollapsedPG(el.id, this._collapsedPropertyGroups[el.id]);
         }
     });
 
@@ -534,10 +530,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       const oldPropGroupState = this._collapsedPropertyGroups[oldId] || {};
       const { [oldId]: _rOldProp, ...restPropGroupStates } = this._collapsedPropertyGroups;
       this._collapsedPropertyGroups = { ...restPropGroupStates };
-      this._collapsedPropertyGroups[newId] = {};
-      Object.values(PropertyGroup).forEach(pgKey => {
-          this._collapsedPropertyGroups[newId][pgKey] = oldPropGroupState[pgKey] ?? true;
-      });
+      this._collapsedPropertyGroups[newId] = this._initCollapsedPG(newId, oldPropGroupState);
 
       this._editingElementId = null;
       this._editingElementIdInput = '';
@@ -826,8 +819,7 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
     // but it *was* in the original config, this preserves it.
     // Given that stretchTo2 is now part of getFormData and getSchema, it should be in formData.
     // Let's assume processDataUpdate and the loop above handle it correctly.
-    // This specific preservation might no longer be needed if stretchTo2 is always in `cleanedData` when appropriate.
-    // For safety, we can keep it, but if stretchTo2 is *cleared* via the form, this would incorrectly add it back.
+    // This specific preservation might no longer be needed if stretchTo2 is *cleared* via the form, this would incorrectly add it back.
     //
     // Revised approach: rely on `processDataUpdate` and `setDeep`.
     // If `currentElementConfig.layout?.stretch?.stretchTo2` existed and `cleanedData` doesn't clear it,
@@ -921,13 +913,32 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
     this.requestUpdate();
   }
 
-  private _togglePropertyGroupCollapse(elementId: string, groupKey: string): void {
+  /**
+   * Initializes the collapsed state for property groups of a given element.
+   * If previous state is provided, uses it, otherwise defaults to all true.
+   * @param elementId The ID of the element.
+   * @param prevCollapsedState Optional previous collapsed state for this element.
+   * @returns The initialized collapsed state map for property groups.
+   */
+  private _initCollapsedPG(elementId: string, prevCollapsedState?: Record<PropertyGroup, boolean>): Record<PropertyGroup, boolean> {
+      // Initialize with a temporary type that allows string keys, then populate
+      const newState: { [key: string]: boolean } = {};
+      Object.values(PropertyGroup).forEach(pgKey => {
+          newState[pgKey] = prevCollapsedState?.[pgKey] ?? true;
+      });
+      // The object now conforms to Record<PropertyGroup, boolean>, implicitly returned as such
+      return newState as Record<PropertyGroup, boolean>;
+  }
+
+  private _togglePropertyGroupCollapse(elementId: string, groupKey: PropertyGroup): void {
     if (!this._collapsedPropertyGroups[elementId]) {
-        this._collapsedPropertyGroups[elementId] = {};
+        // Use helper to initialize if element state doesn't exist
+        this._collapsedPropertyGroups[elementId] = this._initCollapsedPG(elementId);
     }
+    // Ensure all keys are present, even if not explicitly initialized before
     Object.values(PropertyGroup).forEach(pgKey => {
         if (this._collapsedPropertyGroups[elementId][pgKey] === undefined) {
-            this._collapsedPropertyGroups[elementId][pgKey] = true;
+             this._collapsedPropertyGroups[elementId][pgKey] = true;
         }
     });
 
