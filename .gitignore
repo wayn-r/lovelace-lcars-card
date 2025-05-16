@@ -6,4 +6,5 @@ package-lock.json
 editor.bak.ts
 reference-files/
 
-flattened-codebase.md
+flattened_codebase.md
+git_history_diff.md
