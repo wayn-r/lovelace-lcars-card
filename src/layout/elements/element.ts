@@ -14,8 +14,8 @@ export abstract class LayoutElement {
     layout: LayoutState;
     intrinsicSize: IntrinsicSize;
     hass?: HomeAssistant;
-    protected requestUpdateCallback?: () => void;
-    protected button?: Button;
+    public requestUpdateCallback?: () => void;
+    public button?: Button;
       constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
       this.id = id;
       this.props = props;
@@ -42,31 +42,33 @@ export abstract class LayoutElement {
       this.intrinsicSize.calculated = true;
     }
   
-    canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
-      if (!this._checkAnchorDependencies(elementsMap)) return false;
-      if (!this._checkStretchDependencies(elementsMap)) return false;
-      if (!this._checkSpecialDependencies(elementsMap)) return false;
+    canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
+      if (!this._checkAnchorDependencies(elementsMap, dependencies)) return false;
+      if (!this._checkStretchDependencies(elementsMap, dependencies)) return false;
+      if (!this._checkSpecialDependencies(elementsMap, dependencies)) return false;
   
       return true;
     }
   
-    private _checkAnchorDependencies(elementsMap: Map<string, LayoutElement>): boolean {
+    private _checkAnchorDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
       if (this.layoutConfig.anchor?.anchorTo && this.layoutConfig.anchor.anchorTo !== 'container') {
           const targetElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
           if (!targetElement || !targetElement.layout.calculated) {
+              dependencies.push(this.layoutConfig.anchor.anchorTo);
               return false;
           }
       }
       return true;
     }
   
-    private _checkStretchDependencies(elementsMap: Map<string, LayoutElement>): boolean {
+    private _checkStretchDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
       if (this.layoutConfig.stretch?.stretchTo1 && 
           this.layoutConfig.stretch.stretchTo1 !== 'canvas' && 
           this.layoutConfig.stretch.stretchTo1 !== 'container') {
           
           const targetElement = elementsMap.get(this.layoutConfig.stretch.stretchTo1);
           if (!targetElement || !targetElement.layout.calculated) {
+              dependencies.push(this.layoutConfig.stretch.stretchTo1);
               return false;
           }
       }
@@ -77,6 +79,7 @@ export abstract class LayoutElement {
           
           const targetElement = elementsMap.get(this.layoutConfig.stretch.stretchTo2);
           if (!targetElement || !targetElement.layout.calculated) {
+              dependencies.push(this.layoutConfig.stretch.stretchTo2);
               return false;
           }
       }
@@ -84,7 +87,7 @@ export abstract class LayoutElement {
       return true;
     }
   
-    private _checkSpecialDependencies(elementsMap: Map<string, LayoutElement>): boolean {
+    private _checkSpecialDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
       if (this.constructor.name === 'EndcapElement' && 
           this.layoutConfig.anchor?.anchorTo && 
           this.layoutConfig.anchor.anchorTo !== 'container' && 
@@ -92,6 +95,7 @@ export abstract class LayoutElement {
         
         const targetElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
         if (!targetElement || !targetElement.layout.calculated) {
+            dependencies.push(this.layoutConfig.anchor.anchorTo);
             return false;
         }
       }

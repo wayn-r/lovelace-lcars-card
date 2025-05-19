@@ -109,8 +109,9 @@ export class LcarsCard extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @property({ attribute: false }) private _config!: LcarsCardConfig;
   @state() private _layoutElementTemplates: SVGTemplateResult[] = [];
-  @state() private _viewBox: string = '0 0 100 50';
+  @state() private _viewBox: string = '0 0 100 100';
   @state() private _elementStateNeedsRefresh: boolean = false;
+  @state() private _calculatedHeight: number = 100;
   
   private _layoutEngine: LayoutEngine = new LayoutEngine();
   private _resizeObserver?: ResizeObserver;
@@ -122,6 +123,9 @@ export class LcarsCard extends LitElement {
   private _fontsLoaded: boolean = false;
   private _fontLoadAttempts: number = 0;
   private _maxFontLoadAttempts: number = 3;
+  private _initialLoadComplete: boolean = false;
+  private _resizeTimeout: ReturnType<typeof setTimeout> | undefined;
+  private _editModeObserver?: MutationObserver;
 
   static styles = [editorStyles];
 
@@ -150,17 +154,40 @@ export class LcarsCard extends LitElement {
     if (!this._resizeObserver) {
        this._resizeObserver = new ResizeObserver(this._handleResize.bind(this));
     }
+    
+    // Listen for window resize as a backup to ResizeObserver
+    window.addEventListener('resize', this._handleWindowResize.bind(this));
+
+    // Handle page visibility changes to recalculate on tab switch
+    document.addEventListener('visibilitychange', this._handleVisibilityChange.bind(this));
+    
+    // Listen for potential panel/edit mode changes
+    this._setupEditModeObserver();
+    
     if (document.readyState === 'complete') {
       this._triggerRecalc();
     } else {
       window.addEventListener('load', () => this._triggerRecalc(), { once: true });
     }
+    
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(() => {
         this._layoutCalculationPending = true;
         this.requestUpdate();
       });
     }
+
+    // Force layout recalculation after a short timeout to ensure dimensions are correct
+    // This helps ensure proper initial layout, especially in complex layouts like grid views
+    setTimeout(() => this._forceLayoutRecalculation(), 100);
+    
+    // Backup recalculation in case the initial one didn't work due to container not being ready
+    setTimeout(() => {
+      if (!this._initialLoadComplete) {
+        this._forceLayoutRecalculation();
+        this._initialLoadComplete = true;
+      }
+    }, 1000);
   }
   
   public firstUpdated() {
@@ -253,6 +280,15 @@ export class LcarsCard extends LitElement {
 
   disconnectedCallback(): void {
     this._resizeObserver?.disconnect();
+    window.removeEventListener('resize', this._handleWindowResize.bind(this));
+    document.removeEventListener('visibilitychange', this._handleVisibilityChange.bind(this));
+    
+    // Clean up edit mode observer
+    if (this._editModeObserver) {
+      this._editModeObserver.disconnect();
+      this._editModeObserver = undefined;
+    }
+    
     super.disconnectedCallback();
   }
   
@@ -303,28 +339,52 @@ export class LcarsCard extends LitElement {
         return;
     }
 
+    console.log("[_performLayoutCalculation] Calculating layout with dimensions:", rect.width, "x", rect.height);
+
     const svgElement = this.shadowRoot?.querySelector('.card-container svg') as SVGSVGElement | null;
     if (svgElement) {
       (this._layoutEngine as any).tempSvgContainer = svgElement;
     }
+    
+    // Clear previous layout
     this._layoutEngine.clearLayout();
-    const groups = parseConfig(this._config, this.hass, () => { this._elementStateNeedsRefresh = true; this.requestUpdate(); }); 
-    groups.forEach((group: Group) => { this._layoutEngine.addGroup(group); });
+    
+    // Parse config and add elements to layout engine
+    const groups = parseConfig(this._config, this.hass, () => { 
+      this._elementStateNeedsRefresh = true; 
+      this.requestUpdate(); 
+    }); 
+    
+    groups.forEach((group: Group) => { 
+      this._layoutEngine.addGroup(group); 
+    });
 
-    this._layoutEngine.calculateBoundingBoxes(rect);
+    // Calculate layout using the available width and dynamicHeight option
+    const inputRect = new DOMRect(rect.x, rect.y, rect.width, rect.height);
+    const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(inputRect, { dynamicHeight: true });
+    
+    // Get the required height from the layout engine
+    this._calculatedHeight = layoutDimensions.height;
 
+    // Render elements
     const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
         group.elements
             .map(el => el.render())
             .filter((template): template is SVGTemplateResult => template !== null)
     );
-    const newViewBox = `0 0 ${rect.width} ${rect.height}`;
 
-    if (JSON.stringify(newTemplates.map(t => ({s: t.strings, v: (t.values || []).map(val => String(val))}))) !== JSON.stringify(this._layoutElementTemplates.map(t => ({s:t.strings, v: (t.values || []).map(val => String(val))}))) || newViewBox !== this._viewBox) {
+    const TOP_MARGIN = 8;  // offset for broken HA UI
+    
+    // Update viewBox to match container dimensions and calculated height
+    const newViewBox = `0 ${-TOP_MARGIN} ${rect.width} ${this._calculatedHeight + TOP_MARGIN}`;
+
+    
+    if (JSON.stringify(newTemplates.map(t => ({s: t.strings, v: (t.values || []).map(val => String(val))}))) !==
+        JSON.stringify(this._layoutElementTemplates.map(t => ({s:t.strings, v: (t.values || []).map(val => String(val))}))) || newViewBox !== this._viewBox) {
         this._layoutElementTemplates = newTemplates;
         this._viewBox = newViewBox;
-    } else {
     }
+    
     this._layoutCalculationPending = false;
   }
 
@@ -345,20 +405,116 @@ export class LcarsCard extends LitElement {
     this._elementStateNeedsRefresh = false;
   }
 
+  private _handleVisibilityChange(): void {
+    if (document.visibilityState === 'visible') {
+        // Recalculate layout when tab becomes visible
+        requestAnimationFrame(() => {
+            this._forceLayoutRecalculation();
+        });
+    }
+  }
+
+  private _handleWindowResize(): void {
+    // Debounce resize handling to avoid excessive calculations
+    if (this._resizeTimeout) {
+        clearTimeout(this._resizeTimeout);
+    }
+    
+    this._resizeTimeout = setTimeout(() => {
+        const container = this.shadowRoot?.querySelector('.card-container');
+        if (container) {
+            const newRect = container.getBoundingClientRect();
+            if (newRect.width > 0 && newRect.height > 0) {
+                this._handleDimensionChange(newRect);
+            }
+        }
+        this._resizeTimeout = undefined;
+    }, 50);
+  }
+
   private _handleResize(entries: ResizeObserverEntry[]): void {
     const entry = entries[0];
+    if (!entry) return;
+    
     const newRect = entry.contentRect;
-
+    
+    // Only process if dimensions are valid
     if (newRect.width > 0 && newRect.height > 0) {
-        if (!this._containerRect || 
-            Math.abs(this._containerRect.width - newRect.width) > 1 ||
-            Math.abs(this._containerRect.height - newRect.height) > 1) 
-        {
-            this._containerRect = newRect;
-            this._layoutCalculationPending = true;
-            this.requestUpdate();
-        }
+        this._handleDimensionChange(newRect);
     } else {
+        console.warn("ResizeObserver received invalid dimensions:", newRect);
+        // If we got invalid dimensions from ResizeObserver, check directly
+        const container = this.shadowRoot?.querySelector('.card-container');
+        if (container) {
+            const directRect = container.getBoundingClientRect();
+            if (directRect.width > 0 && directRect.height > 0) {
+                this._handleDimensionChange(directRect);
+            }
+        }
+    }
+  }
+
+  private _handleDimensionChange(newRect: DOMRect): void {
+    // Check if dimensions have changed significantly
+    if (!this._containerRect || 
+        Math.abs(this._containerRect.width - newRect.width) > 1 ||
+        Math.abs(this._containerRect.height - newRect.height) > 1) 
+    {
+        console.log("Dimension change detected:", newRect.width, "x", newRect.height);
+        
+        // Update container dimensions
+        this._containerRect = newRect;
+        
+        // Reset all layouts for a complete recalculation
+        if (this._layoutEngine && this._layoutEngine.layoutGroups) {
+            this._layoutEngine.layoutGroups.forEach(group => {
+                group.elements.forEach(el => {
+                    el.resetLayout();
+                });
+            });
+        }
+        
+        // Only mark for recalculation but don't change height yet - that will be done in _performLayoutCalculation
+        this._layoutCalculationPending = true;
+        this.requestUpdate();
+        
+        // If this is the first successful resize with valid dimensions, mark initial load complete
+        if (!this._initialLoadComplete && newRect.width > 50 && newRect.height > 50) {
+            this._initialLoadComplete = true;
+        }
+    }
+  }
+
+  private _forceLayoutRecalculation(): void {
+    // Get current container dimensions
+    const container = this.shadowRoot?.querySelector('.card-container');
+    if (!container) return;
+
+    const newRect = container.getBoundingClientRect();
+    
+    // Only proceed if container has non-zero dimensions
+    if (newRect.width > 0 && newRect.height > 0) {
+        console.log("Forcing layout recalculation:", newRect.width, "x", newRect.height);
+        
+        // Reset all layouts for recalculation
+        if (this._layoutEngine && this._layoutEngine.layoutGroups) {
+            this._layoutEngine.layoutGroups.forEach(group => {
+                group.elements.forEach(el => {
+                    el.resetLayout();
+                });
+            });
+        }
+        
+        // Update container rect and trigger recalculation
+        this._containerRect = newRect;
+        this._layoutCalculationPending = true;
+        this.requestUpdate();
+    } else {
+        // If container has zero dimensions, schedule another attempt
+        console.warn("Container has zero dimensions during force recalculation");
+        requestAnimationFrame(() => {
+            this._forceLayoutRecalculation();
+        });
     }
   }
 
@@ -403,13 +559,30 @@ export class LcarsCard extends LitElement {
       }
     }
 
+    // Extract dimensions from viewBox
+    const viewBoxParts = this._viewBox.split(' ');
+    const viewBoxWidth = parseFloat(viewBoxParts[2]) || 100;
+    const viewBoxHeight = parseFloat(viewBoxParts[3]) || 100;
+    
+    // Define dimensions based on container rect or view box
+    const width = this._containerRect ? this._containerRect.width : viewBoxWidth;
+    const height = this._calculatedHeight || viewBoxHeight;
+    
+    // Style for the SVG
+    const svgStyle = `width: 100%; height: ${height}px;`;
+    
+    // Simple container style
+    const containerStyle = `width: 100%; height: ${height}px;`;
+
     return html`
       <ha-card>
-        <div class="card-container">
+        <div class="card-container" 
+             style="${containerStyle}">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox=${this._viewBox}
-            preserveAspectRatio="xMidYMid meet"
+            preserveAspectRatio="none"
+            style=${svgStyle}
           >
             ${defsContent.length > 0 ? svg`<defs>${defsContent}</defs>` : ''}
             ${svgContent}
@@ -454,29 +627,72 @@ export class LcarsCard extends LitElement {
       }
     });
     
+    // Create a map of updated sizes to pass to the engine
+    const updatedSizesMap = new Map<string, {width: number, height: number}>();
+    
+    // Compare measured sizes with current intrinsic sizes
     const engineAny = this._layoutEngine as any;
     const elementsMap: Map<string, any> = engineAny.elements;
-    let changed = false;
     
     elementsMap.forEach((el: any, id: string) => {
       const m = measured[id];
       if (m && (el.intrinsicSize.width !== m.w || el.intrinsicSize.height !== m.h)) {
-        el.intrinsicSize.width = m.w;
-        el.intrinsicSize.height = m.h;
-        el.intrinsicSize.calculated = true;
-        changed = true;
+        // Store the updated sizes in the map
+        updatedSizesMap.set(id, { width: m.w, height: m.h });
       }
     });
     
-    if (changed) {
-      this._layoutCalculationPending = true;
-      this._performLayoutCalculation(this._containerRect);
+    if (updatedSizesMap.size > 0) {
+      // Pass the updated sizes to the layout engine for recalculation
+      const layoutDimensions = this._layoutEngine.updateIntrinsicSizesAndRecalculate(
+        updatedSizesMap, 
+        this._containerRect
+      );
+      
+      // Update the card's calculated height
+      this._calculatedHeight = layoutDimensions.height;
+      
+      // Update rendered elements
       const newTemplates = this._layoutEngine.layoutGroups.flatMap((group: any) =>
         group.elements.map((e: any) => e.render()).filter((t: any) => t !== null)
       );
+      
+      // Update viewBox and trigger a re-render
       this._layoutElementTemplates = newTemplates;
-      this._viewBox = `0 0 ${this._containerRect.width} ${this._containerRect.height}`;
+      this._viewBox = `0 0 ${this._containerRect.width} ${this._calculatedHeight}`;
       this.requestUpdate();
     }
+  }
+
+  private _setupEditModeObserver(): void {
+    // Clean up any existing observer
+    if (this._editModeObserver) {
+      this._editModeObserver.disconnect();
+    }
+    
+    // Create a new observer to watch for changes in the DOM that might affect edit mode
+    this._editModeObserver = new MutationObserver((mutations) => {
+      // If any mutation might have affected the edit mode or panel layout, adjust
+      const shouldCheck = mutations.some(mutation => {
+        // Check for relevant class changes
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          return true;
+        }
+        // Check for added/removed nodes that might affect layout
+        if (mutation.type === 'childList' && 
+            (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)) {
+          return true;
+        }
+        return false;
+      });
+    });
+    
+    // Observe changes to document body and its children
+    this._editModeObserver.observe(document.body, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      attributeFilter: ['class']
+    });
   }
 }

@@ -1,0 +1,175 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ElbowElement > render > Non-Button Rendering > should render a basic elbow path with default props 1`] = `
+{
+  "_$litType$": 2,
+  "strings": [
+    "
+          <path
+            id=",
+    "
+            d=",
+    "
+            fill=",
+    "
+            stroke=",
+    "
+            stroke-width=",
+    "
+          />
+        ",
+  ],
+  "values": [
+    "el-render",
+    "MOCK_PATH_elbow_top-left_100x80_body30_arm30_at_5,10_r30",
+    "none",
+    "none",
+    "0",
+  ],
+}
+`;
+
+exports[`ElbowElement > render > Non-Button Rendering > should render correctly for orientation: bottom-left 1`] = `
+{
+  "_$litType$": 2,
+  "strings": [
+    "
+          <path
+            id=",
+    "
+            d=",
+    "
+            fill=",
+    "
+            stroke=",
+    "
+            stroke-width=",
+    "
+          />
+        ",
+  ],
+  "values": [
+    "el-render",
+    "MOCK_PATH_elbow_bottom-left_100x100_body30_arm30_at_10,20_r30",
+    "none",
+    "none",
+    "0",
+  ],
+}
+`;
+
+exports[`ElbowElement > render > Non-Button Rendering > should render correctly for orientation: bottom-right 1`] = `
+{
+  "_$litType$": 2,
+  "strings": [
+    "
+          <path
+            id=",
+    "
+            d=",
+    "
+            fill=",
+    "
+            stroke=",
+    "
+            stroke-width=",
+    "
+          />
+        ",
+  ],
+  "values": [
+    "el-render",
+    "MOCK_PATH_elbow_bottom-right_100x100_body30_arm30_at_10,20_r30",
+    "none",
+    "none",
+    "0",
+  ],
+}
+`;
+
+exports[`ElbowElement > render > Non-Button Rendering > should render correctly for orientation: top-left 1`] = `
+{
+  "_$litType$": 2,
+  "strings": [
+    "
+          <path
+            id=",
+    "
+            d=",
+    "
+            fill=",
+    "
+            stroke=",
+    "
+            stroke-width=",
+    "
+          />
+        ",
+  ],
+  "values": [
+    "el-render",
+    "MOCK_PATH_elbow_top-left_100x100_body30_arm30_at_10,20_r30",
+    "none",
+    "none",
+    "0",
+  ],
+}
+`;
+
+exports[`ElbowElement > render > Non-Button Rendering > should render correctly for orientation: top-right 1`] = `
+{
+  "_$litType$": 2,
+  "strings": [
+    "
+          <path
+            id=",
+    "
+            d=",
+    "
+            fill=",
+    "
+            stroke=",
+    "
+            stroke-width=",
+    "
+          />
+        ",
+  ],
+  "values": [
+    "el-render",
+    "MOCK_PATH_elbow_top-right_100x100_body30_arm30_at_10,20_r30",
+    "none",
+    "none",
+    "0",
+  ],
+}
+`;
+
+exports[`ElbowElement > render > Non-Button Rendering > should render with specified props (fill, stroke, orientation, bodyWidth, armHeight) 1`] = `
+{
+  "_$litType$": 2,
+  "strings": [
+    "
+          <path
+            id=",
+    "
+            d=",
+    "
+            fill=",
+    "
+            stroke=",
+    "
+            stroke-width=",
+    "
+          />
+        ",
+  ],
+  "values": [
+    "el-render",
+    "MOCK_PATH_elbow_bottom-right_120x90_body40_arm20_at_0,0_r20",
+    "red",
+    "blue",
+    "2",
+  ],
+}
+`;

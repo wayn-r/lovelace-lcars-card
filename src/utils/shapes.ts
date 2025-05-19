@@ -447,7 +447,7 @@ export function getTextWidth(text: string, font: string): number {
         try {
             if (typeof document !== 'undefined' && document.createElement) {
                 const canvas = document.createElement('canvas');
-                canvasContext = canvas.getContext('2d');
+                canvasContext = canvas.getContext('2d', { willReadFrequently: true });
                 if (!canvasContext) {
                      console.warn("LCARS Card: Failed to get 2D context for text measurement. Using fallback.");
                 }

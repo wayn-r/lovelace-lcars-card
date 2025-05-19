@@ -308,6 +308,12 @@ export class Fill implements LcarsPropertyBase {
     private hexToRgb(hex: string): number[] {
         hex = hex.replace(/^#/, '');
         
+        // Validate hex format first
+        const validHex = /^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/.test(hex);
+        if (!validHex) {
+            return [0, 0, 0];
+        }
+        
         if (hex.length === 3) {
             return [
                 parseInt(hex[0] + hex[0], 16),

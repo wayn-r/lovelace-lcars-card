@@ -137,7 +137,7 @@ export abstract class EditorElement {
             const propertyGroup = groupKey as PropertyGroup;
 
             if (propertyGroup === PropertyGroup.ANCHOR) {
-                if (groupDef === null || groupDef) {
+                if (groupDef !== null) {
                     allProperties.push(AnchorTo, AnchorPoint, TargetAnchorPoint);
                 }
                 continue;
@@ -183,9 +183,12 @@ export abstract class EditorElement {
             try {
                 let instance: LcarsPropertyBase;
                 // Check if it's a class constructor or a factory function
-                if (PropClassOrFactory.prototype && typeof PropClassOrFactory.prototype.getSchema === 'function') {
+                if (typeof PropClassOrFactory === 'function' && PropClassOrFactory.prototype && 
+                    typeof PropClassOrFactory.prototype.getSchema === 'function') {
+                    // It's a class constructor
                     instance = new (PropClassOrFactory as new () => LcarsPropertyBase)();
                 } else {
+                    // It's a factory function
                     instance = (PropClassOrFactory as () => LcarsPropertyBase)();
                 }
                 return instance.getSchema(fullContext);
@@ -207,9 +210,12 @@ export abstract class EditorElement {
         propertyClasses.forEach(PropClassOrFactory => {
             try {
                 let instance: LcarsPropertyBase;
-                if (PropClassOrFactory.prototype && typeof PropClassOrFactory.prototype.getSchema === 'function') {
+                if (typeof PropClassOrFactory === 'function' && PropClassOrFactory.prototype && 
+                    typeof PropClassOrFactory.prototype.getSchema === 'function') {
+                    // It's a class constructor
                     instance = new (PropClassOrFactory as new () => LcarsPropertyBase)();
                 } else {
+                    // It's a factory function
                     instance = (PropClassOrFactory as () => LcarsPropertyBase)();
                 }
                 map.set(instance.name, instance);
@@ -378,6 +384,12 @@ export abstract class EditorElement {
     requestDelete(): { elementId: string } { return { elementId: this.id }; }
 
     private _isHorizontalDirection(targetAnchorPoint: string): boolean {
+        // Check for vertical directions first - if a name contains 'top' or 'bottom', consider it vertical
+        if (targetAnchorPoint.includes('top') || targetAnchorPoint.includes('bottom')) {
+            return false; // Vertical direction
+        }
+        
+        // Otherwise check for horizontal directions
         return targetAnchorPoint === 'left' || targetAnchorPoint === 'right' || targetAnchorPoint === 'center' ||
                targetAnchorPoint.includes('Left') || targetAnchorPoint.includes('Right') || targetAnchorPoint.includes('Center');
     }

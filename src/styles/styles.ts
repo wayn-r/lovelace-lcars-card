@@ -8,18 +8,31 @@ export const editorStyles = css`
     ha-card {
       width: 100%;
       box-sizing: border-box;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     
     .card-container {
       width: 100%;
       position: relative;
       overflow: hidden;
+      line-height: 0; /* Prevent extra spacing */
+      display: block;
     }
+
+    /* this doesn't work, but it's here for reference of where I see the problem in the 
+       inspector. In the inspector, if I change 48px to 56px, everything positions
+       correctly. Changing this in this file doesn't apply since it's in the shadow
+       DOM.
+    .edit-mode hui-view-container {
+      padding-top: calc(var(--header-height) + 48px + env(safe-area-inset-top));
+    } */
     
     svg {
       width: 100%;
       display: block;
-      min-height: 50px;
+      overflow: hidden;
     }
     
     /* Remove focus outline from SVG elements when clicked */

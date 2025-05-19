@@ -1,9 +1,10 @@
-## BUGS:
+## BUGS
+- top header is implemented, but there is a bug where anchoring to it doesn't properly position the element.
 
 ## TODOs:
 
-### Currently working on:
-- Just fixed half-width property rendering, need to organize them and add expandable groups for them.
+### Tests
+- Implement a way to automate testing to ensure updates don't break existing functionality.
 
 ### Components
 - implement headerbar as a standalone element

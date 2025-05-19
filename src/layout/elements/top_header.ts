@@ -92,19 +92,9 @@ export class TopHeaderElement extends LayoutElement {
   private createHeaderBar(id: string, fill: string, hass?: HomeAssistant, requestUpdateCallback?: () => void): RectangleElement {
     return new RectangleElement(`${id}_header_bar`, {
       fill,
-      width: 1  // Initial width, required to instantiate
+      width: 1  // Will be calculated in layoutHeaderBar
     }, {
-      anchor: {
-        anchorTo: `${id}_left_text`,
-        anchorPoint: 'topLeft',
-        targetAnchorPoint: 'topRight'
-      },
-      stretch: {
-        stretchTo1: `${id}_right_text`,
-        targetStretchAnchorPoint1: 'centerLeft',
-        stretchPadding1: this.textGap * -1
-      },
-      offsetX: this.textGap
+      // No anchor or stretch - we'll position this manually in layoutHeaderBar
     }, hass, requestUpdateCallback);
   }
 
@@ -115,19 +105,44 @@ export class TopHeaderElement extends LayoutElement {
   }
 
   calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
-    this.registerChildElements(elementsMap);
-    super.calculateLayout(elementsMap, containerRect);
     
-    if (!this.layout.calculated) return;
-    
-    const { x, y, width, height } = this.layout;
-    const offsetY = this.props.offsetY || 0;
-    const fontConfig = this.getFontConfiguration();
-    const fontSize = this.calculateFontSize(height, fontConfig);
-    
-    this.layoutEndcaps(height, elementsMap, containerRect);
-    this.layoutTextElements(fontSize, fontConfig, x, y, offsetY, elementsMap, containerRect);
-    this.layoutHeaderBar(height, offsetY, elementsMap, containerRect);
+    try {
+      // First register all child elements
+      this.registerChildElements(elementsMap);
+      
+      // Calculate our own layout first
+      super.calculateLayout(elementsMap, containerRect);
+      
+      if (!this.layout.calculated) {
+        return;
+      }
+      
+      const { x, y, width, height } = this.layout;
+      const offsetY = this.props.offsetY || 0;
+      const fontConfig = this.getFontConfiguration();
+      const fontSize = this.calculateFontSize(height, fontConfig);
+      
+      
+      this.layoutEndcaps(height, elementsMap, containerRect);
+      
+      this.layoutTextElements(fontSize, fontConfig, x, y, offsetY, elementsMap, containerRect);
+      
+      const leftTextReady = this.leftText?.layout?.calculated;
+      const rightTextReady = this.rightText?.layout?.calculated;
+      
+      if (leftTextReady && rightTextReady) {
+        this.layoutHeaderBar(height, offsetY, elementsMap, containerRect);
+      } else {
+        if (!leftTextReady) console.warn(`  - Left text not ready: ${this.leftText.id}`);
+        if (!rightTextReady) console.warn(`  - Right text not ready: ${this.rightText.id}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error in TopHeader layout:', error);
+      throw error;
+    } finally {
+      console.groupEnd();
+    }
   }
   
   private registerChildElements(elementsMap: Map<string, LayoutElement>): void {
@@ -271,26 +286,43 @@ export class TopHeaderElement extends LayoutElement {
   }
   
   private layoutHeaderBar(height: number, offsetY: number, elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
-    const fill = this.props.fill || '#99CCFF';
     
-    this.headerBar.props.fill = fill;
-    this.headerBar.props.height = height;
-    
-    this.headerBar.intrinsicSize = {
-      width: 1,  // width required to instantiate
-      height: height,
-      calculated: true
-    };
-    
-    this.headerBar.resetLayout();
-    this.headerBar.calculateIntrinsicSize(containerRect as unknown as SVGElement);
-    this.headerBar.calculateLayout(elementsMap, containerRect);
-    
-    this.headerBar.layout.y = this.layout.y + offsetY;
-    this.headerBar.layout.height = height;
-    
-    if (this.headerBar.layout.width < 10) {
-      console.warn(`TopHeader stretch failed: ${this.headerBar.id} width=${this.headerBar.layout.width}`);
+    try {
+      const fill = this.props.fill || '#99CCFF';
+      
+      // Get the right edge of the left text
+      const leftTextRightEdge = this.leftText.layout.x + this.leftText.layout.width;
+      
+      // Get the left edge of the right text
+      const rightTextLeftEdge = this.rightText.layout.x;
+      
+      // Calculate the width of the header bar (space between text elements minus gaps)
+      const headerBarWidth = Math.max(0, rightTextLeftEdge - leftTextRightEdge - (this.textGap * 2));
+      
+      this.headerBar.props.fill = fill;
+      this.headerBar.props.height = height;
+      
+      // Set the header bar's position and size
+      const headerBarX = leftTextRightEdge + this.textGap;
+      const headerBarY = this.layout.y + offsetY;
+      
+      this.headerBar.layout.x = headerBarX;
+      this.headerBar.layout.y = headerBarY;
+      this.headerBar.layout.width = headerBarWidth;
+      this.headerBar.layout.height = height;
+      this.headerBar.layout.calculated = true;
+      
+      // Update intrinsic size for rendering
+      this.headerBar.intrinsicSize = {
+        width: headerBarWidth,
+        height: height,
+        calculated: true
+      };
+    } catch (error) {
+      console.error('❌ Error in header bar layout:', error);
+      throw error;
+    } finally {
+      console.groupEnd();
     }
   }
 

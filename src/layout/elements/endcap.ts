@@ -20,29 +20,40 @@ export class EndcapElement extends LayoutElement {
     }
   
     canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
-      if (this.intrinsicSize.height === 0 && this.layoutConfig.anchorTo) {
-        const anchorElement = elementsMap.get(this.layoutConfig.anchorTo);
-        if (!anchorElement || !anchorElement.layout.calculated) return false; 
+      // Check if we have zero height and anchor configuration
+      if (this.intrinsicSize.height === 0 && this.layoutConfig.anchor?.anchorTo) {
+        const anchorElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
+        // If anchor target doesn't exist or is not calculated, return false
+        // and DON'T call super.canCalculateLayout
+        if (!anchorElement || !anchorElement.layout.calculated) {
+          return false;
+        }
       }
+      // Only call super if we passed the special checks
       return super.canCalculateLayout(elementsMap); 
     }
   
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
-      if (this.intrinsicSize.height === 0 && this.layoutConfig.anchorTo) {
-        const anchorElement = elementsMap.get(this.layoutConfig.anchorTo);
-        if (anchorElement) { 
+      if (this.intrinsicSize.height === 0 && this.layoutConfig.anchor?.anchorTo) {
+        const anchorElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
+        if (anchorElement && anchorElement.layout.calculated) { 
           // IMPORTANT: Modify the height used for this specific layout calculation
-          // We store the calculated dimensions in this.layout, not this.intrinsicSize here
-          // Let the base calculateLayout use this adopted height
-           const adoptedHeight = anchorElement.layout.height;
-           const originalLayoutHeight = this.layoutConfig.height;
-           this.layoutConfig.height = adoptedHeight; 
-           super.calculateLayout(elementsMap, containerRect);
-           this.layoutConfig.height = originalLayoutHeight;
-           return;
+          // Store the original height so we can restore it later
+          const originalLayoutHeight = this.layoutConfig.height;
+          
+          // Set the layoutConfig height to match the anchor element height
+          this.layoutConfig.height = anchorElement.layout.height;
+          
+          // Call super to do the actual layout calculation
+          super.calculateLayout(elementsMap, containerRect);
+          
+          // Restore the original height
+          this.layoutConfig.height = originalLayoutHeight;
+          return;
         }
       }
       
+      // If we didn't need to adjust height or couldn't find anchor, just call super
       super.calculateLayout(elementsMap, containerRect);
     }
   

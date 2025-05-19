@@ -134,7 +134,7 @@ export class TextElement extends LayoutElement {
           letter-spacing=${this.props.letterSpacing || 'normal'}
           text-anchor=${textAnchor}
           dominant-baseline=${dominantBaseline}
-          style=${styles}
+          style="${styles}"
         >
           ${this.props.text || ''}
         </text>
