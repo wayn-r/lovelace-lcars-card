@@ -289,6 +289,65 @@ describe('RectangleElement', () => {
             { hasText: true, isCutout: false, rx: 0 }
         );
       });
+
+      it('should position button text correctly based on text_anchor setting', () => {
+        // Mock the Button class to track createButton calls and capture text positioning
+        const mockButton = {
+          createButton: vi.fn((pathData, x, y, width, height, options) => {
+            return svg`<g>Mock Button</g>`;
+          })
+        };
+
+        // Test 'start' anchor - should position at left edge with padding
+        const propsStart = { 
+          button: { enabled: true, text: "Start Text", text_anchor: "start" }, 
+          rx: 0 
+        };
+        const layout = { x: 10, y: 20, width: 100, height: 30, calculated: true };
+        rectangleElement = new RectangleElement('btn-text-start', propsStart, {}, mockHass, mockRequestUpdate);
+        rectangleElement.button = mockButton as any;
+        rectangleElement.layout = layout;
+        rectangleElement.render();
+        
+        expect(mockButton.createButton).toHaveBeenCalledWith(
+          expect.any(String), 10, 20, 100, 30,
+          { hasText: true, isCutout: false, rx: 0 }
+        );
+
+        mockButton.createButton.mockClear();
+
+        // Test 'end' anchor - should position at right edge with padding
+        const propsEnd = { 
+          button: { enabled: true, text: "End Text", text_anchor: "end" }, 
+          rx: 0 
+        };
+        rectangleElement = new RectangleElement('btn-text-end', propsEnd, {}, mockHass, mockRequestUpdate);
+        rectangleElement.button = mockButton as any;
+        rectangleElement.layout = layout;
+        rectangleElement.render();
+        
+        expect(mockButton.createButton).toHaveBeenCalledWith(
+          expect.any(String), 10, 20, 100, 30,
+          { hasText: true, isCutout: false, rx: 0 }
+        );
+
+        mockButton.createButton.mockClear();
+
+        // Test 'middle' anchor (default) - should position at center
+        const propsMiddle = { 
+          button: { enabled: true, text: "Middle Text", text_anchor: "middle" }, 
+          rx: 0 
+        };
+        rectangleElement = new RectangleElement('btn-text-middle', propsMiddle, {}, mockHass, mockRequestUpdate);
+        rectangleElement.button = mockButton as any;
+        rectangleElement.layout = layout;
+        rectangleElement.render();
+        
+        expect(mockButton.createButton).toHaveBeenCalledWith(
+          expect.any(String), 10, 20, 100, 30,
+          { hasText: true, isCutout: false, rx: 0 }
+        );
+      });
     });
   });
 

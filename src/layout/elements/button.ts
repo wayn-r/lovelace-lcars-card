@@ -135,9 +135,27 @@ export class Button {
         if (options.hasText && buttonConfig.text) {
             const textConfig = this.getTextConfig(buttonConfig);
             
-            // Use custom text position if provided, otherwise center in the element
-            const textX = options.customTextPosition?.x ?? (x + width / 2);
-            const textY = options.customTextPosition?.y ?? (y + height / 2);
+            let textX: number;
+            let textY: number;
+            
+            if (options.customTextPosition) {
+                // Use custom text position if provided
+                textX = options.customTextPosition.x;
+                textY = options.customTextPosition.y;
+            } else {
+                // Calculate text position based on text anchor
+                const textAnchor = textConfig.textAnchor;
+                const textPadding = this._props.textPadding || 2; // Default padding of 8px
+                
+                if (textAnchor === 'start') {
+                    textX = x + textPadding; // Left edge with padding
+                } else if (textAnchor === 'end') {
+                    textX = x + width - textPadding; // Right edge with padding
+                } else {
+                    textX = x + width / 2; // Center (default for 'middle')
+                }
+                textY = y + height / 2; // Always center vertically
+            }
             
             if (options.isCutout && maskId) {
                 elements.push(this.createTextMask(

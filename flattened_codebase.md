@@ -39,6 +39,7 @@ lovelace-lcars-card/
 │   │       └── renderer.spec.ts.snap
 │   ├── layout/
 │   │   ├── elements/
+│   │   │   ├── button.spec.ts
 │   │   │   ├── button.ts
 │   │   │   ├── chisel_endcap.spec.ts
 │   │   │   ├── chisel_endcap.ts
@@ -10764,6 +10765,195 @@ function renderHalfWidthPropertyForm(
 }
 ```
 
+## File: src/layout/elements/button.spec.ts
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Button } from './button';
+import { svg, SVGTemplateResult } from 'lit';
+
+// Mock HomeAssistant
+const mockHass: any = {
+  callService: vi.fn(),
+  states: {}
+};
+
+describe('Button Text Positioning', () => {
+  let button: Button;
+  const mockRequestUpdate = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('createButton with different text anchors', () => {
+    it('should position text at left edge with padding for text_anchor: "start"', () => {
+      const props = {
+        button: {
+          enabled: true,
+          text: 'Start Text',
+          text_anchor: 'start'
+        },
+        textPadding: 10
+      };
+      
+      button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      
+      // Capture the createText call to verify positioning
+      const originalCreateText = button.createText;
+      const createTextSpy = vi.fn();
+      button.createText = createTextSpy;
+
+      const pathData = 'M 0,0 L 100,0 L 100,30 L 0,30 Z';
+      button.createButton(pathData, 0, 0, 100, 30, {
+        hasText: true,
+        isCutout: false,
+        rx: 0
+      });
+
+      expect(createTextSpy).toHaveBeenCalledWith(
+        10, // x position: left edge (0) + padding (10)
+        15, // y position: center (30/2)
+        'Start Text',
+        expect.objectContaining({
+          textAnchor: 'start'
+        })
+      );
+    });
+
+    it('should position text at right edge with padding for text_anchor: "end"', () => {
+      const props = {
+        button: {
+          enabled: true,
+          text: 'End Text',
+          text_anchor: 'end'
+        },
+        textPadding: 10
+      };
+      
+      button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      
+      const createTextSpy = vi.fn();
+      button.createText = createTextSpy;
+
+      const pathData = 'M 0,0 L 100,0 L 100,30 L 0,30 Z';
+      button.createButton(pathData, 0, 0, 100, 30, {
+        hasText: true,
+        isCutout: false,
+        rx: 0
+      });
+
+      expect(createTextSpy).toHaveBeenCalledWith(
+        90, // x position: right edge (100) - padding (10)
+        15, // y position: center (30/2)
+        'End Text',
+        expect.objectContaining({
+          textAnchor: 'end'
+        })
+      );
+    });
+
+    it('should position text at center for text_anchor: "middle" (default)', () => {
+      const props = {
+        button: {
+          enabled: true,
+          text: 'Middle Text',
+          text_anchor: 'middle'
+        }
+      };
+      
+      button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      
+      const createTextSpy = vi.fn();
+      button.createText = createTextSpy;
+
+      const pathData = 'M 0,0 L 100,0 L 100,30 L 0,30 Z';
+      button.createButton(pathData, 0, 0, 100, 30, {
+        hasText: true,
+        isCutout: false,
+        rx: 0
+      });
+
+      expect(createTextSpy).toHaveBeenCalledWith(
+        50, // x position: center (100/2)
+        15, // y position: center (30/2)
+        'Middle Text',
+        expect.objectContaining({
+          textAnchor: 'middle'
+        })
+      );
+    });
+
+    it('should use default padding when textPadding is not specified', () => {
+      const props = {
+        button: {
+          enabled: true,
+          text: 'Start Text',
+          text_anchor: 'start'
+        }
+        // No textPadding specified
+      };
+      
+      button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      
+      const createTextSpy = vi.fn();
+      button.createText = createTextSpy;
+
+      const pathData = 'M 0,0 L 100,0 L 100,30 L 0,30 Z';
+      button.createButton(pathData, 0, 0, 100, 30, {
+        hasText: true,
+        isCutout: false,
+        rx: 0
+      });
+
+      expect(createTextSpy).toHaveBeenCalledWith(
+        2, // x position: left edge (0) + default padding (2)
+        15, // y position: center (30/2)
+        'Start Text',
+        expect.objectContaining({
+          textAnchor: 'start'
+        })
+      );
+    });
+
+    it('should respect customTextPosition when provided', () => {
+      const props = {
+        button: {
+          enabled: true,
+          text: 'Custom Position',
+          text_anchor: 'start' // This should be ignored when customTextPosition is provided
+        }
+      };
+      
+      button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      
+      const createTextSpy = vi.fn();
+      button.createText = createTextSpy;
+
+      const pathData = 'M 0,0 L 100,0 L 100,30 L 0,30 Z';
+      button.createButton(pathData, 0, 0, 100, 30, {
+        hasText: true,
+        isCutout: false,
+        rx: 0,
+        customTextPosition: {
+          x: 25,
+          y: 20
+        }
+      });
+
+      expect(createTextSpy).toHaveBeenCalledWith(
+        25, // x position: custom position
+        20, // y position: custom position
+        'Custom Position',
+        expect.objectContaining({
+          textAnchor: 'start'
+        })
+      );
+    });
+  });
+});
+```
+
 ## File: src/layout/elements/button.ts
 
 ```typescript
@@ -10904,9 +11094,27 @@ export class Button {
         if (options.hasText && buttonConfig.text) {
             const textConfig = this.getTextConfig(buttonConfig);
             
-            // Use custom text position if provided, otherwise center in the element
-            const textX = options.customTextPosition?.x ?? (x + width / 2);
-            const textY = options.customTextPosition?.y ?? (y + height / 2);
+            let textX: number;
+            let textY: number;
+            
+            if (options.customTextPosition) {
+                // Use custom text position if provided
+                textX = options.customTextPosition.x;
+                textY = options.customTextPosition.y;
+            } else {
+                // Calculate text position based on text anchor
+                const textAnchor = textConfig.textAnchor;
+                const textPadding = this._props.textPadding || 2; // Default padding of 8px
+                
+                if (textAnchor === 'start') {
+                    textX = x + textPadding; // Left edge with padding
+                } else if (textAnchor === 'end') {
+                    textX = x + width - textPadding; // Right edge with padding
+                } else {
+                    textX = x + width / 2; // Center (default for 'middle')
+                }
+                textY = y + height / 2; // Always center vertically
+            }
             
             if (options.isCutout && maskId) {
                 elements.push(this.createTextMask(
@@ -13958,6 +14166,65 @@ describe('RectangleElement', () => {
         expect(mockCreateButton).toHaveBeenCalledWith(
             expect.any(String), 3, 3, 90, 45,
             { hasText: true, isCutout: false, rx: 0 }
+        );
+      });
+
+      it('should position button text correctly based on text_anchor setting', () => {
+        // Mock the Button class to track createButton calls and capture text positioning
+        const mockButton = {
+          createButton: vi.fn((pathData, x, y, width, height, options) => {
+            return svg`<g>Mock Button</g>`;
+          })
+        };
+
+        // Test 'start' anchor - should position at left edge with padding
+        const propsStart = { 
+          button: { enabled: true, text: "Start Text", text_anchor: "start" }, 
+          rx: 0 
+        };
+        const layout = { x: 10, y: 20, width: 100, height: 30, calculated: true };
+        rectangleElement = new RectangleElement('btn-text-start', propsStart, {}, mockHass, mockRequestUpdate);
+        rectangleElement.button = mockButton as any;
+        rectangleElement.layout = layout;
+        rectangleElement.render();
+        
+        expect(mockButton.createButton).toHaveBeenCalledWith(
+          expect.any(String), 10, 20, 100, 30,
+          { hasText: true, isCutout: false, rx: 0 }
+        );
+
+        mockButton.createButton.mockClear();
+
+        // Test 'end' anchor - should position at right edge with padding
+        const propsEnd = { 
+          button: { enabled: true, text: "End Text", text_anchor: "end" }, 
+          rx: 0 
+        };
+        rectangleElement = new RectangleElement('btn-text-end', propsEnd, {}, mockHass, mockRequestUpdate);
+        rectangleElement.button = mockButton as any;
+        rectangleElement.layout = layout;
+        rectangleElement.render();
+        
+        expect(mockButton.createButton).toHaveBeenCalledWith(
+          expect.any(String), 10, 20, 100, 30,
+          { hasText: true, isCutout: false, rx: 0 }
+        );
+
+        mockButton.createButton.mockClear();
+
+        // Test 'middle' anchor (default) - should position at center
+        const propsMiddle = { 
+          button: { enabled: true, text: "Middle Text", text_anchor: "middle" }, 
+          rx: 0 
+        };
+        rectangleElement = new RectangleElement('btn-text-middle', propsMiddle, {}, mockHass, mockRequestUpdate);
+        rectangleElement.button = mockButton as any;
+        rectangleElement.layout = layout;
+        rectangleElement.render();
+        
+        expect(mockButton.createButton).toHaveBeenCalledWith(
+          expect.any(String), 10, 20, 100, 30,
+          { hasText: true, isCutout: false, rx: 0 }
         );
       });
     });
