@@ -126,6 +126,11 @@ export class LcarsCard extends LitElement {
   private _initialLoadComplete: boolean = false;
   private _resizeTimeout: ReturnType<typeof setTimeout> | undefined;
   private _editModeObserver?: MutationObserver;
+  private _forceRecalcRetryCount: number = 0;
+  private _maxForceRecalcRetries: number = 10;
+  private _visibilityChangeTimeout?: ReturnType<typeof setTimeout>;
+  private _isForceRecalculating: boolean = false;
+  private _visibilityChangeCount: number = 0;
 
   static styles = [editorStyles];
 
@@ -283,6 +288,22 @@ export class LcarsCard extends LitElement {
     window.removeEventListener('resize', this._handleWindowResize.bind(this));
     document.removeEventListener('visibilitychange', this._handleVisibilityChange.bind(this));
     
+    // Clean up timeouts
+    if (this._resizeTimeout) {
+      clearTimeout(this._resizeTimeout);
+      this._resizeTimeout = undefined;
+    }
+    
+    if (this._visibilityChangeTimeout) {
+      clearTimeout(this._visibilityChangeTimeout);
+      this._visibilityChangeTimeout = undefined;
+    }
+    
+    // Clear recalculation flags
+    this._isForceRecalculating = false;
+    this._forceRecalcRetryCount = 0;
+    this._visibilityChangeCount = 0;
+    
     // Clean up edit mode observer
     if (this._editModeObserver) {
       this._editModeObserver.disconnect();
@@ -406,11 +427,36 @@ export class LcarsCard extends LitElement {
   }
 
   private _handleVisibilityChange(): void {
+    // Track multiple rapid visibility changes for debugging
+    this._visibilityChangeCount++;
+    console.log(`Visibility change #${this._visibilityChangeCount}, state: ${document.visibilityState}, currently recalculating: ${this._isForceRecalculating}`);
+    
+    // Clear any existing timeout
+    if (this._visibilityChangeTimeout) {
+      clearTimeout(this._visibilityChangeTimeout);
+    }
+    
     if (document.visibilityState === 'visible') {
-        // Recalculate layout when tab becomes visible
-        requestAnimationFrame(() => {
-            this._forceLayoutRecalculation();
-        });
+        // If we're already in a recalculation cycle, skip this event
+        if (this._isForceRecalculating) {
+            console.log("Skipping visibility change - already recalculating");
+            return;
+        }
+        
+        // Add a longer delay to give the browser more time to restore the layout properly
+        // and to debounce rapid visibility changes more aggressively
+        this._visibilityChangeTimeout = setTimeout(() => {
+            // Double check that we're still visible and not already recalculating
+            if (document.visibilityState === 'visible' && !this._isForceRecalculating) {
+                // Reset retry counter for a fresh start, but only if we're not already retrying
+                this._forceRecalcRetryCount = 0;
+                
+                requestAnimationFrame(() => {
+                    this._forceLayoutRecalculation();
+                });
+            }
+            this._visibilityChangeTimeout = undefined;
+        }, 500); // Increased from 250ms to 500ms for more aggressive debouncing
     }
   }
 
@@ -486,15 +532,32 @@ export class LcarsCard extends LitElement {
   }
 
   private _forceLayoutRecalculation(): void {
+    // If we're already recalculating, avoid overlapping attempts
+    if (this._isForceRecalculating) {
+      console.log("Skipping force recalculation - already in progress");
+      return;
+    }
+    
     // Get current container dimensions
     const container = this.shadowRoot?.querySelector('.card-container');
-    if (!container) return;
+    if (!container) {
+      console.warn("Container not found during force recalculation");
+      this._forceRecalcRetryCount = 0; // Reset counter
+      this._isForceRecalculating = false; // Clear flag
+      return;
+    }
 
     const newRect = container.getBoundingClientRect();
     
     // Only proceed if container has non-zero dimensions
     if (newRect.width > 0 && newRect.height > 0) {
         console.log("Forcing layout recalculation:", newRect.width, "x", newRect.height);
+        
+        // Set the flag to indicate we're recalculating
+        this._isForceRecalculating = true;
+        
+        // Reset retry counter on success
+        this._forceRecalcRetryCount = 0;
         
         // Reset all layouts for recalculation
         if (this._layoutEngine && this._layoutEngine.layoutGroups) {
@@ -509,12 +572,32 @@ export class LcarsCard extends LitElement {
         this._containerRect = newRect;
         this._layoutCalculationPending = true;
         this.requestUpdate();
+        
+        // Clear the flag after a short delay to allow the recalculation to complete
+        // We use a timeout here because requestUpdate is async
+        setTimeout(() => {
+            this._isForceRecalculating = false;
+        }, 100);
     } else {
-        // If container has zero dimensions, schedule another attempt
-        console.warn("Container has zero dimensions during force recalculation");
-        requestAnimationFrame(() => {
-            this._forceLayoutRecalculation();
-        });
+        // If container has zero dimensions, check retry limit
+        this._forceRecalcRetryCount++;
+        
+        if (this._forceRecalcRetryCount <= this._maxForceRecalcRetries) {
+            console.warn(`Container has zero dimensions during force recalculation (attempt ${this._forceRecalcRetryCount}/${this._maxForceRecalcRetries})`);
+            
+            // Set flag to indicate we're in a retry cycle
+            this._isForceRecalculating = true;
+            
+            // Use increasing delays to give the browser more time to restore dimensions
+            const delay = Math.min(100 * this._forceRecalcRetryCount, 1000);
+            setTimeout(() => {
+                this._forceLayoutRecalculation();
+            }, delay);
+        } else {
+            console.warn(`Giving up force recalculation after ${this._maxForceRecalcRetries} attempts with zero dimensions`);
+            this._forceRecalcRetryCount = 0; // Reset for future attempts
+            this._isForceRecalculating = false; // Clear flag
+        }
     }
   }
 
