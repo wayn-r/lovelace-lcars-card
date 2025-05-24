@@ -721,7 +721,26 @@ export class ButtonFontWeight implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return (new FontWeight()).getSchema(); }
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: {
+              select: {
+                options: [
+                  { value: '', label: '' },
+                  { value: 'normal', label: 'Normal' },
+                  { value: 'bold', label: 'Bold' },
+                  { value: 'bolder', label: 'Bolder' },
+                  { value: 'lighter', label: 'Lighter' },
+                  { value: '100', label: '100' }, { value: '200', label: '200' }, { value: '300', label: '300' },
+                  { value: '400', label: '400' }, { value: '500', label: '500' }, { value: '600', label: '600' },
+                  { value: '700', label: '700' }, { value: '800', label: '800' }, { value: '900', label: '900' },
+                ],
+              },
+            }
+        };
+    }
 }
 export class ButtonLetterSpacing implements LcarsPropertyBase {
     name = 'button.letter_spacing';
@@ -739,7 +758,13 @@ export class ButtonTextTransform implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return (new TextTransform()).getSchema(); }
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { text: {} }
+        };
+    }
 }
 export class ButtonTextAnchor implements LcarsPropertyBase {
     name = 'button.text_anchor';
@@ -748,7 +773,23 @@ export class ButtonTextAnchor implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return (new TextAnchor()).getSchema(); }
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: {
+              select: {
+                options: [
+                  { value: '', label: '' },
+                  { value: 'start', label: 'Start' },
+                  { value: 'middle', label: 'Middle' },
+                  { value: 'end', label: 'End' },
+                ],
+                mode: 'dropdown'
+              },
+            }
+        };
+    }
 }
 export class ButtonDominantBaseline implements LcarsPropertyBase {
     name = 'button.dominant_baseline';
@@ -757,7 +798,24 @@ export class ButtonDominantBaseline implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return (new DominantBaseline()).getSchema(); }
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: {
+              select: {
+                options: [
+                  { value: '', label: '' },
+                  { value: 'auto', label: 'Auto' },
+                  { value: 'middle', label: 'Middle' },
+                  { value: 'central', label: 'Central' },
+                  { value: 'hanging', label: 'Hanging' },
+                ],
+                mode: 'dropdown'
+              },
+            }
+        };
+    }
 }
 
 

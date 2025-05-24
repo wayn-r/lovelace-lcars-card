@@ -8049,18 +8049,37 @@ describe('ButtonTextColor Property', () => {
 describe('ButtonFontWeight Property', () => {
     const prop = new ButtonFontWeight();
     testCommonProperties(prop, 'button.font_weight', 'Button Font Weight', 'button.font_weight', PropertyGroup.BUTTON, Layout.HALF);
-    it('should reuse FontWeight schema', () => {
-        const baseSchema = new FontWeight().getSchema();
-        expect(prop.getSchema()).toEqual(baseSchema); // Directly compare, name is part of baseSchema
+    it('should return correct schema with font weight options', () => {
+        expect(prop.getSchema()).toEqual({
+            name: 'button.font_weight',
+            label: 'Button Font Weight',
+            selector: {
+              select: {
+                options: [
+                  { value: '', label: '' },
+                  { value: 'normal', label: 'Normal' },
+                  { value: 'bold', label: 'Bold' },
+                  { value: 'bolder', label: 'Bolder' },
+                  { value: 'lighter', label: 'Lighter' },
+                  { value: '100', label: '100' }, { value: '200', label: '200' }, { value: '300', label: '300' },
+                  { value: '400', label: '400' }, { value: '500', label: '500' }, { value: '600', label: '600' },
+                  { value: '700', label: '700' }, { value: '800', label: '800' }, { value: '900', label: '900' },
+                ],
+              },
+            }
+        });
     });
 });
 
 describe('ButtonTextTransform Property', () => {
     const prop = new ButtonTextTransform();
     testCommonProperties(prop, 'button.text_transform', 'Button Text Transform', 'button.text_transform', PropertyGroup.BUTTON, Layout.HALF);
-    it('should reuse TextTransform schema', () => {
-        const baseSchema = new TextTransform().getSchema();
-        expect(prop.getSchema()).toEqual(baseSchema);
+    it('should return correct schema for text selector', () => {
+        expect(prop.getSchema()).toEqual({ 
+            name: 'button.text_transform', 
+            label: 'Button Text Transform', 
+            selector: { text: {} } 
+        });
     });
 });
 
@@ -8190,18 +8209,45 @@ describe('ButtonLetterSpacing Property', () => {
 describe('ButtonTextAnchor Property', () => {
     const prop = new ButtonTextAnchor();
     testCommonProperties(prop, 'button.text_anchor', 'Button Text Anchor', 'button.text_anchor', PropertyGroup.BUTTON, Layout.HALF);
-    it('should reuse TextAnchor schema', () => {
-        const baseSchema = new TextAnchor().getSchema();
-        expect(prop.getSchema()).toEqual(baseSchema);
+    it('should return correct schema with text anchor options', () => {
+        expect(prop.getSchema()).toEqual({
+            name: 'button.text_anchor',
+            label: 'Button Text Anchor',
+            selector: {
+              select: {
+                options: [
+                  { value: '', label: '' },
+                  { value: 'start', label: 'Start' },
+                  { value: 'middle', label: 'Middle' },
+                  { value: 'end', label: 'End' },
+                ],
+                mode: 'dropdown'
+              },
+            }
+        });
     });
 });
 
 describe('ButtonDominantBaseline Property', () => {
     const prop = new ButtonDominantBaseline();
     testCommonProperties(prop, 'button.dominant_baseline', 'Button Dominant Baseline', 'button.dominant_baseline', PropertyGroup.BUTTON, Layout.HALF);
-    it('should reuse DominantBaseline schema', () => {
-        const baseSchema = new DominantBaseline().getSchema();
-        expect(prop.getSchema()).toEqual(baseSchema);
+    it('should return correct schema with dominant baseline options', () => {
+        expect(prop.getSchema()).toEqual({
+            name: 'button.dominant_baseline',
+            label: 'Button Dominant Baseline',
+            selector: {
+              select: {
+                options: [
+                  { value: '', label: '' },
+                  { value: 'auto', label: 'Auto' },
+                  { value: 'middle', label: 'Middle' },
+                  { value: 'central', label: 'Central' },
+                  { value: 'hanging', label: 'Hanging' },
+                ],
+                mode: 'dropdown'
+              },
+            }
+        });
     });
 });
 
@@ -8951,7 +8997,26 @@ export class ButtonFontWeight implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return (new FontWeight()).getSchema(); }
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: {
+              select: {
+                options: [
+                  { value: '', label: '' },
+                  { value: 'normal', label: 'Normal' },
+                  { value: 'bold', label: 'Bold' },
+                  { value: 'bolder', label: 'Bolder' },
+                  { value: 'lighter', label: 'Lighter' },
+                  { value: '100', label: '100' }, { value: '200', label: '200' }, { value: '300', label: '300' },
+                  { value: '400', label: '400' }, { value: '500', label: '500' }, { value: '600', label: '600' },
+                  { value: '700', label: '700' }, { value: '800', label: '800' }, { value: '900', label: '900' },
+                ],
+              },
+            }
+        };
+    }
 }
 export class ButtonLetterSpacing implements LcarsPropertyBase {
     name = 'button.letter_spacing';
@@ -8969,7 +9034,13 @@ export class ButtonTextTransform implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return (new TextTransform()).getSchema(); }
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { text: {} }
+        };
+    }
 }
 export class ButtonTextAnchor implements LcarsPropertyBase {
     name = 'button.text_anchor';
@@ -8978,7 +9049,23 @@ export class ButtonTextAnchor implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return (new TextAnchor()).getSchema(); }
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: {
+              select: {
+                options: [
+                  { value: '', label: '' },
+                  { value: 'start', label: 'Start' },
+                  { value: 'middle', label: 'Middle' },
+                  { value: 'end', label: 'End' },
+                ],
+                mode: 'dropdown'
+              },
+            }
+        };
+    }
 }
 export class ButtonDominantBaseline implements LcarsPropertyBase {
     name = 'button.dominant_baseline';
@@ -8987,7 +9074,24 @@ export class ButtonDominantBaseline implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return (new DominantBaseline()).getSchema(); }
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: {
+              select: {
+                options: [
+                  { value: '', label: '' },
+                  { value: 'auto', label: 'Auto' },
+                  { value: 'middle', label: 'Middle' },
+                  { value: 'central', label: 'Central' },
+                  { value: 'hanging', label: 'Hanging' },
+                ],
+                mode: 'dropdown'
+              },
+            }
+        };
+    }
 }
 
 
