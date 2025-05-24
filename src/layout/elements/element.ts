@@ -574,4 +574,11 @@ export abstract class LayoutElement {
       }
       return undefined;
     }
+  
+    updateHass(hass?: HomeAssistant): void {
+        this.hass = hass;
+        if (this.button) {
+            this.button.updateHass(hass);
+        }
+    }
   } 

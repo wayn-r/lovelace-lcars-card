@@ -315,7 +315,7 @@ export class Button {
                 ev.stopPropagation();
             
                 const actionConfig = this.createActionConfig(buttonConfig);
-                this.executeAction(actionConfig);
+                this.executeAction(actionConfig, ev.currentTarget as Element);
             },
             
             handleMouseEnter: (): void => {
@@ -375,22 +375,36 @@ export class Button {
         return actionConfig;
     }
     
-    private executeAction(actionConfig: any): void {
+    private executeAction(actionConfig: any, element?: Element): void {
         const hass = this._hass;
         if (hass) {
             console.log(`[${this._id}] Executing action:`, JSON.stringify(actionConfig, null, 2));
             
             import("custom-card-helpers").then(({ handleAction }) => {
-                // Try to find the actual DOM element for this button, fallback to a mock element
-                const element = document.getElementById(this._id) || document.createElement('div');
-                element.id = this._id;
+                // Use the provided element from the event, or try to find it, or create a fallback
+                let targetElement: HTMLElement = element as HTMLElement;
                 
-                console.log(`[${this._id}] Calling handleAction with element:`, element);
+                // If no element provided, try to find it by ID
+                if (!targetElement) {
+                    const foundElement = document.getElementById(this._id);
+                    if (foundElement) {
+                        targetElement = foundElement;
+                    }
+                }
+                
+                // If still not found, create a fallback element with the correct ID
+                if (!targetElement) {
+                    targetElement = document.createElement('div');
+                    targetElement.id = this._id;
+                    console.warn(`[${this._id}] Could not find DOM element, using fallback`);
+                }
+                
+                console.log(`[${this._id}] Calling handleAction with element:`, targetElement);
                 console.log(`[${this._id}] Calling handleAction with actionConfig:`, JSON.stringify(actionConfig, null, 2));
                 console.log(`[${this._id}] Calling handleAction with hass available:`, !!hass);
                 
                 try {
-                    handleAction(element, hass, actionConfig as any, "tap");
+                    handleAction(targetElement, hass, actionConfig as any, "tap");
                     console.log(`[${this._id}] handleAction completed successfully`);
                 } catch (error) {
                     console.error(`[${this._id}] handleAction failed:`, error);
@@ -403,5 +417,9 @@ export class Button {
         } else {
             console.error(`[${this._id}] No hass object available for action execution`);
         }
+    }
+
+    updateHass(hass?: HomeAssistant): void {
+        this._hass = hass;
     }
 } 

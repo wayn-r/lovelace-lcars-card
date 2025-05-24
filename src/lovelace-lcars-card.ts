@@ -415,6 +415,16 @@ export class LcarsCard extends LitElement {
         return;
     }
 
+    // Update hass references for all elements before re-rendering
+    this._layoutEngine.layoutGroups.forEach(group => {
+        group.elements.forEach(el => {
+            const layoutEl = el as any;
+            if (layoutEl.updateHass) {
+                layoutEl.updateHass(this.hass);
+            }
+        });
+    });
+
     const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
         group.elements
             .map(el => el.render())
