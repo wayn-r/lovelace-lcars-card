@@ -305,6 +305,8 @@ export class Button {
                 console.log(`[${this._id}] handleClick:`, { props: this._props });
                 
                 const buttonConfig = this._props.button as LcarsButtonElementConfig | undefined;
+                console.log(`[${this._id}] Button config:`, JSON.stringify(buttonConfig, null, 2));
+                
                 if (!this._hass || !buttonConfig?.action_config) {
                     console.log(`[${this._id}] handleClick: Aborting (no hass or no action_config)`);
                     return; 
@@ -342,26 +344,64 @@ export class Button {
     }
     
     private createActionConfig(buttonConfig: LcarsButtonElementConfig) {
-        return {
+        const actionConfig: any = {
             tap_action: { 
                 action: buttonConfig.action_config?.type,
                 service: buttonConfig.action_config?.service,
                 service_data: buttonConfig.action_config?.service_data,
                 navigation_path: buttonConfig.action_config?.navigation_path,
-                url_path: buttonConfig.action_config?.url_path,
+                url: buttonConfig.action_config?.url_path,
                 entity: buttonConfig.action_config?.entity,
             },
             confirmation: buttonConfig.action_config?.confirmation,
         };
+
+        // For toggle and more-info actions, we need to provide the entity if not explicitly set
+        if (buttonConfig.action_config?.type === 'toggle' || buttonConfig.action_config?.type === 'more-info') {
+            if (!actionConfig.tap_action.entity) {
+                // Use the element ID as the entity ID (this assumes the element ID is an entity ID like "light.living_room")
+                actionConfig.tap_action.entity = this._id;
+            }
+        }
+
+        // Add entity at root level for toggle actions (required by custom-card-helpers)
+        if (buttonConfig.action_config?.type === 'toggle' || buttonConfig.action_config?.type === 'more-info') {
+            actionConfig.entity = actionConfig.tap_action.entity;
+        }
+
+        // Debug logging
+        console.log(`[${this._id}] Action config created:`, JSON.stringify(actionConfig, null, 2));
+
+        return actionConfig;
     }
     
     private executeAction(actionConfig: any): void {
         const hass = this._hass;
         if (hass) {
+            console.log(`[${this._id}] Executing action:`, JSON.stringify(actionConfig, null, 2));
+            
             import("custom-card-helpers").then(({ handleAction }) => {
-                handleAction({ id: this._id } as any, hass, actionConfig as any, "tap");
+                // Try to find the actual DOM element for this button, fallback to a mock element
+                const element = document.getElementById(this._id) || document.createElement('div');
+                element.id = this._id;
+                
+                console.log(`[${this._id}] Calling handleAction with element:`, element);
+                console.log(`[${this._id}] Calling handleAction with actionConfig:`, JSON.stringify(actionConfig, null, 2));
+                console.log(`[${this._id}] Calling handleAction with hass available:`, !!hass);
+                
+                try {
+                    handleAction(element, hass, actionConfig as any, "tap");
+                    console.log(`[${this._id}] handleAction completed successfully`);
+                } catch (error) {
+                    console.error(`[${this._id}] handleAction failed:`, error);
+                }
+                
                 this._requestUpdateCallback?.();
+            }).catch(error => {
+                console.error(`[${this._id}] Failed to import handleAction:`, error);
             });
+        } else {
+            console.error(`[${this._id}] No hass object available for action execution`);
         }
     }
 } 

@@ -71,8 +71,7 @@ lovelace-lcars-card/
 │   └── utils/
 │       ├── fontmetrics.d.ts
 │       ├── shapes.spec.ts
-│       ├── shapes.ts
-│       └── __snapshots__/
+│       └── shapes.ts
 ├── TODO.md
 ├── tsconfig.json
 ├── vite.config.ts
@@ -649,7 +648,7 @@ try {
     "module": "dist/lovelace-lcars-card.js",
     "type": "module",
     "scripts": {
-        "predev": "node flatten-codebase.js && node git-history-diff.js",
+        "predev": "node flatten-codebase.js && node git-history-diff.js && vitest run",
         "dev": "vite",
         "prestart": "node flatten-codebase.js && node git-history-diff.js",
         "start": "vite",
@@ -4075,6 +4074,8 @@ import {
     ButtonFontFamily, ButtonFontSize, ButtonFontWeight, ButtonLetterSpacing,
     ButtonTextTransform, ButtonTextAnchor, ButtonDominantBaseline, ButtonHoverFill,
     ButtonActiveFill, ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
+    ButtonActionService, ButtonActionServiceData, ButtonActionNavigationPath,
+    ButtonActionUrlPath, ButtonActionEntity, ButtonActionConfirmation,
     OffsetX, OffsetY, Type
     // Stretch properties (StretchTarget, StretchDirection, StretchPadding) are dynamically added by base class
     // Anchor properties (AnchorTo, AnchorPoint, TargetAnchorPoint) are explicitly excluded by Rectangle
@@ -4141,8 +4142,9 @@ describe('Rectangle EditorElement', () => {
             groups = rectangleEditorElement.getPropertyGroups();
         });
 
-        it('should define ANCHOR group as null (disabled)', () => {
-            expect(groups[PropertyGroup.ANCHOR]).toBeNull();
+        it('should define ANCHOR group with empty properties (using default anchor properties)', () => {
+            expect(groups[PropertyGroup.ANCHOR]).toBeDefined();
+            expect(groups[PropertyGroup.ANCHOR]?.properties).toEqual([]);
         });
 
         it('should define STRETCH group with empty properties (relying on base class for dynamic stretch props)', () => {
@@ -4158,7 +4160,9 @@ describe('Rectangle EditorElement', () => {
                 ButtonFontFamily, ButtonFontSize, ButtonFontWeight,
                 ButtonLetterSpacing, ButtonTextTransform, ButtonTextAnchor,
                 ButtonDominantBaseline, ButtonHoverFill, ButtonActiveFill,
-                ButtonHoverTransform, ButtonActiveTransform, ButtonActionType
+                ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
+                ButtonActionService, ButtonActionServiceData, ButtonActionNavigationPath,
+                ButtonActionUrlPath, ButtonActionEntity, ButtonActionConfirmation
             ];
             expect(buttonProps).toEqual(expectedButtonProps);
         });
@@ -4188,11 +4192,11 @@ describe('Rectangle EditorElement', () => {
             ]));
         });
 
-        it('should NOT include anchor properties (AnchorTo, AnchorPoint, TargetAnchorPoint) in the schema', () => {
+        it('should include anchor properties (AnchorTo, AnchorPoint, TargetAnchorPoint) in the schema', () => {
             const schema = rectangleEditorElement.getSchema();
             const anchorPropNames = ['anchorTo', 'anchorPoint', 'targetAnchorPoint'];
             anchorPropNames.forEach(propName => {
-                expect(schema.find(s => s.name === propName)).toBeUndefined();
+                expect(schema.find(s => s.name === propName)).toBeDefined();
             });
         });
 
@@ -4246,7 +4250,9 @@ describe('Rectangle EditorElement', () => {
                 new ButtonFontFamily(), new ButtonFontSize(), new ButtonFontWeight(),
                 new ButtonLetterSpacing(), new ButtonTextTransform(), new ButtonTextAnchor(),
                 new ButtonDominantBaseline(), new ButtonHoverFill(), new ButtonActiveFill(),
-                new ButtonHoverTransform(), new ButtonActiveTransform(), new ButtonActionType()
+                new ButtonHoverTransform(), new ButtonActiveTransform(), new ButtonActionType(),
+                new ButtonActionService(), new ButtonActionServiceData(), new ButtonActionNavigationPath(),
+                new ButtonActionUrlPath(), new ButtonActionEntity(), new ButtonActionConfirmation()
             ];
             expect(buttonSchemaItems.length).toBe(expectedButtonPropInstances.length);
             expectedButtonPropInstances.forEach(instance => {
@@ -4472,13 +4478,21 @@ import {
     ButtonActionType,
     ButtonText,
     OffsetX,
-    OffsetY
+    OffsetY,
+    ButtonActionService,
+    ButtonActionServiceData,
+    ButtonActionNavigationPath,
+    ButtonActionUrlPath,
+    ButtonActionEntity,
+    ButtonActionConfirmation
 } from '../properties/properties';
 
 export class Rectangle extends EditorElement {
     getPropertyGroups(): Partial<Record<PropertyGroup, PropertyGroupDefinition | null>> {
         return {
-            [PropertyGroup.ANCHOR]: null,
+            [PropertyGroup.ANCHOR]: {
+                properties: []
+            },
             [PropertyGroup.STRETCH]: {
                 properties: []
             },
@@ -4499,7 +4513,13 @@ export class Rectangle extends EditorElement {
                     ButtonActiveFill,
                     ButtonHoverTransform,
                     ButtonActiveTransform,
-                    ButtonActionType
+                    ButtonActionType,
+                    ButtonActionService,
+                    ButtonActionServiceData,
+                    ButtonActionNavigationPath,
+                    ButtonActionUrlPath,
+                    ButtonActionEntity,
+                    ButtonActionConfirmation
                 ]
             },
             [PropertyGroup.DIMENSIONS]: {
@@ -8083,7 +8103,7 @@ describe('ButtonActionType Property', () => {
     testCommonProperties(prop, 'button.action_config.type', 'Action Type', 'button.action_config.type', PropertyGroup.BUTTON, Layout.HALF);
     it('should return correct schema with action type options', () => {
         const schema = prop.getSchema();
-        expect(schema.selector.aselect.options).toEqual(expect.arrayContaining([
+        expect(schema.selector.select.options).toEqual(expect.arrayContaining([
             { value: 'none', label: 'None' },
             { value: 'call-service', label: 'Call Service' },
         ])); // Check a few
@@ -9047,9 +9067,9 @@ export class ButtonActionType implements LcarsPropertyBase {
         return {
             name: this.name,
             label: this.label,
-            selector: { aselect: {
- mode: 'dropdown',
- options: [
+            selector: { select: {
+            mode: 'dropdown',
+            options: [
                         { value: 'none', label: 'None' },
                         { value: 'call-service', label: 'Call Service' },
                         { value: 'navigate', label: 'Navigate' },
@@ -9070,7 +9090,13 @@ export class ButtonActionService implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { text: {} } }; }
+    getSchema(): HaFormSchema { 
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { text: {} }
+        }
+    }
 }
 export class ButtonActionServiceData implements LcarsPropertyBase {
     name = 'button.action_config.service_data';
@@ -9079,7 +9105,13 @@ export class ButtonActionServiceData implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { object: {} } }; }
+    getSchema(): HaFormSchema { 
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { object: {} }
+        }
+    }
 }
 export class ButtonActionNavigationPath implements LcarsPropertyBase {
     name = 'button.action_config.navigation_path';
@@ -9088,7 +9120,13 @@ export class ButtonActionNavigationPath implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { text: {} } }; }
+    getSchema(): HaFormSchema { 
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { text: {} }
+        }
+    }
 }
 export class ButtonActionUrlPath implements LcarsPropertyBase {
     name = 'button.action_config.url_path';
@@ -9097,7 +9135,13 @@ export class ButtonActionUrlPath implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { text: {} } }; }
+    getSchema(): HaFormSchema { 
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { text: {} }
+        }
+    }
 }
 export class ButtonActionEntity implements LcarsPropertyBase {
     name = 'button.action_config.entity';
@@ -9106,7 +9150,13 @@ export class ButtonActionEntity implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { entity: {} } }; }
+    getSchema(): HaFormSchema { 
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { entity: {} }
+        }
+    }
 }
 export class ButtonActionConfirmation implements LcarsPropertyBase {
     name = 'button.action_config.confirmation';
@@ -10920,6 +10970,8 @@ export class Button {
                 console.log(`[${this._id}] handleClick:`, { props: this._props });
                 
                 const buttonConfig = this._props.button as LcarsButtonElementConfig | undefined;
+                console.log(`[${this._id}] Button config:`, JSON.stringify(buttonConfig, null, 2));
+                
                 if (!this._hass || !buttonConfig?.action_config) {
                     console.log(`[${this._id}] handleClick: Aborting (no hass or no action_config)`);
                     return; 
@@ -10957,26 +11009,64 @@ export class Button {
     }
     
     private createActionConfig(buttonConfig: LcarsButtonElementConfig) {
-        return {
+        const actionConfig: any = {
             tap_action: { 
                 action: buttonConfig.action_config?.type,
                 service: buttonConfig.action_config?.service,
                 service_data: buttonConfig.action_config?.service_data,
                 navigation_path: buttonConfig.action_config?.navigation_path,
-                url_path: buttonConfig.action_config?.url_path,
+                url: buttonConfig.action_config?.url_path,
                 entity: buttonConfig.action_config?.entity,
             },
             confirmation: buttonConfig.action_config?.confirmation,
         };
+
+        // For toggle and more-info actions, we need to provide the entity if not explicitly set
+        if (buttonConfig.action_config?.type === 'toggle' || buttonConfig.action_config?.type === 'more-info') {
+            if (!actionConfig.tap_action.entity) {
+                // Use the element ID as the entity ID (this assumes the element ID is an entity ID like "light.living_room")
+                actionConfig.tap_action.entity = this._id;
+            }
+        }
+
+        // Add entity at root level for toggle actions (required by custom-card-helpers)
+        if (buttonConfig.action_config?.type === 'toggle' || buttonConfig.action_config?.type === 'more-info') {
+            actionConfig.entity = actionConfig.tap_action.entity;
+        }
+
+        // Debug logging
+        console.log(`[${this._id}] Action config created:`, JSON.stringify(actionConfig, null, 2));
+
+        return actionConfig;
     }
     
     private executeAction(actionConfig: any): void {
         const hass = this._hass;
         if (hass) {
+            console.log(`[${this._id}] Executing action:`, JSON.stringify(actionConfig, null, 2));
+            
             import("custom-card-helpers").then(({ handleAction }) => {
-                handleAction({ id: this._id } as any, hass, actionConfig as any, "tap");
+                // Try to find the actual DOM element for this button, fallback to a mock element
+                const element = document.getElementById(this._id) || document.createElement('div');
+                element.id = this._id;
+                
+                console.log(`[${this._id}] Calling handleAction with element:`, element);
+                console.log(`[${this._id}] Calling handleAction with actionConfig:`, JSON.stringify(actionConfig, null, 2));
+                console.log(`[${this._id}] Calling handleAction with hass available:`, !!hass);
+                
+                try {
+                    handleAction(element, hass, actionConfig as any, "tap");
+                    console.log(`[${this._id}] handleAction completed successfully`);
+                } catch (error) {
+                    console.error(`[${this._id}] handleAction failed:`, error);
+                }
+                
                 this._requestUpdateCallback?.();
+            }).catch(error => {
+                console.error(`[${this._id}] Failed to import handleAction:`, error);
             });
+        } else {
+            console.error(`[${this._id}] No hass object available for action execution`);
         }
     }
 }

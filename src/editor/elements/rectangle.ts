@@ -20,13 +20,21 @@ import {
     ButtonActionType,
     ButtonText,
     OffsetX,
-    OffsetY
+    OffsetY,
+    ButtonActionService,
+    ButtonActionServiceData,
+    ButtonActionNavigationPath,
+    ButtonActionUrlPath,
+    ButtonActionEntity,
+    ButtonActionConfirmation
 } from '../properties/properties';
 
 export class Rectangle extends EditorElement {
     getPropertyGroups(): Partial<Record<PropertyGroup, PropertyGroupDefinition | null>> {
         return {
-            [PropertyGroup.ANCHOR]: null,
+            [PropertyGroup.ANCHOR]: {
+                properties: []
+            },
             [PropertyGroup.STRETCH]: {
                 properties: []
             },
@@ -47,7 +55,13 @@ export class Rectangle extends EditorElement {
                     ButtonActiveFill,
                     ButtonHoverTransform,
                     ButtonActiveTransform,
-                    ButtonActionType
+                    ButtonActionType,
+                    ButtonActionService,
+                    ButtonActionServiceData,
+                    ButtonActionNavigationPath,
+                    ButtonActionUrlPath,
+                    ButtonActionEntity,
+                    ButtonActionConfirmation
                 ]
             },
             [PropertyGroup.DIMENSIONS]: {

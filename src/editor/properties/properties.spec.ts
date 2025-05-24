@@ -503,7 +503,7 @@ describe('ButtonActionType Property', () => {
     testCommonProperties(prop, 'button.action_config.type', 'Action Type', 'button.action_config.type', PropertyGroup.BUTTON, Layout.HALF);
     it('should return correct schema with action type options', () => {
         const schema = prop.getSchema();
-        expect(schema.selector.aselect.options).toEqual(expect.arrayContaining([
+        expect(schema.selector.select.options).toEqual(expect.arrayContaining([
             { value: 'none', label: 'None' },
             { value: 'call-service', label: 'Call Service' },
         ])); // Check a few

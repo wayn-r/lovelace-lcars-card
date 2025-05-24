@@ -837,9 +837,9 @@ export class ButtonActionType implements LcarsPropertyBase {
         return {
             name: this.name,
             label: this.label,
-            selector: { aselect: {
- mode: 'dropdown',
- options: [
+            selector: { select: {
+            mode: 'dropdown',
+            options: [
                         { value: 'none', label: 'None' },
                         { value: 'call-service', label: 'Call Service' },
                         { value: 'navigate', label: 'Navigate' },
@@ -860,7 +860,13 @@ export class ButtonActionService implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { text: {} } }; }
+    getSchema(): HaFormSchema { 
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { text: {} }
+        }
+    }
 }
 export class ButtonActionServiceData implements LcarsPropertyBase {
     name = 'button.action_config.service_data';
@@ -869,7 +875,13 @@ export class ButtonActionServiceData implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { object: {} } }; }
+    getSchema(): HaFormSchema { 
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { object: {} }
+        }
+    }
 }
 export class ButtonActionNavigationPath implements LcarsPropertyBase {
     name = 'button.action_config.navigation_path';
@@ -878,7 +890,13 @@ export class ButtonActionNavigationPath implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { text: {} } }; }
+    getSchema(): HaFormSchema { 
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { text: {} }
+        }
+    }
 }
 export class ButtonActionUrlPath implements LcarsPropertyBase {
     name = 'button.action_config.url_path';
@@ -887,7 +905,13 @@ export class ButtonActionUrlPath implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { text: {} } }; }
+    getSchema(): HaFormSchema { 
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { text: {} }
+        }
+    }
 }
 export class ButtonActionEntity implements LcarsPropertyBase {
     name = 'button.action_config.entity';
@@ -896,7 +920,13 @@ export class ButtonActionEntity implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
     layout: Layout = Layout.HALF;
     
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { entity: {} } }; }
+    getSchema(): HaFormSchema { 
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { entity: {} }
+        }
+    }
 }
 export class ButtonActionConfirmation implements LcarsPropertyBase {
     name = 'button.action_config.confirmation';

@@ -238,6 +238,8 @@ import {
     ButtonFontFamily, ButtonFontSize, ButtonFontWeight, ButtonLetterSpacing,
     ButtonTextTransform, ButtonTextAnchor, ButtonDominantBaseline, ButtonHoverFill,
     ButtonActiveFill, ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
+    ButtonActionService, ButtonActionServiceData, ButtonActionNavigationPath,
+    ButtonActionUrlPath, ButtonActionEntity, ButtonActionConfirmation,
     OffsetX, OffsetY, Type
     // Stretch properties (StretchTarget, StretchDirection, StretchPadding) are dynamically added by base class
     // Anchor properties (AnchorTo, AnchorPoint, TargetAnchorPoint) are explicitly excluded by Rectangle
@@ -304,8 +306,9 @@ describe('Rectangle EditorElement', () => {
             groups = rectangleEditorElement.getPropertyGroups();
         });
 
-        it('should define ANCHOR group as null (disabled)', () => {
-            expect(groups[PropertyGroup.ANCHOR]).toBeNull();
+        it('should define ANCHOR group with empty properties (using default anchor properties)', () => {
+            expect(groups[PropertyGroup.ANCHOR]).toBeDefined();
+            expect(groups[PropertyGroup.ANCHOR]?.properties).toEqual([]);
         });
 
         it('should define STRETCH group with empty properties (relying on base class for dynamic stretch props)', () => {
@@ -321,7 +324,9 @@ describe('Rectangle EditorElement', () => {
                 ButtonFontFamily, ButtonFontSize, ButtonFontWeight,
                 ButtonLetterSpacing, ButtonTextTransform, ButtonTextAnchor,
                 ButtonDominantBaseline, ButtonHoverFill, ButtonActiveFill,
-                ButtonHoverTransform, ButtonActiveTransform, ButtonActionType
+                ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
+                ButtonActionService, ButtonActionServiceData, ButtonActionNavigationPath,
+                ButtonActionUrlPath, ButtonActionEntity, ButtonActionConfirmation
             ];
             expect(buttonProps).toEqual(expectedButtonProps);
         });
@@ -351,11 +356,11 @@ describe('Rectangle EditorElement', () => {
             ]));
         });
 
-        it('should NOT include anchor properties (AnchorTo, AnchorPoint, TargetAnchorPoint) in the schema', () => {
+        it('should include anchor properties (AnchorTo, AnchorPoint, TargetAnchorPoint) in the schema', () => {
             const schema = rectangleEditorElement.getSchema();
             const anchorPropNames = ['anchorTo', 'anchorPoint', 'targetAnchorPoint'];
             anchorPropNames.forEach(propName => {
-                expect(schema.find(s => s.name === propName)).toBeUndefined();
+                expect(schema.find(s => s.name === propName)).toBeDefined();
             });
         });
 
@@ -409,7 +414,9 @@ describe('Rectangle EditorElement', () => {
                 new ButtonFontFamily(), new ButtonFontSize(), new ButtonFontWeight(),
                 new ButtonLetterSpacing(), new ButtonTextTransform(), new ButtonTextAnchor(),
                 new ButtonDominantBaseline(), new ButtonHoverFill(), new ButtonActiveFill(),
-                new ButtonHoverTransform(), new ButtonActiveTransform(), new ButtonActionType()
+                new ButtonHoverTransform(), new ButtonActiveTransform(), new ButtonActionType(),
+                new ButtonActionService(), new ButtonActionServiceData(), new ButtonActionNavigationPath(),
+                new ButtonActionUrlPath(), new ButtonActionEntity(), new ButtonActionConfirmation()
             ];
             expect(buttonSchemaItems.length).toBe(expectedButtonPropInstances.length);
             expectedButtonPropInstances.forEach(instance => {
