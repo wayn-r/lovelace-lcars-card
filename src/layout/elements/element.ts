@@ -7,6 +7,8 @@ import { LcarsButtonElementConfig } from '../../lovelace-lcars-card.js';
 import { StretchContext } from '../engine.js';
 import { Button } from './button.js';
 import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../../types';
+import { animationManager, AnimationContext } from '../../utils/animation.js';
+import { colorResolver, ComputedElementColors, ColorResolutionDefaults } from '../../utils/color-resolver.js';
 
 export abstract class LayoutElement {
     id: string;
@@ -17,21 +19,22 @@ export abstract class LayoutElement {
     hass?: HomeAssistant;
     public requestUpdateCallback?: () => void;
     public button?: Button;
-    
-    // Dynamic color monitoring
-    private _monitoredEntities: Set<string> = new Set();
-    private _lastEntityStates: Map<string, any> = new Map();
+    public getShadowElement?: (id: string) => Element | null;
 
-    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
+    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this.id = id;
         this.props = props;
         this.layoutConfig = layoutConfig;
         this.hass = hass;
         this.requestUpdateCallback = requestUpdateCallback;
+        this.getShadowElement = getShadowElement;
+
+        // Initialize animation state for this element
+        animationManager.initializeElementAnimationTracking(id);
 
         // Initialize button if button config exists
         if (props.button?.enabled) {
-            this.button = new Button(id, props, hass, requestUpdateCallback);
+            this.button = new Button(id, props, hass, requestUpdateCallback, getShadowElement);
         }
 
         this.resetLayout();
@@ -552,145 +555,79 @@ export abstract class LayoutElement {
 
     animate(property: string, value: any, duration: number = 0.5): void {
         if (!this.layout.calculated) return;
-        
-        const element = document.getElementById(this.id);
-        if (!element) return;
-        
-        const animProps: { [key: string]: any } = {};
-        animProps[property] = value;
-        
-        gsap.to(element, {
-            duration,
-            ...animProps,
-            ease: "power2.out"
-        });
+        animationManager.animateElementProperty(this.id, property, value, duration, this.getShadowElement);
     }
 
     /**
-     * Formats a color value from different possible input formats
-     * @param color - Color in string format or RGB array
-     * @returns Formatted color string or undefined
+     * Resolve and animate color if it's dynamic, return color for template
      */
-    protected _formatColorValue(color: any): string | undefined {
-        if (typeof color === 'string') {
-            return color;
-        }
-        if (Array.isArray(color) && color.length === 3 && color.every(num => typeof num === 'number')) {
-            return `rgb(${color[0]},${color[1]},${color[2]})`;
-        }
-        return undefined;
+    protected _resolveDynamicColorWithAnimation(colorConfig: ColorValue, property: 'fill' | 'stroke' = 'fill'): string | undefined {
+        const context: AnimationContext = {
+            elementId: this.id,
+            getShadowElement: this.getShadowElement,
+            hass: this.hass,
+            requestUpdateCallback: this.requestUpdateCallback
+        };
+        
+        return animationManager.resolveDynamicColorWithAnimation(this.id, colorConfig, property, context);
+    }
+
+    /**
+     * Resolve all element colors (fill, stroke, strokeWidth) with animation support
+     * This is the preferred method for getting all colors at once
+     */
+    protected _resolveElementColors(options: ColorResolutionDefaults = {}): ComputedElementColors {
+        const context: AnimationContext = {
+            elementId: this.id,
+            getShadowElement: this.getShadowElement,
+            hass: this.hass,
+            requestUpdateCallback: this.requestUpdateCallback
+        };
+        
+        return colorResolver.resolveAllElementColors(this.id, this.props, context, options);
+    }
+
+    /**
+     * Create resolved props for button elements
+     * This handles the common pattern where buttons need a modified props object
+     */
+    protected _createResolvedPropsForButton(): any {
+        const context: AnimationContext = {
+            elementId: this.id,
+            getShadowElement: this.getShadowElement,
+            hass: this.hass,
+            requestUpdateCallback: this.requestUpdateCallback
+        };
+        
+        return colorResolver.createButtonPropsWithResolvedColors(this.id, this.props, context);
     }
 
     /**
      * Resolve a color value that might be static or dynamic (entity-based)
      */
     protected _resolveDynamicColor(colorConfig: ColorValue): string | undefined {
-        if (isDynamicColorConfig(colorConfig)) {
-            return this._getDynamicColorValue(colorConfig);
-        }
-        return this._formatColorValue(colorConfig);
-    }
-
-    /**
-     * Get color value from entity state based on dynamic configuration
-     */
-    private _getDynamicColorValue(config: DynamicColorConfig): string | undefined {
-        if (!this.hass) {
-            return this._formatColorValue(config.default);
-        }
-
-        const entity = this.hass.states[config.entity];
-        if (!entity) {
-            return this._formatColorValue(config.default);
-        }
-
-        // Track this entity for change detection
-        this._monitoredEntities.add(config.entity);
-        this._lastEntityStates.set(config.entity, entity);
-
-        // Get the value to map
-        const value = config.attribute ? entity.attributes[config.attribute] : entity.state;
-        
-        // Handle interpolation for numeric values
-        if (config.interpolate && typeof value === 'number') {
-            return this._interpolateColor(value, config);
-        }
-
-        // Direct mapping
-        const mappedColor = config.mapping[value] || config.default;
-        return this._formatColorValue(mappedColor);
-    }
-
-    /**
-     * Interpolate color for numeric values
-     */
-    private _interpolateColor(value: number, config: DynamicColorConfig): string | undefined {
-        const mappingKeys = Object.keys(config.mapping)
-            .map(k => parseFloat(k))
-            .filter(k => !isNaN(k))
-            .sort((a, b) => a - b);
-
-        if (mappingKeys.length === 0) {
-            return this._formatColorValue(config.default);
-        }
-
-        // Find the two closest values for interpolation
-        let lowerKey = mappingKeys[0];
-        let upperKey = mappingKeys[mappingKeys.length - 1];
-
-        for (let i = 0; i < mappingKeys.length - 1; i++) {
-            if (value >= mappingKeys[i] && value <= mappingKeys[i + 1]) {
-                lowerKey = mappingKeys[i];
-                upperKey = mappingKeys[i + 1];
-                break;
-            }
-        }
-
-        // If exact match, return that color
-        if (config.mapping[value.toString()]) {
-            return this._formatColorValue(config.mapping[value.toString()]);
-        }
-
-        // For now, just return the nearest value (true interpolation can be added later)
-        const lowerDiff = Math.abs(value - lowerKey);
-        const upperDiff = Math.abs(value - upperKey);
-        const nearestKey = lowerDiff <= upperDiff ? lowerKey : upperKey;
-        
-        return this._formatColorValue(config.mapping[nearestKey.toString()] || config.default);
+        return animationManager.resolveDynamicColor(this.id, colorConfig, this.hass);
     }
 
     /**
      * Check if any monitored entities have changed and trigger update if needed
      */
     public checkEntityChanges(hass: HomeAssistant): boolean {
-        if (!this.hass || this._monitoredEntities.size === 0) {
-            return false;
-        }
-
-        let hasChanges = false;
-        
-        for (const entityId of this._monitoredEntities) {
-            const currentEntity = hass.states[entityId];
-            const lastEntity = this._lastEntityStates.get(entityId);
-            
-            // Check if entity state or attributes changed
-            if (!currentEntity || !lastEntity || 
-                currentEntity.state !== lastEntity.state ||
-                JSON.stringify(currentEntity.attributes) !== JSON.stringify(lastEntity.attributes)) {
-                hasChanges = true;
-                this._lastEntityStates.set(entityId, currentEntity);
-            }
-        }
-
-        return hasChanges;
+        return animationManager.checkForEntityStateChanges(this.id, hass);
     }
 
     /**
      * Clear monitored entities (called before recalculating dynamic colors)
      */
     public clearMonitoredEntities(): void {
-        this._monitoredEntities.clear();
-        this._lastEntityStates.clear();
+        animationManager.clearTrackedEntitiesForElement(this.id);
+    }
+
+    /**
+     * Clean up any ongoing animations
+     */
+    public cleanupAnimations(): void {
+        animationManager.stopAllAnimationsForElement(this.id);
     }
 
     updateHass(hass?: HomeAssistant): void {

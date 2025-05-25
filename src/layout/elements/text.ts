@@ -8,9 +8,10 @@ import { getFontMetrics, measureTextBBox, getSvgTextWidth, getTextWidth } from "
 export class TextElement extends LayoutElement {
     // Cache font metrics to maintain consistency across renders
     private _cachedMetrics: any = null;
-    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
-      super(id, props, layoutConfig, hass, requestUpdateCallback);
-      this.resetLayout();
+    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
+        super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+        this.resetLayout();
+        this.intrinsicSize = { width: 0, height: 0, calculated: false };
     }
   
     /**
@@ -122,12 +123,19 @@ export class TextElement extends LayoutElement {
       
       const styles = this.props.textTransform ? `text-transform: ${this.props.textTransform};` : '';
   
+      // Use centralized color resolution with text-specific defaults
+      const colors = this._resolveElementColors({ 
+        fallbackFillColor: '#000000', // Default text color
+        fallbackStrokeColor: 'none', 
+        fallbackStrokeWidth: '0' 
+      });
+
       return svg`
         <text
           id=${this.id}
           x=${textX}
           y=${textY}
-          fill=${this.props.fill || '#000000'}
+          fill=${colors.fillColor}
           font-family=${this.props.fontFamily || 'sans-serif'}
           font-size=${`${this.props.fontSize || 16}px`}
           font-weight=${this.props.fontWeight || 'normal'}

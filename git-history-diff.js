@@ -309,7 +309,6 @@ try {
     uncommittedChangesBlock += "\n";
     fs.appendFileSync(absoluteOutputFile, uncommittedChangesBlock, 'utf8');
 
-    console.log(`Successfully generated git history diff to ${outputFile}`);
 
 } catch (error) {
     console.error("A fatal error occurred during script execution:", error.message, error.stack);
@@ -328,7 +327,6 @@ try {
                 fs.mkdirSync(absoluteOutputDir, { recursive: true });
             }
             fs.writeFileSync(path.resolve(projectRoot, outputFile), `# SCRIPT EXECUTION FAILED\n\nError: ${error.message}\nStack: ${error.stack || 'No stack available'}\n`, 'utf8');
-            console.log(`Wrote fatal error details to ${outputFile}`);
         } catch (writeError) {
             console.error("Additionally, failed to write the fatal error to a new output file:", writeError.message);
         }

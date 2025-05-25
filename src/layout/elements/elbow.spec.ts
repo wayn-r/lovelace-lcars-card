@@ -85,7 +85,7 @@ describe('ElbowElement', () => {
       elbowElement = new ElbowElement('el-btn-init', props, {}, mockHass, mockRequestUpdate);
 
       expect(Button).toHaveBeenCalledOnce();
-      expect(Button).toHaveBeenCalledWith('el-btn-init', props, mockHass, mockRequestUpdate);
+      expect(Button).toHaveBeenCalledWith('el-btn-init', props, mockHass, mockRequestUpdate, undefined);
       expect(elbowElement.button).toBeDefined();
     });
 

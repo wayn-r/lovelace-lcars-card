@@ -36,11 +36,13 @@ import { TopHeaderElement } from './elements/top_header.js';
 describe('parseConfig', () => {
   let mockHass: HomeAssistant;
   let mockRequestUpdateCallback: () => void;
+  let mockGetShadowElement: (id: string) => Element | null;
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     mockHass = {} as HomeAssistant; // Minimal mock, can be expanded if needed
     mockRequestUpdateCallback = vi.fn();
+    mockGetShadowElement = vi.fn().mockReturnValue(null);
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {}); // Suppress console.warn during tests
 
     // Reset all mocks before each test to ensure clean state
@@ -68,7 +70,7 @@ describe('parseConfig', () => {
           elements: elements, // Use the test case value here
         };
 
-        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback);
+        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(groups).toHaveLength(1);
         const group = groups[0];
@@ -78,28 +80,31 @@ describe('parseConfig', () => {
         // 1. Header Bar (RectangleElement)
         expect(mockRectangleElementConstructor).toHaveBeenCalledWith(
           'default-header', // id
-          { fill: '#FF9900', rx: 0, ry: 0, button: undefined }, // props (button merged)
+          { fill: '#FF9900', rx: 0, ry: 0 }, // props (button merged)
           { anchorLeft: true, anchorTop: true, offsetX: 0, offsetY: 0, width: '100%', height: 16 }, // layoutConfig
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
 
         // 2. Title Element (TextElement)
         expect(mockTextElementConstructor).toHaveBeenCalledWith(
           'default-title', // id
-          { text: 'Test Title', fontWeight: 'bold', fontSize: 22, fill: '#FFFFFF', button: undefined }, // props (fontSize: 18 + 4)
+          { text: 'Test Title', fontWeight: 'bold', fontSize: 22, fill: '#FFFFFF' }, // props (fontSize: 18 + 4)
           { anchorLeft: true, anchorTop: true, offsetX: 16, offsetY: 30 }, // layoutConfig
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
 
         // 3. Text Element (TextElement)
         expect(mockTextElementConstructor).toHaveBeenCalledWith(
           'default-text', // id
-          { text: 'Test Text', fontSize: 18, fill: '#CCCCCC', button: undefined }, // props
+          { text: 'Test Text', fontSize: 18, fill: '#CCCCCC' }, // props
           { anchorLeft: true, anchorTop: true, offsetX: 16, offsetY: 60 }, // layoutConfig
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
       });
     });
@@ -113,20 +118,20 @@ describe('parseConfig', () => {
         elements: [], // Triggers default group creation
       };
 
-      parseConfig(config, mockHass, mockRequestUpdateCallback);
+      parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
       // Check title element font size (config.fontSize undefined ? 20)
       expect(mockTextElementConstructor).toHaveBeenCalledWith(
         'default-title',
         expect.objectContaining({ fontSize: 20 }),
-        expect.anything(), mockHass, mockRequestUpdateCallback
+        expect.anything(), mockHass, mockRequestUpdateCallback, expect.any(Function)
       );
 
       // Check text element font size (config.fontSize undefined ? 16)
       expect(mockTextElementConstructor).toHaveBeenCalledWith(
         'default-text',
         expect.objectContaining({ fontSize: 16 }),
-        expect.anything(), mockHass, mockRequestUpdateCallback
+        expect.anything(), mockHass, mockRequestUpdateCallback, expect.any(Function)
       );
     });
 
@@ -138,17 +143,17 @@ describe('parseConfig', () => {
         elements: [], // Triggers default group creation
       };
 
-      parseConfig(config, mockHass, mockRequestUpdateCallback);
+      parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
       expect(mockTextElementConstructor).toHaveBeenCalledWith(
         'default-title',
         expect.objectContaining({ text: undefined }),
-        expect.anything(), mockHass, mockRequestUpdateCallback
+        expect.anything(), mockHass, mockRequestUpdateCallback, expect.any(Function)
       );
       expect(mockTextElementConstructor).toHaveBeenCalledWith(
         'default-text',
         expect.objectContaining({ text: undefined }),
-        expect.anything(), mockHass, mockRequestUpdateCallback
+        expect.anything(), mockHass, mockRequestUpdateCallback, expect.any(Function)
       );
     });
   });
@@ -160,7 +165,7 @@ describe('parseConfig', () => {
           { id: 'el1', type: 'rectangle', group: 'groupA', props: { p1: 'v1'}, layout: {offsetX: 10} }
         ];
         const config: LcarsCardConfig = { type: 'lcars-card', elements };
-        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback);
+        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(groups).toHaveLength(1);
         expect(groups[0].id).toBe('groupA');
@@ -171,7 +176,8 @@ describe('parseConfig', () => {
             { p1: 'v1', button: undefined }, // props merged
             { offsetX: 10 }, // layoutConfig
             mockHass,
-            mockRequestUpdateCallback
+            mockRequestUpdateCallback,
+            expect.any(Function) // getShadowElement
         );
       });
 
@@ -180,13 +186,13 @@ describe('parseConfig', () => {
           { id: 'el1', type: 'rectangle' } // No group property
         ];
         const config: LcarsCardConfig = { type: 'lcars-card', elements };
-        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback);
+        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(groups).toHaveLength(1);
         expect(groups[0].id).toBe('__ungrouped__');
         expect(groups[0].elements).toHaveLength(1);
         expect(mockRectangleElementConstructor).toHaveBeenCalledWith(
-            'el1', { button: undefined }, {}, mockHass, mockRequestUpdateCallback
+            'el1', { button: undefined }, {}, mockHass, mockRequestUpdateCallback, expect.any(Function)
         );
       });
 
@@ -198,7 +204,7 @@ describe('parseConfig', () => {
           { id: 'el4', type: 'text', group: 'groupA' },
         ];
         const config: LcarsCardConfig = { type: 'lcars-card', elements };
-        const groups = parseConfig(config); // Using default hass/callback for brevity
+        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement); // Using default hass/callback for brevity
 
         expect(groups).toHaveLength(3); // groupA, groupB, __ungrouped__
 
@@ -241,7 +247,7 @@ describe('parseConfig', () => {
           };
           const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
 
-          parseConfig(config, mockHass, mockRequestUpdateCallback);
+          parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
           expect(mockConstructor).toHaveBeenCalledTimes(1);
           expect(mockConstructor).toHaveBeenCalledWith(
@@ -249,7 +255,8 @@ describe('parseConfig', () => {
             { customProp: 'value', fill: 'red', button: { enabled: true, text: 'Click', text_transform: 'none' } }, // props (merged)
             { offsetX: 10, width: '50%' }, // layoutConfig
             mockHass,
-            mockRequestUpdateCallback
+            mockRequestUpdateCallback,
+            expect.any(Function) // getShadowElement
           );
         });
 
@@ -262,7 +269,7 @@ describe('parseConfig', () => {
           };
           const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
 
-          parseConfig(config, mockHass, mockRequestUpdateCallback); // Pass hass/cb
+          parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement); // Pass hass/cb
 
           expect(mockConstructor).toHaveBeenCalledTimes(1);
           expect(mockConstructor).toHaveBeenCalledWith(
@@ -270,7 +277,8 @@ describe('parseConfig', () => {
             { button: undefined }, // Default props if element.props is undefined
             {},                   // Default layout if element.layout is undefined
             mockHass,
-            mockRequestUpdateCallback
+            mockRequestUpdateCallback,
+            expect.any(Function) // getShadowElement
           );
         });
       });
@@ -285,7 +293,7 @@ describe('parseConfig', () => {
         };
         const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
 
-        parseConfig(config, mockHass, mockRequestUpdateCallback);
+        parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(mockRectangleElementConstructor).toHaveBeenCalledTimes(1);
         // Other constructors should not have been called for this element
@@ -296,7 +304,8 @@ describe('parseConfig', () => {
           { p: 1, button: { enabled: false, text_transform: 'none' } },
           { offsetX: 2 },
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
         expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
         expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -313,14 +322,15 @@ describe('parseConfig', () => {
           button: { text: 'Button Action', text_transform: 'none' }
         };
         const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
-        parseConfig(config, mockHass, mockRequestUpdateCallback);
+        parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(mockRectangleElementConstructor).toHaveBeenCalledWith(
           'el-no-props',
           { button: { text: 'Button Action', text_transform: 'none' } }, // props is just the button object
           { offsetX: 5 },
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
       });
 
@@ -333,14 +343,15 @@ describe('parseConfig', () => {
           // button: undefined // Implicitly undefined
         };
         const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
-        parseConfig(config, mockHass, mockRequestUpdateCallback);
+        parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(mockRectangleElementConstructor).toHaveBeenCalledWith(
           'el-no-layout',
           { fill: 'blue', button: undefined }, // props.button will be undefined
           {}, // layoutConfig will be {}
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
       });
 
@@ -353,14 +364,15 @@ describe('parseConfig', () => {
           // button: undefined // Implicitly undefined
         };
         const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
-        parseConfig(config, mockHass, mockRequestUpdateCallback);
+        parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(mockRectangleElementConstructor).toHaveBeenCalledWith(
           'el-no-button',
           { fill: 'green', button: undefined }, // props.button remains undefined
           { width: 100 },
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
       });
 
@@ -371,14 +383,15 @@ describe('parseConfig', () => {
           // props, layout, button are all implicitly undefined
         };
         const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
-        parseConfig(config, mockHass, mockRequestUpdateCallback);
+        parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(mockTextElementConstructor).toHaveBeenCalledWith(
           'el-all-undefined',
           { button: undefined }, // props ends up as { button: undefined }
           {}, // layoutConfig is {}
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
       });
     });

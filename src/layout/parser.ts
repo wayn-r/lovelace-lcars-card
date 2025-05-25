@@ -9,9 +9,9 @@ import { ElbowElement } from './elements/elbow.js';
 import { ChiselEndcapElement } from './elements/chisel_endcap.js';
 import { TopHeaderElement } from './elements/top_header.js';
 
-export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant, requestUpdateCallback?: () => void): Group[] {
+export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): Group[] {
   if (!config.elements || config.elements.length === 0) {
-    return [createDefaultGroup(config, hass, requestUpdateCallback)];
+    return [createDefaultGroup(config, hass, requestUpdateCallback, getShadowElement)];
   }
 
   const groupedElements: { [key: string]: any[] } = {};
@@ -34,7 +34,8 @@ export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant, reque
         { ...element.props, button: element.button },
         element.layout || {},
         hass,
-        requestUpdateCallback
+        requestUpdateCallback,
+        getShadowElement
       );
     });
     
@@ -44,7 +45,7 @@ export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant, reque
   return groups;
 }
 
-function createDefaultGroup(config: LcarsCardConfig, hass?: HomeAssistant, requestUpdateCallback?: () => void): Group {
+function createDefaultGroup(config: LcarsCardConfig, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): Group {
   const { title, text, fontSize } = config;
   
   const titleElement = new TextElement(
@@ -62,7 +63,8 @@ function createDefaultGroup(config: LcarsCardConfig, hass?: HomeAssistant, reque
       offsetY: 30
     },
     hass,
-    requestUpdateCallback
+    requestUpdateCallback,
+    getShadowElement
   );
   
   const textElement = new TextElement(
@@ -79,7 +81,8 @@ function createDefaultGroup(config: LcarsCardConfig, hass?: HomeAssistant, reque
       offsetY: 60
     },
     hass,
-    requestUpdateCallback
+    requestUpdateCallback,
+    getShadowElement
   );
   
   const headerBar = new RectangleElement(
@@ -98,7 +101,8 @@ function createDefaultGroup(config: LcarsCardConfig, hass?: HomeAssistant, reque
       height: 16
     },
     hass,
-    requestUpdateCallback
+    requestUpdateCallback,
+    getShadowElement
   );
   
   return new Group('__default__', [headerBar, titleElement, textElement]);
@@ -110,23 +114,24 @@ function createLayoutElement(
   props: any,
   layoutConfig: any,
   hass?: HomeAssistant,
-  requestUpdateCallback?: () => void
+  requestUpdateCallback?: () => void,
+  getShadowElement?: (id: string) => Element | null
 ): LayoutElement {
   switch (type.toLowerCase().trim()) {
     case 'text':
-      return new TextElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new TextElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     case 'rectangle':
-      return new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     case 'endcap':
-      return new EndcapElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new EndcapElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     case 'elbow':
-      return new ElbowElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new ElbowElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     case 'chisel-endcap':
-      return new ChiselEndcapElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new ChiselEndcapElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     case 'top_header':
-      return new TopHeaderElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new TopHeaderElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     default:
       console.warn(`LCARS Card Parser: Unknown element type "${type}". Defaulting to Rectangle.`);
-      return new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
   }
 } 

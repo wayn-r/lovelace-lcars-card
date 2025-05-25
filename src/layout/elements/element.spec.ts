@@ -3,6 +3,7 @@ import { LayoutElement } from './element';
 import { LayoutElementProps, LayoutConfigOptions, LayoutState, IntrinsicSize } from '../engine';
 import { HomeAssistant } from 'custom-card-helpers';
 import { SVGTemplateResult, svg } from 'lit';
+import { animationManager } from '../../utils/animation.js';
 
 // Mock gsap
 vi.mock('gsap', () => {
@@ -49,9 +50,9 @@ class MockLayoutElement extends LayoutElement {
     return svg`<rect id=${this.id} x=${this.layout.x} y=${this.layout.y} width=${this.layout.width} height=${this.layout.height} />`;
   }
 
-  // Expose protected method for testing
+  // Expose color formatting method for testing through animation manager
   public testFormatColorValue(color: any): string | undefined {
-    return this._formatColorValue(color);
+    return (animationManager as any).formatColorValueFromInput(color);
   }
 }
 
@@ -107,7 +108,7 @@ describe('LayoutElement', () => {
     it('should instantiate Button if props.button.enabled is true', () => {
       const props: LayoutElementProps = { button: { enabled: true, text: 'Click' } };
       element = new MockLayoutElement('btn-test', props, {}, mockHass, mockRequestUpdate);
-      expect(Button).toHaveBeenCalledWith('btn-test', props, mockHass, mockRequestUpdate);
+      expect(Button).toHaveBeenCalledWith('btn-test', props, mockHass, mockRequestUpdate, undefined);
       expect(element.button).toBeDefined();
       expect(mockButtonInstance.id).toBe('btn-test');
     });
@@ -429,10 +430,10 @@ describe('LayoutElement', () => {
     });
 
     it('should call gsap.to if layout is calculated and element exists', () => {
-      element = new MockLayoutElement('anim-test');
-      element.layout.calculated = true;
       const mockDomElement = document.createElement('div');
-      document.getElementById = vi.fn().mockReturnValue(mockDomElement);
+      const getShadowElement = vi.fn().mockReturnValue(mockDomElement);
+      element = new MockLayoutElement('anim-test', {}, {}, undefined, undefined, getShadowElement);
+      element.layout.calculated = true;
 
       element.animate('opacity', 0.5, 1);
       expect(gsap.to).toHaveBeenCalledWith(mockDomElement, {

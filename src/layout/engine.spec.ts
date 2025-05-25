@@ -62,7 +62,6 @@ class MockEngineLayoutElement extends LayoutElement {
             const targetElement = elementsMap.get(depId);
             if (!targetElement || !targetElement.layout.calculated) {
                 dependencies.push(depId); // Report actual unmet dependency
-                // console.log(`[Mock ${this.id}] Reporting dep failure for ${depId}: Target found? ${!!targetElement}, Target calculated? ${targetElement?.layout.calculated}`);
                 return false; // Short-circuit if a mock dependency isn't met
             }
         });

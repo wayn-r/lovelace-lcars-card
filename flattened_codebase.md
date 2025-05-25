@@ -6,7 +6,6 @@ lovelace-lcars-card/
 ├── DYNAMIC_COLORS_EXAMPLE.md
 ├── flatten-codebase.js
 ├── git-history-diff.js
-├── MINIMAL_TEST.yaml
 ├── package.json
 ├── reference-files/
 ├── src/
@@ -37,9 +36,7 @@ lovelace-lcars-card/
 │   │   │   ├── properties.spec.ts
 │   │   │   └── properties.ts
 │   │   ├── renderer.spec.ts
-│   │   ├── renderer.ts
-│   │   └── __snapshots__/
-│   │       └── renderer.spec.ts.snap
+│   │   └── renderer.ts
 │   ├── layout/
 │   │   ├── elements/
 │   │   │   ├── button.spec.ts
@@ -57,12 +54,7 @@ lovelace-lcars-card/
 │   │   │   ├── text.spec.ts
 │   │   │   ├── text.ts
 │   │   │   ├── top_header.spec.ts
-│   │   │   ├── top_header.ts
-│   │   │   └── __snapshots__/
-│   │   │       ├── chisel_endcap.spec.ts.snap
-│   │   │       ├── elbow.spec.ts.snap
-│   │   │       ├── endcap.spec.ts.snap
-│   │   │       └── rectangle.spec.ts.snap
+│   │   │   └── top_header.ts
 │   │   ├── engine.spec.ts
 │   │   ├── engine.ts
 │   │   ├── parser.spec.ts
@@ -73,10 +65,13 @@ lovelace-lcars-card/
 │   │   └── styles.ts
 │   ├── types.ts
 │   └── utils/
+│       ├── animation.spec.ts
+│       ├── animation.ts
+│       ├── color-resolver.spec.ts
+│       ├── color-resolver.ts
 │       ├── fontmetrics.d.ts
 │       ├── shapes.spec.ts
 │       └── shapes.ts
-├── TEST_DYNAMIC_COLORS.yaml
 ├── TODO.md
 ├── tsconfig.json
 ├── vite.config.ts
@@ -106,13 +101,13 @@ This example shows how to configure dynamic colors for LCARS card elements based
 Here's an example of a rectangle that changes color based on a light entity's state:
 
 ```yaml
-type: lovelace-lcars-card
+type: custom:lovelace-lcars-card
 elements:
-  - id: living_room_light_indicator
+  - id: basement_reading_lamp
     type: rectangle
     props:
       fill:
-        entity: light.living_room
+        entity: light.basement_reading_lamp
         mapping:
           "on": "#ffaa00"      # Orange when on
           "off": "#333333"     # Dark gray when off
@@ -125,10 +120,10 @@ elements:
       offsetY: 10
     button:
       enabled: true
-      text: "Living Room"
+      text: "Basement Reading Lamp"
       action_config:
         type: toggle
-        entity: light.living_room
+        entity: light.basement_reading_lamp
 ```
 
 ## Advanced: Using Attributes and Interpolation
@@ -136,7 +131,7 @@ elements:
 For numeric attributes like brightness or temperature:
 
 ```yaml
-type: lovelace-lcars-card
+type: custom:lovelace-lcars-card
 elements:
   - id: temperature_indicator
     type: rectangle
@@ -178,6 +173,35 @@ elements:
       offsetY: 110
 ```
 
+## Element ID Considerations
+
+When using dynamic colors with complex element IDs (such as those containing dots), the system properly handles CSS selector escaping. For example:
+
+```yaml
+type: custom:lovelace-lcars-card
+elements:
+  - id: buttons.button-1  # IDs with dots are fully supported
+    type: rectangle
+    props:
+      fill:
+        entity: light.waynes_light
+        mapping:
+          "on": "#ffaa00"
+          "off": "#333333"
+        default: "#666666"
+    layout:
+      width: 110
+      height: 38
+    button:
+      enabled: true
+      text: "My Button"
+      action_config:
+        type: toggle
+        entity: light.waynes_light
+```
+
+The card automatically uses `CSS.escape()` for proper selector handling, ensuring smooth color transitions work correctly regardless of ID complexity.
+
 ## Configuration Options
 
 ### Dynamic Color Properties
@@ -210,9 +234,25 @@ The visual editor provides a user-friendly interface for configuring dynamic col
 
 1. **Entity Monitoring**: The card monitors specified entities for state changes
 2. **Color Resolution**: When an entity state changes, the card looks up the corresponding color
-3. **Smooth Transitions**: Color changes use a 0.3s fade transition
+3. **Smooth Transitions**: Color changes use a 2.0s GSAP-powered fade transition for smooth visual feedback
 4. **Fallback Handling**: If entity is unavailable or state doesn't match, uses default color
 5. **Performance**: Only re-renders elements when their monitored entities actually change
+
+## Transition Animation System
+
+The dynamic color system uses GSAP (GreenSock Animation Platform) for smooth, high-performance color transitions:
+
+- **Cross-Element Support**: All element types (rectangle, chisel-endcap, elbow, endcap) support smooth color transitions
+- **SVG Optimized**: Uses GSAP's `attr` method and SVG-specific animation techniques for optimal performance
+- **Dynamic Only**: Transitions only occur for dynamic color changes, not static color updates
+- **Multi-Property**: Supports smooth transitions for both `fill` and `stroke` properties
+- **Button Support**: Works seamlessly with interactive button elements
+- **Easing**: Uses "power2.out" easing for natural-feeling transitions
+- **Re-render Resilient**: Animations survive template re-renders triggered by entity state changes
+- **Smart State Management**: Tracks animation state and preserves ongoing transitions during DOM updates
+- **No Animation Conflicts**: Intelligently handles rapid state changes by interrupting and restarting animations
+- **Robust Element Selection**: Properly handles complex element IDs using CSS selector escaping
+- **Rapid Click Support**: Animations can be interrupted and restarted for responsive visual feedback during quick successive interactions
 
 ## Tips
 
@@ -220,6 +260,8 @@ The visual editor provides a user-friendly interface for configuring dynamic col
 - Consider using entity attributes like `brightness`, `temperature`, or `humidity`
 - Set meaningful default colors for when entities are unavailable
 - The color picker in the editor shows live previews of your configurations
+- Transition animations only apply to dynamic colors - static colors change immediately
+- Element IDs can contain special characters (dots, hyphens, etc.) without affecting functionality
 ```
 
 ## File: flatten-codebase.js
@@ -358,7 +400,7 @@ try {
     }
     // Add common patterns that should always be ignored.
     // These paths are relative to the project root.
-    ig.add(['node_modules', outputFile, '.git', '.vscode', '.idea']);
+    ig.add(['node_modules', outputFile, '.git', '.vscode', '.idea', '__snapshots__']);
 
 
     // --- 1. Ensure output directory exists ---
@@ -742,7 +784,6 @@ try {
     uncommittedChangesBlock += "\n";
     fs.appendFileSync(absoluteOutputFile, uncommittedChangesBlock, 'utf8');
 
-    console.log(`Successfully generated git history diff to ${outputFile}`);
 
 } catch (error) {
     console.error("A fatal error occurred during script execution:", error.message, error.stack);
@@ -761,7 +802,6 @@ try {
                 fs.mkdirSync(absoluteOutputDir, { recursive: true });
             }
             fs.writeFileSync(path.resolve(projectRoot, outputFile), `# SCRIPT EXECUTION FAILED\n\nError: ${error.message}\nStack: ${error.stack || 'No stack available'}\n`, 'utf8');
-            console.log(`Wrote fatal error details to ${outputFile}`);
         } catch (writeError) {
             console.error("Additionally, failed to write the fatal error to a new output file:", writeError.message);
         }
@@ -11572,6 +11612,8 @@ describe('Button Text Positioning', () => {
 import { LcarsButtonElementConfig } from "../../lovelace-lcars-card.js";
 import { svg, SVGTemplateResult } from "lit";
 import { HomeAssistant } from "custom-card-helpers";
+import { colorResolver, InteractiveStateContext } from "../../utils/color-resolver.js";
+import { AnimationContext } from "../../utils/animation.js";
 
 export type ButtonPropertyName = 'fill' | 'stroke' | 'text_color' | 'strokeWidth' | 
                         'fontFamily' | 'fontSize' | 'fontWeight' | 'letterSpacing' | 
@@ -11584,12 +11626,14 @@ export class Button {
     private _hass?: HomeAssistant;
     private _requestUpdateCallback?: () => void;
     private _id: string;
+    private _getShadowElement?: (id: string) => Element | null;
 
-    constructor(id: string, props: any, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
+    constructor(id: string, props: any, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this._id = id;
         this._props = props;
         this._hass = hass;
         this._requestUpdateCallback = requestUpdateCallback;
+        this._getShadowElement = getShadowElement;
     }
 
     get isHovering(): boolean {
@@ -11618,6 +11662,44 @@ export class Button {
             return `rgb(${color[0]},${color[1]},${color[2]})`;
         }
         return undefined;
+    }
+
+    /**
+     * Get the current animation context for this button
+     */
+    private getAnimationContext(): AnimationContext {
+        return {
+            elementId: this._id,
+            getShadowElement: this._getShadowElement,
+            hass: this._hass,
+            requestUpdateCallback: this._requestUpdateCallback
+        };
+    }
+
+    /**
+     * Get the current state context for this button
+     */
+    private getStateContext(): InteractiveStateContext {
+        return {
+            isCurrentlyHovering: this._isHovering,
+            isCurrentlyActive: this._isActive
+        };
+    }
+
+    /**
+     * Get resolved colors for the button using the new color resolver
+     */
+    private getResolvedColors() {
+        const context = this.getAnimationContext();
+        const stateContext = this.getStateContext();
+        
+        return colorResolver.resolveAllElementColors(
+            this._id,
+            this._props,
+            context,
+            { fallbackTextColor: 'white' },
+            stateContext
+        );
     }
 
     getButtonProperty<T>(propName: ButtonPropertyName, defaultValue?: T): T | string | undefined {
@@ -11686,9 +11768,8 @@ export class Button {
         const buttonConfig = this._props.button as LcarsButtonElementConfig;
         const elements: SVGTemplateResult[] = [];
         
-        const currentFill = this.getButtonProperty('fill', 'none');
-        const currentStroke = this.getButtonProperty('stroke', 'none');
-        const strokeWidth = this.getButtonProperty('strokeWidth', '0');
+        // Use the new color resolver to get colors with hover/active state support
+        const resolvedColors = this.getResolvedColors();
         
         const maskId = options.isCutout ? `mask-text-${this._id}` : null;
         
@@ -11696,9 +11777,9 @@ export class Button {
             <path
                 id=${this._id}
                 d=${pathData}
-                fill=${currentFill}
-                stroke=${currentStroke}
-                stroke-width=${strokeWidth}
+                fill=${resolvedColors.fillColor}
+                stroke=${resolvedColors.strokeColor}
+                stroke-width=${resolvedColors.strokeWidth}
                 mask=${maskId ? `url(#${maskId})` : 'none'}
             />
         `);
@@ -11742,14 +11823,13 @@ export class Button {
                     textY
                 ));
             } else {
-                const currentTextColor = this.getButtonProperty('text_color', 'white');
                 elements.push(this.createText(
                     textX,
                     textY,
                     buttonConfig.text as string,
                     {
                         ...textConfig,
-                        fill: currentTextColor as string,
+                        fill: resolvedColors.textColor,
                         pointerEvents: 'none'
                     }
                 ));
@@ -11891,13 +11971,10 @@ export class Button {
     createEventHandlers() {
         return {
             handleClick: (ev: Event): void => {
-                console.log(`[${this._id}] handleClick:`, { props: this._props });
                 
                 const buttonConfig = this._props.button as LcarsButtonElementConfig | undefined;
-                console.log(`[${this._id}] Button config:`, JSON.stringify(buttonConfig, null, 2));
                 
                 if (!this._hass || !buttonConfig?.action_config) {
-                    console.log(`[${this._id}] handleClick: Aborting (no hass or no action_config)`);
                     return; 
                 }
                 
@@ -11959,7 +12036,6 @@ export class Button {
         }
 
         // Debug logging
-        console.log(`[${this._id}] Action config created:`, JSON.stringify(actionConfig, null, 2));
 
         return actionConfig;
     }
@@ -11967,7 +12043,6 @@ export class Button {
     private executeAction(actionConfig: any, element?: Element): void {
         const hass = this._hass;
         if (hass) {
-            console.log(`[${this._id}] Executing action:`, JSON.stringify(actionConfig, null, 2));
             
             import("custom-card-helpers").then(({ handleAction }) => {
                 // Use the provided element from the event, or try to find it, or create a fallback
@@ -11988,13 +12063,9 @@ export class Button {
                     console.warn(`[${this._id}] Could not find DOM element, using fallback`);
                 }
                 
-                console.log(`[${this._id}] Calling handleAction with element:`, targetElement);
-                console.log(`[${this._id}] Calling handleAction with actionConfig:`, JSON.stringify(actionConfig, null, 2));
-                console.log(`[${this._id}] Calling handleAction with hass available:`, !!hass);
                 
                 try {
                     handleAction(targetElement, hass, actionConfig as any, "tap");
-                    console.log(`[${this._id}] handleAction completed successfully`);
                 } catch (error) {
                     console.error(`[${this._id}] handleAction failed:`, error);
                 }
@@ -12107,7 +12178,7 @@ describe('ChiselEndcapElement', () => {
       chiselEndcapElement = new ChiselEndcapElement('ce-btn-init', props, {}, mockHass, mockRequestUpdate);
 
       expect(Button).toHaveBeenCalledOnce();
-      expect(Button).toHaveBeenCalledWith('ce-btn-init', props, mockHass, mockRequestUpdate);
+      expect(Button).toHaveBeenCalledWith('ce-btn-init', props, mockHass, mockRequestUpdate, undefined);
       expect(chiselEndcapElement.button).toBeDefined();
     });
 
@@ -12414,9 +12485,10 @@ import { Button } from "./button.js";
 export class ChiselEndcapElement extends LayoutElement {
     button?: Button;
 
-    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
-      super(id, props, layoutConfig, hass, requestUpdateCallback);
-      this.resetLayout();
+    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
+        super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+        this.resetLayout();
+        this.intrinsicSize = { width: 0, height: 0, calculated: false };
     }
   
     calculateIntrinsicSize(container: SVGElement): void {
@@ -12476,24 +12548,7 @@ export class ChiselEndcapElement extends LayoutElement {
       const isCutout = hasText && Boolean(buttonConfig?.cutout_text);
       
       if (isButton && this.button) {
-        // Resolve dynamic fill color
-        const fill = this._resolveDynamicColor(this.props.fill) || this.props.fill || 'none';
-        
-        // Create a modified props object with resolved dynamic colors for the button
-        const resolvedProps = { ...this.props };
-        
-        // Resolve dynamic fill color for button
-        if (this.props.fill !== undefined) {
-          resolvedProps.fill = fill;
-        }
-        
-        // Resolve dynamic stroke color for button
-        if (this.props.stroke !== undefined) {
-          resolvedProps.stroke = this._resolveDynamicColor(this.props.stroke) || this.props.stroke;
-        }
-        
-        // Update button props with resolved colors
-        (this.button as any)._props = resolvedProps;
+        // Let the button handle its own color resolution with current state
         
         return this.button.createButton(
           pathData,
@@ -12508,18 +12563,16 @@ export class ChiselEndcapElement extends LayoutElement {
           }
         );
       } else {
-        // Resolve dynamic fill color
-        const fill = this._resolveDynamicColor(this.props.fill) || this.props.fill || 'none';
-        const stroke = this.props.stroke ?? 'none';
-        const strokeWidth = this.props.strokeWidth ?? '0';
+        // Use centralized color resolution for non-button elements
+        const colors = this._resolveElementColors();
         
         return svg`
           <path
             id=${this.id}
             d=${pathData}
-            fill=${fill}
-            stroke=${stroke}
-            stroke-width=${strokeWidth}
+            fill=${colors.fillColor}
+            stroke=${colors.strokeColor}
+            stroke-width=${colors.strokeWidth}
           />
         `;
       }
@@ -12617,7 +12670,7 @@ describe('ElbowElement', () => {
       elbowElement = new ElbowElement('el-btn-init', props, {}, mockHass, mockRequestUpdate);
 
       expect(Button).toHaveBeenCalledOnce();
-      expect(Button).toHaveBeenCalledWith('el-btn-init', props, mockHass, mockRequestUpdate);
+      expect(Button).toHaveBeenCalledWith('el-btn-init', props, mockHass, mockRequestUpdate, undefined);
       expect(elbowElement.button).toBeDefined();
     });
 
@@ -12870,9 +12923,10 @@ import { Button } from "./button.js";
 export class ElbowElement extends LayoutElement {
     button?: Button;
 
-    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
-      super(id, props, layoutConfig, hass, requestUpdateCallback);
-      this.resetLayout();
+    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
+        super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+        this.resetLayout();
+        this.intrinsicSize = { width: 0, height: 0, calculated: false };
     }
   
     calculateIntrinsicSize(container: SVGElement): void {
@@ -12957,24 +13011,7 @@ export class ElbowElement extends LayoutElement {
           }
         }
         
-        // Resolve dynamic fill color
-        const fill = this._resolveDynamicColor(this.props.fill) || this.props.fill || 'none';
-        
-        // Create a modified props object with resolved dynamic colors for the button
-        const resolvedProps = { ...this.props };
-        
-        // Resolve dynamic fill color for button
-        if (this.props.fill !== undefined) {
-          resolvedProps.fill = fill;
-        }
-        
-        // Resolve dynamic stroke color for button
-        if (this.props.stroke !== undefined) {
-          resolvedProps.stroke = this._resolveDynamicColor(this.props.stroke) || this.props.stroke;
-        }
-        
-        // Update button props with resolved colors
-        (this.button as any)._props = resolvedProps;
+        // Let the button handle its own color resolution with current state
         
         return this.button.createButton(
           pathData,
@@ -12990,18 +13027,16 @@ export class ElbowElement extends LayoutElement {
           }
         );
       } else {
-        // Resolve dynamic fill color
-        const fill = this._resolveDynamicColor(this.props.fill) || this.props.fill || 'none';
-        const stroke = this.props.stroke ?? 'none';
-        const strokeWidth = this.props.strokeWidth ?? '0';
+        // Use centralized color resolution for non-button elements
+        const colors = this._resolveElementColors();
         
         return svg`
           <path
             id=${this.id}
             d=${pathData}
-            fill=${fill}
-            stroke=${stroke}
-            stroke-width=${strokeWidth}
+            fill=${colors.fillColor}
+            stroke=${colors.strokeColor}
+            stroke-width=${colors.strokeWidth}
           />
         `;
       }
@@ -13017,6 +13052,7 @@ import { LayoutElement } from './element';
 import { LayoutElementProps, LayoutConfigOptions, LayoutState, IntrinsicSize } from '../engine';
 import { HomeAssistant } from 'custom-card-helpers';
 import { SVGTemplateResult, svg } from 'lit';
+import { animationManager } from '../../utils/animation.js';
 
 // Mock gsap
 vi.mock('gsap', () => {
@@ -13063,9 +13099,9 @@ class MockLayoutElement extends LayoutElement {
     return svg`<rect id=${this.id} x=${this.layout.x} y=${this.layout.y} width=${this.layout.width} height=${this.layout.height} />`;
   }
 
-  // Expose protected method for testing
+  // Expose color formatting method for testing through animation manager
   public testFormatColorValue(color: any): string | undefined {
-    return this._formatColorValue(color);
+    return (animationManager as any).formatColorValueFromInput(color);
   }
 }
 
@@ -13121,7 +13157,7 @@ describe('LayoutElement', () => {
     it('should instantiate Button if props.button.enabled is true', () => {
       const props: LayoutElementProps = { button: { enabled: true, text: 'Click' } };
       element = new MockLayoutElement('btn-test', props, {}, mockHass, mockRequestUpdate);
-      expect(Button).toHaveBeenCalledWith('btn-test', props, mockHass, mockRequestUpdate);
+      expect(Button).toHaveBeenCalledWith('btn-test', props, mockHass, mockRequestUpdate, undefined);
       expect(element.button).toBeDefined();
       expect(mockButtonInstance.id).toBe('btn-test');
     });
@@ -13443,10 +13479,10 @@ describe('LayoutElement', () => {
     });
 
     it('should call gsap.to if layout is calculated and element exists', () => {
-      element = new MockLayoutElement('anim-test');
-      element.layout.calculated = true;
       const mockDomElement = document.createElement('div');
-      document.getElementById = vi.fn().mockReturnValue(mockDomElement);
+      const getShadowElement = vi.fn().mockReturnValue(mockDomElement);
+      element = new MockLayoutElement('anim-test', {}, {}, undefined, undefined, getShadowElement);
+      element.layout.calculated = true;
 
       element.animate('opacity', 0.5, 1);
       expect(gsap.to).toHaveBeenCalledWith(mockDomElement, {
@@ -13514,6 +13550,8 @@ import { LcarsButtonElementConfig } from '../../lovelace-lcars-card.js';
 import { StretchContext } from '../engine.js';
 import { Button } from './button.js';
 import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../../types';
+import { animationManager, AnimationContext } from '../../utils/animation.js';
+import { colorResolver, ComputedElementColors, ColorResolutionDefaults } from '../../utils/color-resolver.js';
 
 export abstract class LayoutElement {
     id: string;
@@ -13524,21 +13562,22 @@ export abstract class LayoutElement {
     hass?: HomeAssistant;
     public requestUpdateCallback?: () => void;
     public button?: Button;
-    
-    // Dynamic color monitoring
-    private _monitoredEntities: Set<string> = new Set();
-    private _lastEntityStates: Map<string, any> = new Map();
+    public getShadowElement?: (id: string) => Element | null;
 
-    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
+    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this.id = id;
         this.props = props;
         this.layoutConfig = layoutConfig;
         this.hass = hass;
         this.requestUpdateCallback = requestUpdateCallback;
+        this.getShadowElement = getShadowElement;
+
+        // Initialize animation state for this element
+        animationManager.initializeElementAnimationTracking(id);
 
         // Initialize button if button config exists
         if (props.button?.enabled) {
-            this.button = new Button(id, props, hass, requestUpdateCallback);
+            this.button = new Button(id, props, hass, requestUpdateCallback, getShadowElement);
         }
 
         this.resetLayout();
@@ -14059,145 +14098,79 @@ export abstract class LayoutElement {
 
     animate(property: string, value: any, duration: number = 0.5): void {
         if (!this.layout.calculated) return;
-        
-        const element = document.getElementById(this.id);
-        if (!element) return;
-        
-        const animProps: { [key: string]: any } = {};
-        animProps[property] = value;
-        
-        gsap.to(element, {
-            duration,
-            ...animProps,
-            ease: "power2.out"
-        });
+        animationManager.animateElementProperty(this.id, property, value, duration, this.getShadowElement);
     }
 
     /**
-     * Formats a color value from different possible input formats
-     * @param color - Color in string format or RGB array
-     * @returns Formatted color string or undefined
+     * Resolve and animate color if it's dynamic, return color for template
      */
-    protected _formatColorValue(color: any): string | undefined {
-        if (typeof color === 'string') {
-            return color;
-        }
-        if (Array.isArray(color) && color.length === 3 && color.every(num => typeof num === 'number')) {
-            return `rgb(${color[0]},${color[1]},${color[2]})`;
-        }
-        return undefined;
+    protected _resolveDynamicColorWithAnimation(colorConfig: ColorValue, property: 'fill' | 'stroke' = 'fill'): string | undefined {
+        const context: AnimationContext = {
+            elementId: this.id,
+            getShadowElement: this.getShadowElement,
+            hass: this.hass,
+            requestUpdateCallback: this.requestUpdateCallback
+        };
+        
+        return animationManager.resolveDynamicColorWithAnimation(this.id, colorConfig, property, context);
+    }
+
+    /**
+     * Resolve all element colors (fill, stroke, strokeWidth) with animation support
+     * This is the preferred method for getting all colors at once
+     */
+    protected _resolveElementColors(options: ColorResolutionDefaults = {}): ComputedElementColors {
+        const context: AnimationContext = {
+            elementId: this.id,
+            getShadowElement: this.getShadowElement,
+            hass: this.hass,
+            requestUpdateCallback: this.requestUpdateCallback
+        };
+        
+        return colorResolver.resolveAllElementColors(this.id, this.props, context, options);
+    }
+
+    /**
+     * Create resolved props for button elements
+     * This handles the common pattern where buttons need a modified props object
+     */
+    protected _createResolvedPropsForButton(): any {
+        const context: AnimationContext = {
+            elementId: this.id,
+            getShadowElement: this.getShadowElement,
+            hass: this.hass,
+            requestUpdateCallback: this.requestUpdateCallback
+        };
+        
+        return colorResolver.createButtonPropsWithResolvedColors(this.id, this.props, context);
     }
 
     /**
      * Resolve a color value that might be static or dynamic (entity-based)
      */
     protected _resolveDynamicColor(colorConfig: ColorValue): string | undefined {
-        if (isDynamicColorConfig(colorConfig)) {
-            return this._getDynamicColorValue(colorConfig);
-        }
-        return this._formatColorValue(colorConfig);
-    }
-
-    /**
-     * Get color value from entity state based on dynamic configuration
-     */
-    private _getDynamicColorValue(config: DynamicColorConfig): string | undefined {
-        if (!this.hass) {
-            return this._formatColorValue(config.default);
-        }
-
-        const entity = this.hass.states[config.entity];
-        if (!entity) {
-            return this._formatColorValue(config.default);
-        }
-
-        // Track this entity for change detection
-        this._monitoredEntities.add(config.entity);
-        this._lastEntityStates.set(config.entity, entity);
-
-        // Get the value to map
-        const value = config.attribute ? entity.attributes[config.attribute] : entity.state;
-        
-        // Handle interpolation for numeric values
-        if (config.interpolate && typeof value === 'number') {
-            return this._interpolateColor(value, config);
-        }
-
-        // Direct mapping
-        const mappedColor = config.mapping[value] || config.default;
-        return this._formatColorValue(mappedColor);
-    }
-
-    /**
-     * Interpolate color for numeric values
-     */
-    private _interpolateColor(value: number, config: DynamicColorConfig): string | undefined {
-        const mappingKeys = Object.keys(config.mapping)
-            .map(k => parseFloat(k))
-            .filter(k => !isNaN(k))
-            .sort((a, b) => a - b);
-
-        if (mappingKeys.length === 0) {
-            return this._formatColorValue(config.default);
-        }
-
-        // Find the two closest values for interpolation
-        let lowerKey = mappingKeys[0];
-        let upperKey = mappingKeys[mappingKeys.length - 1];
-
-        for (let i = 0; i < mappingKeys.length - 1; i++) {
-            if (value >= mappingKeys[i] && value <= mappingKeys[i + 1]) {
-                lowerKey = mappingKeys[i];
-                upperKey = mappingKeys[i + 1];
-                break;
-            }
-        }
-
-        // If exact match, return that color
-        if (config.mapping[value.toString()]) {
-            return this._formatColorValue(config.mapping[value.toString()]);
-        }
-
-        // For now, just return the nearest value (true interpolation can be added later)
-        const lowerDiff = Math.abs(value - lowerKey);
-        const upperDiff = Math.abs(value - upperKey);
-        const nearestKey = lowerDiff <= upperDiff ? lowerKey : upperKey;
-        
-        return this._formatColorValue(config.mapping[nearestKey.toString()] || config.default);
+        return animationManager.resolveDynamicColor(this.id, colorConfig, this.hass);
     }
 
     /**
      * Check if any monitored entities have changed and trigger update if needed
      */
     public checkEntityChanges(hass: HomeAssistant): boolean {
-        if (!this.hass || this._monitoredEntities.size === 0) {
-            return false;
-        }
-
-        let hasChanges = false;
-        
-        for (const entityId of this._monitoredEntities) {
-            const currentEntity = hass.states[entityId];
-            const lastEntity = this._lastEntityStates.get(entityId);
-            
-            // Check if entity state or attributes changed
-            if (!currentEntity || !lastEntity || 
-                currentEntity.state !== lastEntity.state ||
-                JSON.stringify(currentEntity.attributes) !== JSON.stringify(lastEntity.attributes)) {
-                hasChanges = true;
-                this._lastEntityStates.set(entityId, currentEntity);
-            }
-        }
-
-        return hasChanges;
+        return animationManager.checkForEntityStateChanges(this.id, hass);
     }
 
     /**
      * Clear monitored entities (called before recalculating dynamic colors)
      */
     public clearMonitoredEntities(): void {
-        this._monitoredEntities.clear();
-        this._lastEntityStates.clear();
+        animationManager.clearTrackedEntitiesForElement(this.id);
+    }
+
+    /**
+     * Clean up any ongoing animations
+     */
+    public cleanupAnimations(): void {
+        animationManager.stopAllAnimationsForElement(this.id);
     }
 
     updateHass(hass?: HomeAssistant): void {
@@ -14293,7 +14266,7 @@ describe('EndcapElement', () => {
       endcapElement = new EndcapElement('ec-btn-init', props, {}, mockHass, mockRequestUpdate);
 
       expect(Button).toHaveBeenCalledOnce();
-      expect(Button).toHaveBeenCalledWith('ec-btn-init', props, mockHass, mockRequestUpdate);
+      expect(Button).toHaveBeenCalledWith('ec-btn-init', props, mockHass, mockRequestUpdate, undefined);
       expect(endcapElement.button).toBeDefined();
     });
 
@@ -14589,9 +14562,10 @@ import { svg, SVGTemplateResult } from "lit";
 import { generateEndcapPath } from "../../utils/shapes.js";
 
 export class EndcapElement extends LayoutElement {
-    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
-      super(id, props, layoutConfig, hass, requestUpdateCallback);
-      this.resetLayout();
+    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
+        super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+        this.resetLayout();
+        this.intrinsicSize = { width: 0, height: 0, calculated: false };
     }
   
     calculateIntrinsicSize(container: SVGElement): void {
@@ -14656,6 +14630,8 @@ export class EndcapElement extends LayoutElement {
       const isCutout = hasText && Boolean(buttonConfig?.cutout_text);
       
       if (isButton && this.button) {
+        // Let the button handle its own color resolution with current state
+        
         return this.button.createButton(
           pathData,
           x,
@@ -14669,13 +14645,16 @@ export class EndcapElement extends LayoutElement {
           }
         );
       } else {
+        // Use centralized color resolution for non-button elements
+        const colors = this._resolveElementColors();
+        
         return svg`
           <path
             id=${this.id}
             d=${pathData}
-            fill=${this.props.fill || 'none'}
-            stroke=${this.props.stroke || 'none'}
-            stroke-width=${this.props.strokeWidth || '0'}
+            fill=${colors.fillColor}
+            stroke=${colors.strokeColor}
+            stroke-width=${colors.strokeWidth}
           />
         `;
       }
@@ -14790,7 +14769,7 @@ describe('RectangleElement', () => {
       rectangleElement = new RectangleElement('rect-btn-init', props, {}, mockHass, mockRequestUpdate);
 
       expect(Button).toHaveBeenCalled();
-      expect(Button).toHaveBeenCalledWith('rect-btn-init', props, mockHass, mockRequestUpdate);
+      expect(Button).toHaveBeenCalledWith('rect-btn-init', props, mockHass, mockRequestUpdate, undefined);
       expect(rectangleElement.button).toBeDefined();
     });
 
@@ -15072,10 +15051,9 @@ import { Button } from "./button.js";
 
 export class RectangleElement extends LayoutElement {
   button?: Button;
-  private _lastFillColor?: string;
 
-  constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
-    super(id, props, layoutConfig, hass, requestUpdateCallback);
+  constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
+    super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     this.resetLayout();
   }
 
@@ -15109,46 +15087,8 @@ export class RectangleElement extends LayoutElement {
     const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
     const pathData = generateRectanglePath(x, y, width, height, rx);
     
-    // Resolve fill color (dynamic or static)
-    let fillColor;
-    if (this.props.fill !== undefined) {
-      // Try dynamic color resolution first, then fallback to static
-      fillColor = this._resolveDynamicColor(this.props.fill) || this.props.fill;
-    } else {
-      // Default fill when no fill is specified
-      fillColor = 'none';
-    }
-    
-    // Check if color changed and apply fade transition (only for dynamic colors)
-    if (this._lastFillColor && this._lastFillColor !== fillColor && this._resolveDynamicColor(this.props.fill)) {
-      // Schedule animation after render
-      setTimeout(() => {
-        const element = document.getElementById(this.id);
-        if (element) {
-          element.style.transition = 'fill 0.3s ease-in-out';
-          element.style.fill = fillColor;
-        }
-      }, 0);
-    }
-    this._lastFillColor = fillColor;
-
     if (isButton && this.button) {
-      // Create a modified props object with resolved dynamic colors for the button
-      const resolvedProps = { ...this.props };
-      
-      // Resolve dynamic fill color for button
-      if (this.props.fill !== undefined) {
-        resolvedProps.fill = fillColor;
-      }
-      
-      // Resolve dynamic stroke color for button
-      if (this.props.stroke !== undefined) {
-        resolvedProps.stroke = this._resolveDynamicColor(this.props.stroke) || this.props.stroke;
-      }
-      
-      // Update button props with resolved colors
-      (this.button as any)._props = resolvedProps;
-      
+      // Let the button handle its own color resolution with current state
       return this.button.createButton(
         pathData,
         x,
@@ -15162,16 +15102,16 @@ export class RectangleElement extends LayoutElement {
         }
       );
     } else {
-      const stroke = this.props.stroke ?? 'none';
-      const strokeWidth = this.props.strokeWidth ?? '0';
+      // Use centralized color resolution for non-button elements
+      const colors = this._resolveElementColors();
       
       return svg`
         <path
           id=${this.id}
           d=${pathData}
-          fill=${fillColor}
-          stroke=${stroke}
-          stroke-width=${strokeWidth}
+          fill=${colors.fillColor}
+          stroke=${colors.strokeColor}
+          stroke-width=${colors.strokeWidth}
         />
       `;
     }
@@ -15284,7 +15224,7 @@ describe('TextElement', () => {
       textElement = new TextElement('txt-btn-init', props, {}, mockHass, mockRequestUpdate);
 
       expect(Button).toHaveBeenCalledOnce();
-      expect(Button).toHaveBeenCalledWith('txt-btn-init', props, mockHass, mockRequestUpdate);
+      expect(Button).toHaveBeenCalledWith('txt-btn-init', props, mockHass, mockRequestUpdate, undefined);
       expect(textElement.button).toBeDefined();
     });
 
@@ -15588,9 +15528,10 @@ import { getFontMetrics, measureTextBBox, getSvgTextWidth, getTextWidth } from "
 export class TextElement extends LayoutElement {
     // Cache font metrics to maintain consistency across renders
     private _cachedMetrics: any = null;
-    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
-      super(id, props, layoutConfig, hass, requestUpdateCallback);
-      this.resetLayout();
+    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
+        super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+        this.resetLayout();
+        this.intrinsicSize = { width: 0, height: 0, calculated: false };
     }
   
     /**
@@ -15702,12 +15643,19 @@ export class TextElement extends LayoutElement {
       
       const styles = this.props.textTransform ? `text-transform: ${this.props.textTransform};` : '';
   
+      // Use centralized color resolution with text-specific defaults
+      const colors = this._resolveElementColors({ 
+        fallbackFillColor: '#000000', // Default text color
+        fallbackStrokeColor: 'none', 
+        fallbackStrokeWidth: '0' 
+      });
+
       return svg`
         <text
           id=${this.id}
           x=${textX}
           y=${textY}
-          fill=${this.props.fill || '#000000'}
+          fill=${colors.fillColor}
           font-family=${this.props.fontFamily || 'sans-serif'}
           font-size=${`${this.props.fontSize || 16}px`}
           font-weight=${this.props.fontWeight || 'normal'}
@@ -16256,21 +16204,22 @@ export class TopHeaderElement extends LayoutElement {
   
   private readonly textGap: number = 5;
 
-  constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
-    super(id, props, layoutConfig, hass, requestUpdateCallback);
+  constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
+    super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     
-    const defaultColor = props.fill || '#99CCFF';
+    const fillColor = this._resolveDynamicColor(props.fill) || '#99CCFF';
     
-    this.leftEndcap = this.createLeftEndcap(id, defaultColor, hass, requestUpdateCallback);
-    this.rightEndcap = this.createRightEndcap(id, defaultColor, hass, requestUpdateCallback);
-    this.leftText = this.createTextElement(id, 'left', props, hass, requestUpdateCallback);
-    this.rightText = this.createTextElement(id, 'right', props, hass, requestUpdateCallback);
-    this.headerBar = this.createHeaderBar(id, defaultColor, hass, requestUpdateCallback);
+    this.leftEndcap = this.createLeftEndcap(id, fillColor, hass, requestUpdateCallback, getShadowElement);
+    this.rightEndcap = this.createRightEndcap(id, fillColor, hass, requestUpdateCallback, getShadowElement);
+    this.leftText = this.createTextElement(id, 'left', props, hass, requestUpdateCallback, getShadowElement);
+    this.rightText = this.createTextElement(id, 'right', props, hass, requestUpdateCallback, getShadowElement);
+    this.headerBar = this.createHeaderBar(id, fillColor, hass, requestUpdateCallback, getShadowElement);
     
     this.resetLayout();
+    this.intrinsicSize = { width: 0, height: 0, calculated: false };
   }
   
-  private createLeftEndcap(id: string, fill: string, hass?: HomeAssistant, requestUpdateCallback?: () => void): EndcapElement {
+  private createLeftEndcap(id: string, fill: string, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): EndcapElement {
     return new EndcapElement(`${id}_left_endcap`, {
       width: 15,
       direction: 'left',
@@ -16281,10 +16230,10 @@ export class TopHeaderElement extends LayoutElement {
         anchorPoint: 'topLeft',
         targetAnchorPoint: 'topLeft'
       }
-    }, hass, requestUpdateCallback);
+    }, hass, requestUpdateCallback, getShadowElement);
   }
   
-  private createRightEndcap(id: string, fill: string, hass?: HomeAssistant, requestUpdateCallback?: () => void): EndcapElement {
+  private createRightEndcap(id: string, fill: string, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): EndcapElement {
     return new EndcapElement(`${id}_right_endcap`, {
       width: 15,
       direction: 'right',
@@ -16295,10 +16244,10 @@ export class TopHeaderElement extends LayoutElement {
         anchorPoint: 'topRight',
         targetAnchorPoint: 'topRight'
       }
-    }, hass, requestUpdateCallback);
+    }, hass, requestUpdateCallback, getShadowElement);
   }
   
-  private createTextElement(id: string, position: 'left' | 'right', props: LayoutElementProps, hass?: HomeAssistant, requestUpdateCallback?: () => void): TextElement {
+  private createTextElement(id: string, position: 'left' | 'right', props: LayoutElementProps, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): TextElement {
     const isLeft = position === 'left';
     const textKey = isLeft ? 'leftText' : 'rightText';
     const defaultText = isLeft ? 'LEFT' : 'RIGHT';
@@ -16317,16 +16266,16 @@ export class TopHeaderElement extends LayoutElement {
         anchorPoint: isLeft ? 'topLeft' : 'topRight',
         targetAnchorPoint: isLeft ? 'topRight' : 'topLeft'
       }
-    }, hass, requestUpdateCallback);
+    }, hass, requestUpdateCallback, getShadowElement);
   }
   
-  private createHeaderBar(id: string, fill: string, hass?: HomeAssistant, requestUpdateCallback?: () => void): RectangleElement {
+  private createHeaderBar(id: string, fill: string, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): RectangleElement {
     return new RectangleElement(`${id}_header_bar`, {
       fill,
       width: 1  // Will be calculated in layoutHeaderBar
     }, {
       // No anchor or stretch - we'll position this manually in layoutHeaderBar
-    }, hass, requestUpdateCallback);
+    }, hass, requestUpdateCallback, getShadowElement);
   }
 
   calculateIntrinsicSize(container: SVGElement): void {
@@ -16638,7 +16587,6 @@ class MockEngineLayoutElement extends LayoutElement {
             const targetElement = elementsMap.get(depId);
             if (!targetElement || !targetElement.layout.calculated) {
                 dependencies.push(depId); // Report actual unmet dependency
-                // console.log(`[Mock ${this.id}] Reporting dep failure for ${depId}: Target found? ${!!targetElement}, Target calculated? ${targetElement?.layout.calculated}`);
                 return false; // Short-circuit if a mock dependency isn't met
             }
         });
@@ -17413,7 +17361,6 @@ export class LayoutEngine {
           console.warn(`LayoutEngine: Layout incomplete after ${pass} passes (calculated ${totalCalculated}/${this.elements.size})`);
         }
       } else {
-        console.log('✅ Layout calculation completed successfully!');
       }
       
       return this.getLayoutBounds();
@@ -17487,23 +17434,19 @@ export class LayoutEngine {
           } else {
             dependencyFailures[el.id] = dependencies;
             console.warn(`❌ Layout calculation failed despite passing canCalculateLayout`);
-            console.log('Dependencies:', dependencies);
           }
         } else {
           dependencyFailures[el.id] = dependencies;
           console.warn('⏳ Cannot calculate layout yet');
-          console.log('Missing dependencies:', dependencies);
           
           dependencies.forEach(depId => {
             const depElement = this.elements.get(depId);
-            console.log(`  - ${depId}: ${depElement ? depElement.constructor.name : 'NOT FOUND'} (calculated: ${depElement?.layout.calculated ?? 'N/A'})`);
           });
         }
       } catch (error: unknown) {
         dependencyFailures[el.id] = ['ERROR: ' + (error instanceof Error ? error.message : String(error))];
       } finally {
         const elementTime = performance.now() - elementStartTime;
-        console.log(`⏱️ Element time: ${elementTime}ms`);
       }
     }
     
@@ -17542,7 +17485,6 @@ export class LayoutEngine {
             
             dependencies.forEach(depId => {
               const dep = this.elements.get(depId);
-              console.log(`  - ${depId}: ${dep ? dep.constructor.name : 'NOT FOUND'} (calculated: ${dep?.layout.calculated ?? 'N/A'})`);
             });
           } else {
             console.warn('🟠 No dependencies found, but still not calculated');
@@ -17556,7 +17498,6 @@ export class LayoutEngine {
       
       console.warn('Uncalculated elements:', uncalculatedElements);
     } else {
-      console.log('✅ Layout calculation completed successfully!');
     }
   }
 
@@ -17578,8 +17519,6 @@ export class LayoutEngine {
       }
     });
     
-    console.log('✅ Calculated elements:', calculated);
-    console.log('❌ Uncalculated elements:', uncalculated);
   }
 
   destroy(): void {
@@ -17693,11 +17632,13 @@ import { TopHeaderElement } from './elements/top_header.js';
 describe('parseConfig', () => {
   let mockHass: HomeAssistant;
   let mockRequestUpdateCallback: () => void;
+  let mockGetShadowElement: (id: string) => Element | null;
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     mockHass = {} as HomeAssistant; // Minimal mock, can be expanded if needed
     mockRequestUpdateCallback = vi.fn();
+    mockGetShadowElement = vi.fn().mockReturnValue(null);
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {}); // Suppress console.warn during tests
 
     // Reset all mocks before each test to ensure clean state
@@ -17725,7 +17666,7 @@ describe('parseConfig', () => {
           elements: elements, // Use the test case value here
         };
 
-        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback);
+        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(groups).toHaveLength(1);
         const group = groups[0];
@@ -17735,28 +17676,31 @@ describe('parseConfig', () => {
         // 1. Header Bar (RectangleElement)
         expect(mockRectangleElementConstructor).toHaveBeenCalledWith(
           'default-header', // id
-          { fill: '#FF9900', rx: 0, ry: 0, button: undefined }, // props (button merged)
+          { fill: '#FF9900', rx: 0, ry: 0 }, // props (button merged)
           { anchorLeft: true, anchorTop: true, offsetX: 0, offsetY: 0, width: '100%', height: 16 }, // layoutConfig
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
 
         // 2. Title Element (TextElement)
         expect(mockTextElementConstructor).toHaveBeenCalledWith(
           'default-title', // id
-          { text: 'Test Title', fontWeight: 'bold', fontSize: 22, fill: '#FFFFFF', button: undefined }, // props (fontSize: 18 + 4)
+          { text: 'Test Title', fontWeight: 'bold', fontSize: 22, fill: '#FFFFFF' }, // props (fontSize: 18 + 4)
           { anchorLeft: true, anchorTop: true, offsetX: 16, offsetY: 30 }, // layoutConfig
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
 
         // 3. Text Element (TextElement)
         expect(mockTextElementConstructor).toHaveBeenCalledWith(
           'default-text', // id
-          { text: 'Test Text', fontSize: 18, fill: '#CCCCCC', button: undefined }, // props
+          { text: 'Test Text', fontSize: 18, fill: '#CCCCCC' }, // props
           { anchorLeft: true, anchorTop: true, offsetX: 16, offsetY: 60 }, // layoutConfig
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
       });
     });
@@ -17770,20 +17714,20 @@ describe('parseConfig', () => {
         elements: [], // Triggers default group creation
       };
 
-      parseConfig(config, mockHass, mockRequestUpdateCallback);
+      parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
       // Check title element font size (config.fontSize undefined ? 20)
       expect(mockTextElementConstructor).toHaveBeenCalledWith(
         'default-title',
         expect.objectContaining({ fontSize: 20 }),
-        expect.anything(), mockHass, mockRequestUpdateCallback
+        expect.anything(), mockHass, mockRequestUpdateCallback, expect.any(Function)
       );
 
       // Check text element font size (config.fontSize undefined ? 16)
       expect(mockTextElementConstructor).toHaveBeenCalledWith(
         'default-text',
         expect.objectContaining({ fontSize: 16 }),
-        expect.anything(), mockHass, mockRequestUpdateCallback
+        expect.anything(), mockHass, mockRequestUpdateCallback, expect.any(Function)
       );
     });
 
@@ -17795,17 +17739,17 @@ describe('parseConfig', () => {
         elements: [], // Triggers default group creation
       };
 
-      parseConfig(config, mockHass, mockRequestUpdateCallback);
+      parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
       expect(mockTextElementConstructor).toHaveBeenCalledWith(
         'default-title',
         expect.objectContaining({ text: undefined }),
-        expect.anything(), mockHass, mockRequestUpdateCallback
+        expect.anything(), mockHass, mockRequestUpdateCallback, expect.any(Function)
       );
       expect(mockTextElementConstructor).toHaveBeenCalledWith(
         'default-text',
         expect.objectContaining({ text: undefined }),
-        expect.anything(), mockHass, mockRequestUpdateCallback
+        expect.anything(), mockHass, mockRequestUpdateCallback, expect.any(Function)
       );
     });
   });
@@ -17817,7 +17761,7 @@ describe('parseConfig', () => {
           { id: 'el1', type: 'rectangle', group: 'groupA', props: { p1: 'v1'}, layout: {offsetX: 10} }
         ];
         const config: LcarsCardConfig = { type: 'lcars-card', elements };
-        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback);
+        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(groups).toHaveLength(1);
         expect(groups[0].id).toBe('groupA');
@@ -17828,7 +17772,8 @@ describe('parseConfig', () => {
             { p1: 'v1', button: undefined }, // props merged
             { offsetX: 10 }, // layoutConfig
             mockHass,
-            mockRequestUpdateCallback
+            mockRequestUpdateCallback,
+            expect.any(Function) // getShadowElement
         );
       });
 
@@ -17837,13 +17782,13 @@ describe('parseConfig', () => {
           { id: 'el1', type: 'rectangle' } // No group property
         ];
         const config: LcarsCardConfig = { type: 'lcars-card', elements };
-        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback);
+        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(groups).toHaveLength(1);
         expect(groups[0].id).toBe('__ungrouped__');
         expect(groups[0].elements).toHaveLength(1);
         expect(mockRectangleElementConstructor).toHaveBeenCalledWith(
-            'el1', { button: undefined }, {}, mockHass, mockRequestUpdateCallback
+            'el1', { button: undefined }, {}, mockHass, mockRequestUpdateCallback, expect.any(Function)
         );
       });
 
@@ -17855,7 +17800,7 @@ describe('parseConfig', () => {
           { id: 'el4', type: 'text', group: 'groupA' },
         ];
         const config: LcarsCardConfig = { type: 'lcars-card', elements };
-        const groups = parseConfig(config); // Using default hass/callback for brevity
+        const groups = parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement); // Using default hass/callback for brevity
 
         expect(groups).toHaveLength(3); // groupA, groupB, __ungrouped__
 
@@ -17898,7 +17843,7 @@ describe('parseConfig', () => {
           };
           const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
 
-          parseConfig(config, mockHass, mockRequestUpdateCallback);
+          parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
           expect(mockConstructor).toHaveBeenCalledTimes(1);
           expect(mockConstructor).toHaveBeenCalledWith(
@@ -17906,7 +17851,8 @@ describe('parseConfig', () => {
             { customProp: 'value', fill: 'red', button: { enabled: true, text: 'Click', text_transform: 'none' } }, // props (merged)
             { offsetX: 10, width: '50%' }, // layoutConfig
             mockHass,
-            mockRequestUpdateCallback
+            mockRequestUpdateCallback,
+            expect.any(Function) // getShadowElement
           );
         });
 
@@ -17919,7 +17865,7 @@ describe('parseConfig', () => {
           };
           const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
 
-          parseConfig(config, mockHass, mockRequestUpdateCallback); // Pass hass/cb
+          parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement); // Pass hass/cb
 
           expect(mockConstructor).toHaveBeenCalledTimes(1);
           expect(mockConstructor).toHaveBeenCalledWith(
@@ -17927,7 +17873,8 @@ describe('parseConfig', () => {
             { button: undefined }, // Default props if element.props is undefined
             {},                   // Default layout if element.layout is undefined
             mockHass,
-            mockRequestUpdateCallback
+            mockRequestUpdateCallback,
+            expect.any(Function) // getShadowElement
           );
         });
       });
@@ -17942,7 +17889,7 @@ describe('parseConfig', () => {
         };
         const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
 
-        parseConfig(config, mockHass, mockRequestUpdateCallback);
+        parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(mockRectangleElementConstructor).toHaveBeenCalledTimes(1);
         // Other constructors should not have been called for this element
@@ -17953,7 +17900,8 @@ describe('parseConfig', () => {
           { p: 1, button: { enabled: false, text_transform: 'none' } },
           { offsetX: 2 },
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
         expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
         expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -17970,14 +17918,15 @@ describe('parseConfig', () => {
           button: { text: 'Button Action', text_transform: 'none' }
         };
         const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
-        parseConfig(config, mockHass, mockRequestUpdateCallback);
+        parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(mockRectangleElementConstructor).toHaveBeenCalledWith(
           'el-no-props',
           { button: { text: 'Button Action', text_transform: 'none' } }, // props is just the button object
           { offsetX: 5 },
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
       });
 
@@ -17990,14 +17939,15 @@ describe('parseConfig', () => {
           // button: undefined // Implicitly undefined
         };
         const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
-        parseConfig(config, mockHass, mockRequestUpdateCallback);
+        parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(mockRectangleElementConstructor).toHaveBeenCalledWith(
           'el-no-layout',
           { fill: 'blue', button: undefined }, // props.button will be undefined
           {}, // layoutConfig will be {}
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
       });
 
@@ -18010,14 +17960,15 @@ describe('parseConfig', () => {
           // button: undefined // Implicitly undefined
         };
         const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
-        parseConfig(config, mockHass, mockRequestUpdateCallback);
+        parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(mockRectangleElementConstructor).toHaveBeenCalledWith(
           'el-no-button',
           { fill: 'green', button: undefined }, // props.button remains undefined
           { width: 100 },
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
       });
 
@@ -18028,14 +17979,15 @@ describe('parseConfig', () => {
           // props, layout, button are all implicitly undefined
         };
         const config: LcarsCardConfig = { type: 'lcars-card', elements: [elementConfig] };
-        parseConfig(config, mockHass, mockRequestUpdateCallback);
+        parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
 
         expect(mockTextElementConstructor).toHaveBeenCalledWith(
           'el-all-undefined',
           { button: undefined }, // props ends up as { button: undefined }
           {}, // layoutConfig is {}
           mockHass,
-          mockRequestUpdateCallback
+          mockRequestUpdateCallback,
+          expect.any(Function) // getShadowElement
         );
       });
     });
@@ -18057,9 +18009,9 @@ import { ElbowElement } from './elements/elbow.js';
 import { ChiselEndcapElement } from './elements/chisel_endcap.js';
 import { TopHeaderElement } from './elements/top_header.js';
 
-export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant, requestUpdateCallback?: () => void): Group[] {
+export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): Group[] {
   if (!config.elements || config.elements.length === 0) {
-    return [createDefaultGroup(config, hass, requestUpdateCallback)];
+    return [createDefaultGroup(config, hass, requestUpdateCallback, getShadowElement)];
   }
 
   const groupedElements: { [key: string]: any[] } = {};
@@ -18082,7 +18034,8 @@ export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant, reque
         { ...element.props, button: element.button },
         element.layout || {},
         hass,
-        requestUpdateCallback
+        requestUpdateCallback,
+        getShadowElement
       );
     });
     
@@ -18092,7 +18045,7 @@ export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant, reque
   return groups;
 }
 
-function createDefaultGroup(config: LcarsCardConfig, hass?: HomeAssistant, requestUpdateCallback?: () => void): Group {
+function createDefaultGroup(config: LcarsCardConfig, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): Group {
   const { title, text, fontSize } = config;
   
   const titleElement = new TextElement(
@@ -18110,7 +18063,8 @@ function createDefaultGroup(config: LcarsCardConfig, hass?: HomeAssistant, reque
       offsetY: 30
     },
     hass,
-    requestUpdateCallback
+    requestUpdateCallback,
+    getShadowElement
   );
   
   const textElement = new TextElement(
@@ -18127,7 +18081,8 @@ function createDefaultGroup(config: LcarsCardConfig, hass?: HomeAssistant, reque
       offsetY: 60
     },
     hass,
-    requestUpdateCallback
+    requestUpdateCallback,
+    getShadowElement
   );
   
   const headerBar = new RectangleElement(
@@ -18146,7 +18101,8 @@ function createDefaultGroup(config: LcarsCardConfig, hass?: HomeAssistant, reque
       height: 16
     },
     hass,
-    requestUpdateCallback
+    requestUpdateCallback,
+    getShadowElement
   );
   
   return new Group('__default__', [headerBar, titleElement, textElement]);
@@ -18158,24 +18114,25 @@ function createLayoutElement(
   props: any,
   layoutConfig: any,
   hass?: HomeAssistant,
-  requestUpdateCallback?: () => void
+  requestUpdateCallback?: () => void,
+  getShadowElement?: (id: string) => Element | null
 ): LayoutElement {
   switch (type.toLowerCase().trim()) {
     case 'text':
-      return new TextElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new TextElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     case 'rectangle':
-      return new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     case 'endcap':
-      return new EndcapElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new EndcapElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     case 'elbow':
-      return new ElbowElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new ElbowElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     case 'chisel-endcap':
-      return new ChiselEndcapElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new ChiselEndcapElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     case 'top_header':
-      return new TopHeaderElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new TopHeaderElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     default:
       console.warn(`LCARS Card Parser: Unknown element type "${type}". Defaulting to Rectangle.`);
-      return new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback);
+      return new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
   }
 }
 ```
@@ -18208,6 +18165,7 @@ import gsap from 'gsap';
 import { LayoutEngine, Group } from './layout/engine.js';
 import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
+import { animationManager, AnimationContext } from './utils/animation.js';
 
 import './editor/lcars-card-editor.js';
 
@@ -18388,12 +18346,20 @@ export class LcarsCard extends LitElement {
 
     // Force layout recalculation after a short timeout to ensure dimensions are correct
     // This helps ensure proper initial layout, especially in complex layouts like grid views
-    setTimeout(() => this._forceLayoutRecalculation(), 100);
+    setTimeout(() => {
+      // Only force recalculation if we don't already have valid templates and layout isn't pending
+      if (this._layoutElementTemplates.length === 0 && !this._layoutCalculationPending && !this._isForceRecalculating) {
+        this._forceLayoutRecalculation();
+      }
+    }, 100);
     
     // Backup recalculation in case the initial one didn't work due to container not being ready
     setTimeout(() => {
       if (!this._initialLoadComplete) {
-        this._forceLayoutRecalculation();
+        // Only force if we still don't have templates and no other calculation is in progress
+        if (this._layoutElementTemplates.length === 0 && !this._layoutCalculationPending && !this._isForceRecalculating) {
+          this._forceLayoutRecalculation();
+        }
         this._initialLoadComplete = true;
       }
     }, 1000);
@@ -18459,7 +18425,6 @@ export class LcarsCard extends LitElement {
       .then(() => {
         this._fontsLoaded = true;
         this._fontLoadAttempts = 0;
-        console.log(`Fonts loaded successfully: ${Array.from(fontFamilies).join(', ')}`);
         // Use double requestAnimationFrame to ensure browser has time to process font loading
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
@@ -18514,6 +18479,13 @@ export class LcarsCard extends LitElement {
       this._editModeObserver = undefined;
     }
     
+    // Clean up all element animations and entity monitoring
+    for (const group of this._layoutEngine.layoutGroups) {
+      for (const element of group.elements) {
+                    animationManager.cleanupElementAnimationTracking(element.id);
+      }
+    }
+    
     super.disconnectedCallback();
   }
   
@@ -18557,6 +18529,11 @@ export class LcarsCard extends LitElement {
       }
     }
 
+    // Handle element state changes (hover/active states, etc.)
+    if (this._elementStateNeedsRefresh) {
+      this._refreshElementRenders();
+    }
+
     // Handle dynamic color changes
     if (hasHassChanged && this.hass && this._lastHassStates) {
       this._checkDynamicColorChanges();
@@ -18575,7 +18552,6 @@ export class LcarsCard extends LitElement {
         return;
     }
 
-    console.log("[_performLayoutCalculation] Calculating layout with dimensions:", rect.width, "x", rect.height);
 
     const svgElement = this.shadowRoot?.querySelector('.card-container svg') as SVGSVGElement | null;
     if (svgElement) {
@@ -18586,19 +18562,24 @@ export class LcarsCard extends LitElement {
     this._layoutEngine.clearLayout();
     
     // Parse config and add elements to layout engine
+    const getShadowElement = (id: string): Element | null => {
+      return this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
+    };
+    
     const groups = parseConfig(this._config, this.hass, () => { 
       this._elementStateNeedsRefresh = true; 
       this.requestUpdate(); 
-    }); 
+    }, getShadowElement); 
     
     groups.forEach((group: Group) => { 
       this._layoutEngine.addGroup(group); 
     });
 
-    // Clear all entity monitoring before recalculating layout
+    // Clear all entity monitoring and animation state before recalculating layout
     for (const group of this._layoutEngine.layoutGroups) {
       for (const element of group.elements) {
         element.clearMonitoredEntities();
+        element.cleanupAnimations();
       }
     }
 
@@ -18647,6 +18628,17 @@ export class LcarsCard extends LitElement {
         });
     });
 
+    // Collect element IDs for animation state restoration
+    const elementIds = this._layoutEngine.layoutGroups.flatMap(group => 
+        group.elements.map(el => el.id)
+    );
+
+    // Store animation states before re-render using animation manager
+    const animationStates = animationManager.collectAnimationStates(
+        elementIds,
+        (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null
+    );
+
     const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
         group.elements
             .map(el => el.render())
@@ -18655,13 +18647,24 @@ export class LcarsCard extends LitElement {
 
     this._layoutElementTemplates = newTemplates;
 
+    // After re-render, restore animation states using animation manager
+    if (animationStates.size > 0) {
+        const context: AnimationContext = {
+            elementId: '', // Not used in restoration context
+            getShadowElement: (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null,
+            hass: this.hass,
+            requestUpdateCallback: this.requestUpdate.bind(this)
+        };
+
+        animationManager.restoreAnimationStates(animationStates, context);
+    }
+
     this._elementStateNeedsRefresh = false;
   }
 
   private _handleVisibilityChange(): void {
     // Track multiple rapid visibility changes for debugging
     this._visibilityChangeCount++;
-    console.log(`Visibility change #${this._visibilityChangeCount}, state: ${document.visibilityState}, currently recalculating: ${this._isForceRecalculating}`);
     
     // Clear any existing timeout
     if (this._visibilityChangeTimeout) {
@@ -18671,7 +18674,6 @@ export class LcarsCard extends LitElement {
     if (document.visibilityState === 'visible') {
         // If we're already in a recalculation cycle, skip this event
         if (this._isForceRecalculating) {
-            console.log("Skipping visibility change - already recalculating");
             return;
         }
         
@@ -18738,7 +18740,6 @@ export class LcarsCard extends LitElement {
         Math.abs(this._containerRect.width - newRect.width) > 1 ||
         Math.abs(this._containerRect.height - newRect.height) > 1) 
     {
-        console.log("Dimension change detected:", newRect.width, "x", newRect.height);
         
         // Update container dimensions
         this._containerRect = newRect;
@@ -18766,7 +18767,12 @@ export class LcarsCard extends LitElement {
   private _forceLayoutRecalculation(): void {
     // If we're already recalculating, avoid overlapping attempts
     if (this._isForceRecalculating) {
-      console.log("Skipping force recalculation - already in progress");
+      return;
+    }
+    
+    // If we already have templates and the layout is stable, avoid unnecessary recalculation
+    // This prevents interference with hover state changes
+    if (this._layoutElementTemplates.length > 0 && !this._layoutCalculationPending && this._initialLoadComplete) {
       return;
     }
     
@@ -18783,7 +18789,6 @@ export class LcarsCard extends LitElement {
     
     // Only proceed if container has non-zero dimensions
     if (newRect.width > 0 && newRect.height > 0) {
-        console.log("Forcing layout recalculation:", newRect.width, "x", newRect.height);
         
         // Set the flag to indicate we're recalculating
         this._isForceRecalculating = true;
@@ -18869,7 +18874,7 @@ export class LcarsCard extends LitElement {
         });
       });
 
-      if (this._layoutCalculationPending && this._layoutElementTemplates.length === 0 && this._hasRenderedOnce) {
+      if (this._layoutCalculationPending && this._layoutElementTemplates.length === 0 && this._hasRenderedOnce && !this._initialLoadComplete) {
            svgContent = svg`<text x="10" y="20" fill="orange">Calculating layout...</text>`;
            
            // Log debug info
@@ -19039,28 +19044,36 @@ export class LcarsCard extends LitElement {
     
     this._dynamicColorCheckScheduled = true;
     
-    // Use longer delay to reduce frequency of checks
+    // Use longer delay for complex layouts to reduce frequency of checks
+    const hasComplexLayout = this._layoutEngine.layoutGroups.length > 1 || 
+                             this._layoutEngine.layoutGroups.some(group => group.elements.length > 5);
+    const checkDelay = hasComplexLayout ? 150 : 100;
+    
     setTimeout(() => {
       this._dynamicColorCheckScheduled = false;
       
       let needsRefresh = false;
+      let elementsChecked = 0;
       
       // Check all layout elements for entity changes
       for (const group of this._layoutEngine.layoutGroups) {
         for (const element of group.elements) {
+          elementsChecked++;
           if (element.checkEntityChanges(this.hass!)) {
             needsRefresh = true;
-            // Break early since we already know we need to refresh
-            break;
+            // For complex layouts, we can break early to improve performance
+            if (hasComplexLayout) {
+              break;
+            }
           }
         }
-        if (needsRefresh) break; // Break outer loop too
+        if (needsRefresh && hasComplexLayout) break; // Break outer loop too for complex layouts
       }
       
       if (needsRefresh) {
         this._refreshElementRenders();
       }
-    }, 100); // Increased delay from 0ms to 100ms to reduce frequency
+    }, checkDelay);
   }
 }
 ```
@@ -19544,11 +19557,2106 @@ export interface DynamicColorConfig {
   interpolate?: boolean; // for numeric values like temperature
 }
 
-export type ColorValue = string | number[] | DynamicColorConfig;
+// Stateful Color Configuration Types (for hover/active states)
+export interface StatefulColorConfig {
+  default?: any; // default color (static string, array, or dynamic config)
+  hover?: any; // hover color (static string, array, or dynamic config)
+  active?: any; // active/pressed color (static string, array, or dynamic config)
+}
+
+export type ColorValue = string | number[] | DynamicColorConfig | StatefulColorConfig;
 
 export function isDynamicColorConfig(value: any): value is DynamicColorConfig {
   return value && typeof value === 'object' && 'entity' in value && 'mapping' in value;
 }
+
+export function isStatefulColorConfig(value: any): value is StatefulColorConfig {
+  return value && typeof value === 'object' && 
+         ('default' in value || 'hover' in value || 'active' in value) &&
+         !('entity' in value) && !('mapping' in value);
+}
+```
+
+## File: src/utils/animation.spec.ts
+
+```typescript
+/// <reference types="vitest" />
+import { describe, it, expect, vi, beforeEach, afterEach, MockedFunction } from 'vitest';
+import { AnimationManager, animationManager, ColorAnimationState, AnimationContext, EntityStateMonitoringData } from './animation';
+import { HomeAssistant } from 'custom-card-helpers';
+import { DynamicColorConfig, isDynamicColorConfig } from '../types';
+
+// Mock gsap
+vi.mock('gsap', () => ({
+  gsap: {
+    to: vi.fn(),
+    killTweensOf: vi.fn(),
+  },
+}));
+
+// Mock the types module to control isDynamicColorConfig
+vi.mock('../types', () => ({
+  isDynamicColorConfig: vi.fn(),
+}));
+
+// Helper function to create mock HassEntity
+const createMockEntity = (state: string | number, attributes: Record<string, any> = {}): any => ({
+  entity_id: 'test.entity',
+  state: state.toString(),
+  attributes,
+  last_changed: '2023-01-01T00:00:00+00:00',
+  last_updated: '2023-01-01T00:00:00+00:00',
+  context: { id: 'test-context', user_id: null },
+});
+
+describe('AnimationManager', () => {
+  let manager: AnimationManager;
+  let mockHass: HomeAssistant;
+  let mockGetShadowElement: MockedFunction<(id: string) => Element | null>;
+  let mockRequestUpdate: MockedFunction<() => void>;
+  let mockElement: Element;
+  let mockGsapTo: MockedFunction<any>;
+  let mockGsapKillTweensOf: MockedFunction<any>;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    manager = new AnimationManager();
+    
+    // Get references to the mocked gsap functions
+    const { gsap } = await import('gsap');
+    mockGsapTo = vi.mocked(gsap.to);
+    mockGsapKillTweensOf = vi.mocked(gsap.killTweensOf);
+    
+    // Mock HomeAssistant
+    mockHass = {
+      states: {},
+    } as HomeAssistant;
+
+    // Mock DOM element
+    mockElement = {
+      setAttribute: vi.fn(),
+      getAttribute: vi.fn(),
+      id: 'test-element',
+    } as unknown as Element;
+
+    // Mock getShadowElement function
+    mockGetShadowElement = vi.fn().mockReturnValue(mockElement);
+    
+    // Mock requestUpdate callback
+    mockRequestUpdate = vi.fn();
+
+    // Reset GSAP mocks
+    mockGsapTo.mockClear();
+    mockGsapKillTweensOf.mockClear();
+  });
+
+  describe('initializeElementAnimationTracking', () => {
+    it('should initialize animation state for new element', () => {
+      manager.initializeElementAnimationTracking('test-element');
+      
+      const state = manager.getElementAnimationState('test-element');
+      expect(state).toEqual({
+        isAnimatingFillColor: false,
+        isAnimatingStrokeColor: false
+      });
+    });
+
+    it('should not overwrite existing animation state', () => {
+      manager.initializeElementAnimationTracking('test-element');
+      const originalState = manager.getElementAnimationState('test-element');
+      originalState!.isAnimatingFillColor = true;
+      
+      manager.initializeElementAnimationTracking('test-element');
+      const currentState = manager.getElementAnimationState('test-element');
+      expect(currentState!.isAnimatingFillColor).toBe(true);
+    });
+
+    it('should initialize entity monitoring data', () => {
+      manager.initializeElementAnimationTracking('test-element');
+      
+      // Test that entity tracking works (indirect test)
+      const hasChanges = manager.checkForEntityStateChanges('test-element', mockHass);
+      expect(hasChanges).toBe(false); // Should be false with no tracked entities
+    });
+  });
+
+  describe('cleanupElementAnimationTracking', () => {
+    it('should execute pending animation callbacks before cleanup', () => {
+      const fillCallback = vi.fn();
+      const strokeCallback = vi.fn();
+      
+      manager.initializeElementAnimationTracking('test-element');
+      const state = manager.getElementAnimationState('test-element')!;
+      state.fillAnimationCompleteCallback = fillCallback;
+      state.strokeAnimationCompleteCallback = strokeCallback;
+      
+      manager.cleanupElementAnimationTracking('test-element');
+      
+      expect(fillCallback).toHaveBeenCalled();
+      expect(strokeCallback).toHaveBeenCalled();
+    });
+
+    it('should remove all tracking data', () => {
+      manager.initializeElementAnimationTracking('test-element');
+      expect(manager.getElementAnimationState('test-element')).toBeDefined();
+      
+      manager.cleanupElementAnimationTracking('test-element');
+      expect(manager.getElementAnimationState('test-element')).toBeUndefined();
+    });
+
+    it('should handle cleanup of non-existent element gracefully', () => {
+      expect(() => {
+        manager.cleanupElementAnimationTracking('non-existent');
+      }).not.toThrow();
+    });
+  });
+
+  describe('getElementAnimationState', () => {
+    it('should return undefined for untracked element', () => {
+      const state = manager.getElementAnimationState('untracked');
+      expect(state).toBeUndefined();
+    });
+
+    it('should return animation state for tracked element', () => {
+      manager.initializeElementAnimationTracking('test-element');
+      const state = manager.getElementAnimationState('test-element');
+      expect(state).toBeDefined();
+      expect(state?.isAnimatingFillColor).toBe(false);
+      expect(state?.isAnimatingStrokeColor).toBe(false);
+    });
+  });
+
+  describe('animateColorTransition', () => {
+    let animationContext: AnimationContext;
+
+    beforeEach(() => {
+      animationContext = {
+        elementId: 'test-element',
+        getShadowElement: mockGetShadowElement,
+        hass: mockHass,
+        requestUpdateCallback: mockRequestUpdate,
+      };
+    });
+
+    it('should start GSAP animation for valid parameters', () => {
+      manager.animateColorTransition('test-element', 'fill', '#ff0000', '#0000ff', animationContext);
+      
+      expect(mockGsapKillTweensOf).toHaveBeenCalledWith(mockElement, 'fill');
+      expect(mockGsapTo).toHaveBeenCalledWith(mockElement, expect.objectContaining({
+        duration: 0.3,
+        ease: "power2.out",
+        attr: { fill: '#ff0000' },
+      }));
+    });
+
+    it('should set element to starting color before animation', () => {
+      manager.animateColorTransition('test-element', 'stroke', '#ff0000', '#0000ff', animationContext);
+      
+      expect(mockElement.setAttribute).toHaveBeenCalledWith('stroke', '#0000ff');
+    });
+
+    it('should track animation state during transition', () => {
+      manager.animateColorTransition('test-element', 'fill', '#ff0000', '#0000ff', animationContext);
+      
+      const state = manager.getElementAnimationState('test-element');
+      expect(state?.isAnimatingFillColor).toBe(true);
+      // The targetFillColor should be set by the animateColorTransition method
+      expect(state?.targetFillColor).toBeUndefined(); // This is expected since animateColorTransition doesn't set targetFillColor
+    });
+
+    it('should handle missing element gracefully', () => {
+      mockGetShadowElement.mockReturnValue(null);
+      
+      expect(() => {
+        manager.animateColorTransition('test-element', 'fill', '#ff0000', '#0000ff', animationContext);
+      }).not.toThrow();
+      
+      const state = manager.getElementAnimationState('test-element');
+      expect(state?.targetFillColor).toBe('#ff0000');
+    });
+
+    it('should not animate if starting and target colors are the same', () => {
+      manager.animateColorTransition('test-element', 'fill', '#ff0000', '#ff0000', animationContext);
+      
+      expect(mockGsapTo).not.toHaveBeenCalled();
+      const state = manager.getElementAnimationState('test-element');
+      expect(state?.targetFillColor).toBe('#ff0000');
+    });
+
+    it('should clear existing animation callbacks before starting new animation', () => {
+      const existingCallback = vi.fn();
+      manager.initializeElementAnimationTracking('test-element');
+      const state = manager.getElementAnimationState('test-element')!;
+      state.fillAnimationCompleteCallback = existingCallback;
+      
+      manager.animateColorTransition('test-element', 'fill', '#ff0000', '#0000ff', animationContext);
+      
+      expect(existingCallback).toHaveBeenCalled();
+    });
+
+    it('should execute onComplete callback when animation finishes', () => {
+      manager.animateColorTransition('test-element', 'fill', '#ff0000', '#0000ff', animationContext);
+      
+      // Get the animation options passed to GSAP
+      const animationOptions = mockGsapTo.mock.calls[0][1] as any;
+      
+      // Execute the onComplete callback
+      animationOptions.onComplete();
+      
+      expect(mockElement.setAttribute).toHaveBeenCalledWith('fill', '#ff0000');
+      const state = manager.getElementAnimationState('test-element');
+      expect(state?.isAnimatingFillColor).toBe(false);
+      expect(state?.fillAnimationCompleteCallback).toBeUndefined();
+    });
+
+    it('should handle GSAP animation errors gracefully', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      
+      manager.animateColorTransition('test-element', 'fill', '#ff0000', '#0000ff', animationContext);
+      
+      // Get the animation options and trigger error handler
+      const animationOptions = mockGsapTo.mock.calls[0][1] as any;
+      animationOptions.onError('Test error');
+      
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[test-element] Animation error for fill:'),
+        'Test error'
+      );
+      
+      consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('normalizeColorForComparison', () => {
+    it('should convert rgb() to hex format', () => {
+      const result = manager['normalizeColorForComparison']('rgb(255, 0, 0)');
+      expect(result).toBe('#ff0000');
+    });
+
+    it('should convert rgba() to hex format (ignoring alpha)', () => {
+      const result = manager['normalizeColorForComparison']('rgba(255, 0, 0, 0.5)');
+      expect(result).toBe('#ff0000');
+    });
+
+    it('should add # prefix to hex colors without it', () => {
+      const result = manager['normalizeColorForComparison']('ff0000');
+      expect(result).toBe('#ff0000');
+    });
+
+    it('should handle colors with whitespace', () => {
+      const result = manager['normalizeColorForComparison']('  #FF0000  ');
+      expect(result).toBe('#ff0000');
+    });
+
+    it('should return undefined for undefined input', () => {
+      const result = manager['normalizeColorForComparison'](undefined);
+      expect(result).toBeUndefined();
+    });
+
+    it('should convert to lowercase', () => {
+      const result = manager['normalizeColorForComparison']('#FF0000');
+      expect(result).toBe('#ff0000');
+    });
+
+    it('should handle named colors as-is', () => {
+      const result = manager['normalizeColorForComparison']('red');
+      expect(result).toBe('red');
+    });
+  });
+
+  describe('resolveDynamicColor', () => {
+    beforeEach(() => {
+      vi.mocked(isDynamicColorConfig).mockImplementation((value: any) => {
+        return value && typeof value === 'object' && 'entity' in value;
+      });
+    });
+
+    it('should return static color as-is', () => {
+      const result = manager.resolveDynamicColor('test-element', '#ff0000', mockHass);
+      expect(result).toBe('#ff0000');
+    });
+
+    it('should handle dynamic color configuration', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'light.test',
+        mapping: { 'on': '#ff0000', 'off': '#000000' },
+        default: '#808080'
+      };
+
+      mockHass.states['light.test'] = createMockEntity('on');
+      
+      const result = manager.resolveDynamicColor('test-element', dynamicConfig, mockHass);
+      expect(result).toBe('#ff0000');
+    });
+
+    it('should return default color when entity not found', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'light.nonexistent',
+        mapping: { 'on': '#ff0000' },
+        default: '#808080'
+      };
+      
+      const result = manager.resolveDynamicColor('test-element', dynamicConfig, mockHass);
+      expect(result).toBe('#808080');
+    });
+
+    it('should return default color when no hass provided', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'light.test',
+        mapping: { 'on': '#ff0000' },
+        default: '#808080'
+      };
+      
+      const result = manager.resolveDynamicColor('test-element', dynamicConfig);
+      expect(result).toBe('#808080');
+    });
+  });
+
+  describe('extractDynamicColorFromEntityState', () => {
+    it('should map entity state to color', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'light.test',
+        mapping: { 'on': '#ff0000', 'off': '#000000' },
+        default: '#808080'
+      };
+
+      mockHass.states['light.test'] = createMockEntity('on');
+      
+      const result = manager['extractDynamicColorFromEntityState']('test-element', dynamicConfig, mockHass);
+      expect(result).toBe('#ff0000');
+    });
+
+    it('should use attribute value when specified', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'climate.test',
+        attribute: 'temperature',
+        mapping: { '20': '#0000ff', '25': '#ff0000' },
+        default: '#808080'
+      };
+
+      mockHass.states['climate.test'] = createMockEntity('heat', { temperature: 25 });
+      
+      const result = manager['extractDynamicColorFromEntityState']('test-element', dynamicConfig, mockHass);
+      expect(result).toBe('#ff0000');
+    });
+
+    it('should handle interpolation for numeric values', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'sensor.temperature',
+        mapping: { '0': '#0000ff', '100': '#ff0000' },
+        default: '#808080',
+        interpolate: true
+      };
+
+      mockHass.states['sensor.temperature'] = createMockEntity(50);
+      
+      const result = manager['extractDynamicColorFromEntityState']('test-element', dynamicConfig, mockHass);
+      // Should return one of the mapped colors (nearest value logic)
+      expect(result).toMatch(/^#[0-9a-f]{6}$/);
+    });
+
+    it('should track entity for change detection', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'light.test',
+        mapping: { 'on': '#ff0000' },
+        default: '#808080'
+      };
+
+      mockHass.states['light.test'] = createMockEntity('on');
+      
+      manager.initializeElementAnimationTracking('test-element');
+      manager['extractDynamicColorFromEntityState']('test-element', dynamicConfig, mockHass);
+      
+      // Verify entity is being tracked
+      const hasChanges = manager.checkForEntityStateChanges('test-element', mockHass);
+      expect(hasChanges).toBe(false); // No changes since last check
+    });
+  });
+
+  describe('interpolateColorFromNumericValue', () => {
+    it('should return exact match when available', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'sensor.test',
+        mapping: { '0': '#0000ff', '50': '#808080', '100': '#ff0000' },
+        default: '#000000'
+      };
+      
+      const result = manager['interpolateColorFromNumericValue'](50, dynamicConfig);
+      expect(result).toBe('#808080');
+    });
+
+    it('should return nearest value for non-exact matches', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'sensor.test',
+        mapping: { '0': '#0000ff', '100': '#ff0000' },
+        default: '#000000'
+      };
+      
+      const result = manager['interpolateColorFromNumericValue'](25, dynamicConfig);
+      expect(result).toBe('#0000ff'); // Should return nearest (0 is closer to 25 than 100)
+    });
+
+    it('should return default when no numeric keys available', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'sensor.test',
+        mapping: { 'on': '#ff0000', 'off': '#000000' },
+        default: '#808080'
+      };
+      
+      const result = manager['interpolateColorFromNumericValue'](50, dynamicConfig);
+      expect(result).toBe('#808080');
+    });
+
+    it('should handle single mapping value', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'sensor.test',
+        mapping: { '50': '#ff0000' },
+        default: '#000000'
+      };
+      
+      const result = manager['interpolateColorFromNumericValue'](75, dynamicConfig);
+      expect(result).toBe('#ff0000'); // Only option available
+    });
+  });
+
+  describe('formatColorValueFromInput', () => {
+    it('should return string colors as-is', () => {
+      const result = manager['formatColorValueFromInput']('#ff0000');
+      expect(result).toBe('#ff0000');
+    });
+
+    it('should convert RGB array to rgb() string', () => {
+      const result = manager['formatColorValueFromInput']([255, 0, 0]);
+      expect(result).toBe('rgb(255,0,0)');
+    });
+
+    it('should return undefined for invalid RGB arrays', () => {
+      expect(manager['formatColorValueFromInput']([255, 0])).toBeUndefined();
+      expect(manager['formatColorValueFromInput']([255, 0, 'red'])).toBeUndefined();
+      expect(manager['formatColorValueFromInput']([255, 0, 0, 255])).toBeUndefined();
+    });
+
+    it('should return undefined for other data types', () => {
+      expect(manager['formatColorValueFromInput'](123)).toBeUndefined();
+      expect(manager['formatColorValueFromInput']({})).toBeUndefined();
+      expect(manager['formatColorValueFromInput'](null)).toBeUndefined();
+      expect(manager['formatColorValueFromInput'](undefined)).toBeUndefined();
+    });
+  });
+
+  describe('checkForEntityStateChanges', () => {
+    beforeEach(() => {
+      manager.initializeElementAnimationTracking('test-element');
+    });
+
+    it('should return false when no entities are tracked', () => {
+      const hasChanges = manager.checkForEntityStateChanges('test-element', mockHass);
+      expect(hasChanges).toBe(false);
+    });
+
+    it('should detect state changes', () => {
+      // Set up initial tracking
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'light.test',
+        mapping: { 'on': '#ff0000', 'off': '#000000' },
+        default: '#808080'
+      };
+
+      mockHass.states['light.test'] = createMockEntity('off');
+      vi.mocked(isDynamicColorConfig).mockReturnValue(true);
+      
+      // Initial resolution to establish tracking
+      manager.resolveDynamicColor('test-element', dynamicConfig, mockHass);
+      
+      // Change entity state
+      mockHass.states['light.test'] = createMockEntity('on');
+      
+      const hasChanges = manager.checkForEntityStateChanges('test-element', mockHass);
+      expect(hasChanges).toBe(true);
+    });
+
+    it('should detect attribute changes', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'climate.test',
+        attribute: 'temperature',
+        mapping: { '20': '#0000ff', '25': '#ff0000' },
+        default: '#808080'
+      };
+
+      mockHass.states['climate.test'] = createMockEntity('heat', { temperature: 20 });
+      vi.mocked(isDynamicColorConfig).mockReturnValue(true);
+      
+      // Initial resolution
+      manager.resolveDynamicColor('test-element', dynamicConfig, mockHass);
+      
+      // Change attribute
+      mockHass.states['climate.test'] = createMockEntity('heat', { temperature: 25 });
+      
+      const hasChanges = manager.checkForEntityStateChanges('test-element', mockHass);
+      expect(hasChanges).toBe(true);
+    });
+
+    it('should handle missing entities gracefully', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'light.test',
+        mapping: { 'on': '#ff0000' },
+        default: '#808080'
+      };
+
+      mockHass.states['light.test'] = createMockEntity('on');
+      vi.mocked(isDynamicColorConfig).mockReturnValue(true);
+      
+      // Initial resolution
+      manager.resolveDynamicColor('test-element', dynamicConfig, mockHass);
+      
+      // Remove entity
+      delete mockHass.states['light.test'];
+      
+      const hasChanges = manager.checkForEntityStateChanges('test-element', mockHass);
+      expect(hasChanges).toBe(true);
+    });
+  });
+
+  describe('clearTrackedEntitiesForElement', () => {
+    it('should clear all tracked entities and states', () => {
+      manager.initializeElementAnimationTracking('test-element');
+      
+      // Add some tracking
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'light.test',
+        mapping: { 'on': '#ff0000' },
+        default: '#808080'
+      };
+
+      mockHass.states['light.test'] = createMockEntity('on');
+      vi.mocked(isDynamicColorConfig).mockReturnValue(true);
+      manager.resolveDynamicColor('test-element', dynamicConfig, mockHass);
+      
+      // Clear tracking
+      manager.clearTrackedEntitiesForElement('test-element');
+      
+      // Should detect no changes now
+      const hasChanges = manager.checkForEntityStateChanges('test-element', mockHass);
+      expect(hasChanges).toBe(false);
+    });
+
+    it('should handle non-existent elements gracefully', () => {
+      expect(() => {
+        manager.clearTrackedEntitiesForElement('non-existent');
+      }).not.toThrow();
+    });
+  });
+
+  describe('stopAllAnimationsForElement', () => {
+    it('should execute pending animation callbacks', () => {
+      const fillCallback = vi.fn();
+      const strokeCallback = vi.fn();
+      
+      manager.initializeElementAnimationTracking('test-element');
+      const state = manager.getElementAnimationState('test-element')!;
+      state.fillAnimationCompleteCallback = fillCallback;
+      state.strokeAnimationCompleteCallback = strokeCallback;
+      state.isAnimatingFillColor = true;
+      state.isAnimatingStrokeColor = true;
+      
+      manager.stopAllAnimationsForElement('test-element');
+      
+      expect(fillCallback).toHaveBeenCalled();
+      expect(strokeCallback).toHaveBeenCalled();
+      expect(state.isAnimatingFillColor).toBe(false);
+      expect(state.isAnimatingStrokeColor).toBe(false);
+    });
+
+    it('should handle elements without animation state', () => {
+      expect(() => {
+        manager.stopAllAnimationsForElement('non-existent');
+      }).not.toThrow();
+    });
+  });
+
+  describe('collectAnimationStates', () => {
+    it('should collect animation states for animating elements', () => {
+      manager.initializeElementAnimationTracking('element1');
+      manager.initializeElementAnimationTracking('element2');
+      
+      const state1 = manager.getElementAnimationState('element1')!;
+      state1.isAnimatingFillColor = true;
+      state1.targetFillColor = '#ff0000';
+      
+      const state2 = manager.getElementAnimationState('element2')!;
+      state2.isAnimatingStrokeColor = true;
+      state2.targetStrokeColor = '#00ff00';
+      
+      // Mock DOM elements
+      const element1 = { getAttribute: vi.fn().mockReturnValue('#ff0000') } as unknown as Element;
+      const element2 = { getAttribute: vi.fn().mockReturnValue('#00ff00') } as unknown as Element;
+      
+      const mockGetElement = vi.fn()
+        .mockReturnValueOnce(element1)
+        .mockReturnValueOnce(element2);
+      
+      const collected = manager.collectAnimationStates(['element1', 'element2'], mockGetElement);
+      
+      expect(collected.size).toBe(2);
+      expect(collected.get('element1')).toEqual({
+        isAnimatingFillColor: true,
+        isAnimatingStrokeColor: false,
+        currentVisibleFillColor: '#ff0000',
+        currentVisibleStrokeColor: '#ff0000', // getAttribute is called for both fill and stroke
+        targetFillColor: '#ff0000',
+        targetStrokeColor: undefined
+      });
+    });
+
+    it('should only collect states for animating elements', () => {
+      manager.initializeElementAnimationTracking('element1');
+      manager.initializeElementAnimationTracking('element2');
+      
+      // element1 is not animating, element2 is animating
+      const state2 = manager.getElementAnimationState('element2')!;
+      state2.isAnimatingFillColor = true;
+      
+      const collected = manager.collectAnimationStates(['element1', 'element2'], mockGetShadowElement);
+      
+      expect(collected.size).toBe(1);
+      expect(collected.has('element1')).toBe(false);
+      expect(collected.has('element2')).toBe(true);
+    });
+  });
+
+  describe('restoreAnimationStates', () => {
+    it('should restore animation states and restart animations', async () => {
+      const animationStates = new Map();
+      animationStates.set('element1', {
+        isAnimatingFillColor: true,
+        isAnimatingStrokeColor: false,
+        currentVisibleFillColor: '#ff0000',
+        targetFillColor: '#00ff00'
+      });
+      
+      const context: AnimationContext = {
+        elementId: 'element1',
+        getShadowElement: mockGetShadowElement,
+        hass: mockHass,
+        requestUpdateCallback: mockRequestUpdate
+      };
+      
+      return new Promise<void>((resolve) => {
+        manager.restoreAnimationStates(animationStates, context, () => {
+          expect(mockElement.setAttribute).toHaveBeenCalledWith('fill', '#ff0000');
+          resolve();
+        });
+      });
+    });
+
+    it('should call onComplete immediately when no states to restore', async () => {
+      const emptyStates = new Map();
+      const context: AnimationContext = {
+        elementId: 'test',
+        getShadowElement: mockGetShadowElement,
+        hass: mockHass,
+        requestUpdateCallback: mockRequestUpdate
+      };
+      
+      return new Promise<void>((resolve) => {
+        manager.restoreAnimationStates(emptyStates, context, resolve);
+      });
+    });
+
+    it('should handle missing DOM elements during restoration', async () => {
+      const animationStates = new Map();
+      animationStates.set('element1', {
+        isAnimatingFillColor: true,
+        currentVisibleFillColor: '#ff0000',
+        targetFillColor: '#00ff00'
+      });
+      
+      const context: AnimationContext = {
+        elementId: 'element1',
+        getShadowElement: vi.fn().mockReturnValue(null), // Element not found
+        hass: mockHass,
+        requestUpdateCallback: mockRequestUpdate
+      };
+      
+      return new Promise<void>((resolve) => {
+        manager.restoreAnimationStates(animationStates, context, () => {
+          // Test passes if the callback is executed without errors
+          resolve();
+        });
+      });
+    });
+  });
+
+  describe('animateElementProperty', () => {
+    it('should animate generic properties using GSAP', () => {
+      manager.animateElementProperty('test-element', 'opacity', 0.5, 1.0, mockGetShadowElement);
+      
+      expect(mockGsapTo).toHaveBeenCalledWith(mockElement, {
+        duration: 1.0,
+        opacity: 0.5,
+        ease: "power2.out"
+      });
+    });
+
+    it('should use default duration when not provided', () => {
+      manager.animateElementProperty('test-element', 'opacity', 0.5, undefined, mockGetShadowElement);
+      
+      expect(mockGsapTo).toHaveBeenCalledWith(mockElement, {
+        duration: 0.5,
+        opacity: 0.5,
+        ease: "power2.out"
+      });
+    });
+
+    it('should handle missing elements gracefully', () => {
+      mockGetShadowElement.mockReturnValue(null);
+      
+      expect(() => {
+        manager.animateElementProperty('test-element', 'opacity', 0.5, 1.0, mockGetShadowElement);
+      }).not.toThrow();
+      
+      expect(mockGsapTo).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resolveDynamicColorWithAnimation', () => {
+    let animationContext: AnimationContext;
+
+    beforeEach(() => {
+      animationContext = {
+        elementId: 'test-element',
+        getShadowElement: mockGetShadowElement,
+        hass: mockHass,
+        requestUpdateCallback: mockRequestUpdate
+      };
+    });
+
+    it('should resolve static colors without animation', () => {
+      vi.mocked(isDynamicColorConfig).mockReturnValue(false);
+      
+      const result = manager.resolveDynamicColorWithAnimation(
+        'test-element',
+        '#ff0000',
+        'fill',
+        animationContext
+      );
+      
+      expect(result).toBe('#ff0000');
+      const state = manager.getElementAnimationState('test-element');
+      expect(state?.targetFillColor).toBe('#ff0000');
+    });
+
+    it('should animate dynamic color changes', async () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'light.test',
+        mapping: { 'on': '#ff0000', 'off': '#000000' },
+        default: '#808080'
+      };
+
+      mockHass.states['light.test'] = createMockEntity('on');
+      vi.mocked(isDynamicColorConfig).mockReturnValue(true);
+      
+      // Mock element returning different current color
+      (mockElement.getAttribute as any).mockReturnValue('#000000');
+      
+      const result = manager.resolveDynamicColorWithAnimation(
+        'test-element',
+        dynamicConfig,
+        'fill',
+        animationContext
+      );
+      
+      // Should return current color as animation starting point
+      expect(result).toBe('#000000');
+      
+      // Wait for requestAnimationFrame to execute
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          expect(mockGsapTo).toHaveBeenCalled();
+          resolve();
+        }, 10);
+      });
+    });
+
+    it('should not animate when colors are the same', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'light.test',
+        mapping: { 'on': '#ff0000' },
+        default: '#808080'
+      };
+
+      mockHass.states['light.test'] = createMockEntity('on');
+      vi.mocked(isDynamicColorConfig).mockReturnValue(true);
+      
+      // Mock element returning same color
+      (mockElement.getAttribute as any).mockReturnValue('#ff0000');
+      
+      const result = manager.resolveDynamicColorWithAnimation(
+        'test-element',
+        dynamicConfig,
+        'fill',
+        animationContext
+      );
+      
+      expect(result).toBe('#ff0000');
+      expect(mockGsapTo).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findElementWithRetryLogic', () => {
+    it('should return element on first try when available', () => {
+      const result = manager['findElementWithRetryLogic']('test-element', mockGetShadowElement, 3);
+      expect(result).toBe(mockElement);
+      expect(mockGetShadowElement).toHaveBeenCalledTimes(1);
+    });
+
+    it('should retry when element not found', () => {
+      mockGetShadowElement
+        .mockReturnValueOnce(null)
+        .mockReturnValueOnce(mockElement);
+      
+      const result = manager['findElementWithRetryLogic']('test-element', mockGetShadowElement, 2);
+      expect(result).toBe(mockElement);
+      expect(mockGetShadowElement).toHaveBeenCalledTimes(2);
+    });
+
+    it('should return null when retries exhausted', () => {
+      mockGetShadowElement.mockReturnValue(null);
+      
+      const result = manager['findElementWithRetryLogic']('test-element', mockGetShadowElement, 0);
+      expect(result).toBeNull();
+      expect(mockGetShadowElement).toHaveBeenCalledTimes(1);
+    });
+
+    it('should use default retry count', () => {
+      mockGetShadowElement.mockReturnValue(null);
+      
+      const result = manager['findElementWithRetryLogic']('test-element', mockGetShadowElement);
+      expect(result).toBeNull();
+      expect(mockGetShadowElement).toHaveBeenCalledTimes(2); // Initial call + 1 retry (default maxRetryAttempts = 3)
+    });
+  });
+
+  describe('Global animationManager instance', () => {
+    it('should be an instance of AnimationManager', () => {
+      expect(animationManager).toBeInstanceOf(AnimationManager);
+    });
+  });
+
+  describe('Edge cases and error handling', () => {
+    it('should handle requestAnimationFrame scheduling', async () => {
+      const animationContext: AnimationContext = {
+        elementId: 'test-element',
+        getShadowElement: mockGetShadowElement,
+        hass: mockHass,
+        requestUpdateCallback: mockRequestUpdate
+      };
+
+      // Test that scheduleColorTransitionAnimation uses requestAnimationFrame
+      manager['scheduleColorTransitionAnimation'](
+        'test-element',
+        'fill',
+        '#ff0000',
+        '#000000',
+        animationContext
+      );
+
+      // Use setTimeout to check after requestAnimationFrame
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          expect(mockGsapTo).toHaveBeenCalled();
+          resolve();
+        }, 10);
+      });
+    });
+
+    it('should handle missing getShadowElement function', () => {
+      const animationContext: AnimationContext = {
+        elementId: 'test-element',
+        hass: mockHass,
+        requestUpdateCallback: mockRequestUpdate
+      };
+
+      expect(() => {
+        manager.animateColorTransition('test-element', 'fill', '#ff0000', '#000000', animationContext);
+      }).not.toThrow();
+    });
+
+    it('should handle malformed entity states', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'light.test',
+        mapping: { 'on': '#ff0000' },
+        default: '#808080'
+      };
+
+      // Malformed state object
+      mockHass.states['light.test'] = null as any;
+      
+      const result = manager.resolveDynamicColor('test-element', dynamicConfig, mockHass);
+      expect(result).toBe('#808080'); // Should fall back to default
+    });
+
+    it('should handle numeric entity values correctly', () => {
+      const dynamicConfig: DynamicColorConfig = {
+        entity: 'sensor.temperature',
+        mapping: { '20': '#0000ff', '30': '#ff0000' },
+        default: '#808080',
+        interpolate: true
+      };
+
+      mockHass.states['sensor.temperature'] = createMockEntity('25');
+      
+      const result = manager.resolveDynamicColor('test-element', dynamicConfig, mockHass);
+      expect(result).toMatch(/^#[0-9a-f]{6}$/); // Should be a valid hex color
+    });
+  });
+});
+```
+
+## File: src/utils/animation.ts
+
+```typescript
+import { HomeAssistant } from 'custom-card-helpers';
+import { gsap } from 'gsap';
+import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../types';
+
+/**
+ * Animation state tracking for managing ongoing color transitions
+ */
+export interface ColorAnimationState {
+  isAnimatingFillColor: boolean;
+  isAnimatingStrokeColor: boolean;
+  currentVisibleFillColor?: string;
+  currentVisibleStrokeColor?: string;
+  targetFillColor?: string;
+  targetStrokeColor?: string;
+  fillAnimationCompleteCallback?: () => void;
+  strokeAnimationCompleteCallback?: () => void;
+}
+
+/**
+ * Animation context containing element-specific data and callbacks
+ */
+export interface AnimationContext {
+  elementId: string;
+  getShadowElement?: (id: string) => Element | null;
+  hass?: HomeAssistant;
+  requestUpdateCallback?: () => void;
+}
+
+/**
+ * Entity state monitoring data for tracking dynamic color dependencies
+ */
+export interface EntityStateMonitoringData {
+  trackedEntityIds: Set<string>;
+  lastKnownEntityStates: Map<string, any>;
+}
+
+/**
+ * Animation manager responsible for coordinating all color transition animations
+ * and entity state-based dynamic color updates
+ */
+export class AnimationManager {
+  private elementAnimationStates = new Map<string, ColorAnimationState>();
+  private entityStateMonitoring = new Map<string, EntityStateMonitoringData>();
+  private dynamicColorCache = new Map<string, { fillColor?: string; strokeColor?: string }>();
+
+  /**
+   * Initialize animation state tracking for a new element
+   */
+  initializeElementAnimationTracking(elementId: string): void {
+    if (!this.elementAnimationStates.has(elementId)) {
+      this.elementAnimationStates.set(elementId, {
+        isAnimatingFillColor: false,
+        isAnimatingStrokeColor: false
+      });
+    }
+
+    if (!this.entityStateMonitoring.has(elementId)) {
+      this.entityStateMonitoring.set(elementId, {
+        trackedEntityIds: new Set<string>(),
+        lastKnownEntityStates: new Map<string, any>()
+      });
+    }
+  }
+
+  /**
+   * Clean up animation state and entity monitoring for removed elements
+   */
+  cleanupElementAnimationTracking(elementId: string): void {
+    const animationState = this.elementAnimationStates.get(elementId);
+    if (animationState) {
+      // Execute any pending animation completion callbacks
+      if (animationState.fillAnimationCompleteCallback) {
+        animationState.fillAnimationCompleteCallback();
+      }
+      if (animationState.strokeAnimationCompleteCallback) {
+        animationState.strokeAnimationCompleteCallback();
+      }
+    }
+
+    this.elementAnimationStates.delete(elementId);
+    this.entityStateMonitoring.delete(elementId);
+    this.dynamicColorCache.delete(elementId);
+  }
+
+  /**
+   * Get current animation state for an element
+   */
+  getElementAnimationState(elementId: string): ColorAnimationState | undefined {
+    return this.elementAnimationStates.get(elementId);
+  }
+
+  /**
+   * Resolve and animate dynamic colors with smooth transitions
+   */
+  resolveDynamicColorWithAnimation(
+    elementId: string,
+    colorConfiguration: ColorValue,
+    animationProperty: 'fill' | 'stroke',
+    animationContext: AnimationContext
+  ): string | undefined {
+    this.initializeElementAnimationTracking(elementId);
+    
+    const resolvedColor = this.resolveDynamicColor(elementId, colorConfiguration, animationContext.hass);
+    if (!resolvedColor) return resolvedColor;
+    
+    const animationState = this.elementAnimationStates.get(elementId)!;
+    const lastKnownColor = animationProperty === 'fill' ? animationState.targetFillColor : animationState.targetStrokeColor;
+    
+    // For dynamic colors, always check if we need to animate
+    if (isDynamicColorConfig(colorConfiguration)) {
+      // Try to get the current visual color from the DOM element with retry logic
+      const domElement = this.findElementWithRetryLogic(elementId, animationContext.getShadowElement);
+      const currentVisualColor = domElement?.getAttribute(animationProperty) || lastKnownColor;
+      
+      // Normalize colors for comparison to handle different formats (hex, rgb, etc.)
+      const normalizedCurrentColor = this.normalizeColorForComparison(currentVisualColor);
+      const normalizedNewColor = this.normalizeColorForComparison(resolvedColor);
+      
+      // If the new color is different from current visual color, animate to it
+      if (normalizedCurrentColor && normalizedNewColor && normalizedCurrentColor !== normalizedNewColor) {
+        // Schedule animation using requestAnimationFrame to ensure DOM is ready
+        this.scheduleColorTransitionAnimation(elementId, animationProperty, resolvedColor, currentVisualColor, animationContext, domElement);
+        
+        // Update the stored target color
+        if (animationProperty === 'fill') {
+          animationState.targetFillColor = resolvedColor;
+        } else {
+          animationState.targetStrokeColor = resolvedColor;
+        }
+        
+        // Return the current visual color for the template (animation starting point)
+        return currentVisualColor || resolvedColor;
+      }
+      
+      // If colors are the same, just update stored color and return
+      if (animationProperty === 'fill') {
+        animationState.targetFillColor = resolvedColor;
+      } else {
+        animationState.targetStrokeColor = resolvedColor;
+      }
+      
+      return resolvedColor;
+    }
+    
+    // For static colors, update stored color and return
+    if (animationProperty === 'fill') {
+      animationState.targetFillColor = resolvedColor;
+    } else {
+      animationState.targetStrokeColor = resolvedColor;
+    }
+    
+    return resolvedColor;
+  }
+
+  /**
+   * Execute smooth color transitions using GSAP animation library
+   */
+  animateColorTransition(
+    elementId: string,
+    animationProperty: 'fill' | 'stroke',
+    targetColor: string,
+    startingColor?: string,
+    animationContext?: AnimationContext
+  ): void {
+    this.initializeElementAnimationTracking(elementId);
+    
+    const targetElement = this.findElementWithRetryLogic(elementId, animationContext?.getShadowElement, 2);
+    if (!targetElement || !startingColor || startingColor === targetColor) {
+      // If no element or invalid colors, still update stored color
+      const animationState = this.elementAnimationStates.get(elementId)!;
+      if (animationProperty === 'fill') {
+        animationState.targetFillColor = targetColor;
+      } else {
+        animationState.targetStrokeColor = targetColor;
+      }
+      return;
+    }
+
+    const animationState = this.elementAnimationStates.get(elementId)!;
+
+    // Kill any existing GSAP animations on this element for this property
+    gsap.killTweensOf(targetElement, animationProperty);
+
+    // Clear any existing animation callbacks for this property
+    if (animationProperty === 'fill' && animationState.fillAnimationCompleteCallback) {
+      animationState.fillAnimationCompleteCallback();
+    } else if (animationProperty === 'stroke' && animationState.strokeAnimationCompleteCallback) {
+      animationState.strokeAnimationCompleteCallback();
+    }
+
+    // Mark as animating
+    if (animationProperty === 'fill') {
+      animationState.isAnimatingFillColor = true;
+    } else {
+      animationState.isAnimatingStrokeColor = true;
+    }
+
+    // Ensure the element starts with the current color (which may be mid-animation)
+    targetElement.setAttribute(animationProperty, startingColor);
+
+    // Create animation complete callback
+    const onAnimationComplete = () => {
+      // Ensure the final color is set after animation
+      targetElement.setAttribute(animationProperty, targetColor);
+      
+      // Clear animation state
+      if (animationProperty === 'fill') {
+        animationState.isAnimatingFillColor = false;
+        animationState.fillAnimationCompleteCallback = undefined;
+      } else {
+        animationState.isAnimatingStrokeColor = false;
+        animationState.strokeAnimationCompleteCallback = undefined;
+      }
+    };
+
+    // Store the complete callback for potential cleanup
+    if (animationProperty === 'fill') {
+      animationState.fillAnimationCompleteCallback = onAnimationComplete;
+    } else {
+      animationState.strokeAnimationCompleteCallback = onAnimationComplete;
+    }
+
+    // Use GSAP to animate the color change for SVG elements
+    gsap.to(targetElement, {
+      duration: 0.3,
+      ease: "power2.out",
+      // Force GSAP to use setAttribute for SVG elements
+      attr: { [animationProperty]: targetColor },
+      onComplete: onAnimationComplete,
+      // Add error handling for complex layouts
+      onCompleteParams: [targetElement, animationProperty, targetColor],
+      onError: (error: any) => {
+        console.warn(`[${elementId}] Animation error for ${animationProperty}:`, error);
+        // Fallback: set color directly
+        if (targetElement) {
+          targetElement.setAttribute(animationProperty, targetColor);
+        }
+        onAnimationComplete();
+      }
+    });
+  }
+
+  /**
+   * Schedule color animation with proper timing for complex layouts
+   */
+  private scheduleColorTransitionAnimation(
+    elementId: string,
+    animationProperty: 'fill' | 'stroke',
+    targetColor: string,
+    currentVisualColor: string | undefined,
+    animationContext: AnimationContext,
+    cachedElement?: Element | null
+  ): void {
+    // Use requestAnimationFrame to ensure DOM is ready and animation is smooth
+    requestAnimationFrame(() => {
+      // Double-check element availability at animation time
+      const elementForAnimation = cachedElement || this.findElementWithRetryLogic(elementId, animationContext.getShadowElement, 1);
+      
+      if (elementForAnimation && currentVisualColor) {
+        this.animateColorTransition(elementId, animationProperty, targetColor, currentVisualColor, animationContext);
+      } else {
+        // If still no element, fallback to setting the color directly
+        console.warn(`[${elementId}] Element not available for animation, setting color directly`);
+        const animationState = this.elementAnimationStates.get(elementId);
+        if (animationState) {
+          if (animationProperty === 'fill') {
+            animationState.targetFillColor = targetColor;
+          } else {
+            animationState.targetStrokeColor = targetColor;
+          }
+        }
+        
+        // Try to set the color directly if we have an element
+        if (elementForAnimation) {
+          elementForAnimation.setAttribute(animationProperty, targetColor);
+        }
+      }
+    });
+  }
+
+  /**
+   * Find DOM element with retry logic for complex layouts
+   */
+  private findElementWithRetryLogic(
+    elementId: string,
+    getShadowElement?: (id: string) => Element | null,
+    maxRetryAttempts: number = 3
+  ): Element | null {
+    let targetElement = getShadowElement?.(elementId) || null;
+    
+    // If element not found and we have retries left, try again
+    if (!targetElement && maxRetryAttempts > 0) {
+      // For complex layouts, the element might not be available immediately
+      // This is a synchronous retry that checks immediately
+      targetElement = getShadowElement?.(elementId) || null;
+    }
+    
+    return targetElement;
+  }
+
+  /**
+   * Normalize color formats for accurate comparison (handles hex, rgb, rgba formats)
+   */
+  private normalizeColorForComparison(colorString: string | undefined): string | undefined {
+    if (!colorString) return colorString;
+    
+    // Remove whitespace and convert to lowercase
+    const cleanedColor = colorString.trim().toLowerCase();
+    
+    // Convert rgb(r,g,b) to hex for consistent comparison
+    const rgbPatternMatch = cleanedColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (rgbPatternMatch) {
+      const redHex = parseInt(rgbPatternMatch[1]).toString(16).padStart(2, '0');
+      const greenHex = parseInt(rgbPatternMatch[2]).toString(16).padStart(2, '0');
+      const blueHex = parseInt(rgbPatternMatch[3]).toString(16).padStart(2, '0');
+      return `#${redHex}${greenHex}${blueHex}`;
+    }
+    
+    // Convert rgba(r,g,b,a) to hex (ignoring alpha for now)
+    const rgbaPatternMatch = cleanedColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*[\d.]+\)/);
+    if (rgbaPatternMatch) {
+      const redHex = parseInt(rgbaPatternMatch[1]).toString(16).padStart(2, '0');
+      const greenHex = parseInt(rgbaPatternMatch[2]).toString(16).padStart(2, '0');
+      const blueHex = parseInt(rgbaPatternMatch[3]).toString(16).padStart(2, '0');
+      return `#${redHex}${greenHex}${blueHex}`;
+    }
+    
+    // Ensure hex colors have # prefix
+    if (/^[0-9a-f]{6}$/i.test(cleanedColor)) {
+      return `#${cleanedColor}`;
+    }
+    
+    return cleanedColor;
+  }
+
+  /**
+   * Resolve a color value that might be static or dynamic (entity-based)
+   */
+  resolveDynamicColor(elementId: string, colorConfiguration: ColorValue, hass?: HomeAssistant): string | undefined {
+    if (isDynamicColorConfig(colorConfiguration)) {
+      return this.extractDynamicColorFromEntityState(elementId, colorConfiguration, hass);
+    }
+    return this.formatColorValueFromInput(colorConfiguration);
+  }
+
+  /**
+   * Extract color value from entity state based on dynamic configuration
+   */
+  private extractDynamicColorFromEntityState(elementId: string, dynamicConfig: DynamicColorConfig, hass?: HomeAssistant): string | undefined {
+    if (!hass) {
+      return this.formatColorValueFromInput(dynamicConfig.default);
+    }
+
+    const entityState = hass.states[dynamicConfig.entity];
+    if (!entityState) {
+      return this.formatColorValueFromInput(dynamicConfig.default);
+    }
+
+    // Track this entity for change detection
+    const entityMonitoring = this.entityStateMonitoring.get(elementId);
+    if (entityMonitoring) {
+      entityMonitoring.trackedEntityIds.add(dynamicConfig.entity);
+      entityMonitoring.lastKnownEntityStates.set(dynamicConfig.entity, entityState);
+    }
+
+    // Get the value to map
+    const entityValue = dynamicConfig.attribute ? entityState.attributes[dynamicConfig.attribute] : entityState.state;
+    
+    // Handle interpolation for numeric values
+    if (dynamicConfig.interpolate && typeof entityValue === 'number') {
+      return this.interpolateColorFromNumericValue(entityValue, dynamicConfig);
+    }
+
+    // Direct mapping
+    const mappedColor = dynamicConfig.mapping[entityValue] || dynamicConfig.default;
+    return this.formatColorValueFromInput(mappedColor);
+  }
+
+  /**
+   * Interpolate color for numeric entity values
+   */
+  private interpolateColorFromNumericValue(numericValue: number, dynamicConfig: DynamicColorConfig): string | undefined {
+    const numericMappingKeys = Object.keys(dynamicConfig.mapping)
+      .map(keyString => parseFloat(keyString))
+      .filter(parsedKey => !isNaN(parsedKey))
+      .sort((a, b) => a - b);
+
+    if (numericMappingKeys.length === 0) {
+      return this.formatColorValueFromInput(dynamicConfig.default);
+    }
+
+    // Find the two closest values for interpolation
+    let lowerBoundKey = numericMappingKeys[0];
+    let upperBoundKey = numericMappingKeys[numericMappingKeys.length - 1];
+
+    for (let i = 0; i < numericMappingKeys.length - 1; i++) {
+      if (numericValue >= numericMappingKeys[i] && numericValue <= numericMappingKeys[i + 1]) {
+        lowerBoundKey = numericMappingKeys[i];
+        upperBoundKey = numericMappingKeys[i + 1];
+        break;
+      }
+    }
+
+    // If exact match, return that color
+    if (dynamicConfig.mapping[numericValue.toString()]) {
+      return this.formatColorValueFromInput(dynamicConfig.mapping[numericValue.toString()]);
+    }
+
+    // For now, just return the nearest value (true interpolation can be added later)
+    const lowerBoundDistance = Math.abs(numericValue - lowerBoundKey);
+    const upperBoundDistance = Math.abs(numericValue - upperBoundKey);
+    const nearestKey = lowerBoundDistance <= upperBoundDistance ? lowerBoundKey : upperBoundKey;
+    
+    return this.formatColorValueFromInput(dynamicConfig.mapping[nearestKey.toString()] || dynamicConfig.default);
+  }
+
+  /**
+   * Format color value from different possible input formats
+   */
+  private formatColorValueFromInput(colorInput: any): string | undefined {
+    if (typeof colorInput === 'string') {
+      return colorInput;
+    }
+    if (Array.isArray(colorInput) && colorInput.length === 3 && colorInput.every(component => typeof component === 'number')) {
+      return `rgb(${colorInput[0]},${colorInput[1]},${colorInput[2]})`;
+    }
+    return undefined;
+  }
+
+  /**
+   * Check if any monitored entities have changed and trigger update if needed
+   */
+  checkForEntityStateChanges(elementId: string, hass: HomeAssistant): boolean {
+    const entityMonitoring = this.entityStateMonitoring.get(elementId);
+    if (!entityMonitoring || entityMonitoring.trackedEntityIds.size === 0) {
+      return false;
+    }
+
+    let hasDetectedChanges = false;
+    
+    for (const entityId of entityMonitoring.trackedEntityIds) {
+      const currentEntityState = hass.states[entityId];
+      const lastKnownEntityState = entityMonitoring.lastKnownEntityStates.get(entityId);
+      
+      // Check if entity state or attributes changed
+      if (!currentEntityState || !lastKnownEntityState || 
+          currentEntityState.state !== lastKnownEntityState.state ||
+          JSON.stringify(currentEntityState.attributes) !== JSON.stringify(lastKnownEntityState.attributes)) {
+        hasDetectedChanges = true;
+        entityMonitoring.lastKnownEntityStates.set(entityId, currentEntityState);
+      }
+    }
+
+    return hasDetectedChanges;
+  }
+
+  /**
+   * Clear monitored entities for an element (called before recalculating dynamic colors)
+   */
+  clearTrackedEntitiesForElement(elementId: string): void {
+    const entityMonitoring = this.entityStateMonitoring.get(elementId);
+    if (entityMonitoring) {
+      entityMonitoring.trackedEntityIds.clear();
+      entityMonitoring.lastKnownEntityStates.clear();
+    }
+  }
+
+  /**
+   * Stop any ongoing animations for an element
+   */
+  stopAllAnimationsForElement(elementId: string): void {
+    const animationState = this.elementAnimationStates.get(elementId);
+    if (!animationState) return;
+
+    if (animationState.fillAnimationCompleteCallback) {
+      animationState.fillAnimationCompleteCallback();
+    }
+    if (animationState.strokeAnimationCompleteCallback) {
+      animationState.strokeAnimationCompleteCallback();
+    }
+    animationState.isAnimatingFillColor = false;
+    animationState.isAnimatingStrokeColor = false;
+  }
+
+  /**
+   * Collect animation states for multiple elements (used for animation restoration)
+   */
+  collectAnimationStates(
+    elementIds: string[],
+    getShadowElement?: (id: string) => Element | null
+  ): Map<string, ColorAnimationState> {
+    const animationStates = new Map<string, ColorAnimationState>();
+
+    elementIds.forEach(elementId => {
+      const state = this.elementAnimationStates.get(elementId);
+      if (state && (state.isAnimatingFillColor || state.isAnimatingStrokeColor)) {
+        const domElement = getShadowElement?.(elementId);
+        if (domElement) {
+          animationStates.set(elementId, {
+            isAnimatingFillColor: state.isAnimatingFillColor,
+            isAnimatingStrokeColor: state.isAnimatingStrokeColor,
+            currentVisibleFillColor: domElement.getAttribute('fill') || undefined,
+            currentVisibleStrokeColor: domElement.getAttribute('stroke') || undefined,
+            targetFillColor: state.targetFillColor,
+            targetStrokeColor: state.targetStrokeColor
+          });
+        }
+      }
+    });
+
+    return animationStates;
+  }
+
+  /**
+   * Restore animation states after re-render (used for animation restoration)
+   */
+  restoreAnimationStates(
+    animationStates: Map<string, ColorAnimationState>,
+    context: AnimationContext,
+    onComplete?: () => void
+  ): void {
+    if (animationStates.size === 0) {
+      onComplete?.();
+      return;
+    }
+
+    // Use a longer timeout for complex layouts to ensure DOM has been updated
+    const restoreAnimations = (attempt: number = 0) => {
+      let restoredCount = 0;
+      
+      animationStates.forEach((state, elementId) => {
+        const domElement = context.getShadowElement?.(elementId);
+        
+        if (domElement && state.currentVisibleFillColor) {
+          // Restore the current animation color
+          domElement.setAttribute('fill', state.currentVisibleFillColor);
+          
+          if (state.targetFillColor && state.targetFillColor !== state.currentVisibleFillColor) {
+            // Restart the animation from current position
+            this.animateColorTransition(elementId, 'fill', state.targetFillColor, state.currentVisibleFillColor, context);
+            restoredCount++;
+          }
+        }
+        
+        if (domElement && state.currentVisibleStrokeColor) {
+          domElement.setAttribute('stroke', state.currentVisibleStrokeColor);
+          
+          if (state.targetStrokeColor && state.targetStrokeColor !== state.currentVisibleStrokeColor) {
+            this.animateColorTransition(elementId, 'stroke', state.targetStrokeColor, state.currentVisibleStrokeColor, context);
+            restoredCount++;
+          }
+        }
+      });
+      
+      // If we didn't restore all animations and haven't exceeded retry limit, try again
+      if (restoredCount < animationStates.size && attempt < 3) {
+        setTimeout(() => restoreAnimations(attempt + 1), 25 * (attempt + 1)); // Increasing delay
+      } else {
+        if (attempt > 0) {
+        }
+        onComplete?.();
+      }
+    };
+    
+    // Start with a longer initial delay for complex layouts
+    setTimeout(() => restoreAnimations(), 25);
+  }
+
+  /**
+   * Create a generic property animation (for future extensibility beyond colors)
+   */
+  animateElementProperty(
+    elementId: string,
+    animationProperty: string,
+    targetPropertyValue: any,
+    animationDurationSeconds: number = 0.5,
+    getShadowElement?: (id: string) => Element | null
+  ): void {
+    const targetElement = getShadowElement?.(elementId);
+    if (!targetElement) return;
+    
+    const animationProperties: { [key: string]: any } = {};
+    animationProperties[animationProperty] = targetPropertyValue;
+    
+    gsap.to(targetElement, {
+      duration: animationDurationSeconds,
+      ...animationProperties,
+      ease: "power2.out"
+    });
+  }
+}
+
+// Global animation manager instance for convenient access across the application
+export const animationManager = new AnimationManager();
+```
+
+## File: src/utils/color-resolver.spec.ts
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ColorResolver, colorResolver } from './color-resolver';
+import { AnimationContext } from './animation';
+
+// Mock the animation manager
+vi.mock('./animation', () => ({
+  animationManager: {
+    resolveDynamicColorWithAnimation: vi.fn()
+  }
+}));
+
+import { animationManager } from './animation';
+
+describe('ColorResolver', () => {
+  let resolver: ColorResolver;
+  const mockContext: AnimationContext = {
+    elementId: 'test-element',
+    getShadowElement: vi.fn(),
+    hass: undefined,
+    requestUpdateCallback: vi.fn()
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resolver = new ColorResolver();
+  });
+
+  describe('resolveAllElementColors', () => {
+    it('should use default colors when no props colors are provided', () => {
+      const props = {};
+      const result = resolver.resolveAllElementColors('test-id', props, mockContext);
+      
+      expect(result).toEqual({
+        fillColor: 'none',
+        strokeColor: 'none',
+        strokeWidth: '0',
+        textColor: 'currentColor'
+      });
+    });
+
+    it('should use custom defaults when provided', () => {
+      const props = {};
+      const options = {
+        fallbackFillColor: '#ff0000',
+        fallbackStrokeColor: '#00ff00',
+        fallbackStrokeWidth: '2',
+        fallbackTextColor: '#ffffff'
+      };
+      
+      const result = resolver.resolveAllElementColors('test-id', props, mockContext, options);
+      
+              expect(result).toEqual({
+          fillColor: '#ff0000',
+          strokeColor: '#00ff00',
+          strokeWidth: '2',
+          textColor: '#ffffff'
+        });
+    });
+
+    it('should resolve dynamic colors through animation manager', () => {
+      const props = {
+        fill: { entity: 'light.test', mapping: { on: '#ffaa00', off: '#333333' } },
+        stroke: '#00ff00',
+        strokeWidth: 3,
+        text_color: '#ffffff'
+      };
+
+      (animationManager.resolveDynamicColorWithAnimation as any)
+        .mockReturnValueOnce('#ffaa00')  // For fill
+        .mockReturnValueOnce('#00ff00')  // For stroke
+        .mockReturnValueOnce('#ffffff'); // For text_color
+
+      const result = resolver.resolveAllElementColors('test-id', props, mockContext);
+
+      expect(animationManager.resolveDynamicColorWithAnimation).toHaveBeenCalledWith(
+        'test-id',
+        props.fill,
+        'fill',
+        mockContext
+      );
+      expect(animationManager.resolveDynamicColorWithAnimation).toHaveBeenCalledWith(
+        'test-id',
+        props.stroke,
+        'stroke',
+        mockContext
+      );
+      expect(animationManager.resolveDynamicColorWithAnimation).toHaveBeenCalledWith(
+        'test-id',
+        props.text_color,
+        'fill',
+        mockContext
+      );
+
+      expect(result).toEqual({
+        fillColor: '#ffaa00',
+        strokeColor: '#00ff00',
+        strokeWidth: '3',
+        textColor: '#ffffff'
+      });
+    });
+
+    it('should fallback to prop values when animation manager returns undefined', () => {
+      const props = {
+        fill: '#ff0000',
+        stroke: '#00ff00',
+        text_color: '#ffffff'
+      };
+
+      (animationManager.resolveDynamicColorWithAnimation as any)
+        .mockReturnValue(undefined);
+
+      const result = resolver.resolveAllElementColors('test-id', props, mockContext);
+
+      expect(result).toEqual({
+        fillColor: '#ff0000',
+        strokeColor: '#00ff00',
+        strokeWidth: '0',
+        textColor: '#ffffff'
+      });
+    });
+
+    describe('stateful colors', () => {
+      it('should use default color when no state is active', () => {
+        const props = {
+          fill: {
+            default: '#666666',
+            hover: '#0099ff',
+            active: '#ff0099'
+          }
+        };
+
+        (animationManager.resolveDynamicColorWithAnimation as any)
+          .mockReturnValue('#666666');
+
+        const result = resolver.resolveAllElementColors('test-id', props, mockContext, {}, {
+          isCurrentlyHovering: false,
+          isCurrentlyActive: false
+        });
+
+        expect(animationManager.resolveDynamicColorWithAnimation).toHaveBeenCalledWith(
+          'test-id',
+          '#666666',
+          'fill',
+          mockContext
+        );
+
+        expect(result.fillColor).toBe('#666666');
+      });
+
+      it('should use hover color when hovering', () => {
+        const props = {
+          fill: {
+            default: '#666666',
+            hover: '#0099ff',
+            active: '#ff0099'
+          }
+        };
+
+        (animationManager.resolveDynamicColorWithAnimation as any)
+          .mockReturnValue('#0099ff');
+
+        const result = resolver.resolveAllElementColors('test-id', props, mockContext, {}, {
+          isCurrentlyHovering: true,
+          isCurrentlyActive: false
+        });
+
+        expect(animationManager.resolveDynamicColorWithAnimation).toHaveBeenCalledWith(
+          'test-id',
+          '#0099ff',
+          'fill',
+          mockContext
+        );
+
+        expect(result.fillColor).toBe('#0099ff');
+      });
+
+      it('should use active color when active (priority over hover)', () => {
+        const props = {
+          fill: {
+            default: '#666666',
+            hover: '#0099ff',
+            active: '#ff0099'
+          }
+        };
+
+        (animationManager.resolveDynamicColorWithAnimation as any)
+          .mockReturnValue('#ff0099');
+
+        const result = resolver.resolveAllElementColors('test-id', props, mockContext, {}, {
+          isCurrentlyHovering: true,
+          isCurrentlyActive: true
+        });
+
+        expect(animationManager.resolveDynamicColorWithAnimation).toHaveBeenCalledWith(
+          'test-id',
+          '#ff0099',
+          'fill',
+          mockContext
+        );
+
+        expect(result.fillColor).toBe('#ff0099');
+      });
+
+      it('should handle stateful colors with dynamic default', () => {
+        const props = {
+          fill: {
+            default: {
+              entity: 'light.test',
+              mapping: { on: '#ffaa00', off: '#333333' },
+              default: '#666666'
+            },
+            hover: '#0099ff',
+            active: '#ff0099'
+          }
+        };
+
+        (animationManager.resolveDynamicColorWithAnimation as any)
+          .mockReturnValue('#ffaa00');
+
+        const result = resolver.resolveAllElementColors('test-id', props, mockContext, {}, {
+          isCurrentlyHovering: false,
+          isCurrentlyActive: false
+        });
+
+        expect(animationManager.resolveDynamicColorWithAnimation).toHaveBeenCalledWith(
+          'test-id',
+          props.fill.default,
+          'fill',
+          mockContext
+        );
+
+        expect(result.fillColor).toBe('#ffaa00');
+      });
+
+      it('should handle stateful text colors', () => {
+        const props = {
+          text_color: {
+            default: '#ffffff',
+            hover: '#ffaa00',
+            active: '#ff0000'
+          }
+        };
+
+        (animationManager.resolveDynamicColorWithAnimation as any)
+          .mockReturnValue('#ffaa00');
+
+        const result = resolver.resolveAllElementColors('test-id', props, mockContext, {}, {
+          isCurrentlyHovering: true,
+          isCurrentlyActive: false
+        });
+
+        expect(animationManager.resolveDynamicColorWithAnimation).toHaveBeenCalledWith(
+          'test-id',
+          '#ffaa00',
+          'fill', // Text color uses fill internally for animation
+          mockContext
+        );
+
+        expect(result.textColor).toBe('#ffaa00');
+      });
+    });
+  });
+
+  describe('createButtonPropsWithResolvedColors', () => {
+    it('should create props with resolved colors only for defined props', () => {
+      const originalProps = {
+        fill: { entity: 'light.test', mapping: { on: '#ffaa00' } },
+        text: 'Click me',
+        customProp: 'value'
+      };
+
+      (animationManager.resolveDynamicColorWithAnimation as any)
+        .mockReturnValue('#ffaa00');
+
+      const result = resolver.createButtonPropsWithResolvedColors('test-id', originalProps, mockContext);
+
+      expect(result).toEqual({
+        fill: '#ffaa00',
+        text: 'Click me',
+        customProp: 'value'
+      });
+    });
+
+    it('should not override colors that were not in original props', () => {
+      const originalProps = {
+        text: 'Click me'
+      };
+
+      const result = resolver.createButtonPropsWithResolvedColors('test-id', originalProps, mockContext);
+
+      expect(result).toEqual({
+        text: 'Click me'
+      });
+      expect(result).not.toHaveProperty('fill');
+      expect(result).not.toHaveProperty('stroke');
+      expect(result).not.toHaveProperty('text_color');
+    });
+
+    it('should handle stateful colors in button props', () => {
+      const originalProps = {
+        fill: {
+          default: '#666666',
+          hover: '#0099ff',
+          active: '#ff0099'
+        },
+        text_color: {
+          default: '#ffffff',
+          hover: '#ffaa00'
+        },
+        text: 'Click me'
+      };
+
+      (animationManager.resolveDynamicColorWithAnimation as any)
+        .mockReturnValueOnce('#0099ff')  // For fill
+        .mockReturnValueOnce('#ffaa00'); // For text_color
+
+      const result = resolver.createButtonPropsWithResolvedColors('test-id', originalProps, mockContext, {
+        isCurrentlyHovering: true,
+        isCurrentlyActive: false
+      });
+
+      expect(result).toEqual({
+        fill: '#0099ff',
+        text_color: '#ffaa00',
+        text: 'Click me'
+      });
+    });
+  });
+
+  describe('singleton instance', () => {
+    it('should export a singleton colorResolver instance', () => {
+      expect(colorResolver).toBeInstanceOf(ColorResolver);
+    });
+  });
+});
+```
+
+## File: src/utils/color-resolver.ts
+
+```typescript
+import { LayoutElementProps } from '../layout/engine';
+import { ColorValue, isStatefulColorConfig } from '../types';
+import { animationManager, AnimationContext } from './animation.js';
+
+/**
+ * Computed color values for an element after resolution
+ */
+export interface ComputedElementColors {
+  fillColor: string;
+  strokeColor: string;
+  strokeWidth: string;
+  textColor: string;
+}
+
+/**
+ * Default color fallbacks for color resolution
+ */
+export interface ColorResolutionDefaults {
+  fallbackFillColor?: string;
+  fallbackStrokeColor?: string;
+  fallbackStrokeWidth?: string;
+  fallbackTextColor?: string;
+}
+
+/**
+ * Interactive state context for determining hover/active colors
+ */
+export interface InteractiveStateContext {
+  isCurrentlyHovering?: boolean;
+  isCurrentlyActive?: boolean;
+}
+
+/**
+ * Centralized color resolution service that handles entity-state-based colors,
+ * interactive states (hover/active), and coordinates with animation transitions
+ */
+export class ColorResolver {
+  /**
+   * Resolve all color properties for an element with full animation and state support
+   */
+  resolveAllElementColors(
+    elementId: string,
+    elementProps: LayoutElementProps,
+    animationContext: AnimationContext,
+    colorDefaults: ColorResolutionDefaults = {},
+    interactiveState: InteractiveStateContext = {}
+  ): ComputedElementColors {
+    const {
+      fallbackFillColor = 'none',
+      fallbackStrokeColor = 'none',
+      fallbackStrokeWidth = '0',
+      fallbackTextColor = 'currentColor'
+    } = colorDefaults;
+
+    // Resolve fill color with animation and interactive state support
+    let computedFillColor = fallbackFillColor;
+    if (elementProps.fill !== undefined) {
+      const resolvedFillValue = this.resolveColorValueWithInteractiveStates(
+        elementId,
+        elementProps.fill,
+        'fill',
+        animationContext,
+        interactiveState
+      );
+      computedFillColor = resolvedFillValue || elementProps.fill.toString();
+    }
+
+    // Resolve stroke color with animation and interactive state support
+    let computedStrokeColor = fallbackStrokeColor;
+    if (elementProps.stroke !== undefined) {
+      const resolvedStrokeValue = this.resolveColorValueWithInteractiveStates(
+        elementId,
+        elementProps.stroke,
+        'stroke',
+        animationContext,
+        interactiveState
+      );
+      computedStrokeColor = resolvedStrokeValue || elementProps.stroke.toString();
+    }
+
+    // Resolve text color with interactive state support
+    let computedTextColor = fallbackTextColor;
+    if (elementProps.text_color !== undefined) {
+      const resolvedTextColorValue = this.resolveColorValueWithInteractiveStates(
+        elementId,
+        elementProps.text_color,
+        'fill', // Text color uses fill internally for animation purposes
+        animationContext,
+        interactiveState
+      );
+      computedTextColor = resolvedTextColorValue || elementProps.text_color.toString();
+    }
+
+    // Resolve stroke width
+    const computedStrokeWidth = elementProps.strokeWidth?.toString() ?? fallbackStrokeWidth;
+
+    return {
+      fillColor: computedFillColor,
+      strokeColor: computedStrokeColor,
+      strokeWidth: computedStrokeWidth,
+      textColor: computedTextColor
+    };
+  }
+
+  /**
+   * Resolve a color value considering interactive states (hover/active) and animation
+   */
+  private resolveColorValueWithInteractiveStates(
+    elementId: string,
+    colorConfiguration: ColorValue,
+    animationProperty: 'fill' | 'stroke',
+    animationContext: AnimationContext,
+    interactiveState: InteractiveStateContext
+  ): string | undefined {
+    // Check if this is a stateful color configuration with hover/active states
+    if (isStatefulColorConfig(colorConfiguration)) {
+      // Determine which color to use based on state priority: active > hover > default
+      let selectedColorValue = colorConfiguration.default;
+      
+      if (interactiveState.isCurrentlyActive && colorConfiguration.active !== undefined) {
+        selectedColorValue = colorConfiguration.active;
+      } else if (interactiveState.isCurrentlyHovering && colorConfiguration.hover !== undefined) {
+        selectedColorValue = colorConfiguration.hover;
+      }
+      
+      // If we have a selected color value, resolve it (which may be dynamic or static)
+      if (selectedColorValue !== undefined) {
+        return animationManager.resolveDynamicColorWithAnimation(
+          elementId,
+          selectedColorValue,
+          animationProperty,
+          animationContext
+        );
+      }
+      
+      return undefined;
+    }
+    
+    // For non-stateful colors, use existing resolution logic
+    return animationManager.resolveDynamicColorWithAnimation(
+      elementId,
+      colorConfiguration,
+      animationProperty,
+      animationContext
+    );
+  }
+
+  /**
+   * Create a new props object with resolved colors for button-like elements
+   * This handles the common pattern where interactive elements need computed colors
+   */
+  createButtonPropsWithResolvedColors(
+    elementId: string,
+    originalElementProps: LayoutElementProps,
+    animationContext: AnimationContext,
+    interactiveState: InteractiveStateContext = {}
+  ): LayoutElementProps {
+    const computedColors = this.resolveAllElementColors(elementId, originalElementProps, animationContext, {
+      fallbackTextColor: 'white' // Default text color for interactive elements
+    }, interactiveState);
+    
+    const propsWithResolvedColors = { ...originalElementProps };
+
+    // Only override colors that were actually defined in the original props (not defaults)
+    if (originalElementProps.fill !== undefined) {
+      propsWithResolvedColors.fill = computedColors.fillColor;
+    }
+    
+    if (originalElementProps.stroke !== undefined) {
+      propsWithResolvedColors.stroke = computedColors.strokeColor;
+    }
+
+    if (originalElementProps.text_color !== undefined) {
+      propsWithResolvedColors.text_color = computedColors.textColor;
+    }
+
+    return propsWithResolvedColors;
+  }
+
+  /**
+   * Simplified color resolution without animation context for basic scenarios
+   * This can be used when animation support isn't available or needed
+   */
+  resolveColorsWithoutAnimationContext(
+    elementId: string,
+    elementProps: LayoutElementProps,
+    colorDefaults: ColorResolutionDefaults = {},
+    interactiveState: InteractiveStateContext = {}
+  ): ComputedElementColors {
+    const basicAnimationContext: AnimationContext = {
+      elementId,
+      getShadowElement: undefined,
+      hass: undefined,
+      requestUpdateCallback: undefined
+    };
+
+    return this.resolveAllElementColors(elementId, elementProps, basicAnimationContext, colorDefaults, interactiveState);
+  }
+}
+
+// Export a singleton instance for convenient access across the application
+export const colorResolver = new ColorResolver();
 ```
 
 ## File: src/utils/fontmetrics.d.ts

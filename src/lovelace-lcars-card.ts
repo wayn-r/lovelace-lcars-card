@@ -8,6 +8,7 @@ import gsap from 'gsap';
 import { LayoutEngine, Group } from './layout/engine.js';
 import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
+import { animationManager, AnimationContext } from './utils/animation.js';
 
 import './editor/lcars-card-editor.js';
 
@@ -188,12 +189,20 @@ export class LcarsCard extends LitElement {
 
     // Force layout recalculation after a short timeout to ensure dimensions are correct
     // This helps ensure proper initial layout, especially in complex layouts like grid views
-    setTimeout(() => this._forceLayoutRecalculation(), 100);
+    setTimeout(() => {
+      // Only force recalculation if we don't already have valid templates and layout isn't pending
+      if (this._layoutElementTemplates.length === 0 && !this._layoutCalculationPending && !this._isForceRecalculating) {
+        this._forceLayoutRecalculation();
+      }
+    }, 100);
     
     // Backup recalculation in case the initial one didn't work due to container not being ready
     setTimeout(() => {
       if (!this._initialLoadComplete) {
-        this._forceLayoutRecalculation();
+        // Only force if we still don't have templates and no other calculation is in progress
+        if (this._layoutElementTemplates.length === 0 && !this._layoutCalculationPending && !this._isForceRecalculating) {
+          this._forceLayoutRecalculation();
+        }
         this._initialLoadComplete = true;
       }
     }, 1000);
@@ -259,7 +268,6 @@ export class LcarsCard extends LitElement {
       .then(() => {
         this._fontsLoaded = true;
         this._fontLoadAttempts = 0;
-        console.log(`Fonts loaded successfully: ${Array.from(fontFamilies).join(', ')}`);
         // Use double requestAnimationFrame to ensure browser has time to process font loading
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
@@ -314,6 +322,13 @@ export class LcarsCard extends LitElement {
       this._editModeObserver = undefined;
     }
     
+    // Clean up all element animations and entity monitoring
+    for (const group of this._layoutEngine.layoutGroups) {
+      for (const element of group.elements) {
+                    animationManager.cleanupElementAnimationTracking(element.id);
+      }
+    }
+    
     super.disconnectedCallback();
   }
   
@@ -357,6 +372,11 @@ export class LcarsCard extends LitElement {
       }
     }
 
+    // Handle element state changes (hover/active states, etc.)
+    if (this._elementStateNeedsRefresh) {
+      this._refreshElementRenders();
+    }
+
     // Handle dynamic color changes
     if (hasHassChanged && this.hass && this._lastHassStates) {
       this._checkDynamicColorChanges();
@@ -375,7 +395,6 @@ export class LcarsCard extends LitElement {
         return;
     }
 
-    console.log("[_performLayoutCalculation] Calculating layout with dimensions:", rect.width, "x", rect.height);
 
     const svgElement = this.shadowRoot?.querySelector('.card-container svg') as SVGSVGElement | null;
     if (svgElement) {
@@ -386,19 +405,24 @@ export class LcarsCard extends LitElement {
     this._layoutEngine.clearLayout();
     
     // Parse config and add elements to layout engine
+    const getShadowElement = (id: string): Element | null => {
+      return this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
+    };
+    
     const groups = parseConfig(this._config, this.hass, () => { 
       this._elementStateNeedsRefresh = true; 
       this.requestUpdate(); 
-    }); 
+    }, getShadowElement); 
     
     groups.forEach((group: Group) => { 
       this._layoutEngine.addGroup(group); 
     });
 
-    // Clear all entity monitoring before recalculating layout
+    // Clear all entity monitoring and animation state before recalculating layout
     for (const group of this._layoutEngine.layoutGroups) {
       for (const element of group.elements) {
         element.clearMonitoredEntities();
+        element.cleanupAnimations();
       }
     }
 
@@ -447,6 +471,17 @@ export class LcarsCard extends LitElement {
         });
     });
 
+    // Collect element IDs for animation state restoration
+    const elementIds = this._layoutEngine.layoutGroups.flatMap(group => 
+        group.elements.map(el => el.id)
+    );
+
+    // Store animation states before re-render using animation manager
+    const animationStates = animationManager.collectAnimationStates(
+        elementIds,
+        (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null
+    );
+
     const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
         group.elements
             .map(el => el.render())
@@ -455,13 +490,24 @@ export class LcarsCard extends LitElement {
 
     this._layoutElementTemplates = newTemplates;
 
+    // After re-render, restore animation states using animation manager
+    if (animationStates.size > 0) {
+        const context: AnimationContext = {
+            elementId: '', // Not used in restoration context
+            getShadowElement: (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null,
+            hass: this.hass,
+            requestUpdateCallback: this.requestUpdate.bind(this)
+        };
+
+        animationManager.restoreAnimationStates(animationStates, context);
+    }
+
     this._elementStateNeedsRefresh = false;
   }
 
   private _handleVisibilityChange(): void {
     // Track multiple rapid visibility changes for debugging
     this._visibilityChangeCount++;
-    console.log(`Visibility change #${this._visibilityChangeCount}, state: ${document.visibilityState}, currently recalculating: ${this._isForceRecalculating}`);
     
     // Clear any existing timeout
     if (this._visibilityChangeTimeout) {
@@ -471,7 +517,6 @@ export class LcarsCard extends LitElement {
     if (document.visibilityState === 'visible') {
         // If we're already in a recalculation cycle, skip this event
         if (this._isForceRecalculating) {
-            console.log("Skipping visibility change - already recalculating");
             return;
         }
         
@@ -538,7 +583,6 @@ export class LcarsCard extends LitElement {
         Math.abs(this._containerRect.width - newRect.width) > 1 ||
         Math.abs(this._containerRect.height - newRect.height) > 1) 
     {
-        console.log("Dimension change detected:", newRect.width, "x", newRect.height);
         
         // Update container dimensions
         this._containerRect = newRect;
@@ -566,7 +610,12 @@ export class LcarsCard extends LitElement {
   private _forceLayoutRecalculation(): void {
     // If we're already recalculating, avoid overlapping attempts
     if (this._isForceRecalculating) {
-      console.log("Skipping force recalculation - already in progress");
+      return;
+    }
+    
+    // If we already have templates and the layout is stable, avoid unnecessary recalculation
+    // This prevents interference with hover state changes
+    if (this._layoutElementTemplates.length > 0 && !this._layoutCalculationPending && this._initialLoadComplete) {
       return;
     }
     
@@ -583,7 +632,6 @@ export class LcarsCard extends LitElement {
     
     // Only proceed if container has non-zero dimensions
     if (newRect.width > 0 && newRect.height > 0) {
-        console.log("Forcing layout recalculation:", newRect.width, "x", newRect.height);
         
         // Set the flag to indicate we're recalculating
         this._isForceRecalculating = true;
@@ -669,7 +717,7 @@ export class LcarsCard extends LitElement {
         });
       });
 
-      if (this._layoutCalculationPending && this._layoutElementTemplates.length === 0 && this._hasRenderedOnce) {
+      if (this._layoutCalculationPending && this._layoutElementTemplates.length === 0 && this._hasRenderedOnce && !this._initialLoadComplete) {
            svgContent = svg`<text x="10" y="20" fill="orange">Calculating layout...</text>`;
            
            // Log debug info
@@ -839,27 +887,35 @@ export class LcarsCard extends LitElement {
     
     this._dynamicColorCheckScheduled = true;
     
-    // Use longer delay to reduce frequency of checks
+    // Use longer delay for complex layouts to reduce frequency of checks
+    const hasComplexLayout = this._layoutEngine.layoutGroups.length > 1 || 
+                             this._layoutEngine.layoutGroups.some(group => group.elements.length > 5);
+    const checkDelay = hasComplexLayout ? 150 : 100;
+    
     setTimeout(() => {
       this._dynamicColorCheckScheduled = false;
       
       let needsRefresh = false;
+      let elementsChecked = 0;
       
       // Check all layout elements for entity changes
       for (const group of this._layoutEngine.layoutGroups) {
         for (const element of group.elements) {
+          elementsChecked++;
           if (element.checkEntityChanges(this.hass!)) {
             needsRefresh = true;
-            // Break early since we already know we need to refresh
-            break;
+            // For complex layouts, we can break early to improve performance
+            if (hasComplexLayout) {
+              break;
+            }
           }
         }
-        if (needsRefresh) break; // Break outer loop too
+        if (needsRefresh && hasComplexLayout) break; // Break outer loop too for complex layouts
       }
       
       if (needsRefresh) {
         this._refreshElementRenders();
       }
-    }, 100); // Increased delay from 0ms to 100ms to reduce frequency
+    }, checkDelay);
   }
 }

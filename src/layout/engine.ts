@@ -280,7 +280,6 @@ export class LayoutEngine {
           console.warn(`LayoutEngine: Layout incomplete after ${pass} passes (calculated ${totalCalculated}/${this.elements.size})`);
         }
       } else {
-        console.log('✅ Layout calculation completed successfully!');
       }
       
       return this.getLayoutBounds();
@@ -354,23 +353,19 @@ export class LayoutEngine {
           } else {
             dependencyFailures[el.id] = dependencies;
             console.warn(`❌ Layout calculation failed despite passing canCalculateLayout`);
-            console.log('Dependencies:', dependencies);
           }
         } else {
           dependencyFailures[el.id] = dependencies;
           console.warn('⏳ Cannot calculate layout yet');
-          console.log('Missing dependencies:', dependencies);
           
           dependencies.forEach(depId => {
             const depElement = this.elements.get(depId);
-            console.log(`  - ${depId}: ${depElement ? depElement.constructor.name : 'NOT FOUND'} (calculated: ${depElement?.layout.calculated ?? 'N/A'})`);
           });
         }
       } catch (error: unknown) {
         dependencyFailures[el.id] = ['ERROR: ' + (error instanceof Error ? error.message : String(error))];
       } finally {
         const elementTime = performance.now() - elementStartTime;
-        console.log(`⏱️ Element time: ${elementTime}ms`);
       }
     }
     
@@ -409,7 +404,6 @@ export class LayoutEngine {
             
             dependencies.forEach(depId => {
               const dep = this.elements.get(depId);
-              console.log(`  - ${depId}: ${dep ? dep.constructor.name : 'NOT FOUND'} (calculated: ${dep?.layout.calculated ?? 'N/A'})`);
             });
           } else {
             console.warn('🟠 No dependencies found, but still not calculated');
@@ -423,7 +417,6 @@ export class LayoutEngine {
       
       console.warn('Uncalculated elements:', uncalculatedElements);
     } else {
-      console.log('✅ Layout calculation completed successfully!');
     }
   }
 
@@ -445,8 +438,6 @@ export class LayoutEngine {
       }
     });
     
-    console.log('✅ Calculated elements:', calculated);
-    console.log('❌ Uncalculated elements:', uncalculated);
   }
 
   destroy(): void {

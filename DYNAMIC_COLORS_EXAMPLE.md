@@ -7,13 +7,13 @@ This example shows how to configure dynamic colors for LCARS card elements based
 Here's an example of a rectangle that changes color based on a light entity's state:
 
 ```yaml
-type: lovelace-lcars-card
+type: custom:lovelace-lcars-card
 elements:
-  - id: living_room_light_indicator
+  - id: basement_reading_lamp
     type: rectangle
     props:
       fill:
-        entity: light.living_room
+        entity: light.basement_reading_lamp
         mapping:
           "on": "#ffaa00"      # Orange when on
           "off": "#333333"     # Dark gray when off
@@ -26,10 +26,10 @@ elements:
       offsetY: 10
     button:
       enabled: true
-      text: "Living Room"
+      text: "Basement Reading Lamp"
       action_config:
         type: toggle
-        entity: light.living_room
+        entity: light.basement_reading_lamp
 ```
 
 ## Advanced: Using Attributes and Interpolation
@@ -37,7 +37,7 @@ elements:
 For numeric attributes like brightness or temperature:
 
 ```yaml
-type: lovelace-lcars-card
+type: custom:lovelace-lcars-card
 elements:
   - id: temperature_indicator
     type: rectangle
@@ -79,6 +79,35 @@ elements:
       offsetY: 110
 ```
 
+## Element ID Considerations
+
+When using dynamic colors with complex element IDs (such as those containing dots), the system properly handles CSS selector escaping. For example:
+
+```yaml
+type: custom:lovelace-lcars-card
+elements:
+  - id: buttons.button-1  # IDs with dots are fully supported
+    type: rectangle
+    props:
+      fill:
+        entity: light.waynes_light
+        mapping:
+          "on": "#ffaa00"
+          "off": "#333333"
+        default: "#666666"
+    layout:
+      width: 110
+      height: 38
+    button:
+      enabled: true
+      text: "My Button"
+      action_config:
+        type: toggle
+        entity: light.waynes_light
+```
+
+The card automatically uses `CSS.escape()` for proper selector handling, ensuring smooth color transitions work correctly regardless of ID complexity.
+
 ## Configuration Options
 
 ### Dynamic Color Properties
@@ -111,13 +140,31 @@ The visual editor provides a user-friendly interface for configuring dynamic col
 
 1. **Entity Monitoring**: The card monitors specified entities for state changes
 2. **Color Resolution**: When an entity state changes, the card looks up the corresponding color
-3. **Smooth Transitions**: Color changes use a 0.3s fade transition
+3. **Smooth Transitions**: Color changes use a 2.0s GSAP-powered fade transition for smooth visual feedback
 4. **Fallback Handling**: If entity is unavailable or state doesn't match, uses default color
 5. **Performance**: Only re-renders elements when their monitored entities actually change
+
+## Transition Animation System
+
+The dynamic color system uses GSAP (GreenSock Animation Platform) for smooth, high-performance color transitions:
+
+- **Cross-Element Support**: All element types (rectangle, chisel-endcap, elbow, endcap) support smooth color transitions
+- **SVG Optimized**: Uses GSAP's `attr` method and SVG-specific animation techniques for optimal performance
+- **Dynamic Only**: Transitions only occur for dynamic color changes, not static color updates
+- **Multi-Property**: Supports smooth transitions for both `fill` and `stroke` properties
+- **Button Support**: Works seamlessly with interactive button elements
+- **Easing**: Uses "power2.out" easing for natural-feeling transitions
+- **Re-render Resilient**: Animations survive template re-renders triggered by entity state changes
+- **Smart State Management**: Tracks animation state and preserves ongoing transitions during DOM updates
+- **No Animation Conflicts**: Intelligently handles rapid state changes by interrupting and restarting animations
+- **Robust Element Selection**: Properly handles complex element IDs using CSS selector escaping
+- **Rapid Click Support**: Animations can be interrupted and restarted for responsive visual feedback during quick successive interactions
 
 ## Tips
 
 - Use interpolation for smooth color gradients with numeric sensors
 - Consider using entity attributes like `brightness`, `temperature`, or `humidity`
 - Set meaningful default colors for when entities are unavailable
-- The color picker in the editor shows live previews of your configurations 
+- The color picker in the editor shows live previews of your configurations
+- Transition animations only apply to dynamic colors - static colors change immediately
+- Element IDs can contain special characters (dots, hyphens, etc.) without affecting functionality 

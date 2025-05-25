@@ -1,6 +1,8 @@
 import { LcarsButtonElementConfig } from "../../lovelace-lcars-card.js";
 import { svg, SVGTemplateResult } from "lit";
 import { HomeAssistant } from "custom-card-helpers";
+import { colorResolver, InteractiveStateContext } from "../../utils/color-resolver.js";
+import { AnimationContext } from "../../utils/animation.js";
 
 export type ButtonPropertyName = 'fill' | 'stroke' | 'text_color' | 'strokeWidth' | 
                         'fontFamily' | 'fontSize' | 'fontWeight' | 'letterSpacing' | 
@@ -13,12 +15,14 @@ export class Button {
     private _hass?: HomeAssistant;
     private _requestUpdateCallback?: () => void;
     private _id: string;
+    private _getShadowElement?: (id: string) => Element | null;
 
-    constructor(id: string, props: any, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
+    constructor(id: string, props: any, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this._id = id;
         this._props = props;
         this._hass = hass;
         this._requestUpdateCallback = requestUpdateCallback;
+        this._getShadowElement = getShadowElement;
     }
 
     get isHovering(): boolean {
@@ -47,6 +51,44 @@ export class Button {
             return `rgb(${color[0]},${color[1]},${color[2]})`;
         }
         return undefined;
+    }
+
+    /**
+     * Get the current animation context for this button
+     */
+    private getAnimationContext(): AnimationContext {
+        return {
+            elementId: this._id,
+            getShadowElement: this._getShadowElement,
+            hass: this._hass,
+            requestUpdateCallback: this._requestUpdateCallback
+        };
+    }
+
+    /**
+     * Get the current state context for this button
+     */
+    private getStateContext(): InteractiveStateContext {
+        return {
+            isCurrentlyHovering: this._isHovering,
+            isCurrentlyActive: this._isActive
+        };
+    }
+
+    /**
+     * Get resolved colors for the button using the new color resolver
+     */
+    private getResolvedColors() {
+        const context = this.getAnimationContext();
+        const stateContext = this.getStateContext();
+        
+        return colorResolver.resolveAllElementColors(
+            this._id,
+            this._props,
+            context,
+            { fallbackTextColor: 'white' },
+            stateContext
+        );
     }
 
     getButtonProperty<T>(propName: ButtonPropertyName, defaultValue?: T): T | string | undefined {
@@ -115,9 +157,8 @@ export class Button {
         const buttonConfig = this._props.button as LcarsButtonElementConfig;
         const elements: SVGTemplateResult[] = [];
         
-        const currentFill = this.getButtonProperty('fill', 'none');
-        const currentStroke = this.getButtonProperty('stroke', 'none');
-        const strokeWidth = this.getButtonProperty('strokeWidth', '0');
+        // Use the new color resolver to get colors with hover/active state support
+        const resolvedColors = this.getResolvedColors();
         
         const maskId = options.isCutout ? `mask-text-${this._id}` : null;
         
@@ -125,9 +166,9 @@ export class Button {
             <path
                 id=${this._id}
                 d=${pathData}
-                fill=${currentFill}
-                stroke=${currentStroke}
-                stroke-width=${strokeWidth}
+                fill=${resolvedColors.fillColor}
+                stroke=${resolvedColors.strokeColor}
+                stroke-width=${resolvedColors.strokeWidth}
                 mask=${maskId ? `url(#${maskId})` : 'none'}
             />
         `);
@@ -171,14 +212,13 @@ export class Button {
                     textY
                 ));
             } else {
-                const currentTextColor = this.getButtonProperty('text_color', 'white');
                 elements.push(this.createText(
                     textX,
                     textY,
                     buttonConfig.text as string,
                     {
                         ...textConfig,
-                        fill: currentTextColor as string,
+                        fill: resolvedColors.textColor,
                         pointerEvents: 'none'
                     }
                 ));
@@ -320,13 +360,10 @@ export class Button {
     createEventHandlers() {
         return {
             handleClick: (ev: Event): void => {
-                console.log(`[${this._id}] handleClick:`, { props: this._props });
                 
                 const buttonConfig = this._props.button as LcarsButtonElementConfig | undefined;
-                console.log(`[${this._id}] Button config:`, JSON.stringify(buttonConfig, null, 2));
                 
                 if (!this._hass || !buttonConfig?.action_config) {
-                    console.log(`[${this._id}] handleClick: Aborting (no hass or no action_config)`);
                     return; 
                 }
                 
@@ -388,7 +425,6 @@ export class Button {
         }
 
         // Debug logging
-        console.log(`[${this._id}] Action config created:`, JSON.stringify(actionConfig, null, 2));
 
         return actionConfig;
     }
@@ -396,7 +432,6 @@ export class Button {
     private executeAction(actionConfig: any, element?: Element): void {
         const hass = this._hass;
         if (hass) {
-            console.log(`[${this._id}] Executing action:`, JSON.stringify(actionConfig, null, 2));
             
             import("custom-card-helpers").then(({ handleAction }) => {
                 // Use the provided element from the event, or try to find it, or create a fallback
@@ -417,13 +452,9 @@ export class Button {
                     console.warn(`[${this._id}] Could not find DOM element, using fallback`);
                 }
                 
-                console.log(`[${this._id}] Calling handleAction with element:`, targetElement);
-                console.log(`[${this._id}] Calling handleAction with actionConfig:`, JSON.stringify(actionConfig, null, 2));
-                console.log(`[${this._id}] Calling handleAction with hass available:`, !!hass);
                 
                 try {
                     handleAction(targetElement, hass, actionConfig as any, "tap");
-                    console.log(`[${this._id}] handleAction completed successfully`);
                 } catch (error) {
                     console.error(`[${this._id}] handleAction failed:`, error);
                 }

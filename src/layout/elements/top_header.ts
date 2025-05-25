@@ -25,21 +25,22 @@ export class TopHeaderElement extends LayoutElement {
   
   private readonly textGap: number = 5;
 
-  constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
-    super(id, props, layoutConfig, hass, requestUpdateCallback);
+  constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
+    super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     
-    const defaultColor = props.fill || '#99CCFF';
+    const fillColor = this._resolveDynamicColor(props.fill) || '#99CCFF';
     
-    this.leftEndcap = this.createLeftEndcap(id, defaultColor, hass, requestUpdateCallback);
-    this.rightEndcap = this.createRightEndcap(id, defaultColor, hass, requestUpdateCallback);
-    this.leftText = this.createTextElement(id, 'left', props, hass, requestUpdateCallback);
-    this.rightText = this.createTextElement(id, 'right', props, hass, requestUpdateCallback);
-    this.headerBar = this.createHeaderBar(id, defaultColor, hass, requestUpdateCallback);
+    this.leftEndcap = this.createLeftEndcap(id, fillColor, hass, requestUpdateCallback, getShadowElement);
+    this.rightEndcap = this.createRightEndcap(id, fillColor, hass, requestUpdateCallback, getShadowElement);
+    this.leftText = this.createTextElement(id, 'left', props, hass, requestUpdateCallback, getShadowElement);
+    this.rightText = this.createTextElement(id, 'right', props, hass, requestUpdateCallback, getShadowElement);
+    this.headerBar = this.createHeaderBar(id, fillColor, hass, requestUpdateCallback, getShadowElement);
     
     this.resetLayout();
+    this.intrinsicSize = { width: 0, height: 0, calculated: false };
   }
   
-  private createLeftEndcap(id: string, fill: string, hass?: HomeAssistant, requestUpdateCallback?: () => void): EndcapElement {
+  private createLeftEndcap(id: string, fill: string, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): EndcapElement {
     return new EndcapElement(`${id}_left_endcap`, {
       width: 15,
       direction: 'left',
@@ -50,10 +51,10 @@ export class TopHeaderElement extends LayoutElement {
         anchorPoint: 'topLeft',
         targetAnchorPoint: 'topLeft'
       }
-    }, hass, requestUpdateCallback);
+    }, hass, requestUpdateCallback, getShadowElement);
   }
   
-  private createRightEndcap(id: string, fill: string, hass?: HomeAssistant, requestUpdateCallback?: () => void): EndcapElement {
+  private createRightEndcap(id: string, fill: string, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): EndcapElement {
     return new EndcapElement(`${id}_right_endcap`, {
       width: 15,
       direction: 'right',
@@ -64,10 +65,10 @@ export class TopHeaderElement extends LayoutElement {
         anchorPoint: 'topRight',
         targetAnchorPoint: 'topRight'
       }
-    }, hass, requestUpdateCallback);
+    }, hass, requestUpdateCallback, getShadowElement);
   }
   
-  private createTextElement(id: string, position: 'left' | 'right', props: LayoutElementProps, hass?: HomeAssistant, requestUpdateCallback?: () => void): TextElement {
+  private createTextElement(id: string, position: 'left' | 'right', props: LayoutElementProps, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): TextElement {
     const isLeft = position === 'left';
     const textKey = isLeft ? 'leftText' : 'rightText';
     const defaultText = isLeft ? 'LEFT' : 'RIGHT';
@@ -86,16 +87,16 @@ export class TopHeaderElement extends LayoutElement {
         anchorPoint: isLeft ? 'topLeft' : 'topRight',
         targetAnchorPoint: isLeft ? 'topRight' : 'topLeft'
       }
-    }, hass, requestUpdateCallback);
+    }, hass, requestUpdateCallback, getShadowElement);
   }
   
-  private createHeaderBar(id: string, fill: string, hass?: HomeAssistant, requestUpdateCallback?: () => void): RectangleElement {
+  private createHeaderBar(id: string, fill: string, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): RectangleElement {
     return new RectangleElement(`${id}_header_bar`, {
       fill,
       width: 1  // Will be calculated in layoutHeaderBar
     }, {
       // No anchor or stretch - we'll position this manually in layoutHeaderBar
-    }, hass, requestUpdateCallback);
+    }, hass, requestUpdateCallback, getShadowElement);
   }
 
   calculateIntrinsicSize(container: SVGElement): void {
