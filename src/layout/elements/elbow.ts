@@ -4,8 +4,11 @@ import { HomeAssistant } from "custom-card-helpers";
 import { LcarsButtonElementConfig } from "../../lovelace-lcars-card.js";
 import { svg, SVGTemplateResult } from "lit";
 import { generateElbowPath } from "../../utils/shapes.js";
+import { Button } from "./button.js";
 
 export class ElbowElement extends LayoutElement {
+    button?: Button;
+
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
       super(id, props, layoutConfig, hass, requestUpdateCallback);
       this.resetLayout();
@@ -26,59 +29,91 @@ export class ElbowElement extends LayoutElement {
     }
   
     render(): SVGTemplateResult | null {
-      if (!this.layout.calculated || this.layout.height <= 0 || this.layout.width <= 0) return null;
+      if (!this.layout.calculated) return null;
+
       const { x, y, width, height } = this.layout;
-      const fill = this.props.fill || 'none';
-      const stroke = this.props.stroke || 'none';
-      const strokeWidth = this.props.strokeWidth || '0';
+      
+      // Return null for invalid dimensions
+      if (width <= 0 || height <= 0) {
+        return null;
+      }
+      
       const orientation = this.props.orientation || 'top-left';
-      const elbowWidth = this.props.width || width;
       const bodyWidth = this.props.bodyWidth || 30;
       const armHeight = this.props.armHeight || 30;
-      const outerCornerRadius = armHeight;
-      const pathData = generateElbowPath(
-        x,
-        elbowWidth,
-        bodyWidth,
-        armHeight,
-        height,
-        orientation,
-        y,
-        outerCornerRadius
-      );
-      if (!pathData) return null;
+      const elbowWidth = this.props.width || this.layoutConfig.width || 100;
       
+      const pathData = generateElbowPath(x, elbowWidth, bodyWidth, armHeight, height, orientation, y, armHeight);
+      
+      // Return null if path generation fails
+      if (pathData === null) {
+        return null;
+      }
+      
+      // Check for button rendering
       const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
       const isButton = Boolean(buttonConfig?.enabled);
       const hasText = isButton && Boolean(buttonConfig?.text);
       const isCutout = hasText && Boolean(buttonConfig?.cutout_text);
-      const textPosition = this.props.elbow_text_position || 'top';
       
       if (isButton && this.button) {
-        // Calculate text position based on the elbow_text_position property
-        let textX: number, textY: number;
+        // Calculate custom text position for elbow elements
+        let customTextPosition;
+        const elbowTextPosition = this.props.elbow_text_position;
         
-        if (textPosition === 'top') {
-          // Center text in the horizontal header section
-          textX = x + elbowWidth / 2;
-          textY = y + armHeight / 2;
-        } else { // 'side'
-          // Center text in the vertical section
-          // Position depends on orientation
-          if (orientation === 'top-left') {
-            textX = x + bodyWidth / 2;
-            textY = y + armHeight + (height - armHeight) / 2;
-          } else if (orientation === 'top-right') {
-            textX = x + elbowWidth - bodyWidth / 2;
-            textY = y + armHeight + (height - armHeight) / 2;
-          } else if (orientation === 'bottom-left') {
-            textX = x + bodyWidth / 2;
-            textY = y + (height - armHeight) / 2;
-          } else { // 'bottom-right'
-            textX = x + elbowWidth - bodyWidth / 2;
-            textY = y + (height - armHeight) / 2;
+        if (elbowTextPosition && hasText) {
+          const elbowWidth = this.props.width || this.layoutConfig.width || 100;
+          
+          if (elbowTextPosition === 'top') {
+            // Position text at top center
+            customTextPosition = {
+              x: x + elbowWidth / 2,
+              y: y + armHeight / 2
+            };
+          } else if (elbowTextPosition === 'side') {
+            // Position text based on orientation
+            if (orientation === 'top-left') {
+              customTextPosition = {
+                x: x + bodyWidth / 2,
+                y: y + armHeight + (height - armHeight) / 2
+              };
+            } else if (orientation === 'top-right') {
+              customTextPosition = {
+                x: x + elbowWidth - bodyWidth / 2,
+                y: y + armHeight + (height - armHeight) / 2
+              };
+            } else if (orientation === 'bottom-left') {
+              customTextPosition = {
+                x: x + bodyWidth / 2,
+                y: y + (height - armHeight) / 2
+              };
+            } else if (orientation === 'bottom-right') {
+              customTextPosition = {
+                x: x + elbowWidth - bodyWidth / 2,
+                y: y + (height - armHeight) / 2
+              };
+            }
           }
         }
+        
+        // Resolve dynamic fill color
+        const fill = this._resolveDynamicColor(this.props.fill) || this.props.fill || 'none';
+        
+        // Create a modified props object with resolved dynamic colors for the button
+        const resolvedProps = { ...this.props };
+        
+        // Resolve dynamic fill color for button
+        if (this.props.fill !== undefined) {
+          resolvedProps.fill = fill;
+        }
+        
+        // Resolve dynamic stroke color for button
+        if (this.props.stroke !== undefined) {
+          resolvedProps.stroke = this._resolveDynamicColor(this.props.stroke) || this.props.stroke;
+        }
+        
+        // Update button props with resolved colors
+        (this.button as any)._props = resolvedProps;
         
         return this.button.createButton(
           pathData,
@@ -90,13 +125,15 @@ export class ElbowElement extends LayoutElement {
             hasText,
             isCutout,
             rx: 0,
-            customTextPosition: {
-              x: textX,
-              y: textY
-            }
+            ...(customTextPosition && { customTextPosition })
           }
         );
       } else {
+        // Resolve dynamic fill color
+        const fill = this._resolveDynamicColor(this.props.fill) || this.props.fill || 'none';
+        const stroke = this.props.stroke ?? 'none';
+        const strokeWidth = this.props.strokeWidth ?? '0';
+        
         return svg`
           <path
             id=${this.id}

@@ -3,6 +3,7 @@ import { EditorElement } from './elements/element.js';
 import { LcarsGroup } from './group.js';
 import { HaFormSchema, PropertySchemaContext, Type, PropertyGroup, Layout, LcarsPropertyBase } from './properties/properties.js';
 import { repeat } from 'lit/directives/repeat.js';
+import './dynamic-color-editor';
 
 interface EditorContext {
   hass: any;
@@ -422,25 +423,48 @@ function renderCustomSelector(
   value: string, 
   onChange: (value: string) => void
 ): TemplateResult {
-  if (schema.selector && (schema.selector as any).lcars_grid) {
-    const lcarsGridSelector = schema.selector as any;
-    
+  // Handle dynamic color editor
+  if (schema.selector?.__dynamic_color_support) {
+    return html`
+      <dynamic-color-editor
+        .label=${schema.label}
+        .name=${schema.name}
+        .value=${value}
+        @value-changed=${(e: CustomEvent) => onChange(e.detail.value)}
+      ></dynamic-color-editor>
+    `;
+  }
+
+  // Handle grid selector (existing logic)
+  if (schema.type === 'grid' || schema.selector?.lcars_grid) {
+    const schemaAny = schema as any;
+    const gridConfig = schemaAny.selector?.lcars_grid || {};
     return html`
       <lcars-grid-selector
-        .label=${schema.label || schema.name}
+        .label=${schema.label || ''}
         .value=${value || ''}
-        ?labelCenter=${lcarsGridSelector.lcars_grid.labelCenter}
-        ?disableCorners=${lcarsGridSelector.lcars_grid.disableCorners}
-        ?disableCenter=${lcarsGridSelector.lcars_grid.disableCenter}
-        ?onlyCardinalDirections=${lcarsGridSelector.lcars_grid.onlyCardinalDirections}
-        ?stretchMode=${lcarsGridSelector.lcars_grid.stretchMode}
-        ?clearable=${lcarsGridSelector.lcars_grid.clearable}
-        ?required=${lcarsGridSelector.lcars_grid.required}
+        .disabled=${gridConfig.disabled || false}
+        .labelCenter=${gridConfig.labelCenter || false}
+        .clearable=${gridConfig.clearable || false}
+        .required=${gridConfig.required || false}
+        .disableCorners=${gridConfig.disableCorners || false}
+        .disableCenter=${gridConfig.disableCenter || false}
+        .onlyCardinalDirections=${gridConfig.onlyCardinalDirections || false}
+        .stretchMode=${gridConfig.stretchMode || false}
         @value-changed=${(e: CustomEvent) => onChange(e.detail.value)}
       ></lcars-grid-selector>
     `;
   }
-  return html``;
+
+  // Fallback for other custom types
+  return html`
+    <input
+      type="text"
+      .value=${value || ''}
+      @input=${(e: Event) => onChange((e.target as HTMLInputElement).value)}
+      placeholder=${schema.label || ''}
+    />
+  `;
 }
 
 function renderActionButtons(
@@ -769,7 +793,7 @@ function renderHalfWidthPropertyForm(
 ): TemplateResult {
   if (!schema) return html``;
   
-  const content = isCustom && schema.selector && (schema.selector as any).lcars_grid ?
+  const content = isCustom && (schema.type === 'custom' || schema.selector?.lcars_grid) ?
     renderCustomSelector(schema, formData[schema.name], (value: string) => {
       const detail = { value: { ...formData, [schema.name]: value } };
       const customEvent = new CustomEvent('value-changed', { detail, bubbles: true, composed: true });

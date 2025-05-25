@@ -3,13 +3,16 @@ lovelace-lcars-card/
 ├── .gitignore
 ├── CHANGELOG.md
 ├── dist/
+├── DYNAMIC_COLORS_EXAMPLE.md
 ├── flatten-codebase.js
 ├── git-history-diff.js
+├── MINIMAL_TEST.yaml
 ├── package.json
 ├── reference-files/
 ├── src/
 │   ├── constants.ts
 │   ├── editor/
+│   │   ├── dynamic-color-editor.ts
 │   │   ├── elements/
 │   │   │   ├── chisel_endcap.spec.ts
 │   │   │   ├── chisel_endcap.ts
@@ -73,6 +76,7 @@ lovelace-lcars-card/
 │       ├── fontmetrics.d.ts
 │       ├── shapes.spec.ts
 │       └── shapes.ts
+├── TEST_DYNAMIC_COLORS.yaml
 ├── TODO.md
 ├── tsconfig.json
 ├── vite.config.ts
@@ -88,6 +92,134 @@ lovelace-lcars-card/
 
 ## [Unreleased]
 ### Fixed
+```
+
+## File: DYNAMIC_COLORS_EXAMPLE.md
+
+```markdown
+# Dynamic Colors Example
+
+This example shows how to configure dynamic colors for LCARS card elements based on entity states.
+
+## Basic Dynamic Color Configuration
+
+Here's an example of a rectangle that changes color based on a light entity's state:
+
+```yaml
+type: lovelace-lcars-card
+elements:
+  - id: living_room_light_indicator
+    type: rectangle
+    props:
+      fill:
+        entity: light.living_room
+        mapping:
+          "on": "#ffaa00"      # Orange when on
+          "off": "#333333"     # Dark gray when off
+          "unavailable": "#ff0000"  # Red when unavailable
+        default: "#666666"     # Gray fallback
+    layout:
+      width: 100
+      height: 50
+      offsetX: 10
+      offsetY: 10
+    button:
+      enabled: true
+      text: "Living Room"
+      action_config:
+        type: toggle
+        entity: light.living_room
+```
+
+## Advanced: Using Attributes and Interpolation
+
+For numeric attributes like brightness or temperature:
+
+```yaml
+type: lovelace-lcars-card
+elements:
+  - id: temperature_indicator
+    type: rectangle
+    props:
+      fill:
+        entity: sensor.living_room_temperature
+        attribute: state
+        interpolate: true
+        mapping:
+          16: "#0066cc"  # Blue for cold
+          20: "#00cc66"  # Green for comfortable  
+          24: "#cc6600"  # Orange for warm
+          28: "#cc0000"  # Red for hot
+        default: "#666666"
+    layout:
+      width: 200
+      height: 30
+      offsetX: 10
+      offsetY: 70
+
+  - id: brightness_indicator
+    type: rectangle
+    props:
+      fill:
+        entity: light.bedroom
+        attribute: brightness
+        interpolate: true
+        mapping:
+          0: "#111111"    # Very dim
+          64: "#444444"   # Quarter brightness
+          128: "#888888"  # Half brightness
+          192: "#cccccc"  # Three quarter
+          255: "#ffffff"  # Full brightness
+        default: "#333333"
+    layout:
+      width: 150
+      height: 20
+      offsetX: 10
+      offsetY: 110
+```
+
+## Configuration Options
+
+### Dynamic Color Properties
+
+- **entity** (required): The Home Assistant entity ID to monitor
+- **attribute** (optional): Entity attribute to use (defaults to 'state')
+- **mapping** (required): Object mapping entity values to colors
+- **default** (optional): Fallback color when no mapping matches
+- **interpolate** (optional): Enable interpolation for numeric values
+
+### Color Formats
+
+Colors can be specified in several formats:
+- Hex strings: `"#ff0000"`
+- RGB arrays: `[255, 0, 0]`
+- CSS color names: `"red"`
+
+### Visual Editor Support
+
+The visual editor provides a user-friendly interface for configuring dynamic colors:
+
+1. **Color Mode Toggle**: Switch between "Static Color" and "Dynamic Color"
+2. **Entity Picker**: Select any Home Assistant entity
+3. **Attribute Field**: Specify which attribute to monitor
+4. **Mapping Table**: Add/remove state-to-color mappings
+5. **Default Color**: Set fallback color
+6. **Interpolation**: Enable for smooth color transitions with numeric values
+
+## How It Works
+
+1. **Entity Monitoring**: The card monitors specified entities for state changes
+2. **Color Resolution**: When an entity state changes, the card looks up the corresponding color
+3. **Smooth Transitions**: Color changes use a 0.3s fade transition
+4. **Fallback Handling**: If entity is unavailable or state doesn't match, uses default color
+5. **Performance**: Only re-renders elements when their monitored entities actually change
+
+## Tips
+
+- Use interpolation for smooth color gradients with numeric sensors
+- Consider using entity attributes like `brightness`, `temperature`, or `humidity`
+- Set meaningful default colors for when entities are unavailable
+- The color picker in the editor shows live previews of your configurations
 ```
 
 ## File: flatten-codebase.js
@@ -705,6 +837,402 @@ export const CARD_TYPE = "lovelace-lcars-card";
 export const DEFAULT_FONT_SIZE = 16;
 export const DEFAULT_TITLE = "LCARS Card";
 export const DEFAULT_TEXT = "Hello from LCARS";
+```
+
+## File: src/editor/dynamic-color-editor.ts
+
+```typescript
+import { LitElement, html, css, TemplateResult } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import { HomeAssistant } from 'custom-card-helpers';
+import { DynamicColorConfig, isDynamicColorConfig } from '../types';
+
+@customElement('dynamic-color-editor')
+export class DynamicColorEditor extends LitElement {
+  @property({ attribute: false }) public hass?: HomeAssistant;
+  @property({ type: Object }) public value: any = {};
+  @property({ type: String }) public label = '';
+  @property({ type: String }) public name = '';
+
+  @state() private _colorMode: 'static' | 'dynamic' = 'static';
+  @state() private _staticColor: number[] = [0, 102, 255];
+  @state() private _dynamicConfig: Partial<DynamicColorConfig> = {
+    entity: '',
+    attribute: 'state',
+    mapping: {},
+    default: [102, 102, 102],
+    interpolate: false
+  };
+
+  static styles = css`
+    .dynamic-color-editor {
+      padding: 16px;
+      border: 1px solid var(--divider-color, #e0e0e0);
+      border-radius: 4px;
+      background: var(--card-background-color, #fff);
+    }
+
+    .mode-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .mode-button {
+      padding: 8px 16px;
+      border: 1px solid var(--primary-color, #03a9f4);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--primary-color, #03a9f4);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mode-button.active {
+      background: var(--primary-color, #03a9f4);
+      color: white;
+    }
+
+    .config-section {
+      margin-bottom: 16px;
+    }
+
+    .config-section label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .config-section input,
+    .config-section select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--divider-color, #e0e0e0);
+      border-radius: 4px;
+    }
+
+    .mapping-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+
+    .mapping-table th,
+    .mapping-table td {
+      padding: 8px;
+      border: 1px solid var(--divider-color, #e0e0e0);
+      text-align: left;
+    }
+
+    .mapping-table th {
+      background: var(--table-header-background-color, #f5f5f5);
+    }
+
+    .add-mapping-button {
+      margin-top: 8px;
+      padding: 8px 16px;
+      background: var(--primary-color, #03a9f4);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .remove-mapping-button {
+      padding: 4px 8px;
+      background: var(--error-color, #f44336);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+  `;
+
+  connectedCallback() {
+    super.connectedCallback();
+    this._initializeFromValue();
+  }
+
+  private _initializeFromValue() {
+    if (this.value?.type === 'dynamic') {
+      this._colorMode = 'dynamic';
+      this._dynamicConfig = {
+        entity: this.value.entity || '',
+        attribute: this.value.attribute || 'state',
+        mapping: this.value.mapping || {},
+        default: this.value.default || [102, 102, 102],
+        interpolate: this.value.interpolate || false
+      };
+    } else {
+      this._colorMode = 'static';
+      this._staticColor = this.value?.color || [0, 102, 255];
+    }
+  }
+
+  private _setColorMode(mode: 'static' | 'dynamic') {
+    this._colorMode = mode;
+    this._fireChange();
+  }
+
+  private _handleStaticColorChange(event: Event) {
+    const target = event.target as any;
+    if (target.value) {
+      this._staticColor = target.value;
+      this._fireChange();
+    }
+  }
+
+  private _handleEntityChange(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this._dynamicConfig = {
+      ...this._dynamicConfig,
+      entity: target.value
+    };
+    this._fireChange();
+  }
+
+  private _handleAttributeChange(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this._dynamicConfig = {
+      ...this._dynamicConfig,
+      attribute: target.value
+    };
+    this._fireChange();
+  }
+
+  private _handleDefaultColorChange(event: Event) {
+    const target = event.target as any;
+    if (target.value) {
+      this._dynamicConfig = {
+        ...this._dynamicConfig,
+        default: target.value
+      };
+      this._fireChange();
+    }
+  }
+
+  private _handleInterpolateChange(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this._dynamicConfig = {
+      ...this._dynamicConfig,
+      interpolate: target.checked
+    };
+    this._fireChange();
+  }
+
+  private _addMapping() {
+    const newMapping = { ...this._dynamicConfig.mapping };
+    newMapping['new_state'] = [128, 128, 128];
+    this._dynamicConfig = {
+      ...this._dynamicConfig,
+      mapping: newMapping
+    };
+    this._fireChange();
+  }
+
+  private _removeMapping(key: string) {
+    const newMapping = { ...this._dynamicConfig.mapping };
+    delete newMapping[key];
+    this._dynamicConfig = {
+      ...this._dynamicConfig,
+      mapping: newMapping
+    };
+    this._fireChange();
+  }
+
+  private _handleMappingKeyChange(oldKey: string, event: Event) {
+    const target = event.target as HTMLInputElement;
+    const newKey = target.value;
+    if (newKey !== oldKey) {
+      const newMapping = { ...this._dynamicConfig.mapping };
+      newMapping[newKey] = newMapping[oldKey];
+      delete newMapping[oldKey];
+      this._dynamicConfig = {
+        ...this._dynamicConfig,
+        mapping: newMapping
+      };
+      this._fireChange();
+    }
+  }
+
+  private _handleMappingColorChange(key: string, event: Event) {
+    const target = event.target as any;
+    if (target.value) {
+      const newMapping = { ...this._dynamicConfig.mapping };
+      newMapping[key] = target.value;
+      this._dynamicConfig = {
+        ...this._dynamicConfig,
+        mapping: newMapping
+      };
+      this._fireChange();
+    }
+  }
+
+  private _fireChange() {
+    let newValue;
+    
+    if (this._colorMode === 'static') {
+      newValue = this._staticColor;
+    } else {
+      newValue = {
+        entity: this._dynamicConfig.entity,
+        attribute: this._dynamicConfig.attribute,
+        mapping: this._dynamicConfig.mapping,
+        default: this._dynamicConfig.default,
+        interpolate: this._dynamicConfig.interpolate
+      } as DynamicColorConfig;
+    }
+
+    this.dispatchEvent(new CustomEvent('value-changed', {
+      detail: { value: newValue },
+      bubbles: true,
+      composed: true
+    }));
+  }
+
+  private _getEntityOptions(): { value: string; label: string }[] {
+    if (!this.hass) return [];
+    
+    return Object.keys(this.hass.states).map(entityId => ({
+      value: entityId,
+      label: `${entityId} (${this.hass!.states[entityId].attributes.friendly_name || entityId})`
+    }));
+  }
+
+  protected render(): TemplateResult {
+    return html`
+      <div class="dynamic-color-editor">
+        <div class="mode-selector">
+          <button 
+            class="mode-button ${this._colorMode === 'static' ? 'active' : ''}"
+            @click=${() => this._setColorMode('static')}
+          >
+            Static Color
+          </button>
+          <button 
+            class="mode-button ${this._colorMode === 'dynamic' ? 'active' : ''}"
+            @click=${() => this._setColorMode('dynamic')}
+          >
+            Dynamic Color
+          </button>
+        </div>
+
+        ${this._colorMode === 'static' ? this._renderStaticMode() : this._renderDynamicMode()}
+      </div>
+    `;
+  }
+
+  private _renderStaticMode(): TemplateResult {
+    return html`
+      <div class="config-section">
+        <label>Color</label>
+        <ha-color-picker
+          .value=${this._staticColor}
+          @value-changed=${this._handleStaticColorChange}
+        ></ha-color-picker>
+      </div>
+    `;
+  }
+
+  private _renderDynamicMode(): TemplateResult {
+    return html`
+      <div class="config-section">
+        <label>Entity</label>
+        <ha-entity-picker
+          .hass=${this.hass}
+          .value=${this._dynamicConfig.entity}
+          @value-changed=${this._handleEntityChange}
+        ></ha-entity-picker>
+      </div>
+
+      <div class="config-section">
+        <label>Attribute (leave empty for state)</label>
+        <input
+          type="text"
+          .value=${this._dynamicConfig.attribute || 'state'}
+          @input=${this._handleAttributeChange}
+          placeholder="state"
+        />
+      </div>
+
+      <div class="config-section">
+        <label>Default Color</label>
+        <ha-color-picker
+          .value=${this._dynamicConfig.default}
+          @value-changed=${this._handleDefaultColorChange}
+        ></ha-color-picker>
+      </div>
+
+      <div class="config-section">
+        <label>State → Color Mapping</label>
+        <table class="mapping-table">
+          <thead>
+            <tr>
+              <th>Entity Value</th>
+              <th>Color</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${Object.entries(this._dynamicConfig.mapping || {}).map(([key, color]) => html`
+              <tr>
+                <td>
+                  <input
+                    type="text"
+                    .value=${key}
+                    @input=${(e: Event) => this._handleMappingKeyChange(key, e)}
+                    placeholder="e.g., on, off, 25"
+                  />
+                </td>
+                <td>
+                  <ha-color-picker
+                    .value=${color}
+                    @value-changed=${(e: Event) => this._handleMappingColorChange(key, e)}
+                  ></ha-color-picker>
+                </td>
+                <td>
+                  <button 
+                    class="remove-mapping-button"
+                    @click=${() => this._removeMapping(key)}
+                  >
+                    Remove
+                  </button>
+                </td>
+              </tr>
+            `)}
+          </tbody>
+        </table>
+        <button class="add-mapping-button" @click=${this._addMapping}>
+          Add Mapping
+        </button>
+      </div>
+
+      <div class="checkbox-container">
+        <input
+          type="checkbox"
+          id="interpolate"
+          .checked=${this._dynamicConfig.interpolate || false}
+          @change=${this._handleInterpolateChange}
+        />
+        <label for="interpolate">Enable interpolation for numeric values</label>
+      </div>
+    `;
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'dynamic-color-editor': DynamicColorEditor;
+  }
+}
 ```
 
 ## File: src/editor/elements/chisel_endcap.spec.ts
@@ -6658,6 +7186,9 @@ import { LcarsGroup } from './group.js';
 import { Rectangle } from './elements/rectangle.js';
 import { PropertyGroup } from './properties/properties.js';
 
+import './dynamic-color-editor.js';
+import { isDynamicColorConfig, DynamicColorConfig } from '../types.js';
+
 function setDeep(obj: any, path: string | string[], value: any): void {
     const pathArray = Array.isArray(path) ? path : path.split('.');
     let current = obj;
@@ -7406,6 +7937,35 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
 
     const formData = ev.detail.value;
 
+    // Handle single property changes (dynamic colors)
+    if (ev.detail.name && ev.detail.value !== undefined) {
+        const { name, value } = ev.detail;
+        const elementInstance = this._getElementInstance(elementId);
+        if (!elementInstance) return;
+
+        const propertiesMap = elementInstance.getPropertiesMap();
+        const property = propertiesMap.get(name);
+        
+        // Handle dynamic color configurations
+        if (property && property.name === 'fill' && isDynamicColorConfig(value)) {
+            // Store dynamic color config directly
+            this._updateElementConfigValue(this._config.elements[index], property.configPath, value);
+            this._updateConfig(this._config.elements);
+            return;
+        }
+
+        // Handle other single property changes
+        let processedValue = value;
+        if (Array.isArray(value) && value.length === 3 && value.every(num => typeof num === 'number')) {
+            processedValue = this._rgbArrayToHex(value);
+        }
+
+        this._updateElementConfigValue(this._config.elements[index], property?.configPath || name, processedValue);
+        this._updateConfig(this._config.elements);
+        return;
+    }
+
+    // Handle complete form data changes (existing logic)
     if (Object.keys(formData).length === 1 && formData.hasOwnProperty('type')) {
         const newType = formData.type;
         if (!newType) {
@@ -7439,29 +7999,17 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
         if (cleanedData.hasOwnProperty(key)) {
             let value = cleanedData[key];
 
-            if (key === 'fill' && Array.isArray(value) && value.length === 3) {
+            // Handle dynamic colors
+            if (key === 'fill' && isDynamicColorConfig(value)) {
+                setDeep(newElementConfig, propInstance.configPath, value);
+            } else if (key === 'fill' && Array.isArray(value) && value.length === 3) {
                 value = this._rgbArrayToHex(value);
+                setDeep(newElementConfig, propInstance.configPath, value);
+            } else {
+                setDeep(newElementConfig, propInstance.configPath, value);
             }
-
-            setDeep(newElementConfig, propInstance.configPath, value);
         }
     });
-    
-    // --- Special handling to preserve stretchTo2 if it already exists ---
-    // This might need to be revisited if processDataUpdate handles it sufficiently.
-    // If stretchTo2 is part of formData and processDataUpdate processes it, this might be redundant
-    // or could conflict if processDataUpdate decides to remove it.
-    // However, if processDataUpdate *doesn't* receive stretchTo2 from formData (because it wasn't in the schema that caused the event)
-    // but it *was* in the original config, this preserves it.
-    // Given that stretchTo2 is now part of getFormData and getSchema, it should be in formData.
-    // Let's assume processDataUpdate and the loop above handle it correctly.
-    // This specific preservation might no longer be needed if stretchTo2 is *cleared* via the form, this would incorrectly add it back.
-    //
-    // Revised approach: rely on `processDataUpdate` and `setDeep`.
-    // If `currentElementConfig.layout?.stretch?.stretchTo2` existed and `cleanedData` doesn't clear it,
-    // and `stretchTo2` is a property in `propertiesMap`, `setDeep` will handle it.
-    // If `cleanedData` *does* clear it (because the form cleared it), `setDeep` won't set it.
-    // The key is that `processDataUpdate` correctly reflects the intent from `formData`.
 
     if (newElementConfig.props && Object.keys(newElementConfig.props).length === 0) {
         delete newElementConfig.props;
@@ -7484,109 +8032,109 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
     this.requestUpdate();
 }
   
-  private _rgbArrayToHex(rgb: number[]): string {
-      return '#' + rgb.map(val => {
-          const hex = Math.max(0, Math.min(255, val)).toString(16);
-          return hex.length === 1 ? '0' + hex : hex;
-      }).join('');
-  }
+private _rgbArrayToHex(rgb: number[]): string {
+    return '#' + rgb.map(val => {
+        const hex = Math.max(0, Math.min(255, val)).toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+    }).join('');
+}
   
-  private _updateElementConfigValue(elementConfig: any, path: string, value: any): void {
-      const pathParts = path.split('.');
-      if (pathParts.length === 1) {
-          elementConfig[pathParts[0]] = value;
-      } else if (pathParts.length === 2) {
-          const [section, property] = pathParts;
-          if (!elementConfig[section]) {
-              elementConfig[section] = {};
-          }
-          elementConfig[section][property] = value;
-      }
-  }
-
-  private _updateElementIdInput(value: string): void {
-    this._editingElementIdInput = value;
-    
-    if (this._editingElementId) {
-      const elementInstance = this._getElementInstance(this._editingElementId);
-      if (elementInstance) {
-        elementInstance.currentIdInput = value;
-        elementInstance.validateIdInput();
-        this._elementIdWarning = elementInstance.idEditErrorMessage;
-      }
-    }
-    
-    this.requestUpdate();
-  }
-
-  private _updateGroupNameInput(value: string): void {
-    if (this._editingGroup) {
-      this._editingGroupInput = value;
-      
-      const groupInstance = this._groupInstances.get(this._editingGroup);
-      if (groupInstance) {
-        groupInstance.updateNameInput(value);
-        this._groupIdWarning = groupInstance.editErrorMessage;
-      }
-    } else if (this._newGroupDraft) {
-      this._newGroupInput = value;
-      
-      const validation = LcarsGroup.validateIdentifier(value, "Group ID", new Set(this._groups));
-      this._groupIdWarning = validation.error || '';
-    }
-    
-    this.requestUpdate();
-  }
-  
-  private _updateNewElementInput(value: string): void {
-    this._addElementInput = value;
-    
-    const tempElement = new Rectangle({ id: '', type: 'rectangle' });
-    tempElement.currentIdInput = value;
-    tempElement.validateIdInput();
-    this._addElementWarning = tempElement.idEditErrorMessage;
-    
-    this.requestUpdate();
-  }
-
-  /**
-   * Initializes the collapsed state for property groups of a given element.
-   * If previous state is provided, uses it, otherwise defaults to all true.
-   * @param elementId The ID of the element.
-   * @param prevCollapsedState Optional previous collapsed state for this element.
-   * @returns The initialized collapsed state map for property groups.
-   */
-  private _initCollapsedPG(elementId: string, prevCollapsedState?: Record<PropertyGroup, boolean>): Record<PropertyGroup, boolean> {
-      // Initialize with a temporary type that allows string keys, then populate
-      const newState: { [key: string]: boolean } = {};
-      Object.values(PropertyGroup).forEach(pgKey => {
-          newState[pgKey] = prevCollapsedState?.[pgKey] ?? true;
-      });
-      // The object now conforms to Record<PropertyGroup, boolean>, implicitly returned as such
-      return newState as Record<PropertyGroup, boolean>;
-  }
-
-  private _togglePropertyGroupCollapse(elementId: string, groupKey: PropertyGroup): void {
-    if (!this._collapsedPropertyGroups[elementId]) {
-        // Use helper to initialize if element state doesn't exist
-        this._collapsedPropertyGroups[elementId] = this._initCollapsedPG(elementId);
-    }
-    // Ensure all keys are present, even if not explicitly initialized before
-    Object.values(PropertyGroup).forEach(pgKey => {
-        if (this._collapsedPropertyGroups[elementId][pgKey] === undefined) {
-             this._collapsedPropertyGroups[elementId][pgKey] = true;
+private _updateElementConfigValue(elementConfig: any, path: string, value: any): void {
+    const pathParts = path.split('.');
+    if (pathParts.length === 1) {
+        elementConfig[pathParts[0]] = value;
+    } else if (pathParts.length === 2) {
+        const [section, property] = pathParts;
+        if (!elementConfig[section]) {
+            elementConfig[section] = {};
         }
-    });
+        elementConfig[section][property] = value;
+    }
+}
 
-    this._collapsedPropertyGroups = {
-        ...this._collapsedPropertyGroups,
-        [elementId]: {
-            ...this._collapsedPropertyGroups[elementId],
-            [groupKey]: !this._collapsedPropertyGroups[elementId][groupKey],
-        },
-    };
-    this.requestUpdate();
+private _updateElementIdInput(value: string): void {
+  this._editingElementIdInput = value;
+  
+  if (this._editingElementId) {
+    const elementInstance = this._getElementInstance(this._editingElementId);
+    if (elementInstance) {
+      elementInstance.currentIdInput = value;
+      elementInstance.validateIdInput();
+      this._elementIdWarning = elementInstance.idEditErrorMessage;
+    }
   }
+  
+  this.requestUpdate();
+}
+
+private _updateGroupNameInput(value: string): void {
+  if (this._editingGroup) {
+    this._editingGroupInput = value;
+    
+    const groupInstance = this._groupInstances.get(this._editingGroup);
+    if (groupInstance) {
+      groupInstance.updateNameInput(value);
+      this._groupIdWarning = groupInstance.editErrorMessage;
+    }
+  } else if (this._newGroupDraft) {
+    this._newGroupInput = value;
+    
+    const validation = LcarsGroup.validateIdentifier(value, "Group ID", new Set(this._groups));
+    this._groupIdWarning = validation.error || '';
+  }
+  
+  this.requestUpdate();
+}
+  
+private _updateNewElementInput(value: string): void {
+  this._addElementInput = value;
+  
+  const tempElement = new Rectangle({ id: '', type: 'rectangle' });
+  tempElement.currentIdInput = value;
+  tempElement.validateIdInput();
+  this._addElementWarning = tempElement.idEditErrorMessage;
+  
+  this.requestUpdate();
+}
+
+/**
+ * Initializes the collapsed state for property groups of a given element.
+ * If previous state is provided, uses it, otherwise defaults to all true.
+ * @param elementId The ID of the element.
+ * @param prevCollapsedState Optional previous collapsed state for this element.
+ * @returns The initialized collapsed state map for property groups.
+ */
+private _initCollapsedPG(elementId: string, prevCollapsedState?: Record<PropertyGroup, boolean>): Record<PropertyGroup, boolean> {
+    // Initialize with a temporary type that allows string keys, then populate
+    const newState: { [key: string]: boolean } = {};
+    Object.values(PropertyGroup).forEach(pgKey => {
+        newState[pgKey] = prevCollapsedState?.[pgKey] ?? true;
+    });
+    // The object now conforms to Record<PropertyGroup, boolean>, implicitly returned as such
+    return newState as Record<PropertyGroup, boolean>;
+}
+
+private _togglePropertyGroupCollapse(elementId: string, groupKey: PropertyGroup): void {
+  if (!this._collapsedPropertyGroups[elementId]) {
+      // Use helper to initialize if element state doesn't exist
+      this._collapsedPropertyGroups[elementId] = this._initCollapsedPG(elementId);
+  }
+  // Ensure all keys are present, even if not explicitly initialized before
+  Object.values(PropertyGroup).forEach(pgKey => {
+      if (this._collapsedPropertyGroups[elementId][pgKey] === undefined) {
+           this._collapsedPropertyGroups[elementId][pgKey] = true;
+      }
+  });
+
+  this._collapsedPropertyGroups = {
+      ...this._collapsedPropertyGroups,
+      [elementId]: {
+          ...this._collapsedPropertyGroups[elementId],
+          [groupKey]: !this._collapsedPropertyGroups[elementId][groupKey],
+      },
+  };
+  this.requestUpdate();
+}
 }
 
 declare global {
@@ -7829,7 +8377,15 @@ describe('Fill Property', () => {
     const prop = new Fill();
     testCommonProperties(prop, 'fill', 'Fill Color', 'props.fill', PropertyGroup.APPEARANCE, Layout.HALF);
     it('should return correct schema for color_rgb selector', () => {
-        expect(prop.getSchema()).toEqual({ name: 'fill', label: 'Fill Color', selector: { color_rgb: {} } });
+        expect(prop.getSchema()).toEqual({ 
+            name: 'fill', 
+            label: 'Fill Color', 
+            selector: { 
+                color_rgb: {},
+                __dynamic_color_support: true
+            },
+            type: 'custom'
+        });
     });
 
     describe('formatValueForForm', () => {
@@ -8275,6 +8831,10 @@ describe('ButtonActiveTransform Property', () => {
 ## File: src/editor/properties/properties.ts
 
 ```typescript
+import { HomeAssistant } from 'custom-card-helpers';
+import { html, TemplateResult } from 'lit';
+import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../../types';
+
 export interface HaFormSchema {
     name: string;
     label?: string;
@@ -8555,6 +9115,27 @@ export class TargetAnchorPoint implements LcarsPropertyBase {
 
 // --- Common Props Property Classes ---
 
+// Helper function to convert hex to RGB
+function hexToRgb(hex: string): number[] | null {
+    // Handle 3-digit hex
+    const shortResult = /^#?([a-f\d])([a-f\d])([a-f\d])$/i.exec(hex);
+    if (shortResult) {
+        return [
+            parseInt(shortResult[1] + shortResult[1], 16),
+            parseInt(shortResult[2] + shortResult[2], 16),
+            parseInt(shortResult[3] + shortResult[3], 16)
+        ];
+    }
+    
+    // Handle 6-digit hex
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? [
+        parseInt(result[1], 16),
+        parseInt(result[2], 16),
+        parseInt(result[3], 16)
+    ] : null;
+}
+
 export class Fill implements LcarsPropertyBase {
     name = 'fill';
     label = 'Fill Color';
@@ -8562,50 +9143,57 @@ export class Fill implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.APPEARANCE;
     layout: Layout = Layout.HALF;
 
-    getSchema(): HaFormSchema {
+    getSchema(context?: PropertySchemaContext): HaFormSchema {
         return {
             name: this.name,
             label: this.label,
-            selector: { color_rgb: {} }
+            selector: { 
+                color_rgb: {},
+                // Additional metadata for dynamic color support
+                __dynamic_color_support: true
+            },
+            type: 'custom'
         };
     }
-    
-    formatValueForForm(value: any): any {
-        if (Array.isArray(value) && value.length === 3) {
-            return value;
+
+    formatValueForForm?(value: any): any {
+        // Handle dynamic color configs
+        if (isDynamicColorConfig(value)) {
+            return {
+                type: 'dynamic',
+                config: value
+            };
         }
         
-        if (typeof value === 'string' && value.startsWith('#')) {
-            return this.hexToRgb(value);
+        // Handle static colors - maintain backward compatibility with tests
+        if (typeof value === 'string') {
+            if (value.startsWith('#')) {
+                // Convert hex to RGB for the color picker
+                const rgb = hexToRgb(value);
+                return rgb || [0, 0, 0];
+            }
+            return value; // Return other string colors as-is
+        }
+        
+        if (Array.isArray(value)) {
+            return value; // Return RGB arrays as-is
         }
         
         return value;
     }
-    
-    private hexToRgb(hex: string): number[] {
-        hex = hex.replace(/^#/, '');
-        
-        // Validate hex format first
-        const validHex = /^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/.test(hex);
-        if (!validHex) {
-            return [0, 0, 0];
+
+    formatValueForConfig?(value: any): any {
+        // Handle the editor format back to config format
+        if (value && typeof value === 'object') {
+            if (value.type === 'dynamic' && value.config) {
+                return value.config;
+            }
+            if (value.type === 'static' && value.color) {
+                return value.color;
+            }
         }
         
-        if (hex.length === 3) {
-            return [
-                parseInt(hex[0] + hex[0], 16),
-                parseInt(hex[1] + hex[1], 16),
-                parseInt(hex[2] + hex[2], 16)
-            ];
-        } else if (hex.length === 6) {
-            return [
-                parseInt(hex.substring(0, 2), 16),
-                parseInt(hex.substring(2, 4), 16),
-                parseInt(hex.substring(4, 6), 16)
-            ];
-        }
-        
-        return [0, 0, 0];
+        return value;
     }
 }
 
@@ -9978,6 +10566,7 @@ import { EditorElement } from './elements/element.js';
 import { LcarsGroup } from './group.js';
 import { HaFormSchema, PropertySchemaContext, Type, PropertyGroup, Layout, LcarsPropertyBase } from './properties/properties.js';
 import { repeat } from 'lit/directives/repeat.js';
+import './dynamic-color-editor';
 
 interface EditorContext {
   hass: any;
@@ -10397,25 +10986,48 @@ function renderCustomSelector(
   value: string, 
   onChange: (value: string) => void
 ): TemplateResult {
-  if (schema.selector && (schema.selector as any).lcars_grid) {
-    const lcarsGridSelector = schema.selector as any;
-    
+  // Handle dynamic color editor
+  if (schema.selector?.__dynamic_color_support) {
+    return html`
+      <dynamic-color-editor
+        .label=${schema.label}
+        .name=${schema.name}
+        .value=${value}
+        @value-changed=${(e: CustomEvent) => onChange(e.detail.value)}
+      ></dynamic-color-editor>
+    `;
+  }
+
+  // Handle grid selector (existing logic)
+  if (schema.type === 'grid' || schema.selector?.lcars_grid) {
+    const schemaAny = schema as any;
+    const gridConfig = schemaAny.selector?.lcars_grid || {};
     return html`
       <lcars-grid-selector
-        .label=${schema.label || schema.name}
+        .label=${schema.label || ''}
         .value=${value || ''}
-        ?labelCenter=${lcarsGridSelector.lcars_grid.labelCenter}
-        ?disableCorners=${lcarsGridSelector.lcars_grid.disableCorners}
-        ?disableCenter=${lcarsGridSelector.lcars_grid.disableCenter}
-        ?onlyCardinalDirections=${lcarsGridSelector.lcars_grid.onlyCardinalDirections}
-        ?stretchMode=${lcarsGridSelector.lcars_grid.stretchMode}
-        ?clearable=${lcarsGridSelector.lcars_grid.clearable}
-        ?required=${lcarsGridSelector.lcars_grid.required}
+        .disabled=${gridConfig.disabled || false}
+        .labelCenter=${gridConfig.labelCenter || false}
+        .clearable=${gridConfig.clearable || false}
+        .required=${gridConfig.required || false}
+        .disableCorners=${gridConfig.disableCorners || false}
+        .disableCenter=${gridConfig.disableCenter || false}
+        .onlyCardinalDirections=${gridConfig.onlyCardinalDirections || false}
+        .stretchMode=${gridConfig.stretchMode || false}
         @value-changed=${(e: CustomEvent) => onChange(e.detail.value)}
       ></lcars-grid-selector>
     `;
   }
-  return html``;
+
+  // Fallback for other custom types
+  return html`
+    <input
+      type="text"
+      .value=${value || ''}
+      @input=${(e: Event) => onChange((e.target as HTMLInputElement).value)}
+      placeholder=${schema.label || ''}
+    />
+  `;
 }
 
 function renderActionButtons(
@@ -10744,7 +11356,7 @@ function renderHalfWidthPropertyForm(
 ): TemplateResult {
   if (!schema) return html``;
   
-  const content = isCustom && schema.selector && (schema.selector as any).lcars_grid ?
+  const content = isCustom && (schema.type === 'custom' || schema.selector?.lcars_grid) ?
     renderCustomSelector(schema, formData[schema.name], (value: string) => {
       const detail = { value: { ...formData, [schema.name]: value } };
       const customEvent = new CustomEvent('value-changed', { detail, bubbles: true, composed: true });
@@ -11797,8 +12409,11 @@ import { HomeAssistant } from "custom-card-helpers";
 import { LcarsButtonElementConfig } from "../../lovelace-lcars-card.js";
 import { svg, SVGTemplateResult } from "lit";
 import { generateChiselEndcapPath } from "../../utils/shapes.js";
+import { Button } from "./button.js";
 
 export class ChiselEndcapElement extends LayoutElement {
+    button?: Button;
+
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
       super(id, props, layoutConfig, hass, requestUpdateCallback);
       this.resetLayout();
@@ -11834,18 +12449,52 @@ export class ChiselEndcapElement extends LayoutElement {
     }
   
     render(): SVGTemplateResult | null {
-      if (!this.layout.calculated || this.layout.height <= 0 || this.layout.width <= 0) return null;
+      if (!this.layout.calculated) {
+        return null;
+      }
+
       const { x, y, width, height } = this.layout;
-      const direction = (this.props.direction || 'right') as 'right';
-      const pathData = generateChiselEndcapPath(width, height, direction, x, y);
-      if (!pathData) return null;
       
+      // Return null for invalid dimensions
+      if (width <= 0 || height <= 0) {
+        return null;
+      }
+      
+      const side = this.props.direction === 'left' ? 'left' : 'right';
+      
+      const pathData = generateChiselEndcapPath(width, height, side, x, y);
+      
+      // Check if pathData is null (edge case)
+      if (pathData === null) {
+        return null;
+      }
+      
+      // Check for button rendering
       const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
       const isButton = Boolean(buttonConfig?.enabled);
       const hasText = isButton && Boolean(buttonConfig?.text);
       const isCutout = hasText && Boolean(buttonConfig?.cutout_text);
       
       if (isButton && this.button) {
+        // Resolve dynamic fill color
+        const fill = this._resolveDynamicColor(this.props.fill) || this.props.fill || 'none';
+        
+        // Create a modified props object with resolved dynamic colors for the button
+        const resolvedProps = { ...this.props };
+        
+        // Resolve dynamic fill color for button
+        if (this.props.fill !== undefined) {
+          resolvedProps.fill = fill;
+        }
+        
+        // Resolve dynamic stroke color for button
+        if (this.props.stroke !== undefined) {
+          resolvedProps.stroke = this._resolveDynamicColor(this.props.stroke) || this.props.stroke;
+        }
+        
+        // Update button props with resolved colors
+        (this.button as any)._props = resolvedProps;
+        
         return this.button.createButton(
           pathData,
           x,
@@ -11859,13 +12508,18 @@ export class ChiselEndcapElement extends LayoutElement {
           }
         );
       } else {
+        // Resolve dynamic fill color
+        const fill = this._resolveDynamicColor(this.props.fill) || this.props.fill || 'none';
+        const stroke = this.props.stroke ?? 'none';
+        const strokeWidth = this.props.strokeWidth ?? '0';
+        
         return svg`
           <path
             id=${this.id}
             d=${pathData}
-            fill=${this.props.fill || 'none'}
-            stroke=${this.props.stroke || 'none'}
-            stroke-width=${this.props.strokeWidth || '0'}
+            fill=${fill}
+            stroke=${stroke}
+            stroke-width=${strokeWidth}
           />
         `;
       }
@@ -12211,8 +12865,11 @@ import { HomeAssistant } from "custom-card-helpers";
 import { LcarsButtonElementConfig } from "../../lovelace-lcars-card.js";
 import { svg, SVGTemplateResult } from "lit";
 import { generateElbowPath } from "../../utils/shapes.js";
+import { Button } from "./button.js";
 
 export class ElbowElement extends LayoutElement {
+    button?: Button;
+
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
       super(id, props, layoutConfig, hass, requestUpdateCallback);
       this.resetLayout();
@@ -12233,59 +12890,91 @@ export class ElbowElement extends LayoutElement {
     }
   
     render(): SVGTemplateResult | null {
-      if (!this.layout.calculated || this.layout.height <= 0 || this.layout.width <= 0) return null;
+      if (!this.layout.calculated) return null;
+
       const { x, y, width, height } = this.layout;
-      const fill = this.props.fill || 'none';
-      const stroke = this.props.stroke || 'none';
-      const strokeWidth = this.props.strokeWidth || '0';
+      
+      // Return null for invalid dimensions
+      if (width <= 0 || height <= 0) {
+        return null;
+      }
+      
       const orientation = this.props.orientation || 'top-left';
-      const elbowWidth = this.props.width || width;
       const bodyWidth = this.props.bodyWidth || 30;
       const armHeight = this.props.armHeight || 30;
-      const outerCornerRadius = armHeight;
-      const pathData = generateElbowPath(
-        x,
-        elbowWidth,
-        bodyWidth,
-        armHeight,
-        height,
-        orientation,
-        y,
-        outerCornerRadius
-      );
-      if (!pathData) return null;
+      const elbowWidth = this.props.width || this.layoutConfig.width || 100;
       
+      const pathData = generateElbowPath(x, elbowWidth, bodyWidth, armHeight, height, orientation, y, armHeight);
+      
+      // Return null if path generation fails
+      if (pathData === null) {
+        return null;
+      }
+      
+      // Check for button rendering
       const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
       const isButton = Boolean(buttonConfig?.enabled);
       const hasText = isButton && Boolean(buttonConfig?.text);
       const isCutout = hasText && Boolean(buttonConfig?.cutout_text);
-      const textPosition = this.props.elbow_text_position || 'top';
       
       if (isButton && this.button) {
-        // Calculate text position based on the elbow_text_position property
-        let textX: number, textY: number;
+        // Calculate custom text position for elbow elements
+        let customTextPosition;
+        const elbowTextPosition = this.props.elbow_text_position;
         
-        if (textPosition === 'top') {
-          // Center text in the horizontal header section
-          textX = x + elbowWidth / 2;
-          textY = y + armHeight / 2;
-        } else { // 'side'
-          // Center text in the vertical section
-          // Position depends on orientation
-          if (orientation === 'top-left') {
-            textX = x + bodyWidth / 2;
-            textY = y + armHeight + (height - armHeight) / 2;
-          } else if (orientation === 'top-right') {
-            textX = x + elbowWidth - bodyWidth / 2;
-            textY = y + armHeight + (height - armHeight) / 2;
-          } else if (orientation === 'bottom-left') {
-            textX = x + bodyWidth / 2;
-            textY = y + (height - armHeight) / 2;
-          } else { // 'bottom-right'
-            textX = x + elbowWidth - bodyWidth / 2;
-            textY = y + (height - armHeight) / 2;
+        if (elbowTextPosition && hasText) {
+          const elbowWidth = this.props.width || this.layoutConfig.width || 100;
+          
+          if (elbowTextPosition === 'top') {
+            // Position text at top center
+            customTextPosition = {
+              x: x + elbowWidth / 2,
+              y: y + armHeight / 2
+            };
+          } else if (elbowTextPosition === 'side') {
+            // Position text based on orientation
+            if (orientation === 'top-left') {
+              customTextPosition = {
+                x: x + bodyWidth / 2,
+                y: y + armHeight + (height - armHeight) / 2
+              };
+            } else if (orientation === 'top-right') {
+              customTextPosition = {
+                x: x + elbowWidth - bodyWidth / 2,
+                y: y + armHeight + (height - armHeight) / 2
+              };
+            } else if (orientation === 'bottom-left') {
+              customTextPosition = {
+                x: x + bodyWidth / 2,
+                y: y + (height - armHeight) / 2
+              };
+            } else if (orientation === 'bottom-right') {
+              customTextPosition = {
+                x: x + elbowWidth - bodyWidth / 2,
+                y: y + (height - armHeight) / 2
+              };
+            }
           }
         }
+        
+        // Resolve dynamic fill color
+        const fill = this._resolveDynamicColor(this.props.fill) || this.props.fill || 'none';
+        
+        // Create a modified props object with resolved dynamic colors for the button
+        const resolvedProps = { ...this.props };
+        
+        // Resolve dynamic fill color for button
+        if (this.props.fill !== undefined) {
+          resolvedProps.fill = fill;
+        }
+        
+        // Resolve dynamic stroke color for button
+        if (this.props.stroke !== undefined) {
+          resolvedProps.stroke = this._resolveDynamicColor(this.props.stroke) || this.props.stroke;
+        }
+        
+        // Update button props with resolved colors
+        (this.button as any)._props = resolvedProps;
         
         return this.button.createButton(
           pathData,
@@ -12297,13 +12986,15 @@ export class ElbowElement extends LayoutElement {
             hasText,
             isCutout,
             rx: 0,
-            customTextPosition: {
-              x: textX,
-              y: textY
-            }
+            ...(customTextPosition && { customTextPosition })
           }
         );
       } else {
+        // Resolve dynamic fill color
+        const fill = this._resolveDynamicColor(this.props.fill) || this.props.fill || 'none';
+        const stroke = this.props.stroke ?? 'none';
+        const strokeWidth = this.props.strokeWidth ?? '0';
+        
         return svg`
           <path
             id=${this.id}
@@ -12822,6 +13513,7 @@ import { SVGTemplateResult } from 'lit';
 import { LcarsButtonElementConfig } from '../../lovelace-lcars-card.js';
 import { StretchContext } from '../engine.js';
 import { Button } from './button.js';
+import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../../types';
 
 export abstract class LayoutElement {
     id: string;
@@ -12832,572 +13524,689 @@ export abstract class LayoutElement {
     hass?: HomeAssistant;
     public requestUpdateCallback?: () => void;
     public button?: Button;
-      constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
-      this.id = id;
-      this.props = props;
-      this.layoutConfig = layoutConfig;
-      this.hass = hass;
-      this.requestUpdateCallback = requestUpdateCallback;
-  
-      // Initialize button if button config exists
-      if (props.button?.enabled) {
-        this.button = new Button(id, props, hass, requestUpdateCallback);
-      }
+    
+    // Dynamic color monitoring
+    private _monitoredEntities: Set<string> = new Set();
+    private _lastEntityStates: Map<string, any> = new Map();
 
-      this.resetLayout();
-      this.intrinsicSize = { width: 0, height: 0, calculated: false };
+    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
+        this.id = id;
+        this.props = props;
+        this.layoutConfig = layoutConfig;
+        this.hass = hass;
+        this.requestUpdateCallback = requestUpdateCallback;
+
+        // Initialize button if button config exists
+        if (props.button?.enabled) {
+            this.button = new Button(id, props, hass, requestUpdateCallback);
+        }
+
+        this.resetLayout();
+        this.intrinsicSize = { width: 0, height: 0, calculated: false };
     }
-  
+
     resetLayout(): void {
-      this.layout = { x: 0, y: 0, width: 0, height: 0, calculated: false };
+        this.layout = { x: 0, y: 0, width: 0, height: 0, calculated: false };
     }
-  
+
     calculateIntrinsicSize(container: SVGElement): void {
-      this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 0;
-      this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 0;
-      this.intrinsicSize.calculated = true;
+        this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 0;
+        this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 0;
+        this.intrinsicSize.calculated = true;
     }
-  
+
     canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-      if (!this._checkAnchorDependencies(elementsMap, dependencies)) return false;
-      if (!this._checkStretchDependencies(elementsMap, dependencies)) return false;
-      if (!this._checkSpecialDependencies(elementsMap, dependencies)) return false;
-  
-      return true;
+        if (!this._checkAnchorDependencies(elementsMap, dependencies)) return false;
+        if (!this._checkStretchDependencies(elementsMap, dependencies)) return false;
+        if (!this._checkSpecialDependencies(elementsMap, dependencies)) return false;
+
+        return true;
     }
-  
+
     private _checkAnchorDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-      if (this.layoutConfig.anchor?.anchorTo && this.layoutConfig.anchor.anchorTo !== 'container') {
-          const targetElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
-          if (!targetElement || !targetElement.layout.calculated) {
-              dependencies.push(this.layoutConfig.anchor.anchorTo);
-              return false;
-          }
-      }
-      return true;
+        if (this.layoutConfig.anchor?.anchorTo && this.layoutConfig.anchor.anchorTo !== 'container') {
+            const targetElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
+            if (!targetElement || !targetElement.layout.calculated) {
+                dependencies.push(this.layoutConfig.anchor.anchorTo);
+                return false;
+            }
+        }
+        return true;
     }
-  
+
     private _checkStretchDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-      if (this.layoutConfig.stretch?.stretchTo1 && 
-          this.layoutConfig.stretch.stretchTo1 !== 'canvas' && 
-          this.layoutConfig.stretch.stretchTo1 !== 'container') {
-          
-          const targetElement = elementsMap.get(this.layoutConfig.stretch.stretchTo1);
-          if (!targetElement || !targetElement.layout.calculated) {
-              dependencies.push(this.layoutConfig.stretch.stretchTo1);
-              return false;
-          }
-      }
-      
-      if (this.layoutConfig.stretch?.stretchTo2 && 
-          this.layoutConfig.stretch.stretchTo2 !== 'canvas' && 
-          this.layoutConfig.stretch.stretchTo2 !== 'container') {
-          
-          const targetElement = elementsMap.get(this.layoutConfig.stretch.stretchTo2);
-          if (!targetElement || !targetElement.layout.calculated) {
-              dependencies.push(this.layoutConfig.stretch.stretchTo2);
-              return false;
-          }
-      }
-      
-      return true;
+        if (this.layoutConfig.stretch?.stretchTo1 && 
+            this.layoutConfig.stretch.stretchTo1 !== 'canvas' && 
+            this.layoutConfig.stretch.stretchTo1 !== 'container') {
+            
+            const targetElement = elementsMap.get(this.layoutConfig.stretch.stretchTo1);
+            if (!targetElement || !targetElement.layout.calculated) {
+                dependencies.push(this.layoutConfig.stretch.stretchTo1);
+                return false;
+            }
+        }
+        
+        if (this.layoutConfig.stretch?.stretchTo2 && 
+            this.layoutConfig.stretch.stretchTo2 !== 'canvas' && 
+            this.layoutConfig.stretch.stretchTo2 !== 'container') {
+            
+            const targetElement = elementsMap.get(this.layoutConfig.stretch.stretchTo2);
+            if (!targetElement || !targetElement.layout.calculated) {
+                dependencies.push(this.layoutConfig.stretch.stretchTo2);
+                return false;
+            }
+        }
+        
+        return true;
     }
-  
+
     private _checkSpecialDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-      if (this.constructor.name === 'EndcapElement' && 
-          this.layoutConfig.anchor?.anchorTo && 
-          this.layoutConfig.anchor.anchorTo !== 'container' && 
-          !this.props.height) {
-        
-        const targetElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
-        if (!targetElement || !targetElement.layout.calculated) {
-            dependencies.push(this.layoutConfig.anchor.anchorTo);
-            return false;
+        if (this.constructor.name === 'EndcapElement' && 
+            this.layoutConfig.anchor?.anchorTo && 
+            this.layoutConfig.anchor.anchorTo !== 'container' && 
+            !this.props.height) {
+            
+            const targetElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
+            if (!targetElement || !targetElement.layout.calculated) {
+                dependencies.push(this.layoutConfig.anchor.anchorTo);
+                return false;
+            }
         }
-      }
-      return true;
+        return true;
     }
-  
+
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
-      const { width: containerWidth, height: containerHeight } = containerRect;
-      let elementWidth = this._calculateElementWidth(containerWidth);
-      let elementHeight = this._calculateElementHeight(containerHeight);
-  
-      let { x, y } = this._calculateInitialPosition(elementsMap, containerWidth, containerHeight, elementWidth, elementHeight);
-  
-      if (this.layoutConfig.stretch) {
-        const stretchContext: StretchContext = {
-          x,
-          y,
-          width: elementWidth,
-          height: elementHeight,
-          elementsMap,
-          containerWidth,
-          containerHeight
-        };
-        
-        this._applyStretchConfigurations(stretchContext);
-        
-        x = stretchContext.x;
-        y = stretchContext.y;
-        elementWidth = stretchContext.width;
-        elementHeight = stretchContext.height;
-      }
-  
-      this._finalizeLayout(x, y, elementWidth, elementHeight);
+        const { width: containerWidth, height: containerHeight } = containerRect;
+        let elementWidth = this._calculateElementWidth(containerWidth);
+        let elementHeight = this._calculateElementHeight(containerHeight);
+
+        let { x, y } = this._calculateInitialPosition(elementsMap, containerWidth, containerHeight, elementWidth, elementHeight);
+
+        if (this.layoutConfig.stretch) {
+            const stretchContext: StretchContext = {
+                x,
+                y,
+                width: elementWidth,
+                height: elementHeight,
+                elementsMap,
+                containerWidth,
+                containerHeight
+            };
+            
+            this._applyStretchConfigurations(stretchContext);
+            
+            x = stretchContext.x;
+            y = stretchContext.y;
+            elementWidth = stretchContext.width;
+            elementHeight = stretchContext.height;
+        }
+
+        this._finalizeLayout(x, y, elementWidth, elementHeight);
     }
-  
+
     private _calculateElementWidth(containerWidth: number): number {
-      let width = this.intrinsicSize.width;
-      if (typeof this.layoutConfig.width === 'string' && this.layoutConfig.width.endsWith('%')) {
-        width = containerWidth * (parseFloat(this.layoutConfig.width) / 100);
-      }
-      return width;
+        let width = this.intrinsicSize.width;
+        if (typeof this.layoutConfig.width === 'string' && this.layoutConfig.width.endsWith('%')) {
+            width = containerWidth * (parseFloat(this.layoutConfig.width) / 100);
+        }
+        return width;
     }
-  
+
     private _calculateElementHeight(containerHeight: number): number {
-      let height = this.intrinsicSize.height;
-      if (typeof this.layoutConfig.height === 'string' && this.layoutConfig.height.endsWith('%')) {
-        height = containerHeight * (parseFloat(this.layoutConfig.height) / 100);
-      }
-      return height;
+        let height = this.intrinsicSize.height;
+        if (typeof this.layoutConfig.height === 'string' && this.layoutConfig.height.endsWith('%')) {
+            height = containerHeight * (parseFloat(this.layoutConfig.height) / 100);
+        }
+        return height;
     }
-  
+
     private _calculateInitialPosition(
-      elementsMap: Map<string, LayoutElement>, 
-      containerWidth: number, 
-      containerHeight: number,
-      elementWidth: number,
-      elementHeight: number
+        elementsMap: Map<string, LayoutElement>, 
+        containerWidth: number, 
+        containerHeight: number,
+        elementWidth: number,
+        elementHeight: number
     ): { x: number, y: number } {
-      let x = 0;
-      let y = 0;
-  
-      const anchorConfig = this.layoutConfig.anchor;
-      const anchorTo = anchorConfig?.anchorTo;
-      const anchorPoint = anchorConfig?.anchorPoint || 'topLeft';
-      const targetAnchorPoint = anchorConfig?.targetAnchorPoint || 'topLeft';
-  
-      if (!anchorTo || anchorTo === 'container') {
-        const { x: elementX, y: elementY } = this._anchorToContainer(
-          anchorPoint, 
-          targetAnchorPoint, 
-          elementWidth, 
-          elementHeight, 
-          containerWidth, 
-          containerHeight
-        );
-        x = elementX;
-        y = elementY;
-      } else {
-        const result = this._anchorToElement(
-          anchorTo, 
-          anchorPoint, 
-          targetAnchorPoint, 
-          elementWidth, 
-          elementHeight, 
-          elementsMap
-        );
-        
-        if (!result) {
-          this.layout.calculated = false;
-          return { x, y };
+        let x = 0;
+        let y = 0;
+
+        const anchorConfig = this.layoutConfig.anchor;
+        const anchorTo = anchorConfig?.anchorTo;
+        const anchorPoint = anchorConfig?.anchorPoint || 'topLeft';
+        const targetAnchorPoint = anchorConfig?.targetAnchorPoint || 'topLeft';
+
+        if (!anchorTo || anchorTo === 'container') {
+            const { x: elementX, y: elementY } = this._anchorToContainer(
+                anchorPoint, 
+                targetAnchorPoint, 
+                elementWidth, 
+                elementHeight, 
+                containerWidth, 
+                containerHeight
+            );
+            x = elementX;
+            y = elementY;
+        } else {
+            const result = this._anchorToElement(
+                anchorTo, 
+                anchorPoint, 
+                targetAnchorPoint, 
+                elementWidth, 
+                elementHeight, 
+                elementsMap
+            );
+            
+            if (!result) {
+                this.layout.calculated = false;
+                return { x, y };
+            }
+            
+            x = result.x;
+            y = result.y;
         }
-        
-        x = result.x;
-        y = result.y;
-      }
-  
-      x += this._parseOffset(this.layoutConfig.offsetX, containerWidth);
-      y += this._parseOffset(this.layoutConfig.offsetY, containerHeight);
-  
-      return { x, y };
+
+        x += this._parseOffset(this.layoutConfig.offsetX, containerWidth);
+        y += this._parseOffset(this.layoutConfig.offsetY, containerHeight);
+
+        return { x, y };
     }
-  
+
     private _anchorToContainer(
-      anchorPoint: string, 
-      targetAnchorPoint: string, 
-      elementWidth: number, 
-      elementHeight: number, 
-      containerWidth: number, 
-      containerHeight: number
+        anchorPoint: string, 
+        targetAnchorPoint: string, 
+        elementWidth: number, 
+        elementHeight: number, 
+        containerWidth: number, 
+        containerHeight: number
     ): { x: number, y: number } {
-      const elementAnchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
-      const containerTargetPos = this._getRelativeAnchorPosition(targetAnchorPoint, containerWidth, containerHeight); 
-  
-      const x = containerTargetPos.x - elementAnchorPos.x;
-      const y = containerTargetPos.y - elementAnchorPos.y;
-  
-      return { x, y };
+        const elementAnchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
+        const containerTargetPos = this._getRelativeAnchorPosition(targetAnchorPoint, containerWidth, containerHeight); 
+
+        const x = containerTargetPos.x - elementAnchorPos.x;
+        const y = containerTargetPos.y - elementAnchorPos.y;
+
+        return { x, y };
     }
-  
+
     private _anchorToElement(
-      anchorTo: string,
-      anchorPoint: string,
-      targetAnchorPoint: string,
-      elementWidth: number,
-      elementHeight: number,
-      elementsMap: Map<string, LayoutElement>
+        anchorTo: string,
+        anchorPoint: string,
+        targetAnchorPoint: string,
+        elementWidth: number,
+        elementHeight: number,
+        elementsMap: Map<string, LayoutElement>
     ): { x: number, y: number } | null {
-      const targetElement = elementsMap.get(anchorTo);
-      if (!targetElement || !targetElement.layout.calculated) {
-        console.warn(`[${this.id}] Anchor target '${anchorTo}' not found or not calculated yet.`);
-        return null;
-      }
-  
-      const elementAnchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
-      const targetElementPos = targetElement._getRelativeAnchorPosition(targetAnchorPoint);
-  
-      const x = targetElement.layout.x + targetElementPos.x - elementAnchorPos.x;
-      const y = targetElement.layout.y + targetElementPos.y - elementAnchorPos.y;
-  
-      return { x, y };
+        const targetElement = elementsMap.get(anchorTo);
+        if (!targetElement || !targetElement.layout.calculated) {
+            console.warn(`[${this.id}] Anchor target '${anchorTo}' not found or not calculated yet.`);
+            return null;
+        }
+
+        const elementAnchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
+        const targetElementPos = targetElement._getRelativeAnchorPosition(targetAnchorPoint);
+
+        const x = targetElement.layout.x + targetElementPos.x - elementAnchorPos.x;
+        const y = targetElement.layout.y + targetElementPos.y - elementAnchorPos.y;
+
+        return { x, y };
     }
-  
+
     private _applyStretchConfigurations(context: StretchContext): void {
-      const stretchConfig = this.layoutConfig.stretch;
-      if (!stretchConfig) return;
-      
-      this._processSingleStretch(
-        stretchConfig.stretchTo1, 
-        stretchConfig.targetStretchAnchorPoint1, 
-        stretchConfig.stretchPadding1,
-        context
-      );
-  
-      this._processSingleStretch(
-        stretchConfig.stretchTo2, 
-        stretchConfig.targetStretchAnchorPoint2, 
-        stretchConfig.stretchPadding2,
-        context
-      );
+        const stretchConfig = this.layoutConfig.stretch;
+        if (!stretchConfig) return;
+        
+        this._processSingleStretch(
+            stretchConfig.stretchTo1, 
+            stretchConfig.targetStretchAnchorPoint1, 
+            stretchConfig.stretchPadding1,
+            context
+        );
+
+        this._processSingleStretch(
+            stretchConfig.stretchTo2, 
+            stretchConfig.targetStretchAnchorPoint2, 
+            stretchConfig.stretchPadding2,
+            context
+        );
     }
-  
+
     private _finalizeLayout(x: number, y: number, width: number, height: number): void {
-      this.layout.x = x;
-      this.layout.y = y;
-      this.layout.width = Math.max(1, width);
-      this.layout.height = Math.max(1, height);
-      this.layout.calculated = true;
+        this.layout.x = x;
+        this.layout.y = y;
+        this.layout.width = Math.max(1, width);
+        this.layout.height = Math.max(1, height);
+        this.layout.calculated = true;
     }
-  
+
     private _processSingleStretch(
-      stretchTo: string | undefined, 
-      targetStretchAnchorPoint: string | undefined, 
-      stretchPadding: number | undefined,
-      context: StretchContext
+        stretchTo: string | undefined, 
+        targetStretchAnchorPoint: string | undefined, 
+        stretchPadding: number | undefined,
+        context: StretchContext
     ): void {
-      if (!stretchTo || !targetStretchAnchorPoint) return;
-      
-      const padding = stretchPadding ?? 0;
-      const isHorizontal = this._isHorizontalStretch(targetStretchAnchorPoint);
-      
-      if (isHorizontal) {
-        this._applyHorizontalStretch(context, stretchTo, targetStretchAnchorPoint, padding);
-      } else {
-        this._applyVerticalStretch(context, stretchTo, targetStretchAnchorPoint, padding);
-      }
+        if (!stretchTo || !targetStretchAnchorPoint) return;
+        
+        const padding = stretchPadding ?? 0;
+        const isHorizontal = this._isHorizontalStretch(targetStretchAnchorPoint);
+        
+        if (isHorizontal) {
+            this._applyHorizontalStretch(context, stretchTo, targetStretchAnchorPoint, padding);
+        } else {
+            this._applyVerticalStretch(context, stretchTo, targetStretchAnchorPoint, padding);
+        }
     }
-  
+
     private _isHorizontalStretch(targetStretchAnchorPoint: string): boolean {
-      return ['left', 'right'].some(dir => targetStretchAnchorPoint.toLowerCase().includes(dir));
+        return ['left', 'right'].some(dir => targetStretchAnchorPoint.toLowerCase().includes(dir));
     }
-  
+
     private _applyHorizontalStretch(
-      context: StretchContext,
-      stretchTo: string,
-      targetStretchAnchorPoint: string,
-      padding: number
+        context: StretchContext,
+        stretchTo: string,
+        targetStretchAnchorPoint: string,
+        padding: number
     ): void {
-      const { x: stretchedX, size: stretchedWidth } = this._applyStretch(
-        context.x, 
-        context.width, 
-        true,
-        stretchTo,
-        targetStretchAnchorPoint,
-        padding,
-        context.elementsMap,
-        context.containerWidth
-      );
-      
-      if (stretchedX !== undefined) context.x = stretchedX;
-      context.width = stretchedWidth;
+        const { x: stretchedX, size: stretchedWidth } = this._applyStretch(
+            context.x, 
+            context.width, 
+            true,
+            stretchTo,
+            targetStretchAnchorPoint,
+            padding,
+            context.elementsMap,
+            context.containerWidth
+        );
+        
+        if (stretchedX !== undefined) context.x = stretchedX;
+        context.width = stretchedWidth;
     }
-  
+
     private _applyVerticalStretch(
-      context: StretchContext,
-      stretchTo: string,
-      targetStretchAnchorPoint: string,
-      padding: number
+        context: StretchContext,
+        stretchTo: string,
+        targetStretchAnchorPoint: string,
+        padding: number
     ): void {
-      const { y: stretchedY, size: stretchedHeight } = this._applyStretch(
-        context.y, 
-        context.height, 
-        false,
-        stretchTo,
-        targetStretchAnchorPoint,
-        padding,
-        context.elementsMap,
-        context.containerHeight
-      );
-      
-      if (stretchedY !== undefined) context.y = stretchedY;
-      context.height = stretchedHeight;
+        const { y: stretchedY, size: stretchedHeight } = this._applyStretch(
+            context.y, 
+            context.height, 
+            false,
+            stretchTo,
+            targetStretchAnchorPoint,
+            padding,
+            context.elementsMap,
+            context.containerHeight
+        );
+        
+        if (stretchedY !== undefined) context.y = stretchedY;
+        context.height = stretchedHeight;
     }
-  
+
     private _getTargetCoordinate(
-      stretchTargetId: string, 
-      targetAnchorPoint: string, 
-      isHorizontal: boolean,
-      elementsMap: Map<string, LayoutElement>,
-      containerSize: number
+        stretchTargetId: string, 
+        targetAnchorPoint: string, 
+        isHorizontal: boolean,
+        elementsMap: Map<string, LayoutElement>,
+        containerSize: number
     ): number | null {
-      if (stretchTargetId === 'container') {
-        return this._getContainerEdgeCoordinate(targetAnchorPoint, isHorizontal, containerSize);
-      } else {
-        return this._getElementEdgeCoordinate(stretchTargetId, targetAnchorPoint, isHorizontal, elementsMap);
-      }
+        if (stretchTargetId === 'container') {
+            return this._getContainerEdgeCoordinate(targetAnchorPoint, isHorizontal, containerSize);
+        } else {
+            return this._getElementEdgeCoordinate(stretchTargetId, targetAnchorPoint, isHorizontal, elementsMap);
+        }
     }
-  
+
     private _getContainerEdgeCoordinate(
-      targetAnchorPoint: string, 
-      isHorizontal: boolean, 
-      containerSize: number
+        targetAnchorPoint: string, 
+        isHorizontal: boolean, 
+        containerSize: number
     ): number {
-      if (isHorizontal) {
-        if (targetAnchorPoint === 'left' || targetAnchorPoint.includes('Left')) return 0;
-        if (targetAnchorPoint === 'right' || targetAnchorPoint.includes('Right')) return containerSize;
-        if (targetAnchorPoint === 'center' || targetAnchorPoint.includes('Center')) return containerSize / 2;
-        return containerSize;
-      } else {
-        if (targetAnchorPoint === 'top' || targetAnchorPoint.includes('Top')) return 0;
-        if (targetAnchorPoint === 'bottom' || targetAnchorPoint.includes('Bottom')) return containerSize;
-        if (targetAnchorPoint === 'center' || targetAnchorPoint.includes('Center')) return containerSize / 2;
-        return containerSize;
-      }
+        if (isHorizontal) {
+            if (targetAnchorPoint === 'left' || targetAnchorPoint.includes('Left')) return 0;
+            if (targetAnchorPoint === 'right' || targetAnchorPoint.includes('Right')) return containerSize;
+            if (targetAnchorPoint === 'center' || targetAnchorPoint.includes('Center')) return containerSize / 2;
+            return containerSize;
+        } else {
+            if (targetAnchorPoint === 'top' || targetAnchorPoint.includes('Top')) return 0;
+            if (targetAnchorPoint === 'bottom' || targetAnchorPoint.includes('Bottom')) return containerSize;
+            if (targetAnchorPoint === 'center' || targetAnchorPoint.includes('Center')) return containerSize / 2;
+            return containerSize;
+        }
     }
-  
+
     private _getElementEdgeCoordinate(
-      stretchTargetId: string,
-      targetAnchorPoint: string,
-      isHorizontal: boolean,
-      elementsMap: Map<string, LayoutElement>
+        stretchTargetId: string,
+        targetAnchorPoint: string,
+        isHorizontal: boolean,
+        elementsMap: Map<string, LayoutElement>
     ): number | null {
-      const targetElement = elementsMap.get(stretchTargetId);
-      if (!targetElement || !targetElement.layout.calculated) {
-        console.warn(`[${this.id}] Stretch target '${stretchTargetId}' not found or not calculated yet.`);
-        return null; 
-      }
-      
-      const anchorPointToUse = this._mapSimpleDirectionToAnchorPoint(targetAnchorPoint, isHorizontal);
-      const targetRelativePos = targetElement._getRelativeAnchorPosition(anchorPointToUse);
-      
-      return isHorizontal
-        ? targetElement.layout.x + targetRelativePos.x
-        : targetElement.layout.y + targetRelativePos.y;
+        const targetElement = elementsMap.get(stretchTargetId);
+        if (!targetElement || !targetElement.layout.calculated) {
+            console.warn(`[${this.id}] Stretch target '${stretchTargetId}' not found or not calculated yet.`);
+            return null; 
+        }
+        
+        const anchorPointToUse = this._mapSimpleDirectionToAnchorPoint(targetAnchorPoint, isHorizontal);
+        const targetRelativePos = targetElement._getRelativeAnchorPosition(anchorPointToUse);
+        
+        return isHorizontal
+            ? targetElement.layout.x + targetRelativePos.x
+            : targetElement.layout.y + targetRelativePos.y;
     }
-  
+
     private _mapSimpleDirectionToAnchorPoint(direction: string, isHorizontal: boolean): string {
-      if (isHorizontal) {
-        if (direction === 'left') return 'centerLeft';
-        if (direction === 'right') return 'centerRight';
-        if (direction === 'center') return 'center';
-      } else {
-        if (direction === 'top') return 'topCenter';
-        if (direction === 'bottom') return 'bottomCenter';
-        if (direction === 'center') return 'center';
-      }
-      return direction;
+        if (isHorizontal) {
+            if (direction === 'left') return 'centerLeft';
+            if (direction === 'right') return 'centerRight';
+            if (direction === 'center') return 'center';
+        } else {
+            if (direction === 'top') return 'topCenter';
+            if (direction === 'bottom') return 'bottomCenter';
+            if (direction === 'center') return 'center';
+        }
+        return direction;
     }
-  
+
     private _applyStretch(
-      initialPosition: number, 
-      initialSize: number, 
-      isHorizontal: boolean,
-      stretchTo: string,
-      targetAnchorPoint: string,
-      padding: number,
-      elementsMap: Map<string, LayoutElement>,
-      containerSize: number
+        initialPosition: number, 
+        initialSize: number, 
+        isHorizontal: boolean,
+        stretchTo: string,
+        targetAnchorPoint: string,
+        padding: number,
+        elementsMap: Map<string, LayoutElement>,
+        containerSize: number
     ): { x?: number, y?: number, size: number } {
-      
-      const targetCoord = this._getTargetCoordinate(
-        stretchTo, 
-        targetAnchorPoint, 
-        isHorizontal, 
-        elementsMap, 
-        containerSize
-      );
-  
-      if (targetCoord === null) {
-        return isHorizontal ? { x: initialPosition, size: initialSize } : { y: initialPosition, size: initialSize };
-      }
-  
-      const myAnchorPoint = this._getCloserEdge(initialPosition, initialSize, targetCoord, isHorizontal);
-      const myRelativePos = this._getRelativeAnchorPosition(myAnchorPoint, initialSize, initialSize);
-      const currentCoord = initialPosition + (isHorizontal ? myRelativePos.x : myRelativePos.y);
-      
-      let delta = targetCoord - currentCoord;
-      delta = this._applyPadding(delta, myAnchorPoint, padding, containerSize);
-      
-      const result = this._applyStretchToEdge(
-        initialPosition, 
-        initialSize, 
-        delta, 
-        myAnchorPoint, 
-        isHorizontal
-      );
-      
-      return result;
+        
+        const targetCoord = this._getTargetCoordinate(
+            stretchTo, 
+            targetAnchorPoint, 
+            isHorizontal, 
+            elementsMap, 
+            containerSize
+        );
+
+        if (targetCoord === null) {
+            return isHorizontal ? { x: initialPosition, size: initialSize } : { y: initialPosition, size: initialSize };
+        }
+
+        const myAnchorPoint = this._getCloserEdge(initialPosition, initialSize, targetCoord, isHorizontal);
+        const myRelativePos = this._getRelativeAnchorPosition(myAnchorPoint, initialSize, initialSize);
+        const currentCoord = initialPosition + (isHorizontal ? myRelativePos.x : myRelativePos.y);
+        
+        let delta = targetCoord - currentCoord;
+        delta = this._applyPadding(delta, myAnchorPoint, padding, containerSize);
+        
+        const result = this._applyStretchToEdge(
+            initialPosition, 
+            initialSize, 
+            delta, 
+            myAnchorPoint, 
+            isHorizontal
+        );
+        
+        return result;
     }
-  
+
     private _applyPadding(
-      delta: number, 
-      anchorPoint: string, 
-      padding: number, 
-      containerSize: number
+        delta: number, 
+        anchorPoint: string, 
+        padding: number, 
+        containerSize: number
     ): number {
-      const paddingOffset = this._parseOffset(padding, containerSize);
-      
-      if (anchorPoint.includes('Left') || anchorPoint.includes('Top')) {
-        return delta - paddingOffset;
-      } else {
-        return delta + paddingOffset;
-      }
+        const paddingOffset = this._parseOffset(padding, containerSize);
+        
+        if (anchorPoint.includes('Left') || anchorPoint.includes('Top')) {
+            return delta - paddingOffset;
+        } else {
+            return delta + paddingOffset;
+        }
     }
-  
+
     private _applyStretchToEdge(
-      initialPosition: number,
-      initialSize: number,
-      delta: number,
-      anchorPoint: string,
-      isHorizontal: boolean
+        initialPosition: number,
+        initialSize: number,
+        delta: number,
+        anchorPoint: string,
+        isHorizontal: boolean
     ): { x?: number, y?: number, size: number } {
-      let newPosition = initialPosition;
-      let newSize = initialSize;
-      
-      if (isHorizontal) {
-        if (anchorPoint === 'centerRight') {
-          newSize += delta;
-        } else {
-          if (delta < initialSize) {
-            newPosition += delta;
-            newSize -= delta;
-          } else {
-            newPosition += initialSize - 1;
-            newSize = 1;
-          }
-        }
+        let newPosition = initialPosition;
+        let newSize = initialSize;
         
-        newSize = Math.max(1, newSize);
-        return { x: newPosition, size: newSize };
-      } else {
-        if (anchorPoint === 'bottomCenter') {
-          newSize += delta;
+        if (isHorizontal) {
+            if (anchorPoint === 'centerRight') {
+                newSize += delta;
+            } else {
+                if (delta < initialSize) {
+                    newPosition += delta;
+                    newSize -= delta;
+                } else {
+                    newPosition += initialSize - 1;
+                    newSize = 1;
+                }
+            }
+            
+            newSize = Math.max(1, newSize);
+            return { x: newPosition, size: newSize };
         } else {
-          if (delta < initialSize) {
-            newPosition += delta;
-            newSize -= delta;
-          } else {
-            newPosition += initialSize - 1;
-            newSize = 1;
-          }
+            if (anchorPoint === 'bottomCenter') {
+                newSize += delta;
+            } else {
+                if (delta < initialSize) {
+                    newPosition += delta;
+                    newSize -= delta;
+                } else {
+                    newPosition += initialSize - 1;
+                    newSize = 1;
+                }
+            }
+            
+            newSize = Math.max(1, newSize);
+            return { y: newPosition, size: newSize };
         }
-        
-        newSize = Math.max(1, newSize);
-        return { y: newPosition, size: newSize };
-      }
     }
-  
+
     private _getCloserEdge(
-      initialPosition: number, 
-      initialSize: number, 
-      targetCoord: number, 
-      isHorizontal: boolean
+        initialPosition: number, 
+        initialSize: number, 
+        targetCoord: number, 
+        isHorizontal: boolean
     ): string {
-      if (isHorizontal) {
-        const leftEdge = initialPosition;
-        const rightEdge = initialPosition + initialSize;
-        return (Math.abs(targetCoord - leftEdge) <= Math.abs(targetCoord - rightEdge)) ? 'centerLeft' : 'centerRight';
-      } else {
-        const topEdge = initialPosition;
-        const bottomEdge = initialPosition + initialSize;
-        return (Math.abs(targetCoord - topEdge) <= Math.abs(targetCoord - bottomEdge)) ? 'topCenter' : 'bottomCenter';
-      }
-    }
-  
-    private _parseOffset(offset: string | number | undefined, containerDimension: number): number {
-      if (offset === undefined) return 0;
-      if (typeof offset === 'number') return offset;
-      if (typeof offset === 'string') {
-        if (offset.endsWith('%')) {
-          return (parseFloat(offset) / 100) * containerDimension;
+        if (isHorizontal) {
+            const leftEdge = initialPosition;
+            const rightEdge = initialPosition + initialSize;
+            return (Math.abs(targetCoord - leftEdge) <= Math.abs(targetCoord - rightEdge)) ? 'centerLeft' : 'centerRight';
+        } else {
+            const topEdge = initialPosition;
+            const bottomEdge = initialPosition + initialSize;
+            return (Math.abs(targetCoord - topEdge) <= Math.abs(targetCoord - bottomEdge)) ? 'topCenter' : 'bottomCenter';
         }
-        return parseFloat(offset);
-      }
-      return 0;
     }
-  
+
+    private _parseOffset(offset: string | number | undefined, containerDimension: number): number {
+        if (offset === undefined) return 0;
+        if (typeof offset === 'number') return offset;
+        if (typeof offset === 'string') {
+            if (offset.endsWith('%')) {
+                return (parseFloat(offset) / 100) * containerDimension;
+            }
+            return parseFloat(offset);
+        }
+        return 0;
+    }
+
     _getRelativeAnchorPosition(anchorPoint: string, width?: number, height?: number): { x: number; y: number } {
-      const w = width !== undefined ? width : this.layout.width;
-      const h = height !== undefined ? height : this.layout.height;
-      
-      switch (anchorPoint) {
-        case 'topLeft': return { x: 0, y: 0 };
-        case 'topCenter': return { x: w / 2, y: 0 };
-        case 'topRight': return { x: w, y: 0 };
-        case 'centerLeft': return { x: 0, y: h / 2 };
-        case 'center': return { x: w / 2, y: h / 2 };
-        case 'centerRight': return { x: w, y: h / 2 };
-        case 'bottomLeft': return { x: 0, y: h };
-        case 'bottomCenter': return { x: w / 2, y: h };
-        case 'bottomRight': return { x: w, y: h };
-        default: 
-          console.warn(`Unknown anchor point: ${anchorPoint}. Defaulting to topLeft.`);
-          return { x: 0, y: 0 };
-      }
+        const w = width !== undefined ? width : this.layout.width;
+        const h = height !== undefined ? height : this.layout.height;
+        
+        switch (anchorPoint) {
+            case 'topLeft': return { x: 0, y: 0 };
+            case 'topCenter': return { x: w / 2, y: 0 };
+            case 'topRight': return { x: w, y: 0 };
+            case 'centerLeft': return { x: 0, y: h / 2 };
+            case 'center': return { x: w / 2, y: h / 2 };
+            case 'centerRight': return { x: w, y: h / 2 };
+            case 'bottomLeft': return { x: 0, y: h };
+            case 'bottomCenter': return { x: w / 2, y: h };
+            case 'bottomRight': return { x: w, y: h };
+            default: 
+                console.warn(`Unknown anchor point: ${anchorPoint}. Defaulting to topLeft.`);
+                return { x: 0, y: 0 };
+        }
     }
-  
+
     abstract render(): SVGTemplateResult | null;
-  
+
     animate(property: string, value: any, duration: number = 0.5): void {
-      if (!this.layout.calculated) return;
-      
-      const element = document.getElementById(this.id);
-      if (!element) return;
-      
-      const animProps: { [key: string]: any } = {};
-      animProps[property] = value;
-      
-      gsap.to(element, {
-        duration,
-        ...animProps,
-        ease: "power2.out"
-      });
+        if (!this.layout.calculated) return;
+        
+        const element = document.getElementById(this.id);
+        if (!element) return;
+        
+        const animProps: { [key: string]: any } = {};
+        animProps[property] = value;
+        
+        gsap.to(element, {
+            duration,
+            ...animProps,
+            ease: "power2.out"
+        });
     }
-  
+
     /**
      * Formats a color value from different possible input formats
      * @param color - Color in string format or RGB array
      * @returns Formatted color string or undefined
      */
     protected _formatColorValue(color: any): string | undefined {
-      if (typeof color === 'string') {
-        return color;
-      }
-      if (Array.isArray(color) && color.length === 3 && color.every(num => typeof num === 'number')) {
-        return `rgb(${color[0]},${color[1]},${color[2]})`;
-      }
-      return undefined;
+        if (typeof color === 'string') {
+            return color;
+        }
+        if (Array.isArray(color) && color.length === 3 && color.every(num => typeof num === 'number')) {
+            return `rgb(${color[0]},${color[1]},${color[2]})`;
+        }
+        return undefined;
     }
-  
+
+    /**
+     * Resolve a color value that might be static or dynamic (entity-based)
+     */
+    protected _resolveDynamicColor(colorConfig: ColorValue): string | undefined {
+        if (isDynamicColorConfig(colorConfig)) {
+            return this._getDynamicColorValue(colorConfig);
+        }
+        return this._formatColorValue(colorConfig);
+    }
+
+    /**
+     * Get color value from entity state based on dynamic configuration
+     */
+    private _getDynamicColorValue(config: DynamicColorConfig): string | undefined {
+        if (!this.hass) {
+            return this._formatColorValue(config.default);
+        }
+
+        const entity = this.hass.states[config.entity];
+        if (!entity) {
+            return this._formatColorValue(config.default);
+        }
+
+        // Track this entity for change detection
+        this._monitoredEntities.add(config.entity);
+        this._lastEntityStates.set(config.entity, entity);
+
+        // Get the value to map
+        const value = config.attribute ? entity.attributes[config.attribute] : entity.state;
+        
+        // Handle interpolation for numeric values
+        if (config.interpolate && typeof value === 'number') {
+            return this._interpolateColor(value, config);
+        }
+
+        // Direct mapping
+        const mappedColor = config.mapping[value] || config.default;
+        return this._formatColorValue(mappedColor);
+    }
+
+    /**
+     * Interpolate color for numeric values
+     */
+    private _interpolateColor(value: number, config: DynamicColorConfig): string | undefined {
+        const mappingKeys = Object.keys(config.mapping)
+            .map(k => parseFloat(k))
+            .filter(k => !isNaN(k))
+            .sort((a, b) => a - b);
+
+        if (mappingKeys.length === 0) {
+            return this._formatColorValue(config.default);
+        }
+
+        // Find the two closest values for interpolation
+        let lowerKey = mappingKeys[0];
+        let upperKey = mappingKeys[mappingKeys.length - 1];
+
+        for (let i = 0; i < mappingKeys.length - 1; i++) {
+            if (value >= mappingKeys[i] && value <= mappingKeys[i + 1]) {
+                lowerKey = mappingKeys[i];
+                upperKey = mappingKeys[i + 1];
+                break;
+            }
+        }
+
+        // If exact match, return that color
+        if (config.mapping[value.toString()]) {
+            return this._formatColorValue(config.mapping[value.toString()]);
+        }
+
+        // For now, just return the nearest value (true interpolation can be added later)
+        const lowerDiff = Math.abs(value - lowerKey);
+        const upperDiff = Math.abs(value - upperKey);
+        const nearestKey = lowerDiff <= upperDiff ? lowerKey : upperKey;
+        
+        return this._formatColorValue(config.mapping[nearestKey.toString()] || config.default);
+    }
+
+    /**
+     * Check if any monitored entities have changed and trigger update if needed
+     */
+    public checkEntityChanges(hass: HomeAssistant): boolean {
+        if (!this.hass || this._monitoredEntities.size === 0) {
+            return false;
+        }
+
+        let hasChanges = false;
+        
+        for (const entityId of this._monitoredEntities) {
+            const currentEntity = hass.states[entityId];
+            const lastEntity = this._lastEntityStates.get(entityId);
+            
+            // Check if entity state or attributes changed
+            if (!currentEntity || !lastEntity || 
+                currentEntity.state !== lastEntity.state ||
+                JSON.stringify(currentEntity.attributes) !== JSON.stringify(lastEntity.attributes)) {
+                hasChanges = true;
+                this._lastEntityStates.set(entityId, currentEntity);
+            }
+        }
+
+        return hasChanges;
+    }
+
+    /**
+     * Clear monitored entities (called before recalculating dynamic colors)
+     */
+    public clearMonitoredEntities(): void {
+        this._monitoredEntities.clear();
+        this._lastEntityStates.clear();
+    }
+
     updateHass(hass?: HomeAssistant): void {
         this.hass = hass;
         if (this.button) {
             this.button.updateHass(hass);
         }
     }
-  }
+}
 ```
 
 ## File: src/layout/elements/endcap.spec.ts
@@ -14263,16 +15072,11 @@ import { Button } from "./button.js";
 
 export class RectangleElement extends LayoutElement {
   button?: Button;
+  private _lastFillColor?: string;
 
   constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
     super(id, props, layoutConfig, hass, requestUpdateCallback);
     this.resetLayout();
-    
-    // Initialize button if needed
-    const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
-    if (buttonConfig?.enabled) {
-      this.button = new Button(id, props, hass, requestUpdateCallback);
-    }
   }
 
   /**
@@ -14305,7 +15109,46 @@ export class RectangleElement extends LayoutElement {
     const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
     const pathData = generateRectanglePath(x, y, width, height, rx);
     
+    // Resolve fill color (dynamic or static)
+    let fillColor;
+    if (this.props.fill !== undefined) {
+      // Try dynamic color resolution first, then fallback to static
+      fillColor = this._resolveDynamicColor(this.props.fill) || this.props.fill;
+    } else {
+      // Default fill when no fill is specified
+      fillColor = 'none';
+    }
+    
+    // Check if color changed and apply fade transition (only for dynamic colors)
+    if (this._lastFillColor && this._lastFillColor !== fillColor && this._resolveDynamicColor(this.props.fill)) {
+      // Schedule animation after render
+      setTimeout(() => {
+        const element = document.getElementById(this.id);
+        if (element) {
+          element.style.transition = 'fill 0.3s ease-in-out';
+          element.style.fill = fillColor;
+        }
+      }, 0);
+    }
+    this._lastFillColor = fillColor;
+
     if (isButton && this.button) {
+      // Create a modified props object with resolved dynamic colors for the button
+      const resolvedProps = { ...this.props };
+      
+      // Resolve dynamic fill color for button
+      if (this.props.fill !== undefined) {
+        resolvedProps.fill = fillColor;
+      }
+      
+      // Resolve dynamic stroke color for button
+      if (this.props.stroke !== undefined) {
+        resolvedProps.stroke = this._resolveDynamicColor(this.props.stroke) || this.props.stroke;
+      }
+      
+      // Update button props with resolved colors
+      (this.button as any)._props = resolvedProps;
+      
       return this.button.createButton(
         pathData,
         x,
@@ -14319,19 +15162,18 @@ export class RectangleElement extends LayoutElement {
         }
       );
     } else {
-      const fill = this.props.fill ?? 'none';
       const stroke = this.props.stroke ?? 'none';
       const strokeWidth = this.props.strokeWidth ?? '0';
       
       return svg`
-          <path
-            id=${this.id}
-            d=${pathData}
-            fill=${fill}
-            stroke=${stroke}
-            stroke-width=${strokeWidth}
-          />
-        `;
+        <path
+          id=${this.id}
+          d=${pathData}
+          fill=${fillColor}
+          stroke=${stroke}
+          stroke-width=${strokeWidth}
+        />
+      `;
     }
   }
 }
@@ -17476,7 +18318,7 @@ export class LcarsCard extends LitElement {
   private _containerRect?: DOMRect;
   private _lastConfig?: LcarsCardConfig;
   private _layoutCalculationPending: boolean = false;
-  private _hasRenderedOnce: boolean = false;
+  @state() private _hasRenderedOnce: boolean = false;
   @state() private _hasMeasuredRenderedText: boolean = false;
   private _fontsLoaded: boolean = false;
   private _fontLoadAttempts: number = 0;
@@ -17489,6 +18331,10 @@ export class LcarsCard extends LitElement {
   private _visibilityChangeTimeout?: ReturnType<typeof setTimeout>;
   private _isForceRecalculating: boolean = false;
   private _visibilityChangeCount: number = 0;
+  
+  // Dynamic color monitoring
+  private _lastHassStates?: { [entityId: string]: any };
+  private _dynamicColorCheckScheduled: boolean = false;
 
   static styles = [editorStyles];
 
@@ -17681,34 +18527,45 @@ export class LcarsCard extends LitElement {
                 this._performLayoutCalculation(this._containerRect);
             } else {
                 console.warn("[_scheduleInitialCalculation] Initial Rect still zero dimensions. Relying on ResizeObserver.");
+                // Set flag to try again on next update cycle
+                this._layoutCalculationPending = true;
+                this.requestUpdate();
             }
+        } else {
+            console.warn("[_scheduleInitialCalculation] Container element not found.");
+            // Schedule retry
+            setTimeout(() => this._scheduleInitialCalculation(), 50);
         }
     } else {
          if(this._layoutCalculationPending){
-            this.requestUpdate(); 
+            this._performLayoutCalculation(this._containerRect);
          }
     }
   }
 
   protected updated(changedProperties: Map<string | number | symbol, unknown>): void {
-      super.updated(changedProperties);
+    const hasHassChanged = changedProperties.has('hass');
+    const hasConfigChanged = changedProperties.has('_config');
 
-      let didFullRecalc = false;
-      if (this._layoutCalculationPending && this._containerRect && this._config) {
-          this._performLayoutCalculation(this._containerRect);
-          didFullRecalc = true;
-      }
+    if (hasConfigChanged || hasHassChanged) {
+      this._updateLayoutEngineWithHass();
+    }
 
-      if (didFullRecalc) {
-          this._elementStateNeedsRefresh = false; 
-      } else if (this._elementStateNeedsRefresh && this._containerRect && this._config && this._layoutEngine.layoutGroups.length > 0) {
-          this._refreshElementRenders();
+    if (hasConfigChanged) {
+      if (this._containerRect) {
+        this._performLayoutCalculation(this._containerRect);
       }
-      
-      if (!this._hasMeasuredRenderedText && this._hasRenderedOnce && this._containerRect) {
-          this._hasMeasuredRenderedText = true;
-          requestAnimationFrame(() => this._measureAndRecalc());
-      }
+    }
+
+    // Handle dynamic color changes
+    if (hasHassChanged && this.hass && this._lastHassStates) {
+      this._checkDynamicColorChanges();
+    }
+
+    // Store current hass states for next comparison
+    if (this.hass) {
+      this._lastHassStates = { ...this.hass.states };
+    }
   }
   
   private _performLayoutCalculation(rect: DOMRect): void {
@@ -17737,6 +18594,13 @@ export class LcarsCard extends LitElement {
     groups.forEach((group: Group) => { 
       this._layoutEngine.addGroup(group); 
     });
+
+    // Clear all entity monitoring before recalculating layout
+    for (const group of this._layoutEngine.layoutGroups) {
+      for (const element of group.elements) {
+        element.clearMonitoredEntities();
+      }
+    }
 
     // Calculate layout using the available width and dynamicHeight option
     const inputRect = new DOMRect(rect.x, rect.y, rect.width, rect.height);
@@ -18007,6 +18871,20 @@ export class LcarsCard extends LitElement {
 
       if (this._layoutCalculationPending && this._layoutElementTemplates.length === 0 && this._hasRenderedOnce) {
            svgContent = svg`<text x="10" y="20" fill="orange">Calculating layout...</text>`;
+           
+           // Log debug info
+           console.warn(`[RENDER] Showing 'calculating layout' - pending: ${this._layoutCalculationPending}, templates: ${this._layoutElementTemplates.length}, hasRendered: ${this._hasRenderedOnce}, containerRect: ${this._containerRect ? 'available' : 'missing'}`);
+           
+           // Safety timeout to prevent getting stuck in calculating state
+           setTimeout(() => {
+             if (this._layoutCalculationPending) {
+               console.warn("Layout calculation seems stuck, forcing retry...");
+               this._layoutCalculationPending = false;
+               if (this._containerRect) {
+                 this._performLayoutCalculation(this._containerRect);
+               }
+             }
+           }, 3000); // 3 second timeout
       }
     }
 
@@ -18145,6 +19023,44 @@ export class LcarsCard extends LitElement {
       subtree: true,
       attributeFilter: ['class']
     });
+  }
+
+  private _updateLayoutEngineWithHass(): void {
+    // Update all layout elements with new hass instance
+    for (const group of this._layoutEngine.layoutGroups) {
+      for (const element of group.elements) {
+        element.updateHass(this.hass);
+      }
+    }
+  }
+
+  private _checkDynamicColorChanges(): void {
+    if (this._dynamicColorCheckScheduled) return;
+    
+    this._dynamicColorCheckScheduled = true;
+    
+    // Use longer delay to reduce frequency of checks
+    setTimeout(() => {
+      this._dynamicColorCheckScheduled = false;
+      
+      let needsRefresh = false;
+      
+      // Check all layout elements for entity changes
+      for (const group of this._layoutEngine.layoutGroups) {
+        for (const element of group.elements) {
+          if (element.checkEntityChanges(this.hass!)) {
+            needsRefresh = true;
+            // Break early since we already know we need to refresh
+            break;
+          }
+        }
+        if (needsRefresh) break; // Break outer loop too
+      }
+      
+      if (needsRefresh) {
+        this._refreshElementRenders();
+      }
+    }, 100); // Increased delay from 0ms to 100ms to reduce frequency
   }
 }
 ```
@@ -18618,6 +19534,21 @@ declare global {
 }
 
 export {};
+
+// Dynamic Color Configuration Types
+export interface DynamicColorConfig {
+  entity: string;
+  attribute?: string; // defaults to 'state' 
+  mapping: Record<string, any>; // entity value -> color
+  default?: any; // fallback color
+  interpolate?: boolean; // for numeric values like temperature
+}
+
+export type ColorValue = string | number[] | DynamicColorConfig;
+
+export function isDynamicColorConfig(value: any): value is DynamicColorConfig {
+  return value && typeof value === 'object' && 'entity' in value && 'mapping' in value;
+}
 ```
 
 ## File: src/utils/fontmetrics.d.ts

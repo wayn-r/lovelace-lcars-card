@@ -118,7 +118,7 @@ export class LcarsCard extends LitElement {
   private _containerRect?: DOMRect;
   private _lastConfig?: LcarsCardConfig;
   private _layoutCalculationPending: boolean = false;
-  private _hasRenderedOnce: boolean = false;
+  @state() private _hasRenderedOnce: boolean = false;
   @state() private _hasMeasuredRenderedText: boolean = false;
   private _fontsLoaded: boolean = false;
   private _fontLoadAttempts: number = 0;
@@ -131,6 +131,10 @@ export class LcarsCard extends LitElement {
   private _visibilityChangeTimeout?: ReturnType<typeof setTimeout>;
   private _isForceRecalculating: boolean = false;
   private _visibilityChangeCount: number = 0;
+  
+  // Dynamic color monitoring
+  private _lastHassStates?: { [entityId: string]: any };
+  private _dynamicColorCheckScheduled: boolean = false;
 
   static styles = [editorStyles];
 
@@ -323,34 +327,45 @@ export class LcarsCard extends LitElement {
                 this._performLayoutCalculation(this._containerRect);
             } else {
                 console.warn("[_scheduleInitialCalculation] Initial Rect still zero dimensions. Relying on ResizeObserver.");
+                // Set flag to try again on next update cycle
+                this._layoutCalculationPending = true;
+                this.requestUpdate();
             }
+        } else {
+            console.warn("[_scheduleInitialCalculation] Container element not found.");
+            // Schedule retry
+            setTimeout(() => this._scheduleInitialCalculation(), 50);
         }
     } else {
          if(this._layoutCalculationPending){
-            this.requestUpdate(); 
+            this._performLayoutCalculation(this._containerRect);
          }
     }
   }
 
   protected updated(changedProperties: Map<string | number | symbol, unknown>): void {
-      super.updated(changedProperties);
+    const hasHassChanged = changedProperties.has('hass');
+    const hasConfigChanged = changedProperties.has('_config');
 
-      let didFullRecalc = false;
-      if (this._layoutCalculationPending && this._containerRect && this._config) {
-          this._performLayoutCalculation(this._containerRect);
-          didFullRecalc = true;
-      }
+    if (hasConfigChanged || hasHassChanged) {
+      this._updateLayoutEngineWithHass();
+    }
 
-      if (didFullRecalc) {
-          this._elementStateNeedsRefresh = false; 
-      } else if (this._elementStateNeedsRefresh && this._containerRect && this._config && this._layoutEngine.layoutGroups.length > 0) {
-          this._refreshElementRenders();
+    if (hasConfigChanged) {
+      if (this._containerRect) {
+        this._performLayoutCalculation(this._containerRect);
       }
-      
-      if (!this._hasMeasuredRenderedText && this._hasRenderedOnce && this._containerRect) {
-          this._hasMeasuredRenderedText = true;
-          requestAnimationFrame(() => this._measureAndRecalc());
-      }
+    }
+
+    // Handle dynamic color changes
+    if (hasHassChanged && this.hass && this._lastHassStates) {
+      this._checkDynamicColorChanges();
+    }
+
+    // Store current hass states for next comparison
+    if (this.hass) {
+      this._lastHassStates = { ...this.hass.states };
+    }
   }
   
   private _performLayoutCalculation(rect: DOMRect): void {
@@ -379,6 +394,13 @@ export class LcarsCard extends LitElement {
     groups.forEach((group: Group) => { 
       this._layoutEngine.addGroup(group); 
     });
+
+    // Clear all entity monitoring before recalculating layout
+    for (const group of this._layoutEngine.layoutGroups) {
+      for (const element of group.elements) {
+        element.clearMonitoredEntities();
+      }
+    }
 
     // Calculate layout using the available width and dynamicHeight option
     const inputRect = new DOMRect(rect.x, rect.y, rect.width, rect.height);
@@ -649,6 +671,20 @@ export class LcarsCard extends LitElement {
 
       if (this._layoutCalculationPending && this._layoutElementTemplates.length === 0 && this._hasRenderedOnce) {
            svgContent = svg`<text x="10" y="20" fill="orange">Calculating layout...</text>`;
+           
+           // Log debug info
+           console.warn(`[RENDER] Showing 'calculating layout' - pending: ${this._layoutCalculationPending}, templates: ${this._layoutElementTemplates.length}, hasRendered: ${this._hasRenderedOnce}, containerRect: ${this._containerRect ? 'available' : 'missing'}`);
+           
+           // Safety timeout to prevent getting stuck in calculating state
+           setTimeout(() => {
+             if (this._layoutCalculationPending) {
+               console.warn("Layout calculation seems stuck, forcing retry...");
+               this._layoutCalculationPending = false;
+               if (this._containerRect) {
+                 this._performLayoutCalculation(this._containerRect);
+               }
+             }
+           }, 3000); // 3 second timeout
       }
     }
 
@@ -787,5 +823,43 @@ export class LcarsCard extends LitElement {
       subtree: true,
       attributeFilter: ['class']
     });
+  }
+
+  private _updateLayoutEngineWithHass(): void {
+    // Update all layout elements with new hass instance
+    for (const group of this._layoutEngine.layoutGroups) {
+      for (const element of group.elements) {
+        element.updateHass(this.hass);
+      }
+    }
+  }
+
+  private _checkDynamicColorChanges(): void {
+    if (this._dynamicColorCheckScheduled) return;
+    
+    this._dynamicColorCheckScheduled = true;
+    
+    // Use longer delay to reduce frequency of checks
+    setTimeout(() => {
+      this._dynamicColorCheckScheduled = false;
+      
+      let needsRefresh = false;
+      
+      // Check all layout elements for entity changes
+      for (const group of this._layoutEngine.layoutGroups) {
+        for (const element of group.elements) {
+          if (element.checkEntityChanges(this.hass!)) {
+            needsRefresh = true;
+            // Break early since we already know we need to refresh
+            break;
+          }
+        }
+        if (needsRefresh) break; // Break outer loop too
+      }
+      
+      if (needsRefresh) {
+        this._refreshElementRenders();
+      }
+    }, 100); // Increased delay from 0ms to 100ms to reduce frequency
   }
 }

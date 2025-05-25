@@ -5,19 +5,19 @@ exports[`RectangleElement > render > Non-Button Rendering > should handle corner
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+        <path
+          id=",
     "
-            d=",
+          d=",
     "
-            fill=",
+          fill=",
     "
-            stroke=",
+          stroke=",
     "
-            stroke-width=",
+          stroke-width=",
     "
-          />
-        ",
+        />
+      ",
   ],
   "values": [
     "rect-cornerRadius",
@@ -108,19 +108,19 @@ exports[`RectangleElement > render > Non-Button Rendering > should prioritize rx
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+        <path
+          id=",
     "
-            d=",
+          d=",
     "
-            fill=",
+          fill=",
     "
-            stroke=",
+          stroke=",
     "
-            stroke-width=",
+          stroke-width=",
     "
-          />
-        ",
+        />
+      ",
   ],
   "values": [
     "rect-rx-priority",
@@ -137,19 +137,19 @@ exports[`RectangleElement > render > Non-Button Rendering > should render a basi
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+        <path
+          id=",
     "
-            d=",
+          d=",
     "
-            fill=",
+          fill=",
     "
-            stroke=",
+          stroke=",
     "
-            stroke-width=",
+          stroke-width=",
     "
-          />
-        ",
+        />
+      ",
   ],
   "values": [
     "rect-default-props",
@@ -166,19 +166,19 @@ exports[`RectangleElement > render > Non-Button Rendering > should render with s
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+        <path
+          id=",
     "
-            d=",
+          d=",
     "
-            fill=",
+          fill=",
     "
-            stroke=",
+          stroke=",
     "
-            stroke-width=",
+          stroke-width=",
     "
-          />
-        ",
+        />
+      ",
   ],
   "values": [
     "rect-styled",

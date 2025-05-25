@@ -228,7 +228,15 @@ describe('Fill Property', () => {
     const prop = new Fill();
     testCommonProperties(prop, 'fill', 'Fill Color', 'props.fill', PropertyGroup.APPEARANCE, Layout.HALF);
     it('should return correct schema for color_rgb selector', () => {
-        expect(prop.getSchema()).toEqual({ name: 'fill', label: 'Fill Color', selector: { color_rgb: {} } });
+        expect(prop.getSchema()).toEqual({ 
+            name: 'fill', 
+            label: 'Fill Color', 
+            selector: { 
+                color_rgb: {},
+                __dynamic_color_support: true
+            },
+            type: 'custom'
+        });
     });
 
     describe('formatValueForForm', () => {

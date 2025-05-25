@@ -8,16 +8,11 @@ import { Button } from "./button.js";
 
 export class RectangleElement extends LayoutElement {
   button?: Button;
+  private _lastFillColor?: string;
 
   constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void) {
     super(id, props, layoutConfig, hass, requestUpdateCallback);
     this.resetLayout();
-    
-    // Initialize button if needed
-    const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
-    if (buttonConfig?.enabled) {
-      this.button = new Button(id, props, hass, requestUpdateCallback);
-    }
   }
 
   /**
@@ -50,7 +45,46 @@ export class RectangleElement extends LayoutElement {
     const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
     const pathData = generateRectanglePath(x, y, width, height, rx);
     
+    // Resolve fill color (dynamic or static)
+    let fillColor;
+    if (this.props.fill !== undefined) {
+      // Try dynamic color resolution first, then fallback to static
+      fillColor = this._resolveDynamicColor(this.props.fill) || this.props.fill;
+    } else {
+      // Default fill when no fill is specified
+      fillColor = 'none';
+    }
+    
+    // Check if color changed and apply fade transition (only for dynamic colors)
+    if (this._lastFillColor && this._lastFillColor !== fillColor && this._resolveDynamicColor(this.props.fill)) {
+      // Schedule animation after render
+      setTimeout(() => {
+        const element = document.getElementById(this.id);
+        if (element) {
+          element.style.transition = 'fill 0.3s ease-in-out';
+          element.style.fill = fillColor;
+        }
+      }, 0);
+    }
+    this._lastFillColor = fillColor;
+
     if (isButton && this.button) {
+      // Create a modified props object with resolved dynamic colors for the button
+      const resolvedProps = { ...this.props };
+      
+      // Resolve dynamic fill color for button
+      if (this.props.fill !== undefined) {
+        resolvedProps.fill = fillColor;
+      }
+      
+      // Resolve dynamic stroke color for button
+      if (this.props.stroke !== undefined) {
+        resolvedProps.stroke = this._resolveDynamicColor(this.props.stroke) || this.props.stroke;
+      }
+      
+      // Update button props with resolved colors
+      (this.button as any)._props = resolvedProps;
+      
       return this.button.createButton(
         pathData,
         x,
@@ -64,19 +98,18 @@ export class RectangleElement extends LayoutElement {
         }
       );
     } else {
-      const fill = this.props.fill ?? 'none';
       const stroke = this.props.stroke ?? 'none';
       const strokeWidth = this.props.strokeWidth ?? '0';
       
       return svg`
-          <path
-            id=${this.id}
-            d=${pathData}
-            fill=${fill}
-            stroke=${stroke}
-            stroke-width=${strokeWidth}
-          />
-        `;
+        <path
+          id=${this.id}
+          d=${pathData}
+          fill=${fillColor}
+          stroke=${stroke}
+          stroke-width=${strokeWidth}
+        />
+      `;
     }
   }
 }

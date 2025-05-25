@@ -22,6 +22,9 @@ import { LcarsGroup } from './group.js';
 import { Rectangle } from './elements/rectangle.js';
 import { PropertyGroup } from './properties/properties.js';
 
+import './dynamic-color-editor.js';
+import { isDynamicColorConfig, DynamicColorConfig } from '../types.js';
+
 function setDeep(obj: any, path: string | string[], value: any): void {
     const pathArray = Array.isArray(path) ? path : path.split('.');
     let current = obj;
@@ -770,6 +773,35 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
 
     const formData = ev.detail.value;
 
+    // Handle single property changes (dynamic colors)
+    if (ev.detail.name && ev.detail.value !== undefined) {
+        const { name, value } = ev.detail;
+        const elementInstance = this._getElementInstance(elementId);
+        if (!elementInstance) return;
+
+        const propertiesMap = elementInstance.getPropertiesMap();
+        const property = propertiesMap.get(name);
+        
+        // Handle dynamic color configurations
+        if (property && property.name === 'fill' && isDynamicColorConfig(value)) {
+            // Store dynamic color config directly
+            this._updateElementConfigValue(this._config.elements[index], property.configPath, value);
+            this._updateConfig(this._config.elements);
+            return;
+        }
+
+        // Handle other single property changes
+        let processedValue = value;
+        if (Array.isArray(value) && value.length === 3 && value.every(num => typeof num === 'number')) {
+            processedValue = this._rgbArrayToHex(value);
+        }
+
+        this._updateElementConfigValue(this._config.elements[index], property?.configPath || name, processedValue);
+        this._updateConfig(this._config.elements);
+        return;
+    }
+
+    // Handle complete form data changes (existing logic)
     if (Object.keys(formData).length === 1 && formData.hasOwnProperty('type')) {
         const newType = formData.type;
         if (!newType) {
@@ -803,29 +835,17 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
         if (cleanedData.hasOwnProperty(key)) {
             let value = cleanedData[key];
 
-            if (key === 'fill' && Array.isArray(value) && value.length === 3) {
+            // Handle dynamic colors
+            if (key === 'fill' && isDynamicColorConfig(value)) {
+                setDeep(newElementConfig, propInstance.configPath, value);
+            } else if (key === 'fill' && Array.isArray(value) && value.length === 3) {
                 value = this._rgbArrayToHex(value);
+                setDeep(newElementConfig, propInstance.configPath, value);
+            } else {
+                setDeep(newElementConfig, propInstance.configPath, value);
             }
-
-            setDeep(newElementConfig, propInstance.configPath, value);
         }
     });
-    
-    // --- Special handling to preserve stretchTo2 if it already exists ---
-    // This might need to be revisited if processDataUpdate handles it sufficiently.
-    // If stretchTo2 is part of formData and processDataUpdate processes it, this might be redundant
-    // or could conflict if processDataUpdate decides to remove it.
-    // However, if processDataUpdate *doesn't* receive stretchTo2 from formData (because it wasn't in the schema that caused the event)
-    // but it *was* in the original config, this preserves it.
-    // Given that stretchTo2 is now part of getFormData and getSchema, it should be in formData.
-    // Let's assume processDataUpdate and the loop above handle it correctly.
-    // This specific preservation might no longer be needed if stretchTo2 is *cleared* via the form, this would incorrectly add it back.
-    //
-    // Revised approach: rely on `processDataUpdate` and `setDeep`.
-    // If `currentElementConfig.layout?.stretch?.stretchTo2` existed and `cleanedData` doesn't clear it,
-    // and `stretchTo2` is a property in `propertiesMap`, `setDeep` will handle it.
-    // If `cleanedData` *does* clear it (because the form cleared it), `setDeep` won't set it.
-    // The key is that `processDataUpdate` correctly reflects the intent from `formData`.
 
     if (newElementConfig.props && Object.keys(newElementConfig.props).length === 0) {
         delete newElementConfig.props;
@@ -848,109 +868,109 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
     this.requestUpdate();
 }
   
-  private _rgbArrayToHex(rgb: number[]): string {
-      return '#' + rgb.map(val => {
-          const hex = Math.max(0, Math.min(255, val)).toString(16);
-          return hex.length === 1 ? '0' + hex : hex;
-      }).join('');
-  }
+private _rgbArrayToHex(rgb: number[]): string {
+    return '#' + rgb.map(val => {
+        const hex = Math.max(0, Math.min(255, val)).toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+    }).join('');
+}
   
-  private _updateElementConfigValue(elementConfig: any, path: string, value: any): void {
-      const pathParts = path.split('.');
-      if (pathParts.length === 1) {
-          elementConfig[pathParts[0]] = value;
-      } else if (pathParts.length === 2) {
-          const [section, property] = pathParts;
-          if (!elementConfig[section]) {
-              elementConfig[section] = {};
-          }
-          elementConfig[section][property] = value;
-      }
-  }
-
-  private _updateElementIdInput(value: string): void {
-    this._editingElementIdInput = value;
-    
-    if (this._editingElementId) {
-      const elementInstance = this._getElementInstance(this._editingElementId);
-      if (elementInstance) {
-        elementInstance.currentIdInput = value;
-        elementInstance.validateIdInput();
-        this._elementIdWarning = elementInstance.idEditErrorMessage;
-      }
-    }
-    
-    this.requestUpdate();
-  }
-
-  private _updateGroupNameInput(value: string): void {
-    if (this._editingGroup) {
-      this._editingGroupInput = value;
-      
-      const groupInstance = this._groupInstances.get(this._editingGroup);
-      if (groupInstance) {
-        groupInstance.updateNameInput(value);
-        this._groupIdWarning = groupInstance.editErrorMessage;
-      }
-    } else if (this._newGroupDraft) {
-      this._newGroupInput = value;
-      
-      const validation = LcarsGroup.validateIdentifier(value, "Group ID", new Set(this._groups));
-      this._groupIdWarning = validation.error || '';
-    }
-    
-    this.requestUpdate();
-  }
-  
-  private _updateNewElementInput(value: string): void {
-    this._addElementInput = value;
-    
-    const tempElement = new Rectangle({ id: '', type: 'rectangle' });
-    tempElement.currentIdInput = value;
-    tempElement.validateIdInput();
-    this._addElementWarning = tempElement.idEditErrorMessage;
-    
-    this.requestUpdate();
-  }
-
-  /**
-   * Initializes the collapsed state for property groups of a given element.
-   * If previous state is provided, uses it, otherwise defaults to all true.
-   * @param elementId The ID of the element.
-   * @param prevCollapsedState Optional previous collapsed state for this element.
-   * @returns The initialized collapsed state map for property groups.
-   */
-  private _initCollapsedPG(elementId: string, prevCollapsedState?: Record<PropertyGroup, boolean>): Record<PropertyGroup, boolean> {
-      // Initialize with a temporary type that allows string keys, then populate
-      const newState: { [key: string]: boolean } = {};
-      Object.values(PropertyGroup).forEach(pgKey => {
-          newState[pgKey] = prevCollapsedState?.[pgKey] ?? true;
-      });
-      // The object now conforms to Record<PropertyGroup, boolean>, implicitly returned as such
-      return newState as Record<PropertyGroup, boolean>;
-  }
-
-  private _togglePropertyGroupCollapse(elementId: string, groupKey: PropertyGroup): void {
-    if (!this._collapsedPropertyGroups[elementId]) {
-        // Use helper to initialize if element state doesn't exist
-        this._collapsedPropertyGroups[elementId] = this._initCollapsedPG(elementId);
-    }
-    // Ensure all keys are present, even if not explicitly initialized before
-    Object.values(PropertyGroup).forEach(pgKey => {
-        if (this._collapsedPropertyGroups[elementId][pgKey] === undefined) {
-             this._collapsedPropertyGroups[elementId][pgKey] = true;
+private _updateElementConfigValue(elementConfig: any, path: string, value: any): void {
+    const pathParts = path.split('.');
+    if (pathParts.length === 1) {
+        elementConfig[pathParts[0]] = value;
+    } else if (pathParts.length === 2) {
+        const [section, property] = pathParts;
+        if (!elementConfig[section]) {
+            elementConfig[section] = {};
         }
-    });
+        elementConfig[section][property] = value;
+    }
+}
 
-    this._collapsedPropertyGroups = {
-        ...this._collapsedPropertyGroups,
-        [elementId]: {
-            ...this._collapsedPropertyGroups[elementId],
-            [groupKey]: !this._collapsedPropertyGroups[elementId][groupKey],
-        },
-    };
-    this.requestUpdate();
+private _updateElementIdInput(value: string): void {
+  this._editingElementIdInput = value;
+  
+  if (this._editingElementId) {
+    const elementInstance = this._getElementInstance(this._editingElementId);
+    if (elementInstance) {
+      elementInstance.currentIdInput = value;
+      elementInstance.validateIdInput();
+      this._elementIdWarning = elementInstance.idEditErrorMessage;
+    }
   }
+  
+  this.requestUpdate();
+}
+
+private _updateGroupNameInput(value: string): void {
+  if (this._editingGroup) {
+    this._editingGroupInput = value;
+    
+    const groupInstance = this._groupInstances.get(this._editingGroup);
+    if (groupInstance) {
+      groupInstance.updateNameInput(value);
+      this._groupIdWarning = groupInstance.editErrorMessage;
+    }
+  } else if (this._newGroupDraft) {
+    this._newGroupInput = value;
+    
+    const validation = LcarsGroup.validateIdentifier(value, "Group ID", new Set(this._groups));
+    this._groupIdWarning = validation.error || '';
+  }
+  
+  this.requestUpdate();
+}
+  
+private _updateNewElementInput(value: string): void {
+  this._addElementInput = value;
+  
+  const tempElement = new Rectangle({ id: '', type: 'rectangle' });
+  tempElement.currentIdInput = value;
+  tempElement.validateIdInput();
+  this._addElementWarning = tempElement.idEditErrorMessage;
+  
+  this.requestUpdate();
+}
+
+/**
+ * Initializes the collapsed state for property groups of a given element.
+ * If previous state is provided, uses it, otherwise defaults to all true.
+ * @param elementId The ID of the element.
+ * @param prevCollapsedState Optional previous collapsed state for this element.
+ * @returns The initialized collapsed state map for property groups.
+ */
+private _initCollapsedPG(elementId: string, prevCollapsedState?: Record<PropertyGroup, boolean>): Record<PropertyGroup, boolean> {
+    // Initialize with a temporary type that allows string keys, then populate
+    const newState: { [key: string]: boolean } = {};
+    Object.values(PropertyGroup).forEach(pgKey => {
+        newState[pgKey] = prevCollapsedState?.[pgKey] ?? true;
+    });
+    // The object now conforms to Record<PropertyGroup, boolean>, implicitly returned as such
+    return newState as Record<PropertyGroup, boolean>;
+}
+
+private _togglePropertyGroupCollapse(elementId: string, groupKey: PropertyGroup): void {
+  if (!this._collapsedPropertyGroups[elementId]) {
+      // Use helper to initialize if element state doesn't exist
+      this._collapsedPropertyGroups[elementId] = this._initCollapsedPG(elementId);
+  }
+  // Ensure all keys are present, even if not explicitly initialized before
+  Object.values(PropertyGroup).forEach(pgKey => {
+      if (this._collapsedPropertyGroups[elementId][pgKey] === undefined) {
+           this._collapsedPropertyGroups[elementId][pgKey] = true;
+      }
+  });
+
+  this._collapsedPropertyGroups = {
+      ...this._collapsedPropertyGroups,
+      [elementId]: {
+          ...this._collapsedPropertyGroups[elementId],
+          [groupKey]: !this._collapsedPropertyGroups[elementId][groupKey],
+      },
+  };
+  this.requestUpdate();
+}
 }
 
 declare global {

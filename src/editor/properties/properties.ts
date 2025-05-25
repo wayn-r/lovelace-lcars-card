@@ -1,3 +1,7 @@
+import { HomeAssistant } from 'custom-card-helpers';
+import { html, TemplateResult } from 'lit';
+import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../../types';
+
 export interface HaFormSchema {
     name: string;
     label?: string;
@@ -278,6 +282,27 @@ export class TargetAnchorPoint implements LcarsPropertyBase {
 
 // --- Common Props Property Classes ---
 
+// Helper function to convert hex to RGB
+function hexToRgb(hex: string): number[] | null {
+    // Handle 3-digit hex
+    const shortResult = /^#?([a-f\d])([a-f\d])([a-f\d])$/i.exec(hex);
+    if (shortResult) {
+        return [
+            parseInt(shortResult[1] + shortResult[1], 16),
+            parseInt(shortResult[2] + shortResult[2], 16),
+            parseInt(shortResult[3] + shortResult[3], 16)
+        ];
+    }
+    
+    // Handle 6-digit hex
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? [
+        parseInt(result[1], 16),
+        parseInt(result[2], 16),
+        parseInt(result[3], 16)
+    ] : null;
+}
+
 export class Fill implements LcarsPropertyBase {
     name = 'fill';
     label = 'Fill Color';
@@ -285,50 +310,57 @@ export class Fill implements LcarsPropertyBase {
     propertyGroup: PropertyGroup = PropertyGroup.APPEARANCE;
     layout: Layout = Layout.HALF;
 
-    getSchema(): HaFormSchema {
+    getSchema(context?: PropertySchemaContext): HaFormSchema {
         return {
             name: this.name,
             label: this.label,
-            selector: { color_rgb: {} }
+            selector: { 
+                color_rgb: {},
+                // Additional metadata for dynamic color support
+                __dynamic_color_support: true
+            },
+            type: 'custom'
         };
     }
-    
-    formatValueForForm(value: any): any {
-        if (Array.isArray(value) && value.length === 3) {
-            return value;
+
+    formatValueForForm?(value: any): any {
+        // Handle dynamic color configs
+        if (isDynamicColorConfig(value)) {
+            return {
+                type: 'dynamic',
+                config: value
+            };
         }
         
-        if (typeof value === 'string' && value.startsWith('#')) {
-            return this.hexToRgb(value);
+        // Handle static colors - maintain backward compatibility with tests
+        if (typeof value === 'string') {
+            if (value.startsWith('#')) {
+                // Convert hex to RGB for the color picker
+                const rgb = hexToRgb(value);
+                return rgb || [0, 0, 0];
+            }
+            return value; // Return other string colors as-is
+        }
+        
+        if (Array.isArray(value)) {
+            return value; // Return RGB arrays as-is
         }
         
         return value;
     }
-    
-    private hexToRgb(hex: string): number[] {
-        hex = hex.replace(/^#/, '');
-        
-        // Validate hex format first
-        const validHex = /^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/.test(hex);
-        if (!validHex) {
-            return [0, 0, 0];
+
+    formatValueForConfig?(value: any): any {
+        // Handle the editor format back to config format
+        if (value && typeof value === 'object') {
+            if (value.type === 'dynamic' && value.config) {
+                return value.config;
+            }
+            if (value.type === 'static' && value.color) {
+                return value.color;
+            }
         }
         
-        if (hex.length === 3) {
-            return [
-                parseInt(hex[0] + hex[0], 16),
-                parseInt(hex[1] + hex[1], 16),
-                parseInt(hex[2] + hex[2], 16)
-            ];
-        } else if (hex.length === 6) {
-            return [
-                parseInt(hex.substring(0, 2), 16),
-                parseInt(hex.substring(2, 4), 16),
-                parseInt(hex.substring(4, 6), 16)
-            ];
-        }
-        
-        return [0, 0, 0];
+        return value;
     }
 }
 
