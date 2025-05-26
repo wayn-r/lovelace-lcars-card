@@ -321,4 +321,50 @@ describe('ElbowElement', () => {
       });
     });
   });
+
+  describe('Stretching Behavior', () => {
+    it('should use calculated layout width when stretch configuration is present', () => {
+      const configuredWidth = 100;
+      const stretchedWidth = 200;
+      
+      elbowElement = new ElbowElement('el-stretch', 
+        { width: configuredWidth, bodyWidth: 30, armHeight: 25 },
+        { stretch: { stretchTo1: 'container', targetStretchAnchorPoint1: 'left' } }
+      );
+      
+      // Simulate layout being calculated with stretched width
+      elbowElement.layout = { 
+        x: 10, y: 15, 
+        width: stretchedWidth, height: 80, 
+        calculated: true 
+      };
+      
+      elbowElement.render();
+      
+      // Should use stretchedWidth (200) not configuredWidth (100) for elbow path generation
+      expect(generateElbowPath).toHaveBeenCalledWith(10, stretchedWidth, 30, 25, 80, 'top-left', 15, 25);
+    });
+
+    it('should use configured width when no stretch configuration is present', () => {
+      const configuredWidth = 100;
+      const layoutWidth = 200; // This might be different due to anchor positioning, but no stretch config
+      
+      elbowElement = new ElbowElement('el-no-stretch', 
+        { width: configuredWidth, bodyWidth: 30, armHeight: 25 },
+        {} // No stretch configuration
+      );
+      
+      // Simulate layout being calculated 
+      elbowElement.layout = { 
+        x: 10, y: 15, 
+        width: layoutWidth, height: 80, 
+        calculated: true 
+      };
+      
+      elbowElement.render();
+      
+      // Should use configuredWidth (100) not layoutWidth (200) for elbow path generation
+      expect(generateElbowPath).toHaveBeenCalledWith(10, configuredWidth, 30, 25, 80, 'top-left', 15, 25);
+    });
+  });
 });

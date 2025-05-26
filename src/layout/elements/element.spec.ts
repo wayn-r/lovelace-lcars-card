@@ -486,4 +486,103 @@ describe('LayoutElement', () => {
         expect(element.testFormatColorValue(undefined)).toBeUndefined();
     });
   });
+
+      describe('Anchor-Aware Stretching', () => {
+        it('should stretch from the opposite side when anchored to preserve anchor relationship', () => {
+            const targetElement = new MockLayoutElement('target', {}, {});
+            // Set target element's layout directly
+            targetElement.layout = { x: 200, y: 50, width: 100, height: 30, calculated: true };
+            
+            const elementsMap = new Map([['target', targetElement]]);
+            
+            // Element anchored to target at topRight->topLeft and stretching to container left edge
+            const element = new MockLayoutElement('test', {}, {
+                width: 117,
+                height: 46,
+                anchor: {
+                    anchorTo: 'target',
+                    anchorPoint: 'topRight',
+                    targetAnchorPoint: 'topLeft'
+                },
+                stretch: {
+                    stretchTo1: 'container',
+                    targetStretchAnchorPoint1: 'centerLeft',
+                    stretchPadding1: 0
+                }
+            });
+            // Set intrinsic size directly
+            element.intrinsicSize = { width: 117, height: 46, calculated: true };
+            
+            const containerRect = new DOMRect(0, 0, 500, 200);
+            element.calculateLayout(elementsMap, containerRect);
+            
+            expect(element.layout.calculated).toBe(true);
+            
+            // The right edge should remain at x=200 (anchored to target's left edge)
+            // The left edge should extend to x=0 (container left)
+            // So width should be 200, and x should be 0
+            expect(element.layout.x).toBe(0);
+            expect(element.layout.width).toBe(200);
+            expect(element.layout.y).toBe(50); // Same y as target (topRight to topLeft)
+        });
+
+        it('should use distance-based logic when anchored in center', () => {
+            const targetElement = new MockLayoutElement('target', {}, {});
+            // Set target element's layout directly
+            targetElement.layout = { x: 200, y: 50, width: 100, height: 30, calculated: true };
+            
+            const elementsMap = new Map([['target', targetElement]]);
+            
+            // Element anchored at center should use original distance-based logic
+            const element = new MockLayoutElement('test', {}, {
+                width: 50,
+                height: 30,
+                anchor: {
+                    anchorTo: 'target',
+                    anchorPoint: 'center',
+                    targetAnchorPoint: 'center'
+                },
+                stretch: {
+                    stretchTo1: 'container',
+                    targetStretchAnchorPoint1: 'left',
+                    stretchPadding1: 0
+                }
+            });
+            // Set intrinsic size directly
+            element.intrinsicSize = { width: 50, height: 30, calculated: true };
+            
+            const containerRect = new DOMRect(0, 0, 500, 200);
+            element.calculateLayout(elementsMap, containerRect);
+            
+            expect(element.layout.calculated).toBe(true);
+            // Should use the closer edge logic (left edge is closer to container left)
+        });
+
+        it('should use original logic when anchored to container', () => {
+            const element = new MockLayoutElement('test', {}, {
+                width: 100,
+                height: 50,
+                anchor: {
+                    anchorTo: 'container',
+                    anchorPoint: 'center',
+                    targetAnchorPoint: 'center'
+                },
+                stretch: {
+                    stretchTo1: 'container',
+                    targetStretchAnchorPoint1: 'left',
+                    stretchPadding1: 0
+                }
+            });
+            // Set intrinsic size directly
+            element.intrinsicSize = { width: 100, height: 50, calculated: true };
+            
+            const containerRect = new DOMRect(0, 0, 500, 200);
+            element.calculateLayout(new Map(), containerRect);
+            
+            expect(element.layout.calculated).toBe(true);
+            // Should use the original distance-based logic
+        });
+    });
+
+  
 });

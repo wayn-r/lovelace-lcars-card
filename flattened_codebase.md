@@ -12906,6 +12906,52 @@ describe('ElbowElement', () => {
       });
     });
   });
+
+  describe('Stretching Behavior', () => {
+    it('should use calculated layout width when stretch configuration is present', () => {
+      const configuredWidth = 100;
+      const stretchedWidth = 200;
+      
+      elbowElement = new ElbowElement('el-stretch', 
+        { width: configuredWidth, bodyWidth: 30, armHeight: 25 },
+        { stretch: { stretchTo1: 'container', targetStretchAnchorPoint1: 'left' } }
+      );
+      
+      // Simulate layout being calculated with stretched width
+      elbowElement.layout = { 
+        x: 10, y: 15, 
+        width: stretchedWidth, height: 80, 
+        calculated: true 
+      };
+      
+      elbowElement.render();
+      
+      // Should use stretchedWidth (200) not configuredWidth (100) for elbow path generation
+      expect(generateElbowPath).toHaveBeenCalledWith(10, stretchedWidth, 30, 25, 80, 'top-left', 15, 25);
+    });
+
+    it('should use configured width when no stretch configuration is present', () => {
+      const configuredWidth = 100;
+      const layoutWidth = 200; // This might be different due to anchor positioning, but no stretch config
+      
+      elbowElement = new ElbowElement('el-no-stretch', 
+        { width: configuredWidth, bodyWidth: 30, armHeight: 25 },
+        {} // No stretch configuration
+      );
+      
+      // Simulate layout being calculated 
+      elbowElement.layout = { 
+        x: 10, y: 15, 
+        width: layoutWidth, height: 80, 
+        calculated: true 
+      };
+      
+      elbowElement.render();
+      
+      // Should use configuredWidth (100) not layoutWidth (200) for elbow path generation
+      expect(generateElbowPath).toHaveBeenCalledWith(10, configuredWidth, 30, 25, 80, 'top-left', 15, 25);
+    });
+  });
 });
 ```
 
@@ -12956,7 +13002,12 @@ export class ElbowElement extends LayoutElement {
       const orientation = this.props.orientation || 'top-left';
       const bodyWidth = this.props.bodyWidth || 30;
       const armHeight = this.props.armHeight || 30;
-      const elbowWidth = this.props.width || this.layoutConfig.width || 100;
+      
+      // Use calculated layout width if stretching is applied, otherwise use configured width
+      // This allows stretching to affect the elbow shape while preserving original behavior for non-stretched elements
+      const hasStretchConfig = Boolean(this.layoutConfig.stretch?.stretchTo1 || this.layoutConfig.stretch?.stretchTo2);
+      const configuredWidth = this.props.width || this.layoutConfig.width || 100;
+      const elbowWidth = hasStretchConfig ? width : configuredWidth;
       
       const pathData = generateElbowPath(x, elbowWidth, bodyWidth, armHeight, height, orientation, y, armHeight);
       
@@ -12977,7 +13028,8 @@ export class ElbowElement extends LayoutElement {
         const elbowTextPosition = this.props.elbow_text_position;
         
         if (elbowTextPosition && hasText) {
-          const elbowWidth = this.props.width || this.layoutConfig.width || 100;
+          // Use same width logic as for path generation for consistent text positioning
+          const elbowWidth = hasStretchConfig ? width : configuredWidth;
           
           if (elbowTextPosition === 'top') {
             // Position text at top center
@@ -13535,6 +13587,105 @@ describe('LayoutElement', () => {
         expect(element.testFormatColorValue(undefined)).toBeUndefined();
     });
   });
+
+      describe('Anchor-Aware Stretching', () => {
+        it('should stretch from the opposite side when anchored to preserve anchor relationship', () => {
+            const targetElement = new MockLayoutElement('target', {}, {});
+            // Set target element's layout directly
+            targetElement.layout = { x: 200, y: 50, width: 100, height: 30, calculated: true };
+            
+            const elementsMap = new Map([['target', targetElement]]);
+            
+            // Element anchored to target at topRight->topLeft and stretching to container left edge
+            const element = new MockLayoutElement('test', {}, {
+                width: 117,
+                height: 46,
+                anchor: {
+                    anchorTo: 'target',
+                    anchorPoint: 'topRight',
+                    targetAnchorPoint: 'topLeft'
+                },
+                stretch: {
+                    stretchTo1: 'container',
+                    targetStretchAnchorPoint1: 'centerLeft',
+                    stretchPadding1: 0
+                }
+            });
+            // Set intrinsic size directly
+            element.intrinsicSize = { width: 117, height: 46, calculated: true };
+            
+            const containerRect = new DOMRect(0, 0, 500, 200);
+            element.calculateLayout(elementsMap, containerRect);
+            
+            expect(element.layout.calculated).toBe(true);
+            
+            // The right edge should remain at x=200 (anchored to target's left edge)
+            // The left edge should extend to x=0 (container left)
+            // So width should be 200, and x should be 0
+            expect(element.layout.x).toBe(0);
+            expect(element.layout.width).toBe(200);
+            expect(element.layout.y).toBe(50); // Same y as target (topRight to topLeft)
+        });
+
+        it('should use distance-based logic when anchored in center', () => {
+            const targetElement = new MockLayoutElement('target', {}, {});
+            // Set target element's layout directly
+            targetElement.layout = { x: 200, y: 50, width: 100, height: 30, calculated: true };
+            
+            const elementsMap = new Map([['target', targetElement]]);
+            
+            // Element anchored at center should use original distance-based logic
+            const element = new MockLayoutElement('test', {}, {
+                width: 50,
+                height: 30,
+                anchor: {
+                    anchorTo: 'target',
+                    anchorPoint: 'center',
+                    targetAnchorPoint: 'center'
+                },
+                stretch: {
+                    stretchTo1: 'container',
+                    targetStretchAnchorPoint1: 'left',
+                    stretchPadding1: 0
+                }
+            });
+            // Set intrinsic size directly
+            element.intrinsicSize = { width: 50, height: 30, calculated: true };
+            
+            const containerRect = new DOMRect(0, 0, 500, 200);
+            element.calculateLayout(elementsMap, containerRect);
+            
+            expect(element.layout.calculated).toBe(true);
+            // Should use the closer edge logic (left edge is closer to container left)
+        });
+
+        it('should use original logic when anchored to container', () => {
+            const element = new MockLayoutElement('test', {}, {
+                width: 100,
+                height: 50,
+                anchor: {
+                    anchorTo: 'container',
+                    anchorPoint: 'center',
+                    targetAnchorPoint: 'center'
+                },
+                stretch: {
+                    stretchTo1: 'container',
+                    targetStretchAnchorPoint1: 'left',
+                    stretchPadding1: 0
+                }
+            });
+            // Set intrinsic size directly
+            element.intrinsicSize = { width: 100, height: 50, calculated: true };
+            
+            const containerRect = new DOMRect(0, 0, 500, 200);
+            element.calculateLayout(new Map(), containerRect);
+            
+            expect(element.layout.calculated).toBe(true);
+            // Should use the original distance-based logic
+        });
+    });
+
+  
 });
 ```
 
@@ -13969,7 +14120,7 @@ export abstract class LayoutElement {
             return isHorizontal ? { x: initialPosition, size: initialSize } : { y: initialPosition, size: initialSize };
         }
 
-        const myAnchorPoint = this._getCloserEdge(initialPosition, initialSize, targetCoord, isHorizontal);
+        const myAnchorPoint = this._getAnchorAwareStretchEdge(initialPosition, initialSize, targetCoord, isHorizontal);
         const myRelativePos = this._getRelativeAnchorPosition(myAnchorPoint, initialSize, initialSize);
         const currentCoord = initialPosition + (isHorizontal ? myRelativePos.x : myRelativePos.y);
         
@@ -14060,6 +14211,48 @@ export abstract class LayoutElement {
             const bottomEdge = initialPosition + initialSize;
             return (Math.abs(targetCoord - topEdge) <= Math.abs(targetCoord - bottomEdge)) ? 'topCenter' : 'bottomCenter';
         }
+    }
+
+    private _getAnchorAwareStretchEdge(
+        initialPosition: number, 
+        initialSize: number, 
+        targetCoord: number, 
+        isHorizontal: boolean
+    ): string {
+        // Check if this element has an anchor configuration
+        const anchorConfig = this.layoutConfig.anchor;
+        
+        if (anchorConfig?.anchorTo && anchorConfig.anchorTo !== 'container') {
+            // Element is anchored to another element - preserve the anchored edge
+            const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
+            
+            if (isHorizontal) {
+                // If anchored on the right side, stretch from left
+                if (anchorPoint.includes('Right')) {
+                    return 'centerLeft';
+                }
+                // If anchored on the left side, stretch from right  
+                if (anchorPoint.includes('Left')) {
+                    return 'centerRight';
+                }
+                // If anchored in center, use distance-based logic
+                return this._getCloserEdge(initialPosition, initialSize, targetCoord, isHorizontal);
+            } else {
+                // If anchored at the bottom, stretch from top
+                if (anchorPoint.includes('bottom')) {
+                    return 'topCenter';
+                }
+                // If anchored at the top, stretch from bottom
+                if (anchorPoint.includes('top')) {
+                    return 'bottomCenter';
+                }
+                // If anchored in center, use distance-based logic
+                return this._getCloserEdge(initialPosition, initialSize, targetCoord, isHorizontal);
+            }
+        }
+        
+        // No anchor constraint or anchored to container - use original distance-based logic
+        return this._getCloserEdge(initialPosition, initialSize, targetCoord, isHorizontal);
     }
 
     private _parseOffset(offset: string | number | undefined, containerDimension: number): number {

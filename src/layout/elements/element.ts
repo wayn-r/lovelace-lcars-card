@@ -426,7 +426,7 @@ export abstract class LayoutElement {
             return isHorizontal ? { x: initialPosition, size: initialSize } : { y: initialPosition, size: initialSize };
         }
 
-        const myAnchorPoint = this._getCloserEdge(initialPosition, initialSize, targetCoord, isHorizontal);
+        const myAnchorPoint = this._getAnchorAwareStretchEdge(initialPosition, initialSize, targetCoord, isHorizontal);
         const myRelativePos = this._getRelativeAnchorPosition(myAnchorPoint, initialSize, initialSize);
         const currentCoord = initialPosition + (isHorizontal ? myRelativePos.x : myRelativePos.y);
         
@@ -517,6 +517,48 @@ export abstract class LayoutElement {
             const bottomEdge = initialPosition + initialSize;
             return (Math.abs(targetCoord - topEdge) <= Math.abs(targetCoord - bottomEdge)) ? 'topCenter' : 'bottomCenter';
         }
+    }
+
+    private _getAnchorAwareStretchEdge(
+        initialPosition: number, 
+        initialSize: number, 
+        targetCoord: number, 
+        isHorizontal: boolean
+    ): string {
+        // Check if this element has an anchor configuration
+        const anchorConfig = this.layoutConfig.anchor;
+        
+        if (anchorConfig?.anchorTo && anchorConfig.anchorTo !== 'container') {
+            // Element is anchored to another element - preserve the anchored edge
+            const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
+            
+            if (isHorizontal) {
+                // If anchored on the right side, stretch from left
+                if (anchorPoint.includes('Right')) {
+                    return 'centerLeft';
+                }
+                // If anchored on the left side, stretch from right  
+                if (anchorPoint.includes('Left')) {
+                    return 'centerRight';
+                }
+                // If anchored in center, use distance-based logic
+                return this._getCloserEdge(initialPosition, initialSize, targetCoord, isHorizontal);
+            } else {
+                // If anchored at the bottom, stretch from top
+                if (anchorPoint.includes('bottom')) {
+                    return 'topCenter';
+                }
+                // If anchored at the top, stretch from bottom
+                if (anchorPoint.includes('top')) {
+                    return 'bottomCenter';
+                }
+                // If anchored in center, use distance-based logic
+                return this._getCloserEdge(initialPosition, initialSize, targetCoord, isHorizontal);
+            }
+        }
+        
+        // No anchor constraint or anchored to container - use original distance-based logic
+        return this._getCloserEdge(initialPosition, initialSize, targetCoord, isHorizontal);
     }
 
     private _parseOffset(offset: string | number | undefined, containerDimension: number): number {

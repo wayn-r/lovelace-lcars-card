@@ -42,7 +42,12 @@ export class ElbowElement extends LayoutElement {
       const orientation = this.props.orientation || 'top-left';
       const bodyWidth = this.props.bodyWidth || 30;
       const armHeight = this.props.armHeight || 30;
-      const elbowWidth = this.props.width || this.layoutConfig.width || 100;
+      
+      // Use calculated layout width if stretching is applied, otherwise use configured width
+      // This allows stretching to affect the elbow shape while preserving original behavior for non-stretched elements
+      const hasStretchConfig = Boolean(this.layoutConfig.stretch?.stretchTo1 || this.layoutConfig.stretch?.stretchTo2);
+      const configuredWidth = this.props.width || this.layoutConfig.width || 100;
+      const elbowWidth = hasStretchConfig ? width : configuredWidth;
       
       const pathData = generateElbowPath(x, elbowWidth, bodyWidth, armHeight, height, orientation, y, armHeight);
       
@@ -63,7 +68,8 @@ export class ElbowElement extends LayoutElement {
         const elbowTextPosition = this.props.elbow_text_position;
         
         if (elbowTextPosition && hasText) {
-          const elbowWidth = this.props.width || this.layoutConfig.width || 100;
+          // Use same width logic as for path generation for consistent text positioning
+          const elbowWidth = hasStretchConfig ? width : configuredWidth;
           
           if (elbowTextPosition === 'top') {
             // Position text at top center
