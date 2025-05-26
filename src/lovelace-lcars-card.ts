@@ -369,6 +369,10 @@ export class LcarsCard extends LitElement {
     if (hasConfigChanged) {
       if (this._containerRect) {
         this._performLayoutCalculation(this._containerRect);
+      } else {
+        // If config changed but container rect is not available yet, mark as pending
+        // The layout calculation will be triggered when container rect becomes available
+        this._layoutCalculationPending = true;
       }
     }
 
@@ -388,6 +392,59 @@ export class LcarsCard extends LitElement {
     }
   }
   
+  private _calculateRequiredHeight(containerWidth: number, containerHeight: number): number {
+    // Analyze elements to determine the minimum container height needed
+    // for proper anchoring and positioning
+    let requiredHeight = containerHeight; // Start with original height
+    
+    if (!this._config?.elements) {
+      return requiredHeight;
+    }
+    
+    // Find elements that directly define height requirements
+    for (const elementConfig of this._config.elements) {
+      if (!elementConfig.layout || !elementConfig.props) continue;
+      
+      const height = this._parseSize(elementConfig.layout.height, containerHeight);
+      const anchor = elementConfig.layout.anchor;
+      
+      // For center-anchored elements, ensure container is at least as tall as the element
+      if (anchor?.anchorTo === 'container' && 
+          anchor.anchorPoint === 'center' && 
+          anchor.targetAnchorPoint === 'center') {
+        requiredHeight = Math.max(requiredHeight, height);
+      }
+      
+      // For bottom-anchored elements, ensure container has enough space
+      if (anchor?.anchorTo === 'container' && 
+          anchor.targetAnchorPoint?.includes('bottom')) {
+        requiredHeight = Math.max(requiredHeight, height);
+      }
+      
+      // For top-anchored elements with significant height
+      if (anchor?.anchorTo === 'container' && 
+          anchor.targetAnchorPoint?.includes('top')) {
+        requiredHeight = Math.max(requiredHeight, height);
+      }
+    }
+    
+    return requiredHeight;
+  }
+  
+  private _parseSize(size: number | string | undefined, containerDimension: number): number {
+    if (typeof size === 'number') {
+      return size;
+    }
+    if (typeof size === 'string') {
+      if (size.endsWith('%')) {
+        const percentage = parseFloat(size) / 100;
+        return containerDimension * percentage;
+      }
+      return parseFloat(size) || 0;
+    }
+    return 0;
+  }
+
   private _performLayoutCalculation(rect: DOMRect): void {
     if (!this._config || !rect || rect.width <= 0 || rect.height <= 0) {
         console.warn("[_performLayoutCalculation] Skipping, invalid config or rect", this._config, rect);
@@ -426,11 +483,18 @@ export class LcarsCard extends LitElement {
       }
     }
 
-    // Calculate layout using the available width and dynamicHeight option
+    // For dynamic height mode, we need to pre-determine the required container height
+    // by analyzing element size requirements, then perform layout with that height
     const inputRect = new DOMRect(rect.x, rect.y, rect.width, rect.height);
-    const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(inputRect, { dynamicHeight: true });
     
-    // Get the required height from the layout engine
+    // Pre-calculate required height by examining element constraints
+    const requiredHeight = this._calculateRequiredHeight(rect.width, rect.height);
+    
+    // Use the required height for layout calculation to ensure proper anchoring
+    const finalContainerRect = new DOMRect(rect.x, rect.y, rect.width, requiredHeight);
+    const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(finalContainerRect, { dynamicHeight: true });
+    
+    // Store the calculated height for rendering
     this._calculatedHeight = layoutDimensions.height;
 
     // Render elements
