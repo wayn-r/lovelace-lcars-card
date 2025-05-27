@@ -4,14 +4,14 @@ import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 
 // --- Mocks ---
 // Mock LcarsGroup.validateIdentifier
-vi.mock('../group', () => ({
+vi.mock('../../group', () => ({
     LcarsGroup: {
         validateIdentifier: vi.fn()
     }
 }));
 
 // --- Imports ---
-import { EditorElement, PropertyGroup, PropertyGroupDefinition, PropertyClassOrFactory } from './element';
+import { EditorElement, PropertyGroup, PropertyGroupDefinition, PropertyClassOrFactory } from '../element';
 import {
     LcarsPropertyBase, HaFormSchema, Layout, PropertySchemaContext,
     Type,
@@ -20,8 +20,8 @@ import {
     ButtonEnabled,
     // Import specific button properties if they are used as defaults by the base class.
     // For now, ButtonEnabled is enough for getButtonProperties testing.
-} from '../properties/properties';
-import { LcarsGroup } from '../group'; // Mocked LcarsGroup
+} from '../../properties/properties';
+import { LcarsGroup } from '../../group'; // Mocked LcarsGroup
 
 // --- Test Helper: Dummy Property Classes ---
 class MockAppearanceProp implements LcarsPropertyBase {

@@ -11,26 +11,26 @@ const mockChiselEndcapElementConstructor = vi.hoisted(() => vi.fn());
 const mockTopHeaderElementConstructor = vi.hoisted(() => vi.fn());
 
 // Mock imports
-vi.mock('./elements/text.js', () => ({ TextElement: mockTextElementConstructor }));
-vi.mock('./elements/rectangle.js', () => ({ RectangleElement: mockRectangleElementConstructor }));
-vi.mock('./elements/endcap.js', () => ({ EndcapElement: mockEndcapElementConstructor }));
-vi.mock('./elements/elbow.js', () => ({ ElbowElement: mockElbowElementConstructor }));
-vi.mock('./elements/chisel_endcap.js', () => ({ ChiselEndcapElement: mockChiselEndcapElementConstructor }));
-vi.mock('./elements/top_header.js', () => ({ TopHeaderElement: mockTopHeaderElementConstructor }));
+vi.mock('../elements/text', () => ({ TextElement: mockTextElementConstructor }));
+vi.mock('../elements/rectangle', () => ({ RectangleElement: mockRectangleElementConstructor }));
+vi.mock('../elements/endcap', () => ({ EndcapElement: mockEndcapElementConstructor }));
+vi.mock('../elements/elbow', () => ({ ElbowElement: mockElbowElementConstructor }));
+vi.mock('../elements/chisel_endcap', () => ({ ChiselEndcapElement: mockChiselEndcapElementConstructor }));
+vi.mock('../elements/top_header', () => ({ TopHeaderElement: mockTopHeaderElementConstructor }));
 
 // Import after mock setup
 import { HomeAssistant } from 'custom-card-helpers';
-import { Group } from './engine';
-import { LcarsCardConfig, LcarsElementConfig } from '../lovelace-lcars-card';
-import { parseConfig } from './parser';
+import { Group } from '../engine';
+import { LcarsCardConfig, LcarsElementConfig } from '../../lovelace-lcars-card';
+import { parseConfig } from '../parser';
 
 // These imports are for type checking
-import { TextElement } from './elements/text.js';
-import { RectangleElement } from './elements/rectangle.js';
-import { EndcapElement } from './elements/endcap.js';
-import { ElbowElement } from './elements/elbow.js';
-import { ChiselEndcapElement } from './elements/chisel_endcap.js';
-import { TopHeaderElement } from './elements/top_header.js';
+import { TextElement } from '../elements/text';
+import { RectangleElement } from '../elements/rectangle';
+import { EndcapElement } from '../elements/endcap';
+import { ElbowElement } from '../elements/elbow';
+import { ChiselEndcapElement } from '../elements/chisel_endcap';
+import { TopHeaderElement } from '../elements/top_header';
 
 
 describe('parseConfig', () => {

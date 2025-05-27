@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Set up mocks - IMPORTANT: Use factory functions with no external variables
-vi.mock('./button.js', () => {
+vi.mock('../button.js', () => {
   return {
     Button: vi.fn().mockImplementation((id, props, hass, cb) => {
       return {
@@ -18,7 +18,7 @@ vi.mock('./button.js', () => {
   };
 });
 
-vi.mock('../../utils/shapes.js', () => {
+vi.mock('../../../utils/shapes.js', () => {
   return {
     getFontMetrics: vi.fn(),
     measureTextBBox: vi.fn(),
@@ -28,11 +28,11 @@ vi.mock('../../utils/shapes.js', () => {
 });
 
 // Now import the mocked modules
-import { TextElement } from './text';
-import { Button } from './button.js';
+import { TextElement } from '../text';
+import { Button } from '../button.js';
 import { svg, SVGTemplateResult } from 'lit';
 import { HomeAssistant } from 'custom-card-helpers';
-import * as shapes from '../../utils/shapes.js';
+import * as shapes from '../../../utils/shapes.js';
 
 // Create a simple SVG renderer to test SVG templates
 function renderSvgTemplate(template: SVGTemplateResult): SVGElement {
@@ -74,9 +74,9 @@ describe('TextElement', () => {
     document.body.appendChild(mockSvgContainer);
 
     // Reset mock implementations
-    vi.mocked(shapes.getFontMetrics).mockReturnValue(null);
-    vi.mocked(shapes.measureTextBBox).mockReturnValue(null);
-    vi.mocked(shapes.getSvgTextWidth).mockReturnValue(0);
+    (shapes.getFontMetrics as any).mockReturnValue(null);
+    (shapes.measureTextBBox as any).mockReturnValue(null);
+    (shapes.getSvgTextWidth as any).mockReturnValue(0);
   });
 
   afterEach(() => {
@@ -126,8 +126,8 @@ describe('TextElement', () => {
     });
 
     it('should calculate size using measureTextBBox and getFontMetrics if available', () => {
-      vi.mocked(shapes.measureTextBBox).mockReturnValue({ width: 120, height: 22 });
-      vi.mocked(shapes.getFontMetrics).mockReturnValue({
+      (shapes.measureTextBBox as any).mockReturnValue({ width: 120, height: 22 });
+      (shapes.getFontMetrics as any).mockReturnValue({
         top: -0.8, bottom: 0.2, ascent: -0.75, descent: 0.25, capHeight: -0.7, xHeight: -0.5, baseline: 0,
         fontFamily: 'Arial', fontWeight: 'normal', fontSize: 16, tittle: 0
       });
@@ -143,8 +143,8 @@ describe('TextElement', () => {
     });
 
     it('should use BBox height if getFontMetrics fails', () => {
-      vi.mocked(shapes.measureTextBBox).mockReturnValue({ width: 110, height: 25 });
-      vi.mocked(shapes.getFontMetrics).mockReturnValue(null);
+      (shapes.measureTextBBox as any).mockReturnValue({ width: 110, height: 25 });
+      (shapes.getFontMetrics as any).mockReturnValue(null);
 
       textElement = new TextElement('txt-is3', { text: 'World' });
       textElement.calculateIntrinsicSize(mockSvgContainer);
@@ -155,8 +155,8 @@ describe('TextElement', () => {
     });
 
     it('should use getSvgTextWidth and default height if measureTextBBox fails', () => {
-      vi.mocked(shapes.measureTextBBox).mockReturnValue(null);
-      vi.mocked(shapes.getSvgTextWidth).mockReturnValue(90);
+      (shapes.measureTextBBox as any).mockReturnValue(null);
+      (shapes.getSvgTextWidth as any).mockReturnValue(90);
 
       textElement = new TextElement('txt-is4', { text: 'Test', fontSize: 20 });
       textElement.calculateIntrinsicSize(mockSvgContainer);
@@ -173,8 +173,8 @@ describe('TextElement', () => {
     });
 
     it('should handle undefined text, letterSpacing, textTransform for getSvgTextWidth', () => {
-      vi.mocked(shapes.measureTextBBox).mockReturnValue(null);
-      vi.mocked(shapes.getSvgTextWidth).mockReturnValue(80);
+      (shapes.measureTextBBox as any).mockReturnValue(null);
+      (shapes.getSvgTextWidth as any).mockReturnValue(80);
 
       textElement = new TextElement('txt-is-undef', { fontSize: 18 }); // No text, letterSpacing, textTransform
       textElement.calculateIntrinsicSize(mockSvgContainer);
@@ -191,8 +191,8 @@ describe('TextElement', () => {
     });
 
     it('should handle empty text string gracefully', () => {
-      vi.mocked(shapes.measureTextBBox).mockReturnValue({ width: 0, height: 18 });
-      vi.mocked(shapes.getFontMetrics).mockReturnValue({ 
+      (shapes.measureTextBBox as any).mockReturnValue({ width: 0, height: 18 });
+      (shapes.getFontMetrics as any).mockReturnValue({ 
         top: -0.8, bottom: 0.2, ascent: -0.75, descent: 0.25, capHeight: -0.7, xHeight: -0.5, baseline: 0, 
         fontFamily: 'Arial', fontWeight: 'normal', fontSize: 16, tittle: 0
       });
@@ -362,7 +362,7 @@ describe('TextElement', () => {
     });
 
     it('should try to fetch new metrics if no cached or initial metrics, and fontFamily is present', () => {
-      vi.mocked(shapes.getFontMetrics).mockReturnValue({ 
+      (shapes.getFontMetrics as any).mockReturnValue({ 
         ascent: -0.6, top: -0.6, bottom: 0, descent: 0, capHeight: 0, xHeight: 0, baseline: 0,
         fontFamily: 'TestFont', fontWeight: 'normal', fontSize: 15, tittle: 0
       });

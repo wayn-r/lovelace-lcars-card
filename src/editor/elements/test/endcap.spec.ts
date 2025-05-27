@@ -1,7 +1,7 @@
-// src/editor/elements/elbow.spec.ts
+// src/editor/elements/endcap.spec.ts
 
 // vi.mock must be before any imports
-vi.mock('./element', () => {
+vi.mock('../element', () => {
     const registerSpy = vi.fn();
     
     const PGMock = {
@@ -12,12 +12,12 @@ vi.mock('./element', () => {
         APPEARANCE: 'APPEARANCE',
         POSITIONING: 'POSITIONING',
         TYPE: 'TYPE',
-        TEXT: 'TEXT' // Though not used by Elbow directly (except via button), keep for mock consistency
+        TEXT: 'TEXT'
     };
 
     return {
         PropertyGroup: PGMock,
-        PropertyGroupDefinition: undefined, // Mock, not used by tests directly
+        PropertyGroupDefinition: undefined,
         EditorElement: class MockEditorElement {
             static registerEditorElement = registerSpy;
             
@@ -30,46 +30,40 @@ vi.mock('./element', () => {
                 this.type = config.type;
                 this.config = config;
                 
-                // Base EditorElement constructor behavior
                 if (!this.config.layout) this.config.layout = {};
                 if (!this.config.layout.stretch) this.config.layout.stretch = {};
                 if (!this.config.button) this.config.button = {};
-                // props is only created if it's in the input config, or handled by specific element constructor
             }
 
-            // Mocked getSchema to reflect base EditorElement behavior driven by getPropertyGroups
             getSchema() {
-                const groups = this.getPropertyGroups(); // This will call Elbow's getPropertyGroups
+                const groups = this.getPropertyGroups();
                 const schema: Array<{name: string, selector?: any, type?: string}> = [];
                 
                 let typeLabel = this.type.charAt(0).toUpperCase() + this.type.slice(1);
-                if (this.type === 'elbow') typeLabel = 'Elbow';
-                // Add more specific labels if needed
+                if (this.type === 'chisel-endcap') typeLabel = 'Chisel Endcap';
+                else if (this.type === 'top_header') typeLabel = 'Top Header';
+                // Add more specific labels if needed, e.g., for 'endcap' it's just 'Endcap'
 
-                // 1. Type property (always first)
                 schema.push({ name: 'type', selector: { select: { options: [{ value: this.type, label: typeLabel }] } } });
                 
-                // 2. Anchor properties (if ANCHOR group is not null)
-                if (groups[PGMock.ANCHOR] !== null && groups[PGMock.ANCHOR]) { // For Elbow, this is true
-                    schema.push({ name: 'anchorTo' }); 
+                if (groups[PGMock.ANCHOR] !== null && groups[PGMock.ANCHOR]) {
+                    schema.push({ name: 'anchorTo' });
                     schema.push({ name: 'anchorPoint', type: 'custom' });
                     schema.push({ name: 'targetAnchorPoint', type: 'custom' });
                 }
                 
-                // 3. Button properties (conditional)
                 const buttonGroupDef = groups[PGMock.BUTTON];
                 if (this.config.button?.enabled) {
                     if (buttonGroupDef?.properties) {
                         buttonGroupDef.properties.forEach((prop: any) => {
-                            const instance = new (prop as any)(); 
+                            const instance = new (prop as any)();
                             schema.push({ name: instance.name });
                         });
                     }
                 } else {
-                     schema.push({ name: 'button.enabled' }); 
+                     schema.push({ name: 'button.enabled' });
                 }
                 
-                // 4. Dimension properties
                 const dimensionGroup = groups[PGMock.DIMENSIONS];
                 if (dimensionGroup?.properties) {
                     dimensionGroup.properties.forEach((prop: any) => {
@@ -78,7 +72,6 @@ vi.mock('./element', () => {
                     });
                 }
                 
-                // 5. Appearance properties
                 const appearanceGroup = groups[PGMock.APPEARANCE];
                 if (appearanceGroup?.properties) {
                     appearanceGroup.properties.forEach((prop: any) => {
@@ -87,7 +80,6 @@ vi.mock('./element', () => {
                     });
                 }
                 
-                // 6. Positioning properties
                 const positioningGroup = groups[PGMock.POSITIONING];
                 if (positioningGroup?.properties) {
                     positioningGroup.properties.forEach((prop: any) => {
@@ -96,14 +88,13 @@ vi.mock('./element', () => {
                     });
                 }
                 
-                // 7. Stretch properties (dynamic based on config, as in base EditorElement)
                 const stretchGroupDef = groups[PGMock.STRETCH];
-                if (stretchGroupDef !== null && stretchGroupDef) { // For Elbow, this is true
+                if (stretchGroupDef !== null && stretchGroupDef) {
                     const stretch = this.config.layout.stretch || {};
                     schema.push({ name: 'stretchTo1' });
                     
                     if (stretch.stretchTo1) {
-                        schema.push({ name: 'stretchDirection1', type: 'custom' }); 
+                        schema.push({ name: 'stretchDirection1', type: 'custom' });
                         schema.push({ name: 'stretchPadding1' });
                         schema.push({ name: 'stretchTo2' });
                         
@@ -123,14 +114,14 @@ vi.mock('./element', () => {
                 
                 if (this.config.props) {
                     Object.entries(this.config.props).forEach(([key, value]) => {
-                        formData[key] = value; // fill, orientation, bodyWidth, armHeight, elbow_text_position
+                        formData[key] = value;
                     });
                 }
                 
                 if (this.config.layout) {
                     const { stretch, anchor, ...otherLayout } = this.config.layout;
                     Object.entries(otherLayout).forEach(([key, value]) => {
-                        formData[key] = value; // width, height, offsetX, offsetY
+                        formData[key] = value;
                     });
 
                     if (anchor) {
@@ -183,59 +174,52 @@ vi.mock('./element', () => {
             }
             
             processDataUpdate(newData: any) {
-                const configDelta: any = {}; 
+                const configDelta: any = {};
 
-                // Props for Elbow
                 if (newData.fill !== undefined) configDelta.fill = newData.fill;
-                if (newData.orientation !== undefined) configDelta.orientation = newData.orientation;
-                if (newData.bodyWidth !== undefined) configDelta.bodyWidth = newData.bodyWidth;
-                if (newData.armHeight !== undefined) configDelta.armHeight = newData.armHeight;
-                if (newData.elbow_text_position !== undefined) configDelta.elbow_text_position = newData.elbow_text_position;
+                if (newData.direction !== undefined) configDelta.direction = newData.direction;
 
-                // Layout properties
                 if (newData.width !== undefined) configDelta.width = newData.width;
                 if (newData.height !== undefined) configDelta.height = newData.height;
                 if (newData.offsetX !== undefined) configDelta.offsetX = newData.offsetX;
                 if (newData.offsetY !== undefined) configDelta.offsetY = newData.offsetY;
 
-                // Anchor properties (base class logic)
-                if (newData.anchorTo !== undefined) { 
+                // Handle anchor properties with proper defaults
+                if (newData.anchorTo !== undefined) {
                     configDelta.anchorTo = newData.anchorTo;
                     
                     if (newData.anchorTo && newData.anchorTo !== '') {
+                        // Set defaults for anchor points if they're not provided
                         configDelta.anchorPoint = newData.anchorPoint || 'center';
                         configDelta.targetAnchorPoint = newData.targetAnchorPoint || 'center';
                     }
+                    // If anchorTo is empty, we don't set the defaults
                 }
-                else { 
+                else {
                     if (newData.anchorPoint !== undefined) configDelta.anchorPoint = newData.anchorPoint;
                     if (newData.targetAnchorPoint !== undefined) configDelta.targetAnchorPoint = newData.targetAnchorPoint;
                 }
 
-                // Stretch properties (base class logic, nested into layout.stretch)
-                configDelta.layout = { stretch: {} }; 
-                
-                const processStretch = (index: number, suffix: string) => {
-                    const stretchToKey = `stretchTo${suffix}`;
-                    const directionKey = `stretchDirection${suffix}`;
-                    const paddingKey = `stretchPadding${suffix}`;
-
-                    if (newData[stretchToKey] !== undefined && newData[stretchToKey]) {
-                        configDelta.layout.stretch[stretchToKey] = newData[stretchToKey];
-                        if (newData[directionKey]) {
-                            configDelta.layout.stretch[`targetStretchAnchorPoint${suffix}`] = newData[directionKey];
-                            const isHorizontal = ['left', 'right', 'center', 'centerLeft', 'centerRight'].includes(newData[directionKey]);
-                            configDelta.layout.stretch[`stretchAxis${suffix}`] = isHorizontal ? 'X' : 'Y';
-                        }
-                        if (newData[paddingKey] !== undefined) {
-                            configDelta.layout.stretch[`stretchPadding${suffix}`] = newData[paddingKey];
-                        }
+                configDelta.layout = { stretch: {} };
+                if (newData.stretchTo1 !== undefined && newData.stretchTo1) {
+                    configDelta.layout.stretch.stretchTo1 = newData.stretchTo1;
+                    if (newData.stretchDirection1) {
+                        configDelta.layout.stretch.targetStretchAnchorPoint1 = newData.stretchDirection1;
+                        const isHorizontal1 = ['left', 'right', 'center', 'centerLeft', 'centerRight'].includes(newData.stretchDirection1);
+                        configDelta.layout.stretch.stretchAxis1 = isHorizontal1 ? 'X' : 'Y';
                     }
-                };
-                processStretch(0, '1');
-                processStretch(1, '2');
-
-                // Button properties (prefixed, base class handles nesting and clearing)
+                    if (newData.stretchPadding1 !== undefined) configDelta.layout.stretch.stretchPadding1 = newData.stretchPadding1;
+                }
+                if (newData.stretchTo2 !== undefined && newData.stretchTo2) {
+                    configDelta.layout.stretch.stretchTo2 = newData.stretchTo2;
+                    if (newData.stretchDirection2) {
+                        configDelta.layout.stretch.targetStretchAnchorPoint2 = newData.stretchDirection2;
+                        const isHorizontal2 = ['left', 'right', 'center', 'centerLeft', 'centerRight'].includes(newData.stretchDirection2);
+                        configDelta.layout.stretch.stretchAxis2 = isHorizontal2 ? 'X' : 'Y';
+                    }
+                    if (newData.stretchPadding2 !== undefined) configDelta.layout.stretch.stretchPadding2 = newData.stretchPadding2;
+                }
+                
                 for (const [key, value] of Object.entries(newData)) {
                     if (key.startsWith('button.')) {
                         configDelta[key] = value;
@@ -249,7 +233,7 @@ vi.mock('./element', () => {
                         }
                     }
                     const actionConfigPrefix = 'button.action_config.';
-                    Object.keys(newData).forEach(key => { 
+                    Object.keys(newData).forEach(key => { // Check original newData for potential keys to remove
                         if (key.startsWith(actionConfigPrefix)) {
                            delete configDelta[key];
                         }
@@ -274,49 +258,49 @@ vi.mock('./element', () => {
             }
             
             getPropertyGroups(): Record<string, any> {
-                throw new Error("MockEditorElement.getPropertyGroups should not be called directly; Elbow should override it.");
+                throw new Error("MockEditorElement.getPropertyGroups should not be called directly; Endcap should override it.");
             }
         }
     };
 });
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EditorElement, PropertyGroup } from './element'; // Mocked base class and real enum
+import { EditorElement, PropertyGroup } from '../element';
 
 import {
-    Orientation, Width, Height, BodyWidth, ArmHeight, ElbowTextPosition, Fill,
+    Width, Height, Fill, Direction, // Endcap specific appearance
     ButtonEnabled, ButtonText, ButtonCutoutText, ButtonTextColor,
     ButtonFontFamily, ButtonFontSize, ButtonFontWeight, ButtonLetterSpacing,
     ButtonTextTransform, ButtonTextAnchor, ButtonDominantBaseline, ButtonHoverFill,
     ButtonActiveFill, ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
     OffsetX, OffsetY, Type,
-    AnchorTo, AnchorPoint, TargetAnchorPoint // Anchor properties are used by Elbow
-} from '../properties/properties';
+    AnchorTo, AnchorPoint, TargetAnchorPoint // Anchor properties are used by Endcap
+} from '../../properties/properties';
 
-import { Elbow } from './elbow'; // The class under test
+import { Endcap } from '../endcap';
 
-describe('Elbow EditorElement', () => {
-    let elbowEditorElement: Elbow;
+describe('Endcap EditorElement', () => {
+    let endcapEditorElement: Endcap;
     let config: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        EditorElement.registerEditorElement('elbow', Elbow);
+        EditorElement.registerEditorElement('endcap', Endcap);
 
         config = {
-            id: 'test-elbow',
-            type: 'elbow',
+            id: 'test-endcap',
+            type: 'endcap',
         };
-        elbowEditorElement = new Elbow(config);
+        endcapEditorElement = new Endcap(config);
     });
 
     it('should be registered with EditorElement upon module import', () => {
-        expect(EditorElement.registerEditorElement).toHaveBeenCalledWith('elbow', Elbow);
+        expect(EditorElement.registerEditorElement).toHaveBeenCalledWith('endcap', Endcap);
     });
 
     describe('constructor', () => {
         it('should initialize with default config structure if parts are missing', () => {
-            const el = new Elbow({ id: 'el1', type: 'elbow' });
+            const el = new Endcap({ id: 'ec1', type: 'endcap' });
             expect(el.config.layout).toEqual({ stretch: {} });
             expect(el.config.button).toEqual({});
             expect(el.config.props).toBeUndefined();
@@ -324,30 +308,30 @@ describe('Elbow EditorElement', () => {
 
         it('should preserve existing props, layout, and button configs', () => {
             const initialConfig = {
-                id: 'el2',
-                type: 'elbow',
-                props: { fill: 'green', orientation: 'top-right', bodyWidth: 20 },
-                layout: { width: 120, offsetX: 2, anchor: { anchorTo: 'el1' } },
-                button: { enabled: true, text: 'Elbow Action', elbow_text_position: 'side' }
+                id: 'ec2',
+                type: 'endcap',
+                props: { fill: 'blue', direction: 'right' },
+                layout: { width: 80, offsetX: -3, anchor: { anchorTo: 'container' } },
+                button: { enabled: true, text: 'Endcap Btn' }
             };
-            const el = new Elbow(initialConfig);
-            expect(el.config.props).toEqual({ fill: 'green', orientation: 'top-right', bodyWidth: 20 });
-            expect(el.config.layout).toEqual({ width: 120, offsetX: 2, anchor: { anchorTo: 'el1' }, stretch: {} });
-            expect(el.config.button).toEqual({ enabled: true, text: 'Elbow Action', elbow_text_position: 'side' });
+            const el = new Endcap(initialConfig);
+            expect(el.config.props).toEqual({ fill: 'blue', direction: 'right' });
+            expect(el.config.layout).toEqual({ width: 80, offsetX: -3, anchor: { anchorTo: 'container' }, stretch: {} });
+            expect(el.config.button).toEqual({ enabled: true, text: 'Endcap Btn' });
         });
     });
 
     describe('getPropertyGroups', () => {
-        let groups: Partial<Record<PropertyGroup, import("./element").PropertyGroupDefinition | null>>;
+        let groups: Partial<Record<PropertyGroup, import("../element").PropertyGroupDefinition | null>>;
 
         beforeEach(() => {
-            groups = elbowEditorElement.getPropertyGroups();
+            groups = endcapEditorElement.getPropertyGroups();
         });
 
         it('should define ANCHOR group as enabled (not null)', () => {
             expect(groups[PropertyGroup.ANCHOR]).toBeDefined();
             expect(groups[PropertyGroup.ANCHOR]).not.toBeNull();
-            expect(groups[PropertyGroup.ANCHOR]?.properties).toEqual([]);
+            expect(groups[PropertyGroup.ANCHOR]?.properties).toEqual([]); // Base class handles actual properties
         });
 
         it('should define STRETCH group with empty properties (relying on base class)', () => {
@@ -355,12 +339,12 @@ describe('Elbow EditorElement', () => {
             expect(groups[PropertyGroup.STRETCH]?.properties).toEqual([]);
         });
 
-        it('should define APPEARANCE group with Fill and Orientation', () => {
+        it('should define APPEARANCE group with Fill and Direction', () => {
             expect(groups[PropertyGroup.APPEARANCE]).toBeDefined();
-            expect(groups[PropertyGroup.APPEARANCE]?.properties).toEqual([Fill, Orientation]);
+            expect(groups[PropertyGroup.APPEARANCE]?.properties).toEqual([Fill, Direction]);
         });
 
-        it('should define BUTTON group with standard button properties and ElbowTextPosition', () => {
+        it('should define BUTTON group with a comprehensive list of button properties', () => {
             expect(groups[PropertyGroup.BUTTON]).toBeDefined();
             const buttonProps = groups[PropertyGroup.BUTTON]?.properties;
             const expectedButtonProps = [
@@ -368,15 +352,14 @@ describe('Elbow EditorElement', () => {
                 ButtonFontFamily, ButtonFontSize, ButtonFontWeight,
                 ButtonLetterSpacing, ButtonTextTransform, ButtonTextAnchor,
                 ButtonDominantBaseline, ButtonHoverFill, ButtonActiveFill,
-                ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
-                ElbowTextPosition // Specific to Elbow's button group
+                ButtonHoverTransform, ButtonActiveTransform, ButtonActionType
             ];
             expect(buttonProps).toEqual(expectedButtonProps);
         });
 
-        it('should define DIMENSIONS group with Width, Height, BodyWidth, and ArmHeight', () => {
+        it('should define DIMENSIONS group with Width and Height', () => {
             expect(groups[PropertyGroup.DIMENSIONS]).toBeDefined();
-            expect(groups[PropertyGroup.DIMENSIONS]?.properties).toEqual([Width, Height, BodyWidth, ArmHeight]);
+            expect(groups[PropertyGroup.DIMENSIONS]?.properties).toEqual([Width, Height]);
         });
 
         it('should define POSITIONING group with OffsetX and OffsetY', () => {
@@ -386,205 +369,161 @@ describe('Elbow EditorElement', () => {
     });
 
     describe('getSchema (behavior inherited from EditorElement, driven by getPropertyGroups)', () => {
-        it('should include the Type property first with "Elbow" label', () => {
-            const schema = elbowEditorElement.getSchema();
+        it('should include the Type property first with "Endcap" label', () => {
+            const schema = endcapEditorElement.getSchema();
             expect(schema[0].name).toBe('type');
-            expect(schema[0].selector?.select.options).toEqual([{ value: 'elbow', label: 'Elbow' }]);
+            expect(schema[0].selector.select.options).toEqual([{ value: 'endcap', label: 'Endcap' }]);
         });
 
         it('should include anchor properties (AnchorTo, AnchorPoint, TargetAnchorPoint) in the schema', () => {
-            const schema = elbowEditorElement.getSchema();
+            const schema = endcapEditorElement.getSchema();
             expect(schema.find(s => s.name === 'anchorTo')).toBeDefined();
             expect(schema.find(s => s.name === 'anchorPoint' && s.type === 'custom')).toBeDefined();
             expect(schema.find(s => s.name === 'targetAnchorPoint' && s.type === 'custom')).toBeDefined();
         });
 
         it('should include stretch properties dynamically (base class behavior)', () => {
-            let schema = elbowEditorElement.getSchema();
+            let schema = endcapEditorElement.getSchema();
             expect(schema.find(s => s.name === 'stretchTo1')).toBeDefined();
-            expect(schema.find(s => s.name === 'stretchDirection1')).toBeUndefined();
+            expect(schema.find(s => s.name === 'stretchDirection1')).toBeUndefined(); // Not shown if stretchTo1 not set
 
-            elbowEditorElement.config.layout.stretch = { stretchTo1: 'container' };
-            schema = elbowEditorElement.getSchema();
+            endcapEditorElement.config.layout.stretch = { stretchTo1: 'container' };
+            schema = endcapEditorElement.getSchema();
             expect(schema.find(s => s.name === 'stretchDirection1' && s.type === 'custom')).toBeDefined();
             expect(schema.find(s => s.name === 'stretchPadding1')).toBeDefined();
             expect(schema.find(s => s.name === 'stretchTo2')).toBeDefined();
         });
 
         it('should include only ButtonEnabled if button.enabled is false/undefined', () => {
-            elbowEditorElement.config.button = { enabled: false };
-            let schema = elbowEditorElement.getSchema();
-            let buttonSchemaItems = schema.filter(s => s.name.startsWith('button.') || s.name === 'elbow_text_position');
+            endcapEditorElement.config.button = { enabled: false };
+            let schema = endcapEditorElement.getSchema();
+            let buttonSchemaItems = schema.filter(s => s.name.startsWith('button.'));
             expect(buttonSchemaItems.length).toBe(1);
             expect(buttonSchemaItems[0].name).toBe('button.enabled');
 
-            elbowEditorElement.config.button = {}; // enabled is implicitly false
-            schema = elbowEditorElement.getSchema();
-            buttonSchemaItems = schema.filter(s => s.name.startsWith('button.') || s.name === 'elbow_text_position');
+            endcapEditorElement.config.button = {}; // enabled is implicitly false
+            schema = endcapEditorElement.getSchema();
+            buttonSchemaItems = schema.filter(s => s.name.startsWith('button.'));
             expect(buttonSchemaItems.length).toBe(1);
             expect(buttonSchemaItems[0].name).toBe('button.enabled');
         });
 
-        it('should include all defined button properties (including ElbowTextPosition) if button.enabled is true', () => {
-            elbowEditorElement.config.button = { enabled: true };
-            const schema = elbowEditorElement.getSchema();
+        it('should include all defined button properties if button.enabled is true', () => {
+            endcapEditorElement.config.button = { enabled: true };
+            const schema = endcapEditorElement.getSchema();
             
             const expectedButtonPropInstances = [
                 new ButtonEnabled(), new ButtonText(), new ButtonCutoutText(), new ButtonTextColor(),
                 new ButtonFontFamily(), new ButtonFontSize(), new ButtonFontWeight(),
                 new ButtonLetterSpacing(), new ButtonTextTransform(), new ButtonTextAnchor(),
                 new ButtonDominantBaseline(), new ButtonHoverFill(), new ButtonActiveFill(),
-                new ButtonHoverTransform(), new ButtonActiveTransform(), new ButtonActionType(),
-                new ElbowTextPosition() // Ensure ElbowTextPosition is checked
+                new ButtonHoverTransform(), new ButtonActiveTransform(), new ButtonActionType()
             ];
             expectedButtonPropInstances.forEach(instance => {
                 expect(schema.find(s => s.name === instance.name)).toBeDefined();
             });
         });
 
-        it('should include appearance properties (Fill, Orientation)', () => {
-            const schema = elbowEditorElement.getSchema();
+        it('should include appearance properties (Fill, Direction)', () => {
+            const schema = endcapEditorElement.getSchema();
             expect(schema.find(s => s.name === 'fill')).toBeDefined();
-            expect(schema.find(s => s.name === 'orientation')).toBeDefined();
+            expect(schema.find(s => s.name === 'direction')).toBeDefined();
         });
 
-        it('should include dimension properties (Width, Height, BodyWidth, ArmHeight)', () => {
-            const schema = elbowEditorElement.getSchema();
+        it('should include dimension and positioning properties', () => {
+            const schema = endcapEditorElement.getSchema();
             expect(schema.find(s => s.name === 'width')).toBeDefined();
             expect(schema.find(s => s.name === 'height')).toBeDefined();
-            expect(schema.find(s => s.name === 'bodyWidth')).toBeDefined();
-            expect(schema.find(s => s.name === 'armHeight')).toBeDefined();
-        });
-
-        it('should include positioning properties (OffsetX, OffsetY)', () => {
-            const schema = elbowEditorElement.getSchema();
             expect(schema.find(s => s.name === 'offsetX')).toBeDefined();
             expect(schema.find(s => s.name === 'offsetY')).toBeDefined();
         });
     });
 
     describe('getFormData (inherited from EditorElement)', () => {
-        it('should correctly extract data from a full config for Elbow', () => {
+        it('should correctly extract data from a full config', () => {
             const testConfig = {
-                id: 'el-formdata', type: 'elbow',
-                props: {
-                    fill: [0, 0, 255], // Blue
-                    orientation: 'bottom-left',
-                    bodyWidth: 25,
-                    armHeight: 35,
-                    elbow_text_position: 'side'
-                },
+                id: 'ec-formdata', type: 'endcap',
+                props: { fill: [100, 100, 100], direction: 'left' },
                 layout: {
-                    width: 180, height: 90, offsetX: -8, offsetY: 12,
-                    anchor: { anchorTo: 'el-target', anchorPoint: 'bottomLeft', targetAnchorPoint: 'topRight' },
-                    stretch: { stretchTo1: 'container', targetStretchAnchorPoint1: 'left', stretchPadding1: 3 }
+                    width: 70, height: 30, offsetX: 5,
+                    anchor: { anchorTo: 'container', anchorPoint: 'center', targetAnchorPoint: 'center' },
+                    stretch: { stretchTo1: 'el-other', targetStretchAnchorPoint1: 'top', stretchPadding1: 2 }
                 },
-                button: { enabled: true, text: 'Elbow Button', font_size: 10 }
+                button: { enabled: true, text: 'EC Button' }
             };
-            const el = new Elbow(testConfig);
+            const el = new Endcap(testConfig);
             const formData = el.getFormData();
 
-            expect(formData.type).toBe('elbow');
-            // Props
-            expect(formData.fill).toEqual([0, 0, 255]);
-            expect(formData.orientation).toBe('bottom-left');
-            expect(formData.bodyWidth).toBe(25);
-            expect(formData.armHeight).toBe(35);
-            expect(formData.elbow_text_position).toBe('side');
-            // Layout
-            expect(formData.width).toBe(180);
-            expect(formData.height).toBe(90);
-            expect(formData.offsetX).toBe(-8);
-            expect(formData.offsetY).toBe(12);
-            // Anchor
-            expect(formData.anchorTo).toBe('el-target');
-            expect(formData.anchorPoint).toBe('bottomLeft');
-            expect(formData.targetAnchorPoint).toBe('topRight');
-            // Stretch
-            expect(formData.stretchTo1).toBe('container');
-            expect(formData.stretchDirection1).toBe('left');
-            expect(formData.stretchPadding1).toBe(3);
-            expect(formData.stretchTo2).toBe('');
-            // Button
+            expect(formData.type).toBe('endcap');
+            expect(formData.fill).toEqual([100, 100, 100]);
+            expect(formData.direction).toBe('left');
+            expect(formData.width).toBe(70);
+            expect(formData.height).toBe(30);
+            expect(formData.offsetX).toBe(5);
+            expect(formData.anchorTo).toBe('container');
+            expect(formData.anchorPoint).toBe('center');
+            expect(formData.targetAnchorPoint).toBe('center');
+            expect(formData.stretchTo1).toBe('el-other');
+            expect(formData.stretchDirection1).toBe('top');
+            expect(formData.stretchPadding1).toBe(2);
             expect(formData['button.enabled']).toBe(true);
-            expect(formData['button.text']).toBe('Elbow Button');
-            expect(formData['button.font_size']).toBe(10);
-        });
-
-        it('should handle missing optional Elbow-specific props', () => {
-            const testConfig = {
-                id: 'el-formdata-min', type: 'elbow',
-                props: { fill: [100,100,100] }, // Only fill in props
-                layout: { width: 50 }
-            };
-            const el = new Elbow(testConfig);
-            const formData = el.getFormData();
-
-            expect(formData.type).toBe('elbow');
-            expect(formData.fill).toEqual([100,100,100]);
-            expect(formData.orientation).toBeUndefined();
-            expect(formData.bodyWidth).toBeUndefined();
-            expect(formData.armHeight).toBeUndefined();
-            expect(formData.elbow_text_position).toBeUndefined();
-            expect(formData.width).toBe(50);
-            expect(formData.height).toBeUndefined();
+            expect(formData['button.text']).toBe('EC Button');
         });
     });
 
     describe('processDataUpdate (inherited from EditorElement)', () => {
-        it('should correctly process full form data (including Elbow props) back to config delta', () => {
+        it('should correctly process form data back to config delta structure', () => {
             const formDataFromUI = {
-                type: 'elbow', 
-                fill: [0, 128, 0], orientation: 'top-left', bodyWidth: 30, armHeight: 40, elbow_text_position: 'top',
-                width: 210, height: 110, offsetX: 22, offsetY: 33,
-                anchorTo: 'el3', anchorPoint: 'center', targetAnchorPoint: 'center',
-                stretchTo1: 'container', stretchDirection1: 'top', stretchPadding1: 7,
-                'button.enabled': true, 'button.text': 'New Elbow Text'
+                type: 'endcap',
+                fill: [0, 255, 0], direction: 'right',
+                width: 75, height: 35, offsetX: 7,
+                anchorTo: 'el2', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomRight',
+                stretchTo1: 'container', stretchDirection1: 'left', stretchPadding1: 3,
+                'button.enabled': true, 'button.text': 'New Text'
             };
-            const el = new Elbow({ id: 'el-update', type: 'elbow' });
+            const el = new Endcap({ id: 'ec-update', type: 'endcap' });
             const configDelta = el.processDataUpdate(formDataFromUI);
 
-            // Props (top-level in delta, editor nests them into 'props')
-            expect(configDelta.fill).toEqual([0, 128, 0]);
-            expect(configDelta.orientation).toBe('top-left');
-            expect(configDelta.bodyWidth).toBe(30);
-            expect(configDelta.armHeight).toBe(40);
-            expect(configDelta.elbow_text_position).toBe('top');
-            // Layout (top-level in delta, editor nests them into 'layout')
-            expect(configDelta.width).toBe(210);
-            expect(configDelta.height).toBe(110);
-            expect(configDelta.offsetX).toBe(22);
-            expect(configDelta.offsetY).toBe(33);
-            // Anchor (top-level in delta)
-            expect(configDelta.anchorTo).toBe('el3');
-            expect(configDelta.anchorPoint).toBe('center');
-            expect(configDelta.targetAnchorPoint).toBe('center');
-            // Stretch (nested by processDataUpdate into delta.layout.stretch)
+            expect(configDelta.fill).toEqual([0, 255, 0]);
+            expect(configDelta.direction).toBe('right');
+            expect(configDelta.width).toBe(75);
+            expect(configDelta.height).toBe(35);
+            expect(configDelta.offsetX).toBe(7);
+            // Anchor properties are top-level in delta, editor nests them
+            expect(configDelta.anchorTo).toBe('el2');
+            expect(configDelta.anchorPoint).toBe('topLeft');
+            expect(configDelta.targetAnchorPoint).toBe('bottomRight');
+            // Stretch properties are nested by processDataUpdate
             expect(configDelta.layout.stretch.stretchTo1).toBe('container');
-            expect(configDelta.layout.stretch.targetStretchAnchorPoint1).toBe('top');
-            expect(configDelta.layout.stretch.stretchAxis1).toBe('Y'); // Derived by base
-            expect(configDelta.layout.stretch.stretchPadding1).toBe(7);
-            // Button (prefixed in delta)
+            expect(configDelta.layout.stretch.targetStretchAnchorPoint1).toBe('left');
+            expect(configDelta.layout.stretch.stretchAxis1).toBe('X');
+            expect(configDelta.layout.stretch.stretchPadding1).toBe(3);
+            // Button properties are prefixed
             expect(configDelta['button.enabled']).toBe(true);
-            expect(configDelta['button.text']).toBe('New Elbow Text');
+            expect(configDelta['button.text']).toBe('New Text');
         });
 
-        // Other tests (clearing anchor, defaulting anchor, disabling button, clearing stretch)
-        // are largely testing base EditorElement behavior, which is assumed to be consistent
-        // as per the chisel_endcap.spec.ts structure.
-        // If specific interactions with Elbow props are needed for these cases, add them.
-        // For now, let's assume the base mock covers these scenarios adequately.
         it('should clear anchorPoint and targetAnchorPoint if anchorTo is emptied', () => {
             const formDataFromUI = { anchorTo: '' };
-            const el = new Elbow({
-                id: 'el-anchor-clear', type: 'elbow',
-                layout: { anchor: { anchorTo: 'prevContainer', anchorPoint: 'center', targetAnchorPoint: 'center' } }
+            const el = new Endcap({
+                id: 'ec-anchor-clear', type: 'endcap',
+                layout: { anchor: { anchorTo: 'container', anchorPoint: 'center', targetAnchorPoint: 'center' } }
             });
             const configDelta = el.processDataUpdate(formDataFromUI);
             
-            expect(configDelta.anchorTo).toBe('');
+            expect(configDelta.anchorTo).toBe(''); // Or undefined, depending on how processDataUpdate handles it
             expect(configDelta.anchorPoint).toBeUndefined();
             expect(configDelta.targetAnchorPoint).toBeUndefined();
+        });
+
+        it('should default anchorPoint and targetAnchorPoint if anchorTo is set but points are not', () => {
+            const formDataFromUI = { anchorTo: 'something' }; // anchorPoint/targetAnchorPoint missing
+             const el = new Endcap({ id: 'ec-anchor-default', type: 'endcap' });
+            const configDelta = el.processDataUpdate(formDataFromUI);
+
+            expect(configDelta.anchorTo).toBe('something');
+            expect(configDelta.anchorPoint).toBe('center'); // Default from processDataUpdate
+            expect(configDelta.targetAnchorPoint).toBe('center'); // Default
         });
     });
 });

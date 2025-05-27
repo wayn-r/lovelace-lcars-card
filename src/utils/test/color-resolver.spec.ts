@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ColorResolver, colorResolver } from './color-resolver';
-import { AnimationContext } from './animation';
+import { ColorResolver, colorResolver } from '../color-resolver';
+import { AnimationContext } from '../animation';
 
 // Mock the animation manager
-vi.mock('./animation', () => ({
+vi.mock('../animation', () => ({
   animationManager: {
     resolveDynamicColorWithAnimation: vi.fn()
   }
 }));
 
-import { animationManager } from './animation';
+import { animationManager } from '../animation';
 
 describe('ColorResolver', () => {
   let resolver: ColorResolver;

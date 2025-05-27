@@ -1,7 +1,7 @@
 // src/editor/elements/rectangle.spec.ts
 
 // vi.mock must be before any imports
-vi.mock('./element', () => {
+vi.mock('../element', () => {
     // Create mock registerEditorElement function
     const registerSpy = vi.fn();
     
@@ -230,7 +230,7 @@ vi.mock('./element', () => {
 });
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EditorElement, PropertyGroup } from './element'; // Base class and enum
+import { EditorElement, PropertyGroup } from '../element'; // Base class and enum
 
 // Import all the required properties from the properties module
 import {
@@ -243,10 +243,10 @@ import {
     OffsetX, OffsetY, Type
     // Stretch properties (StretchTarget, StretchDirection, StretchPadding) are dynamically added by base class
     // Anchor properties (AnchorTo, AnchorPoint, TargetAnchorPoint) are explicitly excluded by Rectangle
-} from '../properties/properties';
+} from '../../properties/properties';
 
 // Import Rectangle after setting up the mock
-import { Rectangle } from './rectangle'; // The class under test
+import { Rectangle } from '../rectangle'; // The class under test
 
 describe('Rectangle EditorElement', () => {
     let rectangleEditorElement: Rectangle;
@@ -300,7 +300,7 @@ describe('Rectangle EditorElement', () => {
     });
 
     describe('getPropertyGroups', () => {
-        let groups: Partial<Record<PropertyGroup, import("./element").PropertyGroupDefinition | null>>;
+        let groups: Partial<Record<PropertyGroup, import("../element").PropertyGroupDefinition | null>>;
 
         beforeEach(() => {
             groups = rectangleEditorElement.getPropertyGroups();

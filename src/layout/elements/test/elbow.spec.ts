@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'v
 
 // Important: vi.mock calls are hoisted to the top of the file 
 // so they must come before any imports of the mocked modules
-vi.mock('./button.js', () => ({
+vi.mock('../button.js', () => ({
   Button: vi.fn().mockImplementation((id, props, hass, cb) => ({
     id,
     props,
@@ -14,7 +14,7 @@ vi.mock('./button.js', () => ({
   }))
 }));
 
-vi.mock('../../utils/shapes.js', () => ({
+vi.mock('../../../utils/shapes.js', () => ({
   generateElbowPath: vi.fn().mockImplementation(
     (x, elbowWidth, bodyWidth, armHeight, height, orientation, y, outerCornerRadius) => 
       `MOCK_PATH_elbow_${orientation}_${elbowWidth}x${height}_body${bodyWidth}_arm${armHeight}_at_${x},${y}_r${outerCornerRadius}`
@@ -22,10 +22,10 @@ vi.mock('../../utils/shapes.js', () => ({
 }));
 
 // Import mocked modules after mock setup
-import { ElbowElement } from './elbow';
-import { Button } from './button.js';
-import { LayoutElement } from './element.js';
-import { generateElbowPath } from '../../utils/shapes.js';
+import { ElbowElement } from '../elbow';
+import { Button } from '../button.js';
+import { LayoutElement } from '../element.js';
+import { generateElbowPath } from '../../../utils/shapes.js';
 import { svg, SVGTemplateResult } from 'lit';
 import { HomeAssistant } from 'custom-card-helpers';
 
@@ -37,7 +37,7 @@ describe('ElbowElement', () => {
   let elementsMap: Map<string, LayoutElement>;
   
   // For accessing the mocked functions directly
-  const mockCreateButton = vi.mocked(Button).mock.results[0]?.value.createButton;
+  let mockCreateButton: any;
 
   // Spies for superclass methods
   let superCalculateLayoutSpy: MockInstance;
@@ -50,6 +50,9 @@ describe('ElbowElement', () => {
     // Setup spies on the prototype of the superclass
     superCalculateLayoutSpy = vi.spyOn(LayoutElement.prototype, 'calculateLayout');
     superCanCalculateLayoutSpy = vi.spyOn(LayoutElement.prototype, 'canCalculateLayout');
+    
+    // Set up mockCreateButton
+    mockCreateButton = vi.fn();
   });
 
   afterEach(() => {
@@ -184,7 +187,7 @@ describe('ElbowElement', () => {
 
     it('should return null if generateElbowPath returns null', () => {
       elbowElement.layout = { x: 5, y: 10, width: 40, height: 20, calculated: true };
-      vi.mocked(generateElbowPath).mockReturnValueOnce(null as unknown as string);
+      (generateElbowPath as any).mockReturnValueOnce(null as unknown as string);
       expect(elbowElement.render()).toBeNull();
     });
 

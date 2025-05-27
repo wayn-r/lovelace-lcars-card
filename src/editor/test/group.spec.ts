@@ -1,7 +1,7 @@
 // src/editor/group.spec.ts
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { LcarsGroup } from './group'; // The class under test
+import { LcarsGroup } from '../group'; // The class under test
 
 describe('LcarsGroup', () => {
     let group: LcarsGroup;

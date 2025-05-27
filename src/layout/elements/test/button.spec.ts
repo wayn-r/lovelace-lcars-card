@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Button } from './button';
+import { Button } from '../button';
 import { svg, SVGTemplateResult } from 'lit';
 
 // Mock HomeAssistant

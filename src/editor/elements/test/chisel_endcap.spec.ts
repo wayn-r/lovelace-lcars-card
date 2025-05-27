@@ -1,7 +1,7 @@
-// src/editor/elements/text.spec.ts
+// src/editor/elements/chisel_endcap.spec.ts
 
 // vi.mock must be before any imports
-vi.mock('./element', () => {
+vi.mock('../element', () => {
     const registerSpy = vi.fn();
     
     const PGMock = {
@@ -12,7 +12,7 @@ vi.mock('./element', () => {
         APPEARANCE: 'APPEARANCE',
         POSITIONING: 'POSITIONING',
         TYPE: 'TYPE',
-        TEXT: 'TEXT' // Added TEXT group
+        TEXT: 'TEXT' // Though not used by ChiselEndcap, keep for mock consistency
     };
 
     return {
@@ -39,19 +39,22 @@ vi.mock('./element', () => {
 
             // Mocked getSchema to reflect base EditorElement behavior driven by getPropertyGroups
             getSchema() {
-                const groups = this.getPropertyGroups(); // This will call Text's getPropertyGroups
+                const groups = this.getPropertyGroups(); // This will call ChiselEndcap's getPropertyGroups
                 const schema: Array<{name: string, selector?: any, type?: string}> = [];
                 
+                // Determine type label based on this.type
                 let typeLabel = this.type.charAt(0).toUpperCase() + this.type.slice(1);
-                // Add more specific labels if needed, e.g. for 'text' it's just 'Text'
+                if (this.type === 'chisel-endcap') typeLabel = 'Chisel Endcap';
+                else if (this.type === 'top_header') typeLabel = 'Top Header';
+                // Add more specific labels if needed
 
                 // 1. Type property (always first)
                 schema.push({ name: 'type', selector: { select: { options: [{ value: this.type, label: typeLabel }] } } });
                 
                 // 2. Anchor properties (if ANCHOR group is not null)
-                if (groups[PGMock.ANCHOR] !== null && groups[PGMock.ANCHOR]) { // For Text, this is true
-                    schema.push({ name: 'anchorTo' });
-                    schema.push({ name: 'anchorPoint', type: 'custom' });
+                if (groups[PGMock.ANCHOR] !== null && groups[PGMock.ANCHOR]) { // For ChiselEndcap, this is true
+                    schema.push({ name: 'anchorTo' }); // Actual property classes would add more detail
+                    schema.push({ name: 'anchorPoint', type: 'custom' }); // Mocking as custom based on properties.ts
                     schema.push({ name: 'targetAnchorPoint', type: 'custom' });
                 }
                 
@@ -60,12 +63,12 @@ vi.mock('./element', () => {
                 if (this.config.button?.enabled) {
                     if (buttonGroupDef?.properties) {
                         buttonGroupDef.properties.forEach((prop: any) => {
-                            const instance = new (prop as any)();
+                            const instance = new (prop as any)(); // Instantiate to get name
                             schema.push({ name: instance.name });
                         });
                     }
                 } else {
-                     schema.push({ name: 'button.enabled' });
+                     schema.push({ name: 'button.enabled' }); // Only ButtonEnabled if not enabled
                 }
                 
                 // 4. Dimension properties
@@ -73,7 +76,7 @@ vi.mock('./element', () => {
                 if (dimensionGroup?.properties) {
                     dimensionGroup.properties.forEach((prop: any) => {
                         const instance = new (prop as any)();
-                        schema.push({ name: instance.name }); // For Text: Height, Width
+                        schema.push({ name: instance.name });
                     });
                 }
                 
@@ -82,42 +85,33 @@ vi.mock('./element', () => {
                 if (appearanceGroup?.properties) {
                     appearanceGroup.properties.forEach((prop: any) => {
                         const instance = new (prop as any)();
-                        schema.push({ name: instance.name }); // For Text: Fill
+                        schema.push({ name: instance.name });
                     });
                 }
-
-                // 6. TEXT properties
-                const textGroup = groups[PGMock.TEXT];
-                if (textGroup?.properties) {
-                    textGroup.properties.forEach((prop: any) => {
+                
+                // 6. Positioning properties
+                const positioningGroup = groups[PGMock.POSITIONING];
+                if (positioningGroup?.properties) {
+                    positioningGroup.properties.forEach((prop: any) => {
                         const instance = new (prop as any)();
                         schema.push({ name: instance.name });
                     });
                 }
                 
-                // 7. Positioning properties
-                const positioningGroup = groups[PGMock.POSITIONING];
-                if (positioningGroup?.properties) {
-                    positioningGroup.properties.forEach((prop: any) => {
-                        const instance = new (prop as any)();
-                        schema.push({ name: instance.name }); // For Text: OffsetX, OffsetY
-                    });
-                }
-                
-                // 8. Stretch properties (dynamic based on config, as in base EditorElement)
+                // 7. Stretch properties (dynamic based on config, as in base EditorElement)
                 const stretchGroupDef = groups[PGMock.STRETCH];
-                if (stretchGroupDef !== null && stretchGroupDef) { // For Text, this is true
+                if (stretchGroupDef !== null && stretchGroupDef) { // For ChiselEndcap, this is true
                     const stretch = this.config.layout.stretch || {};
-                    schema.push({ name: 'stretchTo1' });
+                    schema.push({ name: 'stretchTo1' }); // StretchTarget(0)
                     
                     if (stretch.stretchTo1) {
-                        schema.push({ name: 'stretchDirection1', type: 'custom' });
-                        schema.push({ name: 'stretchPadding1' });
-                        schema.push({ name: 'stretchTo2' });
+                        schema.push({ name: 'stretchDirection1', type: 'custom' }); // StretchDirection(0)
+                        schema.push({ name: 'stretchPadding1' });                 // StretchPadding(0)
+                        schema.push({ name: 'stretchTo2' });                     // StretchTarget(1)
                         
                         if (stretch.stretchTo2) {
-                            schema.push({ name: 'stretchDirection2', type: 'custom' });
-                            schema.push({ name: 'stretchPadding2' });
+                            schema.push({ name: 'stretchDirection2', type: 'custom' }); // StretchDirection(1)
+                            schema.push({ name: 'stretchPadding2' });                 // StretchPadding(1)
                         }
                     }
                 }
@@ -130,14 +124,14 @@ vi.mock('./element', () => {
                 const formData: Record<string, any> = {};
                 formData.type = this.config.type;
                 
-                // Props (e.g., fill, text, fontSize for Text)
+                // Props (e.g., fill, direction for ChiselEndcap)
                 if (this.config.props) {
                     Object.entries(this.config.props).forEach(([key, value]) => {
                         formData[key] = value;
                     });
                 }
                 
-                // Layout (e.g., width, height, offsetX, offsetY for Text)
+                // Layout (e.g., width, height, offsetX, offsetY)
                 if (this.config.layout) {
                     const { stretch, anchor, ...otherLayout } = this.config.layout;
                     Object.entries(otherLayout).forEach(([key, value]) => {
@@ -182,6 +176,7 @@ vi.mock('./element', () => {
                 if (this.config.button) {
                     Object.entries(this.config.button).forEach(([key, value]) => {
                         if (key === 'action_config' && typeof value === 'object' && value !== null) {
+                            // Flatten action_config for form data
                             Object.entries(value).forEach(([acKey, acValue]) => {
                                 formData[`button.action_config.${acKey}`] = acValue;
                             });
@@ -203,40 +198,38 @@ vi.mock('./element', () => {
             processDataUpdate(newData: any) {
                 const configDelta: any = {}; // This represents the *changes* to be applied to the config
 
-                // Direct props (fill, text, fontSize, fontFamily, etc. for Text)
+                // Direct props (fill, direction for ChiselEndcap)
                 if (newData.fill !== undefined) configDelta.fill = newData.fill; // Will be placed under 'props' by editor
-                if (newData.text !== undefined) configDelta.text = newData.text;
-                if (newData.fontSize !== undefined) configDelta.fontSize = newData.fontSize;
-                if (newData.fontFamily !== undefined) configDelta.fontFamily = newData.fontFamily;
-                if (newData.fontWeight !== undefined) configDelta.fontWeight = newData.fontWeight;
-                if (newData.letterSpacing !== undefined) configDelta.letterSpacing = newData.letterSpacing;
-                if (newData.textAnchor !== undefined) configDelta.textAnchor = newData.textAnchor;
-                if (newData.dominantBaseline !== undefined) configDelta.dominantBaseline = newData.dominantBaseline;
-                if (newData.textTransform !== undefined) configDelta.textTransform = newData.textTransform;
+                if (newData.direction !== undefined) configDelta.direction = newData.direction; // Same
 
-
-                // Layout properties (width, height, offsetX, offsetY for Text)
+                // Layout properties (width, height, offsetX, offsetY)
                 if (newData.width !== undefined) configDelta.width = newData.width; // Will be placed under 'layout'
                 if (newData.height !== undefined) configDelta.height = newData.height;
                 if (newData.offsetX !== undefined) configDelta.offsetX = newData.offsetX;
                 if (newData.offsetY !== undefined) configDelta.offsetY = newData.offsetY;
 
                 // Anchor properties (handled by base class logic)
-                if (newData.anchorTo !== undefined) {
-                    configDelta.anchorTo = newData.anchorTo;
+                if (newData.anchorTo !== undefined) { // If anchorTo is in the form data
+                    configDelta.anchorTo = newData.anchorTo; // Top-level in delta
                     
                     if (newData.anchorTo && newData.anchorTo !== '') {
+                        // Base class sets defaults if anchorTo is present and points are not
                         configDelta.anchorPoint = newData.anchorPoint || 'center';
                         configDelta.targetAnchorPoint = newData.targetAnchorPoint || 'center';
                     }
+                    // If anchorTo is empty, base class logic will ensure anchorPoint/targetAnchorPoint are removed from final config
                 }
-                else {
+                else { // If anchorTo is NOT in form data, but points might be (e.g. user cleared anchorTo)
+                    // Base class would remove anchorPoint/targetAnchorPoint.
+                    // The delta only contains what's *changed* or *new*. If anchorTo was removed,
+                    // the main editor logic would handle removing the anchor sub-object.
+                    // For this mock, we just reflect what's in newData.
                     if (newData.anchorPoint !== undefined) configDelta.anchorPoint = newData.anchorPoint;
                     if (newData.targetAnchorPoint !== undefined) configDelta.targetAnchorPoint = newData.targetAnchorPoint;
                 }
 
                 // Stretch properties (handled by base class logic, nested into layout.stretch)
-                configDelta.layout = { stretch: {} };
+                configDelta.layout = { stretch: {} }; // Initialize stretch object in delta's layout
                 
                 const processStretch = (index: number, suffix: string) => {
                     const stretchToKey = `stretchTo${suffix}`;
@@ -247,6 +240,7 @@ vi.mock('./element', () => {
                         configDelta.layout.stretch[stretchToKey] = newData[stretchToKey];
                         if (newData[directionKey]) {
                             configDelta.layout.stretch[`targetStretchAnchorPoint${suffix}`] = newData[directionKey];
+                            // Base class derives axis
                             const isHorizontal = ['left', 'right', 'center', 'centerLeft', 'centerRight'].includes(newData[directionKey]);
                             configDelta.layout.stretch[`stretchAxis${suffix}`] = isHorizontal ? 'X' : 'Y';
                         }
@@ -261,29 +255,34 @@ vi.mock('./element', () => {
                 // Button properties (prefixed, base class handles nesting and clearing)
                 for (const [key, value] of Object.entries(newData)) {
                     if (key.startsWith('button.')) {
-                        configDelta[key] = value;
+                        configDelta[key] = value; // Keep prefixed for delta
                     }
                 }
                 
+                // Base class logic for clearing button sub-properties if button.enabled is false
                 if (newData['button.enabled'] === false) {
+                    // Remove all other `button.*` properties from the delta
                     for (const key in configDelta) {
                         if (key.startsWith('button.') && key !== 'button.enabled') {
                             delete configDelta[key];
                         }
                     }
+                    // Base class also clears action_config sub-properties if button disabled
                     const actionConfigPrefix = 'button.action_config.';
                     Object.keys(newData).forEach(key => { 
                         if (key.startsWith(actionConfigPrefix)) {
-                           delete configDelta[key];
+                           delete configDelta[key]; // Remove from delta
                         }
                     });
                 } else if (newData['button.enabled'] === true) {
+                    // Base class preserves transforms if they exist in original config but not form
                     if (newData['button.hover_transform'] === undefined && this.config.button?.hover_transform) {
                         configDelta['button.hover_transform'] = this.config.button.hover_transform;
                     }
                     if (newData['button.active_transform'] === undefined && this.config.button?.active_transform) {
                         configDelta['button.active_transform'] = this.config.button.active_transform;
                     }
+                    // Base class clears action_config sub-properties if type is 'none'
                     if (!newData['button.action_config.type'] || newData['button.action_config.type'] === 'none') {
                         delete configDelta['button.action_config.service'];
                         delete configDelta['button.action_config.service_data'];
@@ -296,103 +295,106 @@ vi.mock('./element', () => {
                 return configDelta;
             }
             
+            // This mock should be overridden by the ChiselEndcap class
             getPropertyGroups(): Record<string, any> {
-                throw new Error("MockEditorElement.getPropertyGroups should not be called directly; Text element should override it.");
+                // This is crucial: it should throw or return a base set of groups
+                // if ChiselEndcap fails to override it. For testing, ChiselEndcap *will* override it.
+                throw new Error("MockEditorElement.getPropertyGroups should not be called directly; ChiselEndcap should override it.");
             }
         }
     };
 });
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EditorElement, PropertyGroup } from './element'; // Mocked base class and real enum
+import { EditorElement, PropertyGroup } from '../element'; // Mocked base class and real enum
 
+// Import all the required properties from the properties module
 import {
-    TextContent, FontSize, FontFamily, FontWeight, LetterSpacing, TextAnchor, DominantBaseline, TextTransform, // Text specific
-    Fill, // Appearance for Text
-    Width, Height, // Dimensions for Text
+    Width, Height, Fill, Direction, // Appearance properties for ChiselEndcap
     ButtonEnabled, ButtonText, ButtonCutoutText, ButtonTextColor,
     ButtonFontFamily, ButtonFontSize, ButtonFontWeight, ButtonLetterSpacing,
     ButtonTextTransform, ButtonTextAnchor, ButtonDominantBaseline, ButtonHoverFill,
     ButtonActiveFill, ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
     OffsetX, OffsetY, Type,
-    AnchorTo, AnchorPoint, TargetAnchorPoint // Anchor properties are used by Text
-} from '../properties/properties';
+    AnchorTo, AnchorPoint, TargetAnchorPoint // Anchor properties are used by ChiselEndcap
+} from '../../properties/properties';
 
-import { Text } from './text'; // The class under test
+// Import ChiselEndcap after setting up the mock
+import { ChiselEndcap } from '../chisel_endcap'; // The class under test
 
-describe('Text EditorElement', () => {
-    let textEditorElement: Text;
+describe('ChiselEndcap EditorElement', () => {
+    let chiselEndcapEditorElement: ChiselEndcap;
     let config: any;
 
     beforeEach(() => {
-        vi.clearAllMocks();
-        EditorElement.registerEditorElement('text', Text);
+        vi.clearAllMocks(); // Clear mocks before each test
+        
+        // Manually register the element again using the mocked EditorElement
+        // This ensures the spy `EditorElement.registerEditorElement` has a call to check
+        EditorElement.registerEditorElement('chisel-endcap', ChiselEndcap);
 
+        // Basic config for a chisel-endcap element
         config = {
-            id: 'test-text',
-            type: 'text',
+            id: 'test-chisel-endcap',
+            type: 'chisel-endcap',
+            // props, layout, and button will be initialized by the EditorElement constructor if not present
         };
-        textEditorElement = new Text(config);
+        chiselEndcapEditorElement = new ChiselEndcap(config);
     });
 
     it('should be registered with EditorElement upon module import', () => {
-        expect(EditorElement.registerEditorElement).toHaveBeenCalledWith('text', Text);
+        expect(EditorElement.registerEditorElement).toHaveBeenCalledWith('chisel-endcap', ChiselEndcap);
     });
 
     describe('constructor', () => {
         it('should initialize with default config structure if parts are missing', () => {
-            const el = new Text({ id: 'txt1', type: 'text' });
+            const el = new ChiselEndcap({ id: 'ce1', type: 'chisel-endcap' });
+            // Base EditorElement constructor ensures these exist
             expect(el.config.layout).toEqual({ stretch: {} });
             expect(el.config.button).toEqual({});
-            expect(el.config.props).toBeUndefined();
+            // `props` is only created if it's in the input config or by the specific element's constructor
+            // ChiselEndcap constructor does not explicitly create `props`.
+            expect(el.config.props).toBeUndefined(); 
         });
 
         it('should preserve existing props, layout, and button configs', () => {
             const initialConfig = {
-                id: 'txt2',
-                type: 'text',
-                props: { text: 'Hello', fill: 'blue', fontSize: 20 },
+                id: 'ce2',
+                type: 'chisel-endcap',
+                props: { fill: 'red', direction: 'left' },
                 layout: { width: 100, offsetX: 5, anchor: { anchorTo: 'container' } },
                 button: { enabled: true, text: 'Click Me' }
             };
-            const el = new Text(initialConfig);
-            expect(el.config.props).toEqual({ text: 'Hello', fill: 'blue', fontSize: 20 });
+            const el = new ChiselEndcap(initialConfig);
+            expect(el.config.props).toEqual({ fill: 'red', direction: 'left' });
+            // Base constructor adds stretch object to layout
             expect(el.config.layout).toEqual({ width: 100, offsetX: 5, anchor: { anchorTo: 'container' }, stretch: {} });
             expect(el.config.button).toEqual({ enabled: true, text: 'Click Me' });
         });
     });
 
     describe('getPropertyGroups', () => {
-        let groups: Partial<Record<PropertyGroup, import("./element").PropertyGroupDefinition | null>>;
+        let groups: Partial<Record<PropertyGroup, import("../element").PropertyGroupDefinition | null>>;
 
         beforeEach(() => {
-            groups = textEditorElement.getPropertyGroups();
+            groups = chiselEndcapEditorElement.getPropertyGroups();
         });
 
-        it('should define ANCHOR group as enabled (not null)', () => {
+        it('should define ANCHOR group as enabled (not null) with empty properties (base handles)', () => {
             expect(groups[PropertyGroup.ANCHOR]).toBeDefined();
             expect(groups[PropertyGroup.ANCHOR]).not.toBeNull();
-            expect(groups[PropertyGroup.ANCHOR]?.properties).toEqual([]);
+            // Base EditorElement adds AnchorTo, AnchorPoint, TargetAnchorPoint if this group is not null
+            expect(groups[PropertyGroup.ANCHOR]?.properties).toEqual([]); 
         });
 
-        it('should define STRETCH group with empty properties (relying on base class)', () => {
+        it('should define STRETCH group with empty properties (relying on base class for dynamic stretch props)', () => {
             expect(groups[PropertyGroup.STRETCH]).toBeDefined();
             expect(groups[PropertyGroup.STRETCH]?.properties).toEqual([]);
         });
 
-        it('should define APPEARANCE group with Fill', () => {
+        it('should define APPEARANCE group with Fill and Direction', () => {
             expect(groups[PropertyGroup.APPEARANCE]).toBeDefined();
-            expect(groups[PropertyGroup.APPEARANCE]?.properties).toEqual([Fill]);
-        });
-
-        it('should define TEXT group with text-specific properties', () => {
-            expect(groups[PropertyGroup.TEXT]).toBeDefined();
-            const textProps = groups[PropertyGroup.TEXT]?.properties;
-            const expectedTextProps = [
-                TextContent, FontSize, FontFamily, FontWeight, LetterSpacing,
-                TextAnchor, DominantBaseline, TextTransform
-            ];
-            expect(textProps).toEqual(expectedTextProps);
+            expect(groups[PropertyGroup.APPEARANCE]?.properties).toEqual([Fill, Direction]);
         });
 
         it('should define BUTTON group with a comprehensive list of button properties', () => {
@@ -408,9 +410,9 @@ describe('Text EditorElement', () => {
             expect(buttonProps).toEqual(expectedButtonProps);
         });
 
-        it('should define DIMENSIONS group with Height and Width', () => {
+        it('should define DIMENSIONS group with Width and Height', () => {
             expect(groups[PropertyGroup.DIMENSIONS]).toBeDefined();
-            expect(groups[PropertyGroup.DIMENSIONS]?.properties).toEqual([Height, Width]);
+            expect(groups[PropertyGroup.DIMENSIONS]?.properties).toEqual([Width, Height]);
         });
 
         it('should define POSITIONING group with OffsetX and OffsetY', () => {
@@ -420,49 +422,55 @@ describe('Text EditorElement', () => {
     });
 
     describe('getSchema (behavior inherited from EditorElement, driven by getPropertyGroups)', () => {
-        it('should include the Type property first with "Text" label', () => {
-            const schema = textEditorElement.getSchema();
+        it('should include the Type property first with "Chisel Endcap" label', () => {
+            const schema = chiselEndcapEditorElement.getSchema();
             expect(schema[0].name).toBe('type');
-            expect(schema[0].selector.select.options).toEqual([{ value: 'text', label: 'Text' }]);
+            expect(schema[0].selector?.select.options).toEqual([{ value: 'chisel-endcap', label: 'Chisel Endcap' }]);
         });
 
-        it('should include anchor properties in the schema', () => {
-            const schema = textEditorElement.getSchema();
+        it('should include anchor properties (AnchorTo, AnchorPoint, TargetAnchorPoint) in the schema', () => {
+            const schema = chiselEndcapEditorElement.getSchema();
+            // These checks are based on the names of properties defined in properties.ts
             expect(schema.find(s => s.name === 'anchorTo')).toBeDefined();
             expect(schema.find(s => s.name === 'anchorPoint' && s.type === 'custom')).toBeDefined();
             expect(schema.find(s => s.name === 'targetAnchorPoint' && s.type === 'custom')).toBeDefined();
         });
 
         it('should include stretch properties dynamically (base class behavior)', () => {
-            let schema = textEditorElement.getSchema();
+            // Initial: no stretch config, only stretchTo1 should be offered
+            let schema = chiselEndcapEditorElement.getSchema();
             expect(schema.find(s => s.name === 'stretchTo1')).toBeDefined();
-            expect(schema.find(s => s.name === 'stretchDirection1')).toBeUndefined();
+            expect(schema.find(s => s.name === 'stretchDirection1')).toBeUndefined(); // Not shown if stretchTo1 not set
 
-            textEditorElement.config.layout.stretch = { stretchTo1: 'container' };
-            schema = textEditorElement.getSchema();
+            // With stretchTo1 configured
+            chiselEndcapEditorElement.config.layout.stretch = { stretchTo1: 'container' };
+            schema = chiselEndcapEditorElement.getSchema();
             expect(schema.find(s => s.name === 'stretchDirection1' && s.type === 'custom')).toBeDefined();
             expect(schema.find(s => s.name === 'stretchPadding1')).toBeDefined();
             expect(schema.find(s => s.name === 'stretchTo2')).toBeDefined();
         });
 
-        it('should include only ButtonEnabled if button.enabled is false/undefined', () => {
-            textEditorElement.config.button = { enabled: false };
-            let schema = textEditorElement.getSchema();
+        it('should include only ButtonEnabled in schema if button.enabled is false or not explicitly true', () => {
+            // Case 1: button.enabled is false
+            chiselEndcapEditorElement.config.button = { enabled: false };
+            let schema = chiselEndcapEditorElement.getSchema();
             let buttonSchemaItems = schema.filter(s => s.name.startsWith('button.'));
             expect(buttonSchemaItems.length).toBe(1);
             expect(buttonSchemaItems[0].name).toBe('button.enabled');
 
-            textEditorElement.config.button = {}; // enabled is implicitly false
-            schema = textEditorElement.getSchema();
+            // Case 2: button object is empty (enabled is implicitly false)
+            chiselEndcapEditorElement.config.button = {};
+            schema = chiselEndcapEditorElement.getSchema();
             buttonSchemaItems = schema.filter(s => s.name.startsWith('button.'));
             expect(buttonSchemaItems.length).toBe(1);
             expect(buttonSchemaItems[0].name).toBe('button.enabled');
         });
 
-        it('should include all defined button properties if button.enabled is true', () => {
-            textEditorElement.config.button = { enabled: true };
-            const schema = textEditorElement.getSchema();
+        it('should include all defined button properties in schema if button.enabled is true', () => {
+            chiselEndcapEditorElement.config.button = { enabled: true };
+            const schema = chiselEndcapEditorElement.getSchema();
             
+            // Instantiate expected properties to get their names
             const expectedButtonPropInstances = [
                 new ButtonEnabled(), new ButtonText(), new ButtonCutoutText(), new ButtonTextColor(),
                 new ButtonFontFamily(), new ButtonFontSize(), new ButtonFontWeight(),
@@ -475,126 +483,188 @@ describe('Text EditorElement', () => {
             });
         });
 
-        it('should include appearance property (Fill)', () => {
-            const schema = textEditorElement.getSchema();
+        it('should include appearance properties (Fill, Direction)', () => {
+            const schema = chiselEndcapEditorElement.getSchema();
             expect(schema.find(s => s.name === 'fill')).toBeDefined();
+            expect(schema.find(s => s.name === 'direction')).toBeDefined();
         });
 
-        it('should include text-specific properties', () => {
-            const schema = textEditorElement.getSchema();
-            const expectedTextPropInstances = [
-                new TextContent(), new FontSize(), new FontFamily(), new FontWeight(), 
-                new LetterSpacing(), new TextAnchor(), new DominantBaseline(), new TextTransform()
-            ];
-            expectedTextPropInstances.forEach(instance => {
-                expect(schema.find(s => s.name === instance.name)).toBeDefined();
-            });
-        });
-
-        it('should include dimension properties (Height, Width)', () => {
-            const schema = textEditorElement.getSchema();
-            expect(schema.find(s => s.name === 'height')).toBeDefined();
+        it('should include dimension and positioning properties', () => {
+            const schema = chiselEndcapEditorElement.getSchema();
             expect(schema.find(s => s.name === 'width')).toBeDefined();
-        });
-
-        it('should include positioning properties (OffsetX, OffsetY)', () => {
-            const schema = textEditorElement.getSchema();
+            expect(schema.find(s => s.name === 'height')).toBeDefined();
             expect(schema.find(s => s.name === 'offsetX')).toBeDefined();
             expect(schema.find(s => s.name === 'offsetY')).toBeDefined();
         });
     });
 
     describe('getFormData (inherited from EditorElement)', () => {
-        it('should correctly extract data from a full config for Text', () => {
+        it('should correctly extract data from a full config for the form', () => {
             const testConfig = {
-                id: 'txt-formdata', type: 'text',
+                id: 'ce-formdata', type: 'chisel-endcap',
                 props: {
-                    text: 'LCARS Test', fill: [255, 153, 0], fontSize: 24, fontFamily: 'Arial',
-                    fontWeight: 'bold', letterSpacing: '1px', textAnchor: 'middle',
-                    dominantBaseline: 'central', textTransform: 'uppercase'
+                    fill: [255, 153, 0], // RGB array for color picker
+                    direction: 'left'
                 },
                 layout: {
-                    width: 200, height: 50, offsetX: 10, offsetY: -5,
+                    width: 150, height: 75, offsetX: 10, offsetY: -5,
                     anchor: { anchorTo: 'container', anchorPoint: 'center', targetAnchorPoint: 'center' },
-                    stretch: { stretchTo1: 'el-other', targetStretchAnchorPoint1: 'top', stretchPadding1: 5 }
+                    stretch: {
+                        stretchTo1: 'el-other',
+                        targetStretchAnchorPoint1: 'top', // This will be 'stretchDirection1' in form data
+                        stretchPadding1: 5
+                    }
                 },
-                button: { enabled: true, text: 'My Text Button', font_size: 12 }
+                button: {
+                    enabled: true, text: 'My CE Button', font_size: 12
+                }
             };
-            const el = new Text(testConfig);
+            const el = new ChiselEndcap(testConfig);
             const formData = el.getFormData();
 
-            expect(formData.type).toBe('text');
+            expect(formData.type).toBe('chisel-endcap');
             // Props
-            expect(formData.text).toBe('LCARS Test');
             expect(formData.fill).toEqual([255, 153, 0]);
-            expect(formData.fontSize).toBe(24);
-            expect(formData.fontFamily).toBe('Arial');
-            expect(formData.fontWeight).toBe('bold');
-            expect(formData.letterSpacing).toBe('1px');
-            expect(formData.textAnchor).toBe('middle');
-            expect(formData.dominantBaseline).toBe('central');
-            expect(formData.textTransform).toBe('uppercase');
+            expect(formData.direction).toBe('left');
             // Layout
-            expect(formData.width).toBe(200);
-            expect(formData.height).toBe(50);
+            expect(formData.width).toBe(150);
+            expect(formData.height).toBe(75);
             expect(formData.offsetX).toBe(10);
             expect(formData.offsetY).toBe(-5);
-            // Anchor & Stretch
+            // Anchor
             expect(formData.anchorTo).toBe('container');
+            expect(formData.anchorPoint).toBe('center');
+            expect(formData.targetAnchorPoint).toBe('center');
+            // Stretch
             expect(formData.stretchTo1).toBe('el-other');
+            expect(formData.stretchDirection1).toBe('top'); // Mapped from targetStretchAnchorPoint1
+            expect(formData.stretchPadding1).toBe(5);
+            expect(formData.stretchTo2).toBe(''); // Offered but not set
             // Button
             expect(formData['button.enabled']).toBe(true);
-            expect(formData['button.text']).toBe('My Text Button');
+            expect(formData['button.text']).toBe('My CE Button');
+            expect(formData['button.font_size']).toBe(12);
         });
 
-        it('should handle missing optional Text-specific props', () => {
+        it('should handle missing optional fields by not including them or using defaults from base', () => {
             const testConfig = {
-                id: 'txt-formdata-min', type: 'text',
-                props: { text: 'Minimal' }, // Only text in props
-                layout: { width: 50 }
+                id: 'ce-formdata-min', type: 'chisel-endcap',
+                layout: { width: 100 } // Only width is provided
             };
-            const el = new Text(testConfig);
+            const el = new ChiselEndcap(testConfig);
             const formData = el.getFormData();
 
-            expect(formData.type).toBe('text');
-            expect(formData.text).toBe('Minimal');
-            expect(formData.fill).toBeUndefined();
-            expect(formData.fontSize).toBeUndefined();
-            // ... other text props
-            expect(formData.width).toBe(50);
+            expect(formData.type).toBe('chisel-endcap');
+            expect(formData.width).toBe(100);
+            // These should be undefined as they are not in config
             expect(formData.height).toBeUndefined();
+            expect(formData.fill).toBeUndefined();
+            expect(formData.direction).toBeUndefined();
+            expect(formData['button.enabled']).toBeUndefined(); // `button` object missing in config
+            // Defaults from base class logic for empty/missing parts
+            expect(formData.anchorTo).toBe(''); 
+            expect(formData.stretchTo1).toBe('');
+            expect(formData.stretchTo2).toBe('');
         });
     });
 
     describe('processDataUpdate (inherited from EditorElement)', () => {
-        it('should correctly process full form data (including Text props) back to config delta', () => {
+        it('should correctly process full form data back to config delta structure', () => {
             const formDataFromUI = {
-                type: 'text', 
-                text: 'Updated LCARS', fill: [0, 255, 0], fontSize: 18, fontFamily: 'Verdana',
-                fontWeight: 'normal', letterSpacing: 'normal', textAnchor: 'start',
-                dominantBaseline: 'auto', textTransform: 'none',
-                width: 250, height: 60, offsetX: 15, offsetY: 0,
+                type: 'chisel-endcap', 
+                fill: [0, 255, 0], direction: 'right',
+                width: 200, height: 100, offsetX: 20, offsetY: 30,
                 anchorTo: 'el2', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomRight',
-                stretchTo1: 'container', stretchDirection1: 'left', stretchPadding1: 2,
-                'button.enabled': true, 'button.text': 'New Text Button'
+                stretchTo1: 'another-element', stretchDirection1: 'right', stretchPadding1: 10,
+                'button.enabled': true, 'button.text': 'Updated Text'
             };
-            const el = new Text({ id: 'txt-update', type: 'text' });
+            const el = new ChiselEndcap({ id: 'ce-update', type: 'chisel-endcap' });
             const configDelta = el.processDataUpdate(formDataFromUI);
 
-            // Props (top-level in delta, editor nests them into 'props')
-            expect(configDelta.text).toBe('Updated LCARS');
+            // Props (become top-level in delta, editor nests them into 'props')
             expect(configDelta.fill).toEqual([0, 255, 0]);
-            expect(configDelta.fontSize).toBe(18);
-            expect(configDelta.fontFamily).toBe('Verdana');
-            // ... other text props
-
-            // Layout (top-level in delta, editor nests them into 'layout')
-            expect(configDelta.width).toBe(250);
-            expect(configDelta.height).toBe(60);
-            // ... other layout, anchor, stretch, button props (tested in other specs, assume base handles them)
+            expect(configDelta.direction).toBe('right');
+            // Layout (become top-level in delta, editor nests them into 'layout')
+            expect(configDelta.width).toBe(200);
+            expect(configDelta.height).toBe(100);
+            expect(configDelta.offsetX).toBe(20);
+            expect(configDelta.offsetY).toBe(30);
+            // Anchor (top-level in delta)
+            expect(configDelta.anchorTo).toBe('el2');
+            expect(configDelta.anchorPoint).toBe('topLeft');
+            expect(configDelta.targetAnchorPoint).toBe('bottomRight');
+            // Stretch (nested by processDataUpdate into delta.layout.stretch)
+            expect(configDelta.layout.stretch.stretchTo1).toBe('another-element');
+            expect(configDelta.layout.stretch.targetStretchAnchorPoint1).toBe('right');
+            expect(configDelta.layout.stretch.stretchAxis1).toBe('X'); // Derived by base
+            expect(configDelta.layout.stretch.stretchPadding1).toBe(10);
+            // Button (prefixed in delta)
+            expect(configDelta['button.enabled']).toBe(true);
+            expect(configDelta['button.text']).toBe('Updated Text');
         });
 
-        // Other tests like clearing anchor, disabling button, etc., are assumed to be
-        // covered by the base EditorElement mock's behavior, similar to chisel_endcap.spec.ts.
+        it('should clear anchorPoint and targetAnchorPoint if anchorTo is emptied', () => {
+            const formDataFromUI = { anchorTo: '' }; // User cleared anchorTo
+            const el = new ChiselEndcap({
+                id: 'ce-anchor-clear', type: 'chisel-endcap',
+                layout: { anchor: { anchorTo: 'container', anchorPoint: 'center', targetAnchorPoint: 'center' } }
+            });
+            const configDelta = el.processDataUpdate(formDataFromUI);
+            
+            expect(configDelta.anchorTo).toBe('');
+            // Base EditorElement.processDataUpdate should ensure these are not in the delta if anchorTo is empty
+            expect(configDelta.anchorPoint).toBeUndefined();
+            expect(configDelta.targetAnchorPoint).toBeUndefined();
+        });
+        
+        it('should default anchorPoint and targetAnchorPoint if anchorTo is set but points are not', () => {
+            const formDataFromUI = { anchorTo: 'something' }; // anchorPoint/targetAnchorPoint missing
+             const el = new ChiselEndcap({ id: 'ce-anchor-default', type: 'chisel-endcap' });
+            const configDelta = el.processDataUpdate(formDataFromUI);
+
+            expect(configDelta.anchorTo).toBe('something');
+            expect(configDelta.anchorPoint).toBe('center'); // Default from processDataUpdate
+            expect(configDelta.targetAnchorPoint).toBe('center'); // Default
+        });
+
+        it('should remove specific button sub-properties if button.enabled is changed to false', () => {
+            const formDataFromUI = {
+                'button.enabled': false,
+                // These might still be in the form data from a previous state
+                'button.text': 'Text To Remove',
+                'button.font_size': 10,
+            };
+            const el = new ChiselEndcap({
+                id: 'ce-btn-disable', type: 'chisel-endcap',
+                button: { enabled: true, text: 'Initial', font_size: 12 }
+            });
+            const configDelta = el.processDataUpdate(formDataFromUI);
+
+            expect(configDelta['button.enabled']).toBe(false);
+            // Base class logic clears other button props from delta
+            expect(configDelta['button.text']).toBeUndefined();
+            expect(configDelta['button.font_size']).toBeUndefined();
+        });
+
+        it('should clear stretch group details if stretchTo is emptied', () => {
+            const formDataFromUI = {
+                stretchTo1: '', // User cleared the target
+                stretchDirection1: 'left', stretchPadding1: 5 // Might still be in form data
+            };
+            const el = new ChiselEndcap({
+                id: 'ce-stretch-clear', type: 'chisel-endcap',
+                layout: { stretch: { stretchTo1: 'container', targetStretchAnchorPoint1: 'left', stretchPadding1: 10 }}
+            });
+            const configDelta = el.processDataUpdate(formDataFromUI);
+
+            // Base class removes these from delta.layout.stretch if stretchTo is empty
+            expect(configDelta.layout.stretch.stretchTo1).toBeUndefined();
+            expect(configDelta.layout.stretch.targetStretchAnchorPoint1).toBeUndefined();
+            expect(configDelta.layout.stretch.stretchAxis1).toBeUndefined();
+            expect(configDelta.layout.stretch.stretchPadding1).toBeUndefined();
+            // Form data keys should also be gone from top-level delta
+            expect(configDelta.stretchDirection1).toBeUndefined();
+            expect(configDelta.stretchPadding1).toBeUndefined();
+        });
     });
 });

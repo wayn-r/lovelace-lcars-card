@@ -1,8 +1,8 @@
 // src/utils/shapes.spec.ts
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as shapes from './shapes';
-import { EPSILON, CAP_HEIGHT_RATIO, Orientation, Direction } from './shapes';
+import * as shapes from '../shapes';
+import { EPSILON, CAP_HEIGHT_RATIO, Orientation, Direction } from '../shapes';
 
 // Mock the 'fontmetrics' module
 vi.mock('fontmetrics', () => {

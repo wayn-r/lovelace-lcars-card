@@ -3,8 +3,8 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { fireEvent } from 'custom-card-helpers'; // For testing event firing
 
 // Import the component to test
-import './grid-selector'; // This registers the custom element
-import { LcarsGridSelector } from './grid-selector';
+import '../grid-selector'; // This registers the custom element
+import { LcarsGridSelector } from '../grid-selector';
 
 const ALL_POINTS = [
   'topLeft', 'topCenter', 'topRight',

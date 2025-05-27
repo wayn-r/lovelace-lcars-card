@@ -5,7 +5,7 @@ import { svg, SVGTemplateResult } from 'lit';
 import { HomeAssistant } from 'custom-card-helpers';
 
 // Set up all mocks first, before importing the module under test
-vi.mock('../../utils/shapes', () => ({
+vi.mock('../../../utils/shapes', () => ({
   getFontMetrics: vi.fn().mockReturnValue({ capHeight: 0.7, ascent: -0.75, top: -0.8, bottom: 0.2 }),
   getSvgTextWidth: vi.fn().mockReturnValue(50),
 }));
@@ -56,7 +56,7 @@ const createMockElement = (id: string, type: string) => {
 };
 
 // Mock the component classes
-vi.mock('./endcap', () => ({
+vi.mock('../endcap', () => ({
   EndcapElement: vi.fn().mockImplementation((id, props, layoutConfig, hass, cb) => {
     const mock = createMockElement(id, 'endcap');
     mock.props = props || {};
@@ -71,7 +71,7 @@ vi.mock('./endcap', () => ({
   })
 }));
 
-vi.mock('./text', () => ({
+vi.mock('../text', () => ({
   TextElement: vi.fn().mockImplementation((id, props, layoutConfig, hass, cb) => {
     const mock = createMockElement(id, 'text');
     mock.props = props || {};
@@ -86,7 +86,7 @@ vi.mock('./text', () => ({
   })
 }));
 
-vi.mock('./rectangle', () => ({
+vi.mock('../rectangle', () => ({
   RectangleElement: vi.fn().mockImplementation((id, props, layoutConfig, hass, cb) => {
     const mock = createMockElement(id, 'rectangle');
     mock.props = props || {};
@@ -101,13 +101,13 @@ vi.mock('./rectangle', () => ({
 }));
 
 // Now import the module under test
-import { TopHeaderElement } from './top_header';
-import { LayoutElement } from './element';
-import { EndcapElement } from './endcap';
-import { TextElement } from './text';
-import { RectangleElement } from './rectangle';
+import { TopHeaderElement } from '../top_header';
+import { LayoutElement } from '../element';
+import { EndcapElement } from '../endcap';
+import { TextElement } from '../text';
+import { RectangleElement } from '../rectangle';
 // Import directly from utils so we have access to the mocks
-import { getFontMetrics, getSvgTextWidth } from '../../utils/shapes';
+import { getFontMetrics, getSvgTextWidth } from '../../../utils/shapes';
 
 // Now we can start the tests
 describe('TopHeaderElement', () => {

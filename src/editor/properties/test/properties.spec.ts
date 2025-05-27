@@ -25,7 +25,7 @@ import {
     ButtonActiveFill, ButtonHoverTransform, ButtonActiveTransform, ElbowTextPosition,
     ButtonActionType, ButtonActionService, ButtonActionServiceData,
     ButtonActionNavigationPath, ButtonActionUrlPath, ButtonActionEntity, ButtonActionConfirmation
-} from './properties';
+} from '../properties';
 
 // Helper for context
 const emptyContext: PropertySchemaContext = {};

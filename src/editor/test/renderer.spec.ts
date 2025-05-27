@@ -16,7 +16,7 @@ import { repeat } from 'lit/directives/repeat.js'; // Used in renderer
  */
 
 // Import renderer module to access private functions
-import * as rendererModule from './renderer';
+import * as rendererModule from '../renderer';
 import {
     renderElement,
     renderElementIdEditForm,
@@ -26,7 +26,7 @@ import {
     renderGroupDeleteWarning,
     renderAddElementForm,
     renderGroupList
-} from './renderer';
+} from '../renderer';
 
 // Access internal functions via type casting
 const renderPropertyGroupHeader = (rendererModule as any).renderPropertyGroupHeader;
@@ -35,12 +35,12 @@ const renderCustomSelector = (rendererModule as any).renderCustomSelector;
 const renderActionButtons = (rendererModule as any).renderActionButtons;
 
 // Import types and enums
-import { EditorElement } from './elements/element.js';
-import { LcarsGroup } from './group.js';
-import { HaFormSchema, PropertyGroup, Layout, LcarsPropertyBase, PropertySchemaContext } from './properties/properties.js';
+import { EditorElement } from '../elements/element.js';
+import { LcarsGroup } from '../group.js';
+import { HaFormSchema, PropertyGroup, Layout, LcarsPropertyBase, PropertySchemaContext } from '../properties/properties.js';
 
 // Import to register custom elements used in rendering
-import './grid-selector';
+import '../grid-selector';
 
 // Mocks for dependencies
 vi.mock('./elements/element.js', async (importOriginal) => {

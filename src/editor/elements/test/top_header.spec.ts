@@ -1,7 +1,7 @@
 // src/editor/elements/top_header.spec.ts
 
 // vi.mock must be before any imports
-vi.mock('./element', () => {
+vi.mock('../element', () => {
     const registerSpy = vi.fn();
     const PGMock = {
         TYPE: 'type',
@@ -183,7 +183,7 @@ vi.mock('./element', () => {
 });
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EditorElement, PropertyGroup } from './element'; // Mocked base class and real enum
+import { EditorElement, PropertyGroup } from '../element'; // Mocked base class and real enum
 
 // Import property classes used by TopHeader
 import {
@@ -192,10 +192,10 @@ import {
     FontFamily, FontWeight, LetterSpacing, TextTransform,
     OffsetY, Type,
     ButtonEnabled // For testing button schema part
-} from '../properties/properties';
+} from '../../properties/properties';
 
 // Import the class under test
-import { TopHeader } from './top_header';
+import { TopHeader } from '../top_header';
 
 describe('TopHeader EditorElement', () => {
     let topHeaderEditorElement: TopHeader;
@@ -243,7 +243,7 @@ describe('TopHeader EditorElement', () => {
     });
 
     describe('getPropertyGroups', () => {
-        let groups: Partial<Record<PropertyGroup, import("./element").PropertyGroupDefinition | null>>;
+        let groups: Partial<Record<PropertyGroup, import("../element").PropertyGroupDefinition | null>>;
 
         beforeEach(() => {
             groups = topHeaderEditorElement.getPropertyGroups();

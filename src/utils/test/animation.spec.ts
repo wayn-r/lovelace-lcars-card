@@ -1,8 +1,8 @@
 /// <reference types="vitest" />
 import { describe, it, expect, vi, beforeEach, afterEach, MockedFunction } from 'vitest';
-import { AnimationManager, animationManager, ColorAnimationState, AnimationContext, EntityStateMonitoringData } from './animation';
+import { AnimationManager, animationManager, ColorAnimationState, AnimationContext, EntityStateMonitoringData } from '../animation';
 import { HomeAssistant } from 'custom-card-helpers';
-import { DynamicColorConfig, isDynamicColorConfig } from '../types';
+import { DynamicColorConfig, isDynamicColorConfig } from '../../types';
 
 // Mock gsap
 vi.mock('gsap', () => ({
@@ -13,7 +13,7 @@ vi.mock('gsap', () => ({
 }));
 
 // Mock the types module to control isDynamicColorConfig
-vi.mock('../types', () => ({
+vi.mock('../../types', () => ({
   isDynamicColorConfig: vi.fn(),
 }));
 
@@ -284,7 +284,7 @@ describe('AnimationManager', () => {
 
   describe('resolveDynamicColor', () => {
     beforeEach(() => {
-      vi.mocked(isDynamicColorConfig).mockImplementation((value: any) => {
+      (isDynamicColorConfig as any).mockImplementation((value: any) => {
         return value && typeof value === 'object' && 'entity' in value;
       });
     });
@@ -481,7 +481,7 @@ describe('AnimationManager', () => {
       };
 
       mockHass.states['light.test'] = createMockEntity('off');
-      vi.mocked(isDynamicColorConfig).mockReturnValue(true);
+      (isDynamicColorConfig as any).mockReturnValue(true);
       
       // Initial resolution to establish tracking
       manager.resolveDynamicColor('test-element', dynamicConfig, mockHass);
@@ -502,7 +502,7 @@ describe('AnimationManager', () => {
       };
 
       mockHass.states['climate.test'] = createMockEntity('heat', { temperature: 20 });
-      vi.mocked(isDynamicColorConfig).mockReturnValue(true);
+      (isDynamicColorConfig as any).mockReturnValue(true);
       
       // Initial resolution
       manager.resolveDynamicColor('test-element', dynamicConfig, mockHass);
@@ -522,7 +522,7 @@ describe('AnimationManager', () => {
       };
 
       mockHass.states['light.test'] = createMockEntity('on');
-      vi.mocked(isDynamicColorConfig).mockReturnValue(true);
+      (isDynamicColorConfig as any).mockReturnValue(true);
       
       // Initial resolution
       manager.resolveDynamicColor('test-element', dynamicConfig, mockHass);
@@ -547,7 +547,7 @@ describe('AnimationManager', () => {
       };
 
       mockHass.states['light.test'] = createMockEntity('on');
-      vi.mocked(isDynamicColorConfig).mockReturnValue(true);
+      (isDynamicColorConfig as any).mockReturnValue(true);
       manager.resolveDynamicColor('test-element', dynamicConfig, mockHass);
       
       // Clear tracking
@@ -750,7 +750,7 @@ describe('AnimationManager', () => {
     });
 
     it('should resolve static colors without animation', () => {
-      vi.mocked(isDynamicColorConfig).mockReturnValue(false);
+      (isDynamicColorConfig as any).mockReturnValue(false);
       
       const result = manager.resolveDynamicColorWithAnimation(
         'test-element',
@@ -772,7 +772,7 @@ describe('AnimationManager', () => {
       };
 
       mockHass.states['light.test'] = createMockEntity('on');
-      vi.mocked(isDynamicColorConfig).mockReturnValue(true);
+      (isDynamicColorConfig as any).mockReturnValue(true);
       
       // Mock element returning different current color
       (mockElement.getAttribute as any).mockReturnValue('#000000');
@@ -804,7 +804,7 @@ describe('AnimationManager', () => {
       };
 
       mockHass.states['light.test'] = createMockEntity('on');
-      vi.mocked(isDynamicColorConfig).mockReturnValue(true);
+      (isDynamicColorConfig as any).mockReturnValue(true);
       
       // Mock element returning same color
       (mockElement.getAttribute as any).mockReturnValue('#ff0000');

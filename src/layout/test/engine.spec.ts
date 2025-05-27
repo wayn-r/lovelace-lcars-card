@@ -1,8 +1,8 @@
 // src/layout/engine.spec.ts
 
 import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'vitest';
-import { LayoutEngine, Group, LayoutDimensions, LayoutState, IntrinsicSize, LayoutElementProps, LayoutConfigOptions } from './engine';
-import { LayoutElement } from './elements/element'; // Assuming this is the abstract class
+import { LayoutEngine, Group, LayoutDimensions, LayoutState, IntrinsicSize, LayoutElementProps, LayoutConfigOptions } from '../engine';
+import { LayoutElement } from '../elements/element'; // Assuming this is the abstract class
 import { SVGTemplateResult, svg } from 'lit';
 
 // --- Mock LayoutElement ---

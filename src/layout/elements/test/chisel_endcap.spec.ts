@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'v
 
 // Mock Button class
 const mockCreateButton = vi.fn();
-vi.mock('./button.js', () => {
+vi.mock('../button.js', () => {
   return {
     Button: vi.fn().mockImplementation((id, props, hass, cb) => {
       return {
@@ -19,7 +19,7 @@ vi.mock('./button.js', () => {
 });
 
 // Mock the shapes utility - IMPORTANT: add .js extension to match the import in the actual file
-vi.mock('../../utils/shapes.js', () => {
+vi.mock('../../../utils/shapes.js', () => {
   return {
     generateChiselEndcapPath: vi.fn().mockImplementation((width, height, direction, offsetX, offsetY): string | null => 
       `MOCK_PATH_chisel_${direction}_${width}x${height}_at_${offsetX},${offsetY}`)
@@ -27,11 +27,11 @@ vi.mock('../../utils/shapes.js', () => {
 });
 
 // Import after mocks
-import { ChiselEndcapElement } from './chisel_endcap';
-import { Button } from './button.js';
-import { LayoutElement } from './element.js';
-import { RectangleElement } from './rectangle';
-import { generateChiselEndcapPath } from '../../utils/shapes.js';
+import { ChiselEndcapElement } from '../chisel_endcap';
+import { Button } from '../button.js';
+import { LayoutElement } from '../element.js';
+import { RectangleElement } from '../rectangle';
+import { generateChiselEndcapPath } from '../../../utils/shapes.js';
 import { svg, SVGTemplateResult } from 'lit';
 
 describe('ChiselEndcapElement', () => {
@@ -287,7 +287,7 @@ describe('ChiselEndcapElement', () => {
     it('should return null if generateChiselEndcapPath returns null', () => {
       chiselEndcapElement.layout = { x: 5, y: 10, width: 40, height: 20, calculated: true };
       // Use any to bypass type checking, since we're deliberately testing a null return
-      (vi.mocked(generateChiselEndcapPath) as any).mockReturnValueOnce(null);
+      (generateChiselEndcapPath as any).mockReturnValueOnce(null);
       expect(chiselEndcapElement.render()).toBeNull();
     });
 
@@ -330,7 +330,7 @@ describe('ChiselEndcapElement', () => {
     describe('Button Rendering', () => {
       const mockPathData = 'MOCK_BUTTON_PATH';
       beforeEach(() => {
-        vi.mocked(generateChiselEndcapPath).mockReturnValue(mockPathData);
+        (generateChiselEndcapPath as any).mockReturnValue(mockPathData);
         const props = { button: { enabled: true } };
         chiselEndcapElement = new ChiselEndcapElement('ce-render-btn', props, {}, mockHass, mockRequestUpdate);
         chiselEndcapElement.layout = { x: 10, y: 15, width: 60, height: 30, calculated: true };

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'vitest';
-import { LayoutElement } from './element';
-import { LayoutElementProps, LayoutConfigOptions, LayoutState, IntrinsicSize } from '../engine';
+import { LayoutElement } from '../element';
+import { LayoutElementProps, LayoutConfigOptions, LayoutState, IntrinsicSize } from '../../engine';
 import { HomeAssistant } from 'custom-card-helpers';
 import { SVGTemplateResult, svg } from 'lit';
-import { animationManager } from '../../utils/animation.js';
+import { animationManager } from '../../../utils/animation.js';
 
 // Mock gsap
 vi.mock('gsap', () => {
@@ -28,7 +28,7 @@ const mockButtonInstance = {
     createButton: vi.fn(),
     // Add any other methods/properties of Button that LayoutElement might interact with
 };
-vi.mock('./button.js', () => {
+vi.mock('../button.js', () => {
   return {
     Button: vi.fn().mockImplementation((id, props, hass, cb) => {
         mockButtonInstance.id = id;
@@ -40,7 +40,7 @@ vi.mock('./button.js', () => {
     })
   };
 });
-import { Button } from './button.js';
+import { Button } from '../button.js';
 
 
 // Concrete implementation for testing
