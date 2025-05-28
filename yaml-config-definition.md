@@ -3,10 +3,17 @@
 === Top-Level Card Configuration ===
 
 ```yaml
-# === Top-Level Card Configuration ===
-type: custom:lovelace-lcars-card # Required: <string> Specifies the card type. Must be "custom:lovelace-lcars-card".
-card_title: <string>             # Optional: An overall title for the card, distinct from element text.
+# === Home Assistant Custom Card Configuration ===
+# Note: This configuration follows Home Assistant Lovelace UI standards
+# The 'type' property is handled by Lovelace, everything else is passed to the custom card's setConfig() method
 
+type: custom:lovelace-lcars-card # Required: <string> Handled by Lovelace to load the custom card.
+
+# === LCARS Card Configuration ===
+# All properties below are passed to the custom card's setConfig() method
+title: <string>                  # Optional: Card title for display in the UI.
+
+# === Core Card Structure ===
 groups: <array>                  # Required: Defines groups of elements. Elements MUST belong to a group.
   # --- Group Configuration (Each item in the 'groups' array) ---
   - group_id: <string>             # Required: Unique identifier for this group.
@@ -78,19 +85,84 @@ groups: <array>                  # Required: Defines groups of elements. Element
         interactions:                  # Optional: Defines interactivity.
           visibility_triggers: <array> # Optional: Advanced control over element/group visibility based on interactions with other elements.
             - trigger_source:            # Defines what causes this visibility change.
-                element_id_ref: <string>   # Full ID of the element whose interaction triggers this (e.g., "group_id.element_id"). Can be self.
+                element_id_ref: <string>   # Full ID of the element whose interaction triggers this (e.g., "group_id.element_id"). Can be "self".
                 event: <string>            # "hover" or "click".
-              targets: <array>             # Elements/groups whose visibility will be affected.
+              
+              # === Option 1: Simple Direct Actions (existing system) ===
+              targets: <array>             # Optional: Elements/groups whose visibility will be affected directly.
                 - type: <string>             # "element" or "group".
                   id: <string>               # Full ID of the target element or group_id.
-              action: <string>             # "show", "hide", or "toggle".
+              action: <string>             # Optional: "show", "hide", or "toggle".
+              
+              # === Option 2: Enhanced Orchestrated Actions ===
+              orchestrated_action:         # Optional: High-level action for complex visibility scenarios.
+                type: <string>               # Required: Type of orchestrated action.
+                                             #   Options: "state_transition", "toggle_with_dependencies".
+                
+                # --- State Transition Specific (if type: "state_transition") ---
+                state_group: <string>        # Required for state_transition: Name of the state group to operate on.
+                target_state: <string>       # Required for state_transition: Which member should become visible.
+                
+                # --- Toggle with Dependencies Specific (if type: "toggle_with_dependencies") ---
+                primary_target:              # Required for toggle_with_dependencies: Main target to toggle.
+                  type: <string>               # "element" or "group".
+                  id: <string>                 # Full ID of the target element or group_id.
+                when_showing: <object>       # Optional: Actions to take when primary_target is being shown.
+                  hide: <array>                # Optional: Elements/groups to hide.
+                    - type: <string>             # "element" or "group".
+                      id: <string>               # Full ID of the target element or group_id.
+                  show: <array>                # Optional: Elements/groups to show.
+                    - type: <string>             # "element" or "group".
+                      id: <string>               # Full ID of the target element or group_id.
+                when_hiding: <object>        # Optional: Actions to take when primary_target is being hidden.
+                  hide: <array>                # Optional: Elements/groups to hide.
+                    - type: <string>             # "element" or "group".
+                      id: <string>               # Full ID of the target element or group_id.
+                  show: <array>                # Optional: Elements/groups to show.
+                    - type: <string>             # "element" or "group".
+                      id: <string>               # Full ID of the target element or group_id.
+                
+                # --- Common Orchestrated Action Properties ---
+                additional_actions: <array>  # Optional: Additional simultaneous actions outside the main logic.
+                  - targets: <array>           # Required: Elements/groups to affect.
+                      - type: <string>           # "element" or "group".
+                        id: <string>             # Full ID of the target element or group_id.
+                    action: <string>           # Required: "show", "hide", or "toggle".
+                
+                timing:                      # Optional: Animation coordination and timing control.
+                  hide_first: <boolean>        # Optional: Hide conflicting elements before showing new ones. Default: false.
+                  hide_delay: <number>         # Optional: Delay before starting hide animations (ms). Default: 0.
+                  show_delay: <number>         # Optional: Delay before starting show animations (ms). Default: 0.
+                  stagger_hide: <number>       # Optional: Stagger multiple hide animations (ms between each). Default: 0.
+                  stagger_show: <number>       # Optional: Stagger multiple show animations (ms between each). Default: 0.
+              
+              # === Option 3: Conditional Actions ===
+              conditional_actions: <array> # Optional: Context-aware actions that vary based on current state.
+                # --- Conditional Action (Each item in the 'conditional_actions' array) ---
+                - condition:                   # Required: Condition that must be met for this action to execute.
+                    state_group: <string>        # Optional: State group to check.
+                    current_state: <string>      # Optional: Required current state of the state group.
+                    element_visible: <string>    # Optional: Element ID that must be visible.
+                    element_hidden: <string>     # Optional: Element ID that must be hidden.
+                  action: <string>             # Required: "show", "hide", or "toggle".
+                  targets: <array>             # Required: Elements/groups to affect.
+                    - type: <string>             # "element" or "group".
+                      id: <string>               # Full ID of the target element or group_id.
+                  additional_hide: <array>     # Optional: Additional elements/groups to hide.
+                    - type: <string>             # "element" or "group".
+                      id: <string>               # Full ID of the target element or group_id.
+                  additional_show: <array>     # Optional: Additional elements/groups to show.
+                    - type: <string>             # "element" or "group".
+                      id: <string>               # Full ID of the target element or group_id.
+              
+              # === Common Visibility Trigger Properties (existing) ===
               hover_options:               # Optional: Specific to `event: "hover"`.
                 mode: <string>             # "show_on_enter_hide_on_leave" (default) or "toggle_on_enter_hide_on_leave".
                 hide_delay: <number>       # Optional (ms): Delay before hiding on mouse leave. Default: 0.
               click_options:               # Optional: Specific to `event: "click"`.
                 behavior: <string>         # "toggle" (default), "show_only", "hide_only".
                 revert_on_leave_source: <boolean> # If true and target was shown by click, leaving the trigger_source element reverts visibility. Default: false.
-                revert_on_click_outside: <boolean># If true and target was shown by click, clicking anywhere else reverts visibility. Default: true.
+                revert_on_click_outside: <boolean> # If true and target was shown by click, clicking anywhere else reverts visibility. Default: true.
 
           button:                        # Optional: Configuration if this element should act as a button.
             enabled: <boolean>           # True if it's a button. Default: false.
@@ -136,6 +208,121 @@ groups: <array>                  # Required: Defines groups of elements. Element
           on_show: <animation_definition_or_sequence>  # Optional: Animation to play when this element becomes visible (e.g., via a visibility_trigger).
           on_hide: <animation_definition_or_sequence>  # Optional: Animation to play when this element is hidden.
           # Note: on_show/on_hide animations target the element itself by default.
+
+# === State Management ===
+state_management:              # Optional: Enhanced state management configuration.
+  state_groups: <array>        # Optional: Define mutually exclusive or non-exclusive visibility groups.
+    # --- State Group Configuration (Each item in the 'state_groups' array) ---
+    - group_name: <string>       # Required: Logical grouping name for this state group.
+      exclusive: <boolean>       # Required: If true, only one member can be visible at a time.
+      members: <array>           # Required: Elements/groups that belong to this state group.
+        - type: <string>           # Required: "element" or "group".
+          id: <string>             # Required: Full element ID ("group_id.element_id") or group_id.
+      default_visible: <string>  # Optional: Which member ID should be visible by default on card load.
+
+  state_machine: <object>      # Optional: Alternative declarative approach for explicit state management.
+    states: <array>            # Required: Array of possible visibility states.
+      # --- State Definition (Each item in the 'states' array) ---
+      - name: <string>             # Required: Unique name for this state.
+        visible_elements: <array>  # Required: Array of element/group IDs that are visible in this state.
+          - <string>               # Full element ID ("group_id.element_id") or group_id.
+    
+    transitions: <array>       # Required: Array of valid transitions between states.
+      # --- Transition Definition (Each item in the 'transitions' array) ---
+      - from: <string>             # Required: Source state name.
+        to: <string>               # Required: Target state name.
+        trigger:                   # Required: What causes this transition.
+          element_id_ref: <string>   # Required: Full ID of the element whose interaction triggers this.
+          event: <string>            # Required: "hover" or "click".
+        animation_sequence: <array># Optional: Coordinated animations for this transition.
+          # --- Animation Phase (Each item in the 'animation_sequence' array) ---
+          - phase: <string>          # Required: "hide" or "show".
+            targets: <array>         # Required: Array of element/group IDs to animate.
+              - <string>             # Full element ID ("group_id.element_id") or group_id.
+            delay: <number>          # Optional: Delay in milliseconds before starting this phase. Default: 0.
+
+  global_interactions: <object> # Optional: Enhanced top-level interaction system for complex scenarios.
+    visibility_triggers: <array># Optional: Advanced control over element/group visibility with orchestrated actions.
+      # --- Enhanced Visibility Trigger (Each item in the 'visibility_triggers' array) ---
+      - trigger_source:            # Defines what causes this visibility change.
+          element_id_ref: <string>   # Full ID of the element whose interaction triggers this (e.g., "group_id.element_id").
+          event: <string>            # "hover" or "click".
+        
+        # === Option 1: Simple Direct Actions (existing system) ===
+        targets: <array>           # Optional: Elements/groups whose visibility will be affected directly.
+          - type: <string>           # "element" or "group".
+            id: <string>             # Full ID of the target element or group_id.
+        action: <string>           # Optional: "show", "hide", or "toggle".
+        
+        # === Option 2: Enhanced Orchestrated Actions ===
+        orchestrated_action:       # Optional: High-level action for complex visibility scenarios.
+          type: <string>             # Required: Type of orchestrated action.
+                                      #   Options: "state_transition", "toggle_with_dependencies".
+          
+          # --- State Transition Specific (if type: "state_transition") ---
+          state_group: <string>      # Required for state_transition: Name of the state group to operate on.
+          target_state: <string>     # Required for state_transition: Which member should become visible.
+          
+          # --- Toggle with Dependencies Specific (if type: "toggle_with_dependencies") ---
+          primary_target:            # Required for toggle_with_dependencies: Main target to toggle.
+            type: <string>             # "element" or "group".
+            id: <string>               # Full ID of the target element or group_id.
+          when_showing: <object>     # Optional: Actions to take when primary_target is being shown.
+            hide: <array>              # Optional: Elements/groups to hide.
+              - type: <string>           # "element" or "group".
+                id: <string>             # Full ID of the target element or group_id.
+            show: <array>              # Optional: Elements/groups to show.
+              - type: <string>           # "element" or "group".
+                id: <string>             # Full ID of the target element or group_id.
+          when_hiding: <object>      # Optional: Actions to take when primary_target is being hidden.
+            hide: <array>              # Optional: Elements/groups to hide.
+              - type: <string>           # "element" or "group".
+                id: <string>             # Full ID of the target element or group_id.
+            show: <array>              # Optional: Elements/groups to show.
+              - type: <string>           # "element" or "group".
+                id: <string>             # Full ID of the target element or group_id.
+          
+          # --- Common Orchestrated Action Properties ---
+          additional_actions: <array># Optional: Additional simultaneous actions outside the main logic.
+            - targets: <array>         # Required: Elements/groups to affect.
+                - type: <string>         # "element" or "group".
+                  id: <string>           # Full ID of the target element or group_id.
+              action: <string>         # Required: "show", "hide", or "toggle".
+          
+          timing:                    # Optional: Animation coordination and timing control.
+            hide_first: <boolean>      # Optional: Hide conflicting elements before showing new ones. Default: false.
+            hide_delay: <number>       # Optional: Delay before starting hide animations (ms). Default: 0.
+            show_delay: <number>       # Optional: Delay before starting show animations (ms). Default: 0.
+            stagger_hide: <number>     # Optional: Stagger multiple hide animations (ms between each). Default: 0.
+            stagger_show: <number>     # Optional: Stagger multiple show animations (ms between each). Default: 0.
+        
+        # === Option 3: Conditional Actions ===
+        conditional_actions: <array># Optional: Context-aware actions that vary based on current state.
+          # --- Conditional Action (Each item in the 'conditional_actions' array) ---
+          - condition:                 # Required: Condition that must be met for this action to execute.
+              state_group: <string>      # Optional: State group to check.
+              current_state: <string>    # Optional: Required current state of the state group.
+              element_visible: <string>  # Optional: Element ID that must be visible.
+              element_hidden: <string>   # Optional: Element ID that must be hidden.
+            action: <string>           # Required: "show", "hide", or "toggle".
+            targets: <array>           # Required: Elements/groups to affect.
+              - type: <string>           # "element" or "group".
+                id: <string>             # Full ID of the target element or group_id.
+            additional_hide: <array>   # Optional: Additional elements/groups to hide.
+              - type: <string>           # "element" or "group".
+                id: <string>             # Full ID of the target element or group_id.
+            additional_show: <array>   # Optional: Additional elements/groups to show.
+              - type: <string>           # "element" or "group".
+                id: <string>             # Full ID of the target element or group_id.
+        
+        # === Common Visibility Trigger Properties (existing) ===
+        hover_options:             # Optional: Specific to `event: "hover"`.
+          mode: <string>             # "show_on_enter_hide_on_leave" (default) or "toggle_on_enter_hide_on_leave".
+          hide_delay: <number>       # Optional (ms): Delay before hiding on mouse leave. Default: 0.
+        click_options:             # Optional: Specific to `event: "click"`.
+          behavior: <string>         # "toggle" (default), "show_only", "hide_only".
+          revert_on_leave_source: <boolean> # If true and target was shown by click, leaving the trigger_source element reverts visibility. Default: false.
+          revert_on_click_outside: <boolean> # If true and target was shown by click, clicking anywhere else reverts visibility. Default: true.
 ```
 
 ## Helper Type Definitions
@@ -271,3 +458,4 @@ animation_definition:                # Option 2: Animation sequence definition o
       repeat: <number>               # Optional: Repeat count for this step.
       yoyo: <boolean>                # Optional: Yoyo setting for this step.
 ```
+

@@ -933,3 +933,517 @@ groups:
               opacity_start: 0
             duration: 0.4
 ```
+
+## Enhanced State Management Examples
+
+### Example 1: Simple State Group for Navigation
+
+```yaml
+type: custom:lovelace-lcars-card
+title: "Navigation Control with State Groups"
+
+# LCARS-specific configuration with proper hierarchy
+lcars_config:
+  state_management:
+    # Define mutually exclusive navigation groups
+    state_groups:
+      - group_name: "main_navigation"
+        exclusive: true
+        members:
+          - type: "group"
+            id: "group_a"
+          - type: "group"
+            id: "group_b"
+        default_visible: "group_a"
+
+    # Use orchestrated actions for clean state transitions
+    global_interactions:
+      visibility_triggers:
+        - trigger_source:
+            element_id_ref: "nav.button_a"
+            event: "click"
+          orchestrated_action:
+            type: "state_transition"
+            state_group: "main_navigation"
+            target_state: "group_a"
+            additional_actions:
+              - targets:
+                  - type: "element"
+                    id: "nav.button_b"
+                  - type: "element"
+                    id: "nav.button_c"
+                action: "hide"
+            timing:
+              hide_first: true
+              show_delay: 250
+
+groups:
+  - group_id: "nav"
+    elements:
+      - id: "button_a"
+        type: "rectangle"
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: "GROUP A"
+        layout:
+          width: 100
+          height: 40
+        interactions:
+          button:
+            enabled: true
+  
+  - group_id: "group_a"
+    elements:
+      - id: "content_a"
+        type: "rectangle"
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: "Content A Panel"
+        layout:
+          width: 200
+          height: 100
+  
+  - group_id: "group_b"
+    elements:
+      - id: "content_b"
+        type: "rectangle"
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: "Content B Panel"
+        layout:
+          width: 200
+          height: 100
+```
+
+### Example 2: Toggle with Dependencies
+
+```yaml
+type: custom:lovelace-lcars-card
+title: "Button A: Toggle with Dependencies"
+
+# LCARS-specific configuration
+lcars_config:
+  state_management:
+    # Button A: Toggle group_a and manage button visibility
+    global_interactions:
+      visibility_triggers:
+        - trigger_source:
+            element_id_ref: "nav.button_a"
+            event: "click"
+          orchestrated_action:
+            type: "toggle_with_dependencies"
+            primary_target:
+              type: "group"
+              id: "group_a"
+            when_showing:
+              hide:
+                - type: "element"
+                  id: "nav.button_b"
+                - type: "element"
+                  id: "nav.button_c"
+            when_hiding:
+              show:
+                - type: "element"
+                  id: "nav.button_b"
+                - type: "element"
+                  id: "nav.button_c"
+            timing:
+              hide_first: true
+              show_delay: 250
+
+groups:
+  - group_id: "nav"
+    elements:
+      - id: "button_a"
+        type: "rectangle"
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: "TOGGLE A"
+          color: "#000000"
+        layout:
+          width: 100
+          height: 40
+        interactions:
+          button:
+            enabled: true
+            appearance_states:
+              hover:
+                appearance:
+                  fill: "#FFCC66"
+      
+      - id: "button_b"
+        type: "rectangle"
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: "BUTTON B"
+          color: "#FFFFFF"
+        layout:
+          width: 100
+          height: 40
+          anchor:
+            to: "nav.button_a"
+            element_point: "topLeft"
+            target_point: "topRight"
+        interactions:
+          button:
+            enabled: true
+      
+      - id: "button_c"
+        type: "rectangle"
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: "BUTTON C"
+          color: "#FFFFFF"
+        layout:
+          width: 100
+          height: 40
+          anchor:
+            to: "nav.button_b"
+            element_point: "topLeft"
+            target_point: "topRight"
+        interactions:
+          button:
+            enabled: true
+
+  - group_id: "group_a"
+    elements:
+      - id: "panel_a"
+        type: "rectangle"
+        appearance:
+          fill: "#666666"
+          stroke: "#FF9900"
+          strokeWidth: 2
+        text:
+          content: "GROUP A ACTIVE\nButtons B & C are hidden"
+          color: "#FFFFFF"
+        layout:
+          width: 300
+          height: 80
+          anchor:
+            to: "nav.button_a"
+            element_point: "topLeft"
+            target_point: "bottomLeft"
+```
+
+### Example 3: Conditional Actions Based on State
+
+```yaml
+type: custom:lovelace-lcars-card
+title: "Context-Aware Dynamic Button"
+
+# LCARS-specific configuration
+lcars_config:
+  state_management:
+    state_groups:
+      - group_name: "main_navigation"
+        exclusive: true
+        members:
+          - type: "group"
+            id: "group_a"
+        default_visible: "group_a"
+
+groups:
+  - group_id: "controls"
+    elements:
+      - id: "dynamic_button"
+        type: "rectangle"
+        appearance:
+          fill: "#9966CC"
+        text:
+          content: "SMART BUTTON"
+          color: "#FFFFFF"
+        layout:
+          width: 120
+          height: 45
+        interactions:
+          button:
+            enabled: true
+          visibility_triggers:
+            - trigger_source:
+                element_id_ref: "self"
+                event: "click"
+              conditional_actions:
+                - condition:
+                    state_group: "main_navigation"
+                    current_state: "group_a"
+                  action: "hide"
+                  targets:
+                    - type: "group"
+                      id: "group_a"
+                - condition:
+                    element_hidden: "group_a"
+                  action: "show"
+                  targets:
+                    - type: "group"
+                      id: "group_a"
+                  additional_hide:
+                    - type: "element"
+                      id: "nav.button_b"
+
+groups:
+  - group_id: "nav"
+    elements:
+      - id: "button_b"
+        type: "rectangle"
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: "BUTTON B"
+        layout:
+          width: 100
+          height: 40
+  
+  - group_id: "group_a"
+    elements:
+      - id: "status_panel"
+        type: "rectangle"
+        appearance:
+          fill: "#333333"
+          stroke: "#9966CC"
+          strokeWidth: 1
+        text:
+          content: "Group A is currently visible\nClick smart button to hide"
+          color: "#FFFFFF"
+        layout:
+          width: 250
+          height: 60
+```
+
+### Example 4: State Machine Approach
+
+```yaml
+type: custom:lovelace-lcars-card
+title: "Declarative State Machine"
+
+# LCARS-specific configuration
+state_management:
+  # Alternative declarative state machine
+  state_machine:
+    states:
+      - name: "default"
+        visible_elements:
+          - "group_a"
+          - "nav.button_b"
+          - "nav.button_c"
+      
+      - name: "group_a_focused"
+        visible_elements:
+          - "group_a"
+          # buttons b and c implicitly hidden
+          
+      - name: "group_b_active"
+        visible_elements:
+          - "group_b"
+          - "nav.button_a"
+    
+    transitions:
+      - from: "default"
+        to: "group_a_focused"
+        trigger:
+          element_id_ref: "nav.button_a"
+          event: "click"
+        
+      - from: "group_a_focused"
+        to: "default"
+        trigger:
+          element_id_ref: "nav.button_a"
+          event: "click"
+          
+      - from: "default"
+        to: "group_b_active"
+        trigger:
+          element_id_ref: "nav.button_b"
+          event: "click"
+        animation_sequence:
+          - phase: "hide"
+            targets: ["group_a", "nav.button_c"]
+            delay: 0
+          - phase: "show"
+            targets: ["group_b"]
+            delay: 300
+
+groups:
+  - group_id: "nav"
+    elements:
+      - id: "button_a"
+        type: "rectangle"
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: "FOCUS A"
+        layout:
+          width: 100
+          height: 40
+        interactions:
+          button:
+            enabled: true
+      
+      - id: "button_b"
+        type: "rectangle"
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: "ACTIVATE B"
+        layout:
+          width: 100
+          height: 40
+          anchor:
+            to: "nav.button_a"
+            element_point: "topLeft"
+            target_point: "topRight"
+        interactions:
+          button:
+            enabled: true
+      
+      - id: "button_c"
+        type: "rectangle"
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: "BUTTON C"
+        layout:
+          width: 100
+          height: 40
+          anchor:
+            to: "nav.button_b"
+            element_point: "topLeft"
+            target_point: "topRight"
+        interactions:
+          button:
+            enabled: true
+
+  - group_id: "group_a"
+    elements:
+      - id: "panel_a"
+        type: "rectangle"
+        appearance:
+          fill: "#666666"
+        text:
+          content: "Panel A Content"
+        layout:
+          width: 200
+          height: 80
+
+  - group_id: "group_b"
+    elements:
+      - id: "panel_b"
+        type: "rectangle"
+        appearance:
+          fill: "#444444"
+        text:
+          content: "Panel B Content"
+        layout:
+          width: 200
+          height: 80
+```
+
+### Example 5: Home Assistant Integration with State Management
+
+```yaml
+type: custom:lovelace-lcars-card
+title: "Smart Home Control with State Groups"
+
+# LCARS-specific configuration
+state_management:
+  state_groups:
+    - group_name: "room_controls"
+      exclusive: true
+      members:
+        - type: "group"
+          id: "living_room"
+        - type: "group"
+          id: "bedroom"
+        - type: "group"
+          id: "kitchen"
+      default_visible: "living_room"
+
+  global_interactions:
+    visibility_triggers:
+      - trigger_source:
+          element_id_ref: "nav.living_room_btn"
+          event: "click"
+        orchestrated_action:
+          type: "state_transition"
+          state_group: "room_controls"
+          target_state: "living_room"
+          timing:
+            hide_first: true
+            show_delay: 200
+
+groups:
+  - group_id: "nav"
+    elements:
+      - id: "living_room_btn"
+        type: "endcap"
+        appearance:
+          fill: "#FF9900"
+          direction: "left"
+        text:
+          content: "LIVING"
+          color: "#000000"
+        layout:
+          width: 100
+          height: 40
+        interactions:
+          button:
+            enabled: true
+            actions:
+              tap:
+                action: "call-service"
+                service: "scene.turn_on"
+                service_data:
+                  entity_id: "scene.living_room_active"
+
+  - group_id: "living_room"
+    elements:
+      - id: "lights_control"
+        type: "rectangle"
+        appearance:
+          fill:
+            entity: "light.living_room"
+            mapping:
+              "on": "#FFFF00"
+              "off": "#333333"
+            default: "#666666"
+        text:
+          content: "LIGHTS"
+          color: "#000000"
+        layout:
+          width: 120
+          height: 45
+        interactions:
+          button:
+            enabled: true
+            actions:
+              tap:
+                action: "toggle"
+                entity: "light.living_room"
+      
+      - id: "temperature_display"
+        type: "rectangle"
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: "TEMP: 22°C"
+          color: "#FFFFFF"
+        layout:
+          width: 100
+          height: 35
+          anchor:
+            to: "living_room.lights_control"
+            element_point: "topLeft"
+            target_point: "bottomLeft"
+        interactions:
+          button:
+            enabled: true
+            actions:
+              tap:
+                action: "more-info"
+                entity: "climate.living_room"
+```
