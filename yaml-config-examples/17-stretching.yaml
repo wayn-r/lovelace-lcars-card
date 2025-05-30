@@ -1,0 +1,222 @@
+type: custom:lovelace-lcars-card
+card_title: Advanced Layout and Positioning Example
+groups:
+  - group_id: "scaffolding"
+    elements:
+      - id: "column_1"
+        type: "rectangle"
+        appearance:
+          fill: "#FF9900"
+        layout:
+          width: 30
+          height: 300
+          offsetX: 450
+          anchor:
+            to: "container"
+            element_point: "topLeft"
+            target_point: "topLeft"
+
+  - group_id: "container_anchors"
+    elements:
+      - id: CA_TL
+        type: "rectangle"
+        appearance:
+          fill: "#009966"
+        text:
+          content: "CONTAINER ANCHOR TOP LEFT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 200
+          height: 30
+          anchor:
+            to: "container"
+            element_point: "topLeft"
+            target_point: "topLeft"
+      - id: CA_TR
+        type: "rectangle"
+        appearance:
+          fill: "#009966"
+        text:
+          content: "CONTAINER ANCHOR TOP RIGHT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 200
+          height: 30
+          anchor:
+            to: "container"
+            element_point: "topRight"
+            target_point: "topRight"
+
+  - group_id: stretch_bars
+    elements:
+      - id: SB_TL
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: STRETCH BAR TOP LEFT
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          height: 30
+          anchor:
+            to: container_anchors.CA_TL
+            element_point: topLeft
+            target_point: topRight
+          stretch:
+            target1:
+              id: scaffolding.column_1
+              edge: left
+      - id: SB_TR
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: STRETCH BAR TOP RIGHT
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          height: 30
+          anchor:
+            to: container_anchors.CA_TR
+            element_point: topRight
+            target_point: topLeft
+          stretch:
+            target1:
+              id: scaffolding.column_1
+              edge: right
+
+      - id: SB_CL
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: STRETCH BAR CENTER LEFT
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          height: 30
+          anchor:
+            to: container
+            element_point: centerLeft
+            target_point: centerLeft
+          stretch:
+            target1:
+              id: scaffolding.column_1
+              edge: left
+      - id: SB_CR
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: STRETCH BAR CENTER RIGHT
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          height: 30
+          anchor:
+            to: container
+            element_point: centerRight
+            target_point: centerRight
+          stretch:
+            target1:
+              id: scaffolding.column_1
+              edge: right
+
+      - id: SB_BL
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: STRETCH BAR BOTTOM LEFT
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          height: 30
+          anchor:
+            to: container
+            element_point: bottomLeft
+            target_point: bottomLeft
+          stretch:
+            target1:
+              id: scaffolding.column_1
+              edge: left
+      - id: SB_BR
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: STRETCH BAR BOTTOM RIGHT
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          height: 30
+          anchor:
+            to: container
+            element_point: bottomRight
+            target_point: bottomRight
+          stretch:
+            target1:
+              id: scaffolding.column_1
+              edge: right
+
+  - group_id: "stretch_anchors"
+    elements:
+      - id: "SA_TL"
+        type: "rectangle"
+        appearance:
+          fill: "#FF9900"
+        layout:
+          width: 30
+          anchor:
+            to: container_anchors.CA_TL
+            element_point: topCenter
+            target_point: bottomCenter
+          stretch:
+            target1:
+              id: stretch_bars.SB_CL
+              edge: top
+      - id: "SA_TR"
+        type: "rectangle"
+        appearance:
+          fill: "#FF9900"
+        layout:
+          width: 30
+          anchor:
+            to: stretch_bars.SB_TR
+            element_point: topCenter
+            target_point: bottomCenter
+          stretch:
+            target1:
+              id: stretch_bars.SB_CR
+              edge: top
+      - id: "SA_BL"
+        type: "rectangle"
+        appearance:
+          fill: "#FF9900"
+        layout:
+          width: 30
+          anchor:
+            to: stretch_bars.SB_BL
+            element_point: bottomCenter
+            target_point: topCenter
+          stretch:
+            target1:
+              id: stretch_bars.SB_CL
+              edge: bottom
+      - id: "SA_BR"
+        type: "rectangle"
+        appearance:
+          fill: "#FF9900"
+        layout:
+          width: 30
+          anchor:
+            to: stretch_bars.SB_BR
+            element_point: bottomCenter
+            target_point: topCenter
+          stretch:
+            target1:
+              id: stretch_bars.SB_CR
+              edge: bottom

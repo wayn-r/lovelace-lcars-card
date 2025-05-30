@@ -502,22 +502,7 @@ export abstract class LayoutElement {
         }
     }
 
-    private _getCloserEdge(
-        initialPosition: number, 
-        initialSize: number, 
-        targetCoord: number, 
-        isHorizontal: boolean
-    ): string {
-        if (isHorizontal) {
-            const leftEdge = initialPosition;
-            const rightEdge = initialPosition + initialSize;
-            return (Math.abs(targetCoord - leftEdge) <= Math.abs(targetCoord - rightEdge)) ? 'centerLeft' : 'centerRight';
-        } else {
-            const topEdge = initialPosition;
-            const bottomEdge = initialPosition + initialSize;
-            return (Math.abs(targetCoord - topEdge) <= Math.abs(targetCoord - bottomEdge)) ? 'topCenter' : 'bottomCenter';
-        }
-    }
+
 
     private _getAnchorAwareStretchEdge(
         initialPosition: number, 
@@ -541,8 +526,8 @@ export abstract class LayoutElement {
                 if (anchorPoint.includes('Left')) {
                     return 'centerRight';
                 }
-                // If anchored in center, use distance-based logic
-                return this._getCloserEdge(initialPosition, initialSize, targetCoord, isHorizontal);
+                // If anchored in center, use target-based logic
+                return this._getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
             } else {
                 // If anchored at the bottom, stretch from top
                 if (anchorPoint.includes('bottom')) {
@@ -552,13 +537,27 @@ export abstract class LayoutElement {
                 if (anchorPoint.includes('top')) {
                     return 'bottomCenter';
                 }
-                // If anchored in center, use distance-based logic
-                return this._getCloserEdge(initialPosition, initialSize, targetCoord, isHorizontal);
+                // If anchored in center, use target-based logic
+                return this._getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
             }
         }
         
-        // No anchor constraint or anchored to container - use original distance-based logic
-        return this._getCloserEdge(initialPosition, initialSize, targetCoord, isHorizontal);
+        // For elements anchored to container or without anchors, use target-based logic
+        return this._getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
+    }
+
+    private _getTargetBasedStretchEdge(
+        initialPosition: number,
+        targetCoord: number,
+        isHorizontal: boolean
+    ): string {
+        // Determine stretch direction based on target position relative to element position
+        // This works regardless of element size and is more predictable
+        if (isHorizontal) {
+            return targetCoord > initialPosition ? 'centerRight' : 'centerLeft';
+        } else {
+            return targetCoord > initialPosition ? 'bottomCenter' : 'topCenter';
+        }
     }
 
     private _parseOffset(offset: string | number | undefined, containerDimension: number): number {

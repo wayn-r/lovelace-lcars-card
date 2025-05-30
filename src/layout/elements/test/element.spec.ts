@@ -46,7 +46,7 @@ import { Button } from '../button.js';
 
 // Concrete implementation for testing
 class MockLayoutElement extends LayoutElement {
-  render(): SVGTemplateResult | null {
+  renderShape(): SVGTemplateResult | null {
     if (!this.layout.calculated) return null;
     return svg`<rect id=${this.id} x=${this.layout.x} y=${this.layout.y} width=${this.layout.width} height=${this.layout.height} />`;
   }

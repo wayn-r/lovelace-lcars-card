@@ -1,101 +1,79 @@
 type: custom:lovelace-lcars-card
-card_title: "Text Styling Configuration Example"
+card_title: Advanced Layout and Positioning Example
 groups:
-  - group_id: "text_examples"
+  - group_id: layout_examples
     elements:
-      - id: "title_display"
-        type: "rectangle"
+      - id: title_display
+        type: rectangle
         appearance:
           fill: "#FF9900"
         text:
-          content: "Text Styling Configuration Example"
+          content: Advanced Layout and Positioning Example
           fill: "#000000"
           fontSize: 16
-          fontWeight: "bold"
-          fontFamily: "Antonio"
+          fontWeight: bold
+          fontFamily: Antonio
         layout:
           width: 450
           height: 40
-      # Basic text element
-      - id: "simple_text"
-        type: "text"
-        text:
-          content: "STARFLEET COMMAND"
-          fill: "#FF9900"
-          fontSize: 24
-          fontWeight: "bold"
-          fontFamily: "Antonio, Arial, sans-serif"
-        layout:
-          width: 300
-          height: 30
-          anchor:
-            to: "text_examples.title_display"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
-      
-      # Text with advanced styling
-      - id: "styled_text"
-        type: "text"
-        text:
-          content: "OPERATIONAL STATUS"
-          fill: "#FFFFFF"
-          fontSize: 18
-          letterSpacing: "2px"
-          textTransform: "uppercase"
-          textAnchor: "middle"
-          dominantBaseline: "central"
-          fontFamily: "Antonio"
-        layout:
-          width: 250
-          height: 25
-          anchor:
-            to: "text_examples.simple_text"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
-      
-      # Button with cutout text
-      - id: "cutout_button"
-        type: "rectangle"
+      - id: percentage_element
+        type: rectangle
         appearance:
           fill: "#CC6600"
         text:
-          content: "TACTICAL"
-          fill: "#000000"
-          fontSize: 16
-          fontWeight: "bold"
-          fontFamily: "Antonio"
-          cutout: true
-        layout:
-          width: 120
-          height: 45
-          anchor:
-            to: "text_examples.styled_text"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
-        interactions:
-          button:
-            enabled: true
-            appearance_states:
-              hover:
-                text:
-                  fill: "#FFFFFF"
-      
-      # Top header with dual content
-      - id: "dual_header"
-        type: "top_header"
-        appearance:
-          fill: "#0099CC"
-        text:
-          left_content: "BRIDGE"
-          right_content: "12:34:56"
-          fontSize: 20
-          fontWeight: "bold"
-          fontFamily: "Antonio"
+          content: PERCENTAGE
           fill: "#FFFFFF"
+          fontFamily: Antonio
         layout:
-          width: "100%"
-          height: 60
+          width: 25%
+          height: 10%
+          offsetX: 5%
+          offsetY: 5%
           anchor:
-            to: "text_examples.cutout_button"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            to: layout_examples.stretch_bar
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: container_anchor
+        type: rectangle
+        appearance:
+          fill: "#009966"
+        text:
+          content: CONTAINER ANCHOR
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 150
+          height: 30
+          anchor:
+            to: container
+            element_point: topRight
+            target_point: topRight
+      - id: element_anchor
+        type: text
+        text:
+          content: "STATUS: NOMINAL"
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          anchor:
+            to: layout_examples.stretch_bar
+            element_point: centerLeft
+            target_point: centerRight
+      - id: stretch_bar
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: STRETCH BAR
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          height: 20
+          anchor:
+            to: layout_examples.title_display
+            element_point: topLeft
+            target_point: bottomLeft
+          stretch:
+            target1:
+              id: layout_examples.container_anchor
+              edge: left
