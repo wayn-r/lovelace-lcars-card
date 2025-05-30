@@ -1,0 +1,281 @@
+type: custom:lovelace-lcars-card
+card_title: "Anchoring Examples"
+groups:
+  - group_id: "container_anchors"
+    elements:
+      - id: CA_TL
+        type: "rectangle"
+        appearance:
+          fill: "#009966"
+        text:
+          content: "CONTAINER ANCHOR TOP LEFT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 140
+          height: 30
+          anchor:
+            to: "container"
+            element_point: "topLeft"
+            target_point: "topLeft"
+      - id: CA_TC
+        type: "rectangle"
+        appearance:
+          fill: "#009966"
+        text:
+          content: "CONTAINER ANCHOR TOP CENTER"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 140
+          height: 30
+          anchor:
+            to: "container"
+            element_point: "topCenter"
+            target_point: "topCenter"
+      - id: CA_TR
+        type: "rectangle"
+        appearance:
+          fill: "#009966"
+        text:
+          content: "CONTAINER ANCHOR TOP RIGHT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 140
+          height: 30
+          anchor:
+            to: "container"
+            element_point: "topRight"
+            target_point: "topRight"
+
+      - id: CA_CL
+        type: "rectangle"
+        appearance:
+          fill: "#009966"
+        text:
+          content: "CONTAINER ANCHOR CENTER LEFT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 140
+          height: 30
+          anchor:
+            to: "container"
+            element_point: "centerLeft"
+            target_point: "centerLeft"
+      - id: CA_CC
+        type: "rectangle"
+        appearance:
+          fill: "#009966"
+        text:
+          content: "CONTAINER ANCHOR CENTER CENTER"
+          fill: "#FFFFFF" 
+          fontFamily: "Antonio"
+        layout:
+          width: 140
+          height: 30
+          anchor:
+            to: "container"
+            element_point: "center"
+            target_point: "center"
+      - id: CA_CR
+        type: "rectangle"
+        appearance:
+          fill: "#009966"
+        text:
+          content: "CONTAINER ANCHOR CENTER RIGHT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 140
+          height: 30
+          anchor:
+            to: "container"
+            element_point: "centerRight"
+            target_point: "centerRight"
+
+      - id: CA_BL
+        type: "rectangle"
+        appearance:
+          fill: "#009966"
+        text:
+          content: "CONTAINER ANCHOR BOTTOM LEFT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 140
+          height: 30
+          anchor:
+            to: "container"
+            element_point: "bottomLeft"
+            target_point: "bottomLeft"
+      - id: CA_BC
+        type: "rectangle"
+        appearance:
+          fill: "#009966"
+        text:
+          content: "CONTAINER ANCHOR BOTTOM CENTER"
+          fill: "#FFFFFF" 
+          fontFamily: "Antonio"
+        layout:
+          width: 140
+          height: 30
+          anchor:
+            to: "container"
+            element_point: "bottomCenter"
+            target_point: "bottomCenter"
+      - id: CA_BR
+        type: "rectangle"
+        appearance:
+          fill: "#009966"
+        text:
+          content: "CONTAINER ANCHOR BOTTOM RIGHT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 140
+          height: 30
+          anchor:
+            to: "container"
+            element_point: "bottomRight"
+            target_point: "bottomRight"
+
+      # Anchoring to another element
+  - group_id: "element_anchors"
+    elements:
+      - id: "EL_TL"
+        type: "rectangle"
+        text:
+          content: "ELEMENT ANCHOR TOP LEFT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 150
+          height: 30
+          anchor:
+            to: "container_anchors.CA_TL"
+            element_point: "topLeft"
+            target_point: "bottomRight"
+      - id: "EL_TC"
+        type: "rectangle"
+        text:
+          content: "ELEMENT ANCHOR TOP CENTER"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 150
+          height: 30
+          anchor:
+            to: "container_anchors.CA_TC"
+            element_point: "topCenter"
+            target_point: "bottomCenter"
+      - id: "EL_TR"
+        type: "rectangle"
+        text:
+          content: "ELEMENT ANCHOR TOP RIGHT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 150
+          height: 30
+          anchor:
+            to: "container_anchors.CA_TR"
+            element_point: "topRight"
+            target_point: "bottomLeft"
+            
+      - id: "EL_CL"
+        type: "rectangle"
+        text:
+          content: "ELEMENT ANCHOR CENTER LEFT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 150
+          height: 30
+          anchor:
+            to: "container_anchors.CA_CL"
+            element_point: "centerLeft"
+            target_point: "centerRight"
+      - id: "EL_CC"
+        type: "rectangle"
+        text:
+          content: "ELEMENT ANCHOR CENTER CENTER"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 150
+          height: 30
+          anchor:
+            to: "container_anchors.CA_CC"
+            element_point: "center"
+            target_point: "center"
+      - id: "EL_CR"
+        type: "rectangle"
+        text:
+          content: "ELEMENT ANCHOR CENTER RIGHT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 150
+          height: 30
+          anchor:
+            to: "container_anchors.CA_CR"
+            element_point: "centerRight"
+            target_point: "centerLeft"
+
+      - id: "EL_BL"
+        type: "rectangle"
+        text:
+          content: "ELEMENT ANCHOR BOTTOM LEFT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 150
+          height: 30
+          anchor:
+            to: "container_anchors.CA_BL"
+            element_point: "bottomLeft"
+            target_point: "topRight"
+      - id: "EL_BC"
+        type: "rectangle"
+        text:
+          content: "ELEMENT ANCHOR BOTTOM CENTER"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 150
+          height: 30
+          anchor:
+            to: "container_anchors.CA_BC"
+            element_point: "bottomCenter"
+            target_point: "topCenter"
+      - id: "EL_BR"
+        type: "rectangle"
+        text:
+          content: "ELEMENT ANCHOR BOTTOM RIGHT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 150
+          height: 30
+          anchor:
+            to: "container_anchors.CA_BR"
+            element_point: "bottomRight"
+            target_point: "topLeft"
+
+  - group_id: "scaffolding"
+    elements:
+      - id: "column_1"
+        type: "rectangle"
+        appearance:
+          fill: "#FF9900"
+        layout:
+          width: 30
+          height: 300
+          offsetX: 450
+          anchor:
+            to: "container"
+            element_point: "topLeft"
+            target_point: "topLeft"
+            
