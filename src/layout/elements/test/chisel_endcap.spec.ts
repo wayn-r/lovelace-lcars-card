@@ -342,7 +342,7 @@ describe('ChiselEndcapElement', () => {
         expect(mockCreateButton).toHaveBeenCalledTimes(1);
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
-          { hasText: false, isCutout: false, rx: 0 }
+          { rx: 0 }
         );
       });
 
@@ -353,7 +353,7 @@ describe('ChiselEndcapElement', () => {
         expect(generateChiselEndcapPath).toHaveBeenCalledWith(60, 30, 'left', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
-          { hasText: false, isCutout: false, rx: 0 }
+          { rx: 0 }
         );
       });
 
@@ -363,7 +363,7 @@ describe('ChiselEndcapElement', () => {
 
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
-          { hasText: true, isCutout: false, rx: 0 }
+          { rx: 0 }
         );
       });
 
@@ -373,7 +373,7 @@ describe('ChiselEndcapElement', () => {
 
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
-          { hasText: true, isCutout: true, rx: 0 }
+          { rx: 0 }
         );
       });
     });

@@ -44,7 +44,7 @@ export class ChiselEndcapElement extends LayoutElement {
       super.calculateLayout(elementsMap, containerRect);
     }
   
-    render(): SVGTemplateResult | null {
+    renderShape(): SVGTemplateResult | null {
       if (!this.layout.calculated) {
         return null;
       }
@@ -79,8 +79,6 @@ export class ChiselEndcapElement extends LayoutElement {
           width,
           height,
           {
-            hasText: this._hasButtonText(),
-            isCutout: this._isCutoutText(),
             rx: 0
           }
         );
@@ -88,8 +86,8 @@ export class ChiselEndcapElement extends LayoutElement {
         // Use centralized color resolution for non-button elements
         const colors = this._resolveElementColors();
         
-        // Create the path element
-        const pathElement = svg`
+        // Create and return just the path element - text handled by base class
+        return svg`
           <path
             id=${this.id}
             d=${pathData}
@@ -98,13 +96,6 @@ export class ChiselEndcapElement extends LayoutElement {
             stroke-width=${colors.strokeWidth}
           />
         `;
-        
-        // Get text position and render text if present
-        const textPosition = this._getTextPosition();
-        const textElement = this._renderNonButtonText(textPosition.x, textPosition.y, colors);
-        
-        // Return element with optional text wrapping
-        return this._renderWithOptionalText(pathElement, textElement);
       }
     }
   } 

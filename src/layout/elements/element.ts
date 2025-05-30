@@ -593,7 +593,30 @@ export abstract class LayoutElement {
         }
     }
 
-    abstract render(): SVGTemplateResult | null;
+    /**
+     * Abstract method for elements to render their basic shape/path
+     * Elements should implement this to return just their shape without text
+     */
+    protected abstract renderShape(): SVGTemplateResult | null;
+
+    /**
+     * Consolidated render method that handles all text management
+     * Elements should not override this - they should implement renderShape() instead
+     */
+    render(): SVGTemplateResult | null {
+        const shapeElement = this.renderShape();
+        if (!shapeElement) return null;
+
+        // Handle text rendering through centralized system
+        if (this._hasText()) {
+            const colors = this._resolveElementColors();
+            const textPosition = this._getTextPosition();
+            const textElement = this._renderText(textPosition.x, textPosition.y, colors);
+            return this._renderWithOptionalText(shapeElement, textElement);
+        }
+
+        return shapeElement;
+    }
 
     animate(property: string, value: any, duration: number = 0.5): void {
         if (!this.layout.calculated) return;
@@ -680,55 +703,10 @@ export abstract class LayoutElement {
     }
 
     /**
-     * Checks if the element has non-button text to render
+     * Checks if the element has text to render
      */
     protected _hasNonButtonText(): boolean {
-        const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
-        const isButton = Boolean(buttonConfig?.enabled);
-        return !isButton && Boolean(this.props.text && this.props.text.trim() !== '');
-    }
-
-    /**
-     * Checks if the element has button text to render
-     */
-    protected _hasButtonText(): boolean {
-        const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
-        const isButton = Boolean(buttonConfig?.enabled);
-        
-        if (!isButton) {
-            return false;
-        }
-        
-        // Check for text in both old and new property locations for backward compatibility
-        // Old location: this.props.button.text
-        // New location: this.props.text
-        const buttonText = buttonConfig?.text;
-        const mainText = this.props.text;
-        
-        return Boolean(
-            (buttonText && buttonText.trim() !== '') || 
-            (mainText && mainText.trim() !== '')
-        );
-    }
-
-    /**
-     * Checks if button text should be rendered as cutout
-     */
-    protected _isCutoutText(): boolean {
-        const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
-        const isButton = Boolean(buttonConfig?.enabled);
-        
-        if (!isButton || !this._hasButtonText()) {
-            return false;
-        }
-        
-        // Check for cutout setting in both old and new property locations for backward compatibility
-        // Old location: this.props.button.cutout_text
-        // New location: this.props.cutoutText
-        const buttonCutout = buttonConfig?.cutout_text;
-        const mainCutout = this.props.cutoutText;
-        
-        return Boolean(buttonCutout || mainCutout);
+        return Boolean(this.props.text && this.props.text.trim() !== '');
     }
 
     /**
@@ -798,5 +776,23 @@ export abstract class LayoutElement {
      */
     protected _getTextPosition(): { x: number, y: number } {
         return this._getDefaultTextPosition();
+    }
+
+    /**
+     * Checks if the element has text to render
+     */
+    protected _hasText(): boolean {
+        return this._hasNonButtonText();
+    }
+
+    /**
+     * Renders text for the element
+     * @param x - X position for text
+     * @param y - Y position for text
+     * @param colors - Resolved colors for the element
+     * @returns SVG text element or null if no text
+     */
+    protected _renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
+        return this._renderNonButtonText(x, y, colors);
     }
 } 

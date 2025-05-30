@@ -43,29 +43,37 @@ export class LayoutEngine {
   private tempSvgContainer?: SVGElement;
   private containerRect?: DOMRect;
 
+  // Static shared SVG container for all LayoutEngine instances
+  private static sharedTempSvg?: SVGElement;
+  private static instanceCount: number = 0;
+
   constructor() {
     this.elements = new Map();
     this.groups = [];
-    this._initializeTempSvgContainer();
     
-    // Force initialization of tempSvgContainer for testing if document exists
-    if (typeof document !== 'undefined' && document.body) {
-      if (!this.tempSvgContainer) {
-        this.tempSvgContainer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        this.tempSvgContainer.style.position = 'absolute';
-        document.body.appendChild(this.tempSvgContainer);
-      }
+    // Use shared singleton SVG container
+    this._initializeSharedSvgContainer();
+    
+    LayoutEngine.instanceCount++;
+  }
+
+  private _initializeSharedSvgContainer(): void {
+    // Create shared SVG container if it doesn't exist
+    if (!LayoutEngine.sharedTempSvg && typeof document !== 'undefined' && document.body) {
+      LayoutEngine.sharedTempSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      LayoutEngine.sharedTempSvg.style.position = 'absolute';
+      LayoutEngine.sharedTempSvg.style.left = '-9999px';
+      LayoutEngine.sharedTempSvg.style.top = '-9999px';
+      document.body.appendChild(LayoutEngine.sharedTempSvg);
     }
+    
+    // Reference the shared container
+    this.tempSvgContainer = LayoutEngine.sharedTempSvg;
   }
 
   private _initializeTempSvgContainer(): void {
-    if (typeof document !== 'undefined' && document.body) { 
-      this.tempSvgContainer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      this.tempSvgContainer.style.position = 'absolute';
-      this.tempSvgContainer.style.left = '-9999px';
-      this.tempSvgContainer.style.top = '-9999px';
-      document.body.appendChild(this.tempSvgContainer);
-    }
+    // Legacy method - now delegates to shared container
+    this._initializeSharedSvgContainer();
   }
 
   public get layoutGroups(): Group[] {
@@ -262,9 +270,16 @@ export class LayoutEngine {
   }
 
   destroy(): void {
-    if (this.tempSvgContainer && this.tempSvgContainer.parentNode) {
-      this.tempSvgContainer.parentNode.removeChild(this.tempSvgContainer);
+    LayoutEngine.instanceCount--;
+    
+    // Only remove shared SVG container when all instances are destroyed
+    if (LayoutEngine.instanceCount <= 0 && LayoutEngine.sharedTempSvg && LayoutEngine.sharedTempSvg.parentNode) {
+      LayoutEngine.sharedTempSvg.parentNode.removeChild(LayoutEngine.sharedTempSvg);
+      LayoutEngine.sharedTempSvg = undefined;
+      LayoutEngine.instanceCount = 0; // Reset to 0 to handle negative counts
     }
+    
+    this.tempSvgContainer = undefined;
     this.clearLayout();
   }
 

@@ -155,7 +155,8 @@ export class TopHeaderElement extends LayoutElement {
     const metrics = this.getFontMetrics(fontConfig);
     
     if (metrics) {
-      return height / (metrics.capHeight * -1);
+      const cap = Math.abs(metrics.capHeight) || 1; // prevent div-by-0
+      return height / cap;
     }
     
     return height;
@@ -349,7 +350,7 @@ export class TopHeaderElement extends LayoutElement {
     }
   }
 
-  render(): SVGTemplateResult | null {
+  renderShape(): SVGTemplateResult | null {
     if (!this.layout.calculated) return null;
     
     return svg`

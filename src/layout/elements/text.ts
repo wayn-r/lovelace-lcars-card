@@ -71,7 +71,7 @@ export class TextElement extends LayoutElement {
       this.intrinsicSize.calculated = true;
     }
   
-    render(): SVGTemplateResult | null {
+    renderShape(): SVGTemplateResult | null {
       if (!this.layout.calculated) return null;
   
       const { x, y, width, height } = this.layout;
@@ -147,5 +147,12 @@ export class TextElement extends LayoutElement {
           ${this.props.text || ''}
         </text>
       `;
+    }
+
+    /**
+     * Override render() to bypass base class text management since TextElement IS the text
+     */
+    render(): SVGTemplateResult | null {
+        return this.renderShape();
     }
   }

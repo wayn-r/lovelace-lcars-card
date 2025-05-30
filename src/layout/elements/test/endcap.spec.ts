@@ -325,7 +325,7 @@ describe('EndcapElement', () => {
         const expectedPathD = generateEndcapPath(60, 30, 'left', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 15, 60, 30,
-          { hasText: false, isCutout: false, rx: 0 }
+          { rx: 0 }
         );
       });
 
@@ -336,7 +336,7 @@ describe('EndcapElement', () => {
         const expectedPathD = generateEndcapPath(60, 30, 'right', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 15, 60, 30,
-          { hasText: false, isCutout: false, rx: 0 } // rx is hardcoded 0 for endcap button style
+          { rx: 0 }
         );
       });
 
@@ -346,7 +346,7 @@ describe('EndcapElement', () => {
 
         expect(mockCreateButton).toHaveBeenCalledWith(
           expect.any(String), 10, 15, 60, 30,
-          { hasText: true, isCutout: false, rx: 0 }
+          { rx: 0 }
         );
       });
 
@@ -356,7 +356,7 @@ describe('EndcapElement', () => {
 
         expect(mockCreateButton).toHaveBeenCalledWith(
           expect.any(String), 10, 15, 60, 30,
-          { hasText: true, isCutout: true, rx: 0 }
+          { rx: 0 }
         );
       });
     });

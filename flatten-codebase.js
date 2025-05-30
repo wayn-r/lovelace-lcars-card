@@ -131,7 +131,7 @@ try {
     }
     // Add common patterns that should always be ignored.
     // These paths are relative to the project root.
-    ig.add(['node_modules', outputFile, '.git', '.vscode', '.idea', '__snapshots__']);
+    ig.add(['node_modules', outputFile, '.git', '.vscode', '.idea', '__snapshots__', 'yaml-config-examples/']);
 
 
     // --- 1. Ensure output directory exists ---

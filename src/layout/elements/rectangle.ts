@@ -18,7 +18,7 @@ export class RectangleElement extends LayoutElement {
    * Renders the rectangle as an SVG path element.
    * @returns The SVG path element.
    */
-  render(): SVGTemplateResult | null {
+  renderShape(): SVGTemplateResult | null {
     if (!this.layout.calculated) return null;
 
     const { x, y, width, height } = this.layout;
@@ -40,7 +40,7 @@ export class RectangleElement extends LayoutElement {
     const isButton = Boolean(buttonConfig?.enabled);
     
     if (isButton && this.button) {
-      // Let the button handle its own color resolution and text
+      // Let the button handle its own color resolution
       const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
       const pathData = generateRectanglePath(x, y, width, height, rx);
       
@@ -51,8 +51,6 @@ export class RectangleElement extends LayoutElement {
         width,
         height,
         {
-          hasText: this._hasButtonText(),
-          isCutout: this._isCutoutText(),
           rx
         }
       );
@@ -62,8 +60,8 @@ export class RectangleElement extends LayoutElement {
       const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
       const pathData = generateRectanglePath(x, y, width, height, rx);
       
-      // Create the path element
-      const pathElement = svg`
+      // Create and return just the path element - text handled by base class
+      return svg`
         <path
           id=${this.id}
           d=${pathData}
@@ -72,13 +70,6 @@ export class RectangleElement extends LayoutElement {
           stroke-width=${colors.strokeWidth}
         />
       `;
-      
-      // Get text position and render text if present
-      const textPosition = this._getTextPosition();
-      const textElement = this._renderNonButtonText(textPosition.x, textPosition.y, colors);
-      
-      // Return element with optional text wrapping
-      return this._renderWithOptionalText(pathElement, textElement);
     }
   }
 }

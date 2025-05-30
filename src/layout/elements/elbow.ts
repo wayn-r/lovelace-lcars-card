@@ -82,7 +82,7 @@ export class ElbowElement extends LayoutElement {
         }
     }
 
-    render(): SVGTemplateResult | null {
+    renderShape(): SVGTemplateResult | null {
       if (!this.layout.calculated) {
         return null;
       }
@@ -115,14 +115,6 @@ export class ElbowElement extends LayoutElement {
       const isButton = Boolean(buttonConfig?.enabled);
       
       if (isButton && this.button) {
-        // Calculate custom text position for elbow elements if button has text
-        let customTextPosition;
-        const elbowTextPosition = this.props.elbowTextPosition;
-        
-        if (elbowTextPosition && this._hasButtonText()) {
-          customTextPosition = this._getTextPosition();
-        }
-        
         // Let the button handle its own color resolution with current state
         return this.button.createButton(
           pathData,
@@ -131,18 +123,15 @@ export class ElbowElement extends LayoutElement {
           width,
           height,
           {
-            hasText: this._hasButtonText(),
-            isCutout: this._isCutoutText(),
-            rx: 0,
-            ...(customTextPosition && { customTextPosition })
+            rx: 0
           }
         );
       } else {
         // Use centralized color resolution for non-button elements
         const colors = this._resolveElementColors();
         
-        // Create the path element
-        const pathElement = svg`
+        // Create and return just the path element - text handled by base class
+        return svg`
           <path
             id=${this.id}
             d=${pathData}
@@ -151,13 +140,6 @@ export class ElbowElement extends LayoutElement {
             stroke-width=${colors.strokeWidth}
           />
         `;
-        
-        // Get text position and render text if present
-        const textPosition = this._getTextPosition();
-        const textElement = this._renderNonButtonText(textPosition.x, textPosition.y, colors);
-        
-        // Return element with optional text wrapping
-        return this._renderWithOptionalText(pathElement, textElement);
       }
     }
 }

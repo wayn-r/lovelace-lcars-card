@@ -408,22 +408,10 @@ export interface GlobalInteractionsConfig {
 
 export interface LcarsButtonElementConfig {
   enabled?: boolean;
-  text?: string;
-  cutout_text?: boolean;
-  textColor?: any;
-  font_family?: string;
-  font_size?: number;
-  font_weight?: string;
-  letter_spacing?: string | number;
-  text_transform?: 'none' | 'capitalize' | 'uppercase' | 'lowercase';
-  text_anchor?: 'start' | 'middle' | 'end';
-  dominant_baseline?: 'auto' | 'middle' | 'central' | 'hanging' | 'text-bottom' | 'text-top' | 'alphabetic' | 'ideographic';
   hover_fill?: any;
   active_fill?: any;
   hover_stroke?: string;
   active_stroke?: string;
-  hover_text_color?: any;
-  active_text_color?: any;
   hover_transform?: string;
   active_transform?: string;
   action_config?: LcarsButtonActionConfig;

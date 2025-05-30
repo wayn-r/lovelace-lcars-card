@@ -5,9 +5,7 @@ import { colorResolver } from "../../utils/color-resolver.js";
 import { AnimationContext } from "../../utils/animation.js";
 import { Color, ColorStateContext } from "../../utils/color.js";
 
-export type ButtonPropertyName = 'fill' | 'stroke' | 'textColor' | 'strokeWidth' | 
-                        'fontFamily' | 'fontSize' | 'fontWeight' | 'letterSpacing' | 
-                        'textAnchor' | 'dominantBaseline';
+export type ButtonPropertyName = 'fill' | 'stroke' | 'strokeWidth';
 
 export class Button {
     private _isHovering = false;
@@ -115,7 +113,7 @@ export class Button {
             this._id,
             this._props,
             context,
-            { fallbackTextColor: 'white' },
+            {},
             stateContext
         );
     }
@@ -160,7 +158,7 @@ export class Button {
     }
     
     private formatValueForProperty<T>(propName: ButtonPropertyName, value: any): T | string | undefined {
-        if ((propName === 'fill' || propName === 'stroke' || propName === 'textColor') && value !== undefined) {
+        if ((propName === 'fill' || propName === 'stroke') && value !== undefined) {
             // Use the new Color class for color formatting
             const color = Color.fromValue(value, 'transparent');
             return color.toStaticString();
@@ -176,177 +174,36 @@ export class Button {
         width: number,
         height: number,
         options: {
-            hasText: boolean,
-            isCutout: boolean,
-            rx: number,
-            customTextPosition?: {
-                x: number,
-                y: number
-            }
+            rx: number
         }
     ): SVGTemplateResult {
-        const buttonConfig = this._props.button as LcarsButtonElementConfig;
-        const elements: SVGTemplateResult[] = [];
-        
         // Use the new color resolver to get colors with hover/active state support
         const resolvedColors = this.getResolvedColors();
         
-        const maskId = options.isCutout ? `mask-text-${this._id}` : null;
-        
-        elements.push(svg`
+        const pathElement = svg`
             <path
                 id=${this._id}
                 d=${pathData}
                 fill=${resolvedColors.fillColor}
                 stroke=${resolvedColors.strokeColor}
                 stroke-width=${resolvedColors.strokeWidth}
-                mask=${maskId ? `url(#${maskId})` : 'none'}
             />
-        `);
+        `;
         
-        if (options.hasText) {
-            const textConfig = this.getTextConfig(buttonConfig);
-            
-            // Get text content from multiple possible locations for backward compatibility
-            const buttonText = buttonConfig?.text;
-            const mainText = this._props.text;
-            const textContent = buttonText || mainText || '';
-            
-            let textX: number;
-            let textY: number;
-            
-            if (options.customTextPosition) {
-                // Use custom text position if provided
-                textX = options.customTextPosition.x;
-                textY = options.customTextPosition.y;
-            } else {
-                // Calculate text position based on text anchor
-                const textAnchor = textConfig.textAnchor;
-                const textPadding = this._props.textPadding || 2; // Default padding of 8px
-                
-                if (textAnchor === 'start') {
-                    textX = x + textPadding; // Left edge with padding
-                } else if (textAnchor === 'end') {
-                    textX = x + width - textPadding; // Right edge with padding
-                } else {
-                    textX = x + width / 2; // Center (default for 'middle')
-                }
-                textY = y + height / 2; // Always center vertically
-            }
-            
-            if (options.isCutout && maskId) {
-                elements.push(this.createTextMask(
-                    maskId,
-                    x,
-                    y,
-                    width,
-                    height,
-                    pathData,
-                    textContent,
-                    textConfig,
-                    textX,
-                    textY
-                ));
-            } else {
-                elements.push(this.createText(
-                    textX,
-                    textY,
-                    textContent,
-                    {
-                        ...textConfig,
-                        fill: resolvedColors.textColor,
-                        pointerEvents: 'none'
-                    }
-                ));
-            }
-        }
-        
-        return this.createButtonGroup(elements, {
+        return this.createButtonGroup([pathElement], {
             isButton: true,
-            buttonText: buttonConfig.text,
             elementId: this._id
         });
-    }
-
-    createText(
-        x: number, 
-        y: number, 
-        text: string, 
-        config: {
-            fontFamily: string,
-            fontSize: number,
-            fontWeight: string,
-            letterSpacing: string | number,
-            textAnchor: string,
-            dominantBaseline: string,
-            textTransform: string,
-            fill?: string,
-            pointerEvents?: string
-        }
-    ): SVGTemplateResult {
-        return svg`
-            <text
-                x=${x}
-                y=${y}
-                fill=${config.fill || 'currentColor'}
-                font-family=${config.fontFamily}
-                font-size=${`${config.fontSize}px`}
-                font-weight=${config.fontWeight}
-                letter-spacing=${config.letterSpacing}
-                text-anchor=${config.textAnchor}
-                dominant-baseline=${config.dominantBaseline}
-                style="pointer-events: ${config.pointerEvents || 'auto'}; text-transform: ${config.textTransform};"
-            >
-                ${text}
-            </text>
-        `;
-    }
-
-    createTextMask(
-        id: string,
-        x: number,
-        y: number,
-        width: number,
-        height: number,
-        pathData: string,
-        text: string,
-        textConfig: {
-            fontFamily: string,
-            fontSize: number,
-            fontWeight: string,
-            letterSpacing: string | number,
-            textAnchor: string,
-            dominantBaseline: string,
-            textTransform: string
-        },
-        textX: number,
-        textY: number
-    ): SVGTemplateResult {
-        return svg`
-            <mask id=${id}>
-                <path d=${pathData} fill="white" />
-                ${this.createText(
-                    textX,
-                    textY,
-                    text,
-                    {
-                        ...textConfig,
-                        fill: 'black'
-                    }
-                )}
-            </mask>
-        `;
     }
 
     createButtonGroup(
         elements: SVGTemplateResult[],
         config: {
             isButton: boolean,
-            buttonText?: string,
             elementId: string
         }
     ): SVGTemplateResult {
-        const { isButton, buttonText, elementId } = config;
+        const { isButton, elementId } = config;
         
         if (!isButton) {
             return svg`<g>${elements}</g>`;
@@ -364,33 +221,13 @@ export class Button {
                 @mouseup=${buttonHandlers.handleMouseUp}
                 style="cursor: pointer; outline: none;"
                 role="button"
-                aria-label=${buttonText || elementId}
+                aria-label=${elementId}
                 tabindex="0"
                 @keydown=${buttonHandlers.handleKeyDown}
             >
                 ${elements}
             </g>
         `;
-    }
-    
-    getTextConfig(buttonConfig: LcarsButtonElementConfig): {
-        fontFamily: string,
-        fontSize: number,
-        fontWeight: string,
-        letterSpacing: string | number,
-        textAnchor: string,
-        dominantBaseline: string,
-        textTransform: string
-    } {
-        return {
-            fontFamily: buttonConfig.font_family || this._props.fontFamily || 'sans-serif',
-            fontSize: buttonConfig.font_size || this._props.fontSize || 16,
-            fontWeight: buttonConfig.font_weight || this._props.fontWeight || 'normal',
-            letterSpacing: buttonConfig.letter_spacing || this._props.letterSpacing || 'normal',
-            textAnchor: buttonConfig.text_anchor || this._props.textAnchor || 'middle',
-            dominantBaseline: buttonConfig.dominant_baseline || this._props.dominantBaseline || 'middle',
-            textTransform: buttonConfig.text_transform || 'none'
-        };
     }
     
     createEventHandlers() {
@@ -566,14 +403,6 @@ export class Button {
             if (resolvedColors.strokeWidth) {
                 buttonElement.setAttribute('stroke-width', resolvedColors.strokeWidth);
             }
-            
-            // For button groups, we may need to update text color too
-            const textElements = buttonElement.querySelectorAll('text');
-            textElements.forEach(textElement => {
-                if (resolvedColors.textColor) {
-                    textElement.setAttribute('fill', resolvedColors.textColor);
-                }
-            });
             
         } catch (error) {
             console.warn(`[${this._id}] Direct appearance update failed, falling back to global update:`, error);

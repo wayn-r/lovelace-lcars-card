@@ -79,9 +79,7 @@ function convertNewElementToProps(element: ElementConfig): any {
   if (element.interactions?.button) {
     const buttonConfig = element.interactions.button;
     props.button = {
-      enabled: buttonConfig.enabled,
-      text: element.text?.content,
-      cutout_text: element.text?.cutout || false
+      enabled: buttonConfig.enabled
     };
     
     // Convert appearance states
@@ -90,7 +88,6 @@ function convertNewElementToProps(element: ElementConfig): any {
         const hover = buttonConfig.appearance_states.hover;
         if (hover.appearance?.fill) props.button.hover_fill = hover.appearance.fill;
         if (hover.appearance?.stroke) props.button.hover_stroke = hover.appearance.stroke;
-        if (hover.text?.fill) props.button.hover_text_color = hover.text.fill;
         if (hover.transform) props.button.hover_transform = hover.transform;
       }
       
@@ -98,7 +95,6 @@ function convertNewElementToProps(element: ElementConfig): any {
         const active = buttonConfig.appearance_states.active;
         if (active.appearance?.fill) props.button.active_fill = active.appearance.fill;
         if (active.appearance?.stroke) props.button.active_stroke = active.appearance.stroke;
-        if (active.text?.fill) props.button.active_text_color = active.text.fill;
         if (active.transform) props.button.active_transform = active.transform;
       }
     }

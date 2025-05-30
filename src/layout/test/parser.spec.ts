@@ -456,7 +456,7 @@ describe('parseConfig', () => {
 
         expect(props.button).toBeDefined();
         expect(props.button.enabled).toBe(true);
-        expect(props.button.text).toBe('Click Me');
+        expect(props.text).toBe('Click Me');
         expect(props.button.action_config).toBeDefined();
         expect(props.button.action_config.type).toBe('call-service');
         expect(props.button.action_config.service).toBe('light.turn_on');
@@ -524,7 +524,6 @@ describe('parseConfig', () => {
         const props = call[1];
 
         expect(props.button.hover_fill).toBe('#FF0000');
-        expect(props.button.hover_text_color).toBe('#FFFFFF');
         expect(props.button.active_fill).toBe('#AA0000');
       });
     });

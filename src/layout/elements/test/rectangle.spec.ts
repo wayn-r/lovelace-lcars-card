@@ -197,7 +197,7 @@ describe('RectangleElement', () => {
         const expectedPathD = generateRectanglePath(10, 10, 100, 30, 0);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 10, 100, 30,
-          { hasText: true, isCutout: false, rx: 0 }
+          { rx: 0 }
         );
       });
 
@@ -213,7 +213,7 @@ describe('RectangleElement', () => {
         const expectedPathD = generateRectanglePath(0, 0, 80, 40, 8);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 0, 0, 80, 40,
-          { hasText: true, isCutout: false, rx: 8 }
+          { rx: 8 }
         );
       });
 
@@ -229,7 +229,7 @@ describe('RectangleElement', () => {
         const expectedPathD = generateRectanglePath(0, 0, 70, 35, 6);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 0, 0, 70, 35,
-          { hasText: true, isCutout: false, rx: 6 }
+          { rx: 6 }
         );
       });
 
@@ -241,7 +241,7 @@ describe('RectangleElement', () => {
         rectangleElement.render();
         expect(mockCreateButton).toHaveBeenCalledWith(
             expect.any(String), 1, 1, 50, 20,
-            { hasText: false, isCutout: false, rx: 0 }
+            { rx: 0 }
         );
         mockCreateButton.mockClear();
 
@@ -251,7 +251,7 @@ describe('RectangleElement', () => {
         rectangleElement.render();
         expect(mockCreateButton).toHaveBeenCalledWith(
             expect.any(String), 1, 1, 50, 20,
-            { hasText: false, isCutout: false, rx: 0 }
+            { rx: 0 }
         );
       });
 
@@ -263,7 +263,7 @@ describe('RectangleElement', () => {
         rectangleElement.render();
         expect(mockCreateButton).toHaveBeenCalledWith(
             expect.any(String), 2, 2, 60, 25,
-            { hasText: true, isCutout: true, rx: 0 }
+            { rx: 0 }
         );
       });
 
@@ -275,7 +275,7 @@ describe('RectangleElement', () => {
         rectangleElement.render();
         expect(mockCreateButton).toHaveBeenCalledWith(
             expect.any(String), 3, 3, 90, 45,
-            { hasText: true, isCutout: false, rx: 0 }
+            { rx: 0 }
         );
       });
 
@@ -300,7 +300,7 @@ describe('RectangleElement', () => {
         
         expect(mockButton.createButton).toHaveBeenCalledWith(
           expect.any(String), 10, 20, 100, 30,
-          { hasText: true, isCutout: false, rx: 0 }
+          { rx: 0 }
         );
 
         mockButton.createButton.mockClear();
@@ -317,7 +317,7 @@ describe('RectangleElement', () => {
         
         expect(mockButton.createButton).toHaveBeenCalledWith(
           expect.any(String), 10, 20, 100, 30,
-          { hasText: true, isCutout: false, rx: 0 }
+          { rx: 0 }
         );
 
         mockButton.createButton.mockClear();
@@ -334,7 +334,7 @@ describe('RectangleElement', () => {
         
         expect(mockButton.createButton).toHaveBeenCalledWith(
           expect.any(String), 10, 20, 100, 30,
-          { hasText: true, isCutout: false, rx: 0 }
+          { rx: 0 }
         );
       });
     });
@@ -355,6 +355,70 @@ describe('RectangleElement', () => {
         rectangleElement = new RectangleElement('rect-is3', {});
         rectangleElement.calculateIntrinsicSize(mockSvgContainer);
         expect(rectangleElement.intrinsicSize).toEqual({ width: 0, height: 0, calculated: true });
+    });
+  });
+
+  describe('Centralized Text Rendering for Buttons', () => {
+    it('should render text for button elements through centralized system', () => {
+      const props = {
+        button: {
+          enabled: true
+        },
+        text: 'Kitchen Sink Toggle',
+        textColor: '#FFFFFF',
+        fontFamily: 'Antonio'
+      };
+      
+      // Create a proper mock button that returns a valid SVG result
+      const mockButton = {
+        createButton: vi.fn().mockReturnValue(svg`<g class="lcars-button-group"><path d="M0,0 L100,0 L100,30 L0,30 Z"/></g>`)
+      };
+      
+      rectangleElement = new RectangleElement('rect-button-text', props, {}, mockHass, mockRequestUpdate);
+      rectangleElement.button = mockButton as any;
+      rectangleElement.layout = { x: 10, y: 20, width: 150, height: 30, calculated: true };
+      
+      const result = rectangleElement.render();
+      
+      // Should render because text is configured - text handled by base Element class
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('_$litType$');
+      
+      // Result should contain both button and text elements wrapped together
+      expect(result).toHaveProperty('strings');
+      expect(result).toHaveProperty('values');
+      
+      // The template should be a group containing both button and text elements
+      const templateStr = result!.strings.join('');
+      expect(templateStr).toContain('<g>'); // Wrapper group for button+text from base class
+    });
+
+    it('should not render text for button elements when no text is configured', () => {
+      const props = {
+        button: {
+          enabled: true
+        }
+        // No text property
+      };
+      
+      // Create a proper mock button that returns a valid SVG result
+      const mockButton = {
+        createButton: vi.fn().mockReturnValue(svg`<g class="lcars-button-group"><path d="M0,0 L100,0 L100,30 L0,30 Z"/></g>`)
+      };
+      
+      rectangleElement = new RectangleElement('rect-button-no-text', props, {}, mockHass, mockRequestUpdate);
+      rectangleElement.button = mockButton as any;
+      rectangleElement.layout = { x: 10, y: 20, width: 150, height: 30, calculated: true };
+      
+      const result = rectangleElement.render();
+      
+      // Should render button without text wrapper since no text configured
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('_$litType$');
+      
+      // Should be button template without additional text wrapping from base class
+      const templateStr = result!.strings.join('');
+      expect(templateStr).toContain('lcars-button-group'); // Button group should be present
     });
   });
 });

@@ -257,70 +257,8 @@ describe('ElbowElement', () => {
         expect(elbowElement.button?.createButton).toHaveBeenCalledTimes(1);
         expect(elbowElement.button?.createButton).toHaveBeenCalledWith(
           mockPathData, layoutX, layoutY, layoutWidth, layoutHeight, // Note: layoutWidth, not propsElbowWidth for button bounding box
-          expect.objectContaining({ hasText: false, isCutout: false, rx: 0 })
+          { rx: 0 }
         );
-      });
-
-      it('should pass hasText:true if button.text is present', () => {
-        elbowElement.props.button.text = 'Click';
-        elbowElement.render();
-        expect(elbowElement.button?.createButton).toHaveBeenCalledWith(
-          mockPathData, layoutX, layoutY, layoutWidth, layoutHeight,
-          expect.objectContaining({ hasText: true })
-        );
-      });
-
-      it('should pass isCutout:true if button.cutout_text is true', () => {
-        elbowElement.props.button.text = 'Cutout';
-        elbowElement.props.button.cutout_text = true;
-        elbowElement.render();
-        expect(elbowElement.button?.createButton).toHaveBeenCalledWith(
-          mockPathData, layoutX, layoutY, layoutWidth, layoutHeight,
-          expect.objectContaining({ isCutout: true })
-        );
-      });
-
-      describe('Custom Text Position Calculation', () => {
-        const testCases = [
-          // elbowTextPosition: 'top' (default)
-          { elbowTextPos: 'top', orientation: 'top-left', expectedX: layoutX + propsElbowWidth / 2, expectedY: layoutY + propsArmHeight / 2 },
-          { elbowTextPos: 'top', orientation: 'top-right', expectedX: layoutX + propsElbowWidth / 2, expectedY: layoutY + propsArmHeight / 2 },
-          { elbowTextPos: 'top', orientation: 'bottom-left', expectedX: layoutX + propsElbowWidth / 2, expectedY: layoutY + propsArmHeight / 2 },
-          { elbowTextPos: 'top', orientation: 'bottom-right', expectedX: layoutX + propsElbowWidth / 2, expectedY: layoutY + propsArmHeight / 2 },
-
-          // elbowTextPosition: 'side'
-          { elbowTextPos: 'side', orientation: 'top-left',
-            expectedX: layoutX + propsBodyWidth / 2,
-            expectedY: layoutY + propsArmHeight + (layoutHeight - propsArmHeight) / 2 },
-          { elbowTextPos: 'side', orientation: 'top-right',
-            expectedX: layoutX + propsElbowWidth - propsBodyWidth / 2,
-            expectedY: layoutY + propsArmHeight + (layoutHeight - propsArmHeight) / 2 },
-          { elbowTextPos: 'side', orientation: 'bottom-left',
-            expectedX: layoutX + propsBodyWidth / 2,
-            expectedY: layoutY + (layoutHeight - propsArmHeight) / 2 },
-          { elbowTextPos: 'side', orientation: 'bottom-right',
-            expectedX: layoutX + propsElbowWidth - propsBodyWidth / 2,
-            expectedY: layoutY + (layoutHeight - propsArmHeight) / 2 },
-        ];
-
-        testCases.forEach(({ elbowTextPos, orientation, expectedX, expectedY }) => {
-          it(`should calculate text position correctly for elbowTextPosition: ${elbowTextPos}, orientation: ${orientation}`, () => {
-            elbowElement.props.button.text = "Test Text";
-            elbowElement.props.elbowTextPosition = elbowTextPos;
-            elbowElement.props.orientation = orientation as any;
-            elbowElement.render();
-
-            expect(elbowElement.button?.createButton).toHaveBeenCalledWith(
-              mockPathData, layoutX, layoutY, layoutWidth, layoutHeight,
-              expect.objectContaining({
-                customTextPosition: {
-                  x: expectedX,
-                  y: expectedY
-                }
-              })
-            );
-          });
-        });
       });
     });
   });
