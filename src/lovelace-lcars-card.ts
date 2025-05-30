@@ -14,7 +14,6 @@ import { LayoutEngine, Group } from './layout/engine.js';
 import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext } from './utils/animation.js';
-import { ViewChangeDetector } from './utils/view-change-detector.js';
 import { DynamicColorManager } from './utils/dynamic-color-manager.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
@@ -44,7 +43,6 @@ export class LcarsCard extends LitElement {
   private _lastConfig?: LcarsCardConfig;
   
   // Utility classes for better organization
-  private _viewChangeDetector: ViewChangeDetector = new ViewChangeDetector();
   private _dynamicColorManager: DynamicColorManager = new DynamicColorManager();
   
   // Legacy state tracking for compatibility
@@ -168,14 +166,6 @@ export class LcarsCard extends LitElement {
   protected updated(changedProperties: Map<string | number | symbol, unknown>): void {
     const hasHassChanged = changedProperties.has('hass');
     const hasConfigChanged = changedProperties.has('_config');
-
-    // // Handle view changes using the new ViewChangeDetector
-    // if (hasHassChanged && this.hass) {
-    //   const viewChangeDetected = this._viewChangeDetector.detectViewChange(this.hass);
-    //   if (viewChangeDetected) {
-    //     this._handleViewChange();
-    //   }
-    // }
 
     if (hasConfigChanged || hasHassChanged) {
       this._updateLayoutEngineWithHass();
