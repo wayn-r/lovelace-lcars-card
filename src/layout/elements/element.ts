@@ -756,14 +756,36 @@ export abstract class LayoutElement {
     }
 
     /**
-     * Gets the default text position for standard elements (center of element)
-     * Can be overridden by specific elements that need custom text positioning
+     * Gets the default text position for standard elements
+     * Considers textAnchor to position text relative to element edges
      * @returns Object with x and y coordinates for text positioning
      */
     protected _getDefaultTextPosition(): { x: number, y: number } {
         const { x, y, width, height } = this.layout;
+        const textAnchor = this.props.textAnchor || 'middle';
+        
+        let textX: number;
+        
+        // Calculate X position based on textAnchor
+        switch (textAnchor) {
+            case 'start':
+                // Left-align text to the left edge of the element
+                textX = x;
+                break;
+            case 'end':
+                // Right-align text to the right edge of the element  
+                textX = x + width;
+                break;
+            case 'middle':
+            default:
+                // Center text in the middle of the element
+                textX = x + width / 2;
+                break;
+        }
+        
+        // Y position remains centered vertically
         return {
-            x: x + width / 2,
+            x: textX,
             y: y + height / 2
         };
     }
