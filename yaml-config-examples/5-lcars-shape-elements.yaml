@@ -100,7 +100,7 @@ groups:
           content: "ELBOW TL"
           fill: "#FFFFFF"
           fontFamily: "Antonio"
-          elbow_text_position: "side"
+          elbow_text_position: "arm"
         layout:
           width: 100
           height: 80
@@ -120,7 +120,7 @@ groups:
           content: "ELBOW BR"
           fill: "#FFFFFF"
           fontFamily: "Antonio"
-          elbow_text_position: "side"
+          elbow_text_position: "body"
         layout:
           width: 120
           height: 90

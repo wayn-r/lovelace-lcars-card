@@ -44,14 +44,29 @@ export class ElbowElement extends LayoutElement {
         const configuredWidth = this.props.width || this.layoutConfig.width || 100;
         const elbowWidth = hasStretchConfig ? width : configuredWidth;
         
-        if (elbowTextPosition === 'top') {
-            // Position text at top center
+        if (elbowTextPosition === 'arm') {
+            // Position text in the arm (horizontal) part of the elbow
+            // For top orientations, arm is at the top; for bottom orientations, arm is at the bottom
+            const armCenterY = orientation.startsWith('top') 
+                ? y + armHeight / 2 
+                : y + height - armHeight / 2;
+            
+            // Position X based on orientation - arm extends from the body
+            let armCenterX: number;
+            if (orientation === 'top-left' || orientation === 'bottom-left') {
+                // Arm extends from left body to the right
+                armCenterX = x + bodyWidth + (elbowWidth - bodyWidth) / 2;
+            } else {
+                // top-right or bottom-right: Arm extends from right body to the left
+                armCenterX = x + (elbowWidth - bodyWidth) / 2;
+            }
+            
             return {
-                x: x + elbowWidth / 2,
-                y: y + armHeight / 2
+                x: armCenterX,
+                y: armCenterY
             };
-        } else if (elbowTextPosition === 'side') {
-            // Position text based on orientation
+        } else if (elbowTextPosition === 'body') {
+            // Position text in the body (vertical) part of the elbow based on orientation
             if (orientation === 'top-left') {
                 return {
                     x: x + bodyWidth / 2,
@@ -74,10 +89,24 @@ export class ElbowElement extends LayoutElement {
                 };
             }
         } else {
-            // Default to center positioning
+            // Default to arm positioning if not specified
+            const armCenterY = orientation.startsWith('top') 
+                ? y + armHeight / 2 
+                : y + height - armHeight / 2;
+            
+            // Position X based on orientation - arm extends from the body
+            let armCenterX: number;
+            if (orientation === 'top-left' || orientation === 'bottom-left') {
+                // Arm extends from left body to the right
+                armCenterX = x + bodyWidth + (elbowWidth - bodyWidth) / 2;
+            } else {
+                // top-right or bottom-right: Arm extends from right body to the left
+                armCenterX = x + (elbowWidth - bodyWidth) / 2;
+            }
+            
             return {
-                x: x + elbowWidth / 2,
-                y: y + height / 2
+                x: armCenterX,
+                y: armCenterY
             };
         }
     }

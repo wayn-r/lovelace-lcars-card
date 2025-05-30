@@ -308,4 +308,110 @@ describe('ElbowElement', () => {
       expect(generateElbowPath).toHaveBeenCalledWith(10, configuredWidth, 30, 25, 80, 'top-left', 15, 25);
     });
   });
+
+  describe('Text Positioning', () => {
+    beforeEach(() => {
+      elbowElement.layout = { x: 10, y: 20, width: 100, height: 80, calculated: true };
+      elbowElement.props = {
+        orientation: 'top-left',
+        bodyWidth: 30,
+        armHeight: 25,
+        width: 100
+      };
+    });
+
+    it('should position text in arm when elbowTextPosition is "arm"', () => {
+      elbowElement.props.elbowTextPosition = 'arm';
+      elbowElement.props.orientation = 'top-left'; // arm is at top for top orientations
+      const position = (elbowElement as any)._getTextPosition();
+      
+      // Should position at center of arm (horizontal part extending from left body)
+      expect(position.x).toBe(75); // x + bodyWidth + (width - bodyWidth) / 2 = 10 + 30 + (100-30)/2 = 75
+      expect(position.y).toBe(32.5); // y + armHeight / 2 = 20 + 25/2 (top orientation)
+    });
+
+    it('should position text in body when elbowTextPosition is "body" for top-left orientation', () => {
+      elbowElement.props.elbowTextPosition = 'body';
+      elbowElement.props.orientation = 'top-left';
+      const position = (elbowElement as any)._getTextPosition();
+      
+      // Should position at center of body (vertical part)
+      expect(position.x).toBe(25); // x + bodyWidth / 2 = 10 + 30/2
+      expect(position.y).toBe(72.5); // y + armHeight + (height - armHeight) / 2 = 20 + 25 + (80-25)/2
+    });
+
+    it('should position text in body when elbowTextPosition is "body" for top-right orientation', () => {
+      elbowElement.props.elbowTextPosition = 'body';
+      elbowElement.props.orientation = 'top-right';
+      const position = (elbowElement as any)._getTextPosition();
+      
+      // Should position at center of body on the right side
+      expect(position.x).toBe(95); // x + width - bodyWidth / 2 = 10 + 100 - 30/2 = 95
+      expect(position.y).toBe(72.5); // y + armHeight + (height - armHeight) / 2 = 20 + 25 + (80-25)/2
+    });
+
+    it('should position text in body when elbowTextPosition is "body" for bottom-left orientation', () => {
+      elbowElement.props.elbowTextPosition = 'body';
+      elbowElement.props.orientation = 'bottom-left';
+      const position = (elbowElement as any)._getTextPosition();
+      
+      // Should position at center of body (upper part for bottom orientation)
+      expect(position.x).toBe(25); // x + bodyWidth / 2 = 10 + 30/2
+      expect(position.y).toBe(47.5); // y + (height - armHeight) / 2 = 20 + (80-25)/2
+    });
+
+    it('should position text in body when elbowTextPosition is "body" for bottom-right orientation', () => {
+      elbowElement.props.elbowTextPosition = 'body';
+      elbowElement.props.orientation = 'bottom-right';
+      const position = (elbowElement as any)._getTextPosition();
+      
+      // Should position at center of body on the right side (upper part for bottom orientation)
+      expect(position.x).toBe(95); // x + width - bodyWidth / 2 = 10 + 100 - 30/2 = 95
+      expect(position.y).toBe(47.5); // y + (height - armHeight) / 2 = 20 + (80-25)/2
+    });
+
+    it('should default to arm positioning when elbowTextPosition is not specified', () => {
+      // Don't set elbowTextPosition, default orientation is top-left
+      const position = (elbowElement as any)._getTextPosition();
+      
+      // Should default to arm positioning (extending from left body)
+      expect(position.x).toBe(75); // x + bodyWidth + (width - bodyWidth) / 2 = 10 + 30 + (100-30)/2 = 75
+      expect(position.y).toBe(32.5); // y + armHeight / 2 = 20 + 25/2 (top orientation)
+    });
+
+    it('should position text in arm correctly for bottom orientations', () => {
+      elbowElement.props.elbowTextPosition = 'arm';
+      elbowElement.props.orientation = 'bottom-left'; // arm is at bottom for bottom orientations
+      const position = (elbowElement as any)._getTextPosition();
+      
+      // Should position at center of arm at the bottom (extending from left body)
+      expect(position.x).toBe(75); // x + bodyWidth + (width - bodyWidth) / 2 = 10 + 30 + (100-30)/2 = 75
+      expect(position.y).toBe(87.5); // y + height - armHeight / 2 = 20 + 80 - 25/2 = 87.5
+    });
+
+    it('should position text in arm correctly for right-side orientations', () => {
+      elbowElement.props.elbowTextPosition = 'arm';
+      elbowElement.props.orientation = 'top-right'; // arm is at top, body on right
+      const position = (elbowElement as any)._getTextPosition();
+      
+      // Should position at center of arm (extending from right body to left)
+      expect(position.x).toBe(45); // x + (width - bodyWidth) / 2 = 10 + (100-30)/2 = 45
+      expect(position.y).toBe(32.5); // y + armHeight / 2 = 20 + 25/2 (top orientation)
+    });
+
+    it('should handle stretching correctly when positioning text', () => {
+      // Set up stretch configuration
+      elbowElement.layoutConfig.stretch = { stretchTo1: 'some-element' };
+      elbowElement.layout.width = 150; // Stretched width
+      elbowElement.props.width = 100; // Original configured width
+      elbowElement.props.elbowTextPosition = 'arm';
+      elbowElement.props.orientation = 'top-left'; // Specify orientation for clarity
+      
+      const position = (elbowElement as any)._getTextPosition();
+      
+      // Should use stretched width for arm positioning (extending from left body)
+      expect(position.x).toBe(100); // x + bodyWidth + (stretchedWidth - bodyWidth) / 2 = 10 + 30 + (150-30)/2 = 100
+      expect(position.y).toBe(32.5); // y + armHeight / 2 = 20 + 25/2 (top orientation)
+    });
+  });
 });

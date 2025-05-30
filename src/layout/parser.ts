@@ -70,6 +70,9 @@ function convertNewElementToProps(element: ElementConfig): any {
     if (element.text.dominantBaseline !== undefined) props.dominantBaseline = element.text.dominantBaseline;
     if (element.text.textTransform !== undefined) props.textTransform = element.text.textTransform;
     
+    // elbow specific text properties
+    if (element.text.elbow_text_position !== undefined) props.elbowTextPosition = element.text.elbow_text_position;
+    
     // top_header specific text properties
     if (element.text.left_content !== undefined) props.leftContent = element.text.left_content;
     if (element.text.right_content !== undefined) props.rightContent = element.text.right_content;

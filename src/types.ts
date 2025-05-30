@@ -102,7 +102,7 @@ export interface TextConfig {
   dominantBaseline?: string;
   textTransform?: string;
   cutout?: boolean;
-  elbowTextPosition?: 'top' | 'side'; // elbow specific
+  elbow_text_position?: 'arm' | 'body'; // elbow specific
   
   // top_header specific
   left_content?: string;

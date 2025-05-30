@@ -52,7 +52,7 @@ groups: <array>                  # Required: Defines groups of elements. Element
           dominantBaseline: <string>   # SVG dominant-baseline. Default: "auto".
           textTransform: <string>      # CSS text-transform. Default: "none".
           cutout: <boolean>            # For buttonized elements: True for "cut-out" text. Default: false.
-          elbow_text_position: <string># For 'elbow' (buttonized): "top" or "side". Default: "top".
+          elbow_text_position: <string># For 'elbow' (buttonized): "arm" or "body". Default: "arm".
 
           # --- Specific to 'top_header' type ---
           left_content: <string>       # Text for the left side of the top_header.
