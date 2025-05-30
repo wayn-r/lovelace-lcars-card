@@ -12,7 +12,7 @@ groups:
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 140
+          width: 200
           height: 30
           anchor:
             to: "container"
@@ -27,7 +27,7 @@ groups:
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 140
+          width: 200
           height: 30
           anchor:
             to: "container"
@@ -42,7 +42,7 @@ groups:
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 140
+          width: 200
           height: 30
           anchor:
             to: "container"
@@ -58,7 +58,7 @@ groups:
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 140
+          width: 200
           height: 30
           anchor:
             to: "container"
@@ -73,7 +73,7 @@ groups:
           fill: "#FFFFFF" 
           fontFamily: "Antonio"
         layout:
-          width: 140
+          width: 200
           height: 30
           anchor:
             to: "container"
@@ -88,7 +88,7 @@ groups:
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 140
+          width: 200
           height: 30
           anchor:
             to: "container"
@@ -104,7 +104,7 @@ groups:
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 140
+          width: 200
           height: 30
           anchor:
             to: "container"
@@ -119,7 +119,7 @@ groups:
           fill: "#FFFFFF" 
           fontFamily: "Antonio"
         layout:
-          width: 140
+          width: 200
           height: 30
           anchor:
             to: "container"
@@ -134,7 +134,7 @@ groups:
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 140
+          width: 200
           height: 30
           anchor:
             to: "container"
@@ -146,12 +146,14 @@ groups:
     elements:
       - id: "EL_TL"
         type: "rectangle"
+        appearance:
+          fill: "#FF9900"
         text:
           content: "ELEMENT ANCHOR TOP LEFT"
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 150
+          width: 200
           height: 30
           anchor:
             to: "container_anchors.CA_TL"
@@ -159,12 +161,14 @@ groups:
             target_point: "bottomRight"
       - id: "EL_TC"
         type: "rectangle"
+        appearance:
+          fill: "#FF9900"
         text:
           content: "ELEMENT ANCHOR TOP CENTER"
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 150
+          width: 200
           height: 30
           anchor:
             to: "container_anchors.CA_TC"
@@ -172,12 +176,14 @@ groups:
             target_point: "bottomCenter"
       - id: "EL_TR"
         type: "rectangle"
+        appearance:
+          fill: "#FF9900"
         text:
           content: "ELEMENT ANCHOR TOP RIGHT"
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 150
+          width: 200
           height: 30
           anchor:
             to: "container_anchors.CA_TR"
@@ -186,12 +192,14 @@ groups:
             
       - id: "EL_CL"
         type: "rectangle"
+        appearance:
+          fill: "#FF9900"
         text:
           content: "ELEMENT ANCHOR CENTER LEFT"
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 150
+          width: 200
           height: 30
           anchor:
             to: "container_anchors.CA_CL"
@@ -199,12 +207,14 @@ groups:
             target_point: "centerRight"
       - id: "EL_CC"
         type: "rectangle"
+        appearance:
+          fill: "#FF9900"
         text:
           content: "ELEMENT ANCHOR CENTER CENTER"
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 150
+          width: 200
           height: 30
           anchor:
             to: "container_anchors.CA_CC"
@@ -212,12 +222,14 @@ groups:
             target_point: "center"
       - id: "EL_CR"
         type: "rectangle"
+        appearance:
+          fill: "#FF9900"
         text:
           content: "ELEMENT ANCHOR CENTER RIGHT"
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 150
+          width: 200
           height: 30
           anchor:
             to: "container_anchors.CA_CR"
@@ -226,12 +238,14 @@ groups:
 
       - id: "EL_BL"
         type: "rectangle"
+        appearance:
+          fill: "#FF9900"
         text:
           content: "ELEMENT ANCHOR BOTTOM LEFT"
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 150
+          width: 200
           height: 30
           anchor:
             to: "container_anchors.CA_BL"
@@ -239,12 +253,14 @@ groups:
             target_point: "topRight"
       - id: "EL_BC"
         type: "rectangle"
+        appearance:
+          fill: "#FF9900"
         text:
           content: "ELEMENT ANCHOR BOTTOM CENTER"
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 150
+          width: 200
           height: 30
           anchor:
             to: "container_anchors.CA_BC"
@@ -252,12 +268,14 @@ groups:
             target_point: "topCenter"
       - id: "EL_BR"
         type: "rectangle"
+        appearance:
+          fill: "#FF9900"
         text:
           content: "ELEMENT ANCHOR BOTTOM RIGHT"
           fill: "#FFFFFF"
           fontFamily: "Antonio"
         layout:
-          width: 150
+          width: 200
           height: 30
           anchor:
             to: "container_anchors.CA_BR"
