@@ -234,9 +234,7 @@ import { EditorElement, PropertyGroup } from '../element'; // Base class and enu
 
 // Import all the required properties from the properties module
 import {
-    Width, Height, Fill, ButtonEnabled, ButtonText, ButtonCutoutText, ButtonTextColor,
-    ButtonFontFamily, ButtonFontSize, ButtonFontWeight, ButtonLetterSpacing,
-    ButtonTextTransform, ButtonTextAnchor, ButtonDominantBaseline, ButtonHoverFill,
+    Width, Height, Fill, ButtonEnabled, ButtonHoverFill,
     ButtonActiveFill, ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
     ButtonActionService, ButtonActionServiceData, ButtonActionNavigationPath,
     ButtonActionUrlPath, ButtonActionEntity, ButtonActionConfirmation,
@@ -320,10 +318,7 @@ describe('Rectangle EditorElement', () => {
             expect(groups[PropertyGroup.BUTTON]).toBeDefined();
             const buttonProps = groups[PropertyGroup.BUTTON]?.properties;
             const expectedButtonProps = [
-                ButtonEnabled, ButtonText, ButtonCutoutText, ButtonTextColor,
-                ButtonFontFamily, ButtonFontSize, ButtonFontWeight,
-                ButtonLetterSpacing, ButtonTextTransform, ButtonTextAnchor,
-                ButtonDominantBaseline, ButtonHoverFill, ButtonActiveFill,
+                ButtonEnabled, ButtonHoverFill, ButtonActiveFill,
                 ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
                 ButtonActionService, ButtonActionServiceData, ButtonActionNavigationPath,
                 ButtonActionUrlPath, ButtonActionEntity, ButtonActionConfirmation
@@ -410,10 +405,7 @@ describe('Rectangle EditorElement', () => {
             const buttonSchemaItems = schema.filter(s => s.name.startsWith('button.'));
 
             const expectedButtonPropInstances = [
-                new ButtonEnabled(), new ButtonText(), new ButtonCutoutText(), new ButtonTextColor(),
-                new ButtonFontFamily(), new ButtonFontSize(), new ButtonFontWeight(),
-                new ButtonLetterSpacing(), new ButtonTextTransform(), new ButtonTextAnchor(),
-                new ButtonDominantBaseline(), new ButtonHoverFill(), new ButtonActiveFill(),
+                new ButtonEnabled(), new ButtonHoverFill(), new ButtonActiveFill(),
                 new ButtonHoverTransform(), new ButtonActiveTransform(), new ButtonActionType(),
                 new ButtonActionService(), new ButtonActionServiceData(), new ButtonActionNavigationPath(),
                 new ButtonActionUrlPath(), new ButtonActionEntity(), new ButtonActionConfirmation()

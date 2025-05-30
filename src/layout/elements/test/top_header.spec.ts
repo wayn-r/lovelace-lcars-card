@@ -172,7 +172,7 @@ describe('TopHeaderElement', () => {
       expect(mockLeftEndcap.id).toBe('th-test_left_endcap');
       expect(mockLeftEndcap.props.direction).toBe('left');
       expect(mockLeftEndcap.props.fill).toBe('#99CCFF'); // Default fill
-      expect(mockLeftEndcap.layoutConfig.anchor.anchorTo).toBe('container');
+      expect(mockLeftEndcap.layoutConfig.anchor).toBeUndefined();
 
       expect(mockRightEndcap).toBeDefined();
       expect(mockRightEndcap.id).toBe('th-test_right_endcap');
@@ -181,12 +181,12 @@ describe('TopHeaderElement', () => {
       expect(mockLeftText).toBeDefined();
       expect(mockLeftText.id).toBe('th-test_left_text');
       expect(mockLeftText.props.text).toBe('LEFT'); // Default text
-      expect(mockLeftText.layoutConfig.anchor.anchorTo).toBe('th-test_left_endcap');
+      expect(mockLeftText.layoutConfig.anchor).toBeUndefined();
 
       expect(mockRightText).toBeDefined();
       expect(mockRightText.id).toBe('th-test_right_text');
       expect(mockRightText.props.text).toBe('RIGHT'); // Default text
-      expect(mockRightText.layoutConfig.anchor.anchorTo).toBe('th-test_right_endcap');
+      expect(mockRightText.layoutConfig.anchor).toBeUndefined();
 
       expect(mockHeaderBar).toBeDefined();
       expect(mockHeaderBar.id).toBe('th-test_header_bar');
@@ -194,19 +194,19 @@ describe('TopHeaderElement', () => {
     });
 
     it('should use props.fill for default color of children', () => {
-      const props = { fill: 'red' };
+      const props = { fill: 'red', textColor: 'red' };
       topHeaderElement = new TopHeaderElement('th-fill', props);
       expect(mockLeftEndcap.props.fill).toBe('red');
       expect(mockRightEndcap.props.fill).toBe('red');
       expect(mockHeaderBar.props.fill).toBe('red');
-      // Text fill is hardcoded to #FFFFFF
-      expect(mockLeftText.props.fill).toBe('#FFFFFF');
+      // Text fill uses textColor from props if available
+      expect(mockLeftText.props.fill).toBe('red');
     });
 
     it('should use props for text content and font configuration', () => {
       const props = {
-        leftText: 'CustomLeft',
-        rightText: 'CustomRight',
+        leftContent: 'CustomLeft',
+        rightContent: 'CustomRight',
         fontFamily: 'Roboto',
         fontWeight: 'bold',
         letterSpacing: '1px',
@@ -277,12 +277,18 @@ describe('TopHeaderElement', () => {
       expect(mockLeftEndcap.props.height).toBe(40);
       expect(mockLeftEndcap.props.width).toBe(expectedEndcapWidth);
       expect(mockLeftEndcap.calculateIntrinsicSize).toHaveBeenCalled();
-      expect(mockLeftEndcap.calculateLayout).toHaveBeenCalledWith(elementsMap, containerRect);
+      // No longer calling calculateLayout on child elements - positioning manually
+      expect(mockLeftEndcap.layout.calculated).toBe(true);
+      expect(mockLeftEndcap.layout.width).toBe(expectedEndcapWidth);
+      expect(mockLeftEndcap.layout.height).toBe(40);
 
       expect(mockRightEndcap.props.height).toBe(40);
       expect(mockRightEndcap.props.width).toBe(expectedEndcapWidth);
       expect(mockRightEndcap.calculateIntrinsicSize).toHaveBeenCalled();
-      expect(mockRightEndcap.calculateLayout).toHaveBeenCalledWith(elementsMap, containerRect);
+      // No longer calling calculateLayout on child elements - positioning manually
+      expect(mockRightEndcap.layout.calculated).toBe(true);
+      expect(mockRightEndcap.layout.width).toBe(expectedEndcapWidth);
+      expect(mockRightEndcap.layout.height).toBe(40);
     });
 
     it('should calculate font size and configure text elements', () => {
@@ -290,8 +296,8 @@ describe('TopHeaderElement', () => {
       topHeaderElement.intrinsicSize.height = 30; // TopHeader height
       
       // Set text properties before the test
-      topHeaderElement.props.leftText = "TestL";
-      topHeaderElement.props.rightText = "TestR";
+      topHeaderElement.props.leftContent = "TestL";
+      topHeaderElement.props.rightContent = "TestR";
       mockLeftText.props.text = "TestL";
       mockRightText.props.text = "TestR";
       
@@ -316,9 +322,11 @@ describe('TopHeaderElement', () => {
       // Use Math.abs to compare absolute values, since the implementation might be using a negative fontSize
       expect(Math.abs(mockLeftText.props.fontSize)).toBeCloseTo(expectedFontSize);
       expect(mockLeftText.props.text).toBe("TestL");
-      expect(mockLeftText.calculateLayout).toHaveBeenCalledWith(elementsMap, containerRect);
+      // No longer calling calculateLayout on child elements - positioning manually
+      expect(mockLeftText.layout.calculated).toBe(true);
 
       expect(Math.abs(mockRightText.props.fontSize)).toBeCloseTo(expectedFontSize);
+      expect(mockRightText.layout.calculated).toBe(true);
     });
 
     it('should adjust text positions using textGap (with metrics)', () => {

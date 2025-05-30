@@ -1,0 +1,108 @@
+type: custom:lovelace-lcars-card
+card_title: "Simple State Group Navigation Example"
+
+# LCARS-specific configuration with proper hierarchy
+lcars_config:
+  state_management:
+    # Define mutually exclusive navigation groups
+    state_groups:
+      - group_name: "main_navigation"
+        exclusive: true
+        members:
+          - type: "group"
+            id: "group_a"
+          - type: "group"
+            id: "group_b"
+        default_visible: "group_a"
+
+    # Use orchestrated actions for clean state transitions
+    global_interactions:
+      visibility_triggers:
+        - trigger_source:
+            element_id_ref: "nav.button_a"
+            event: "click"
+          orchestrated_action:
+            type: "state_transition"
+            state_group: "main_navigation"
+            target_state: "group_a"
+            additional_actions:
+              - targets:
+                  - type: "element"
+                    id: "nav.button_b"
+                  - type: "element"
+                    id: "nav.button_c"
+                action: "hide"
+            timing:
+              hide_first: true
+              show_delay: 250
+
+groups:
+  - group_id: "nav"
+    elements:
+      - id: "title_display"
+        type: "rectangle"
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: "Simple State Group Navigation Example"
+          fill: "#000000"
+          fontSize: 16
+          fontWeight: "bold"
+          fontFamily: "Antonio"
+        layout:
+          width: 450
+          height: 40
+      - id: "button_a"
+        type: "rectangle"
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: "GROUP A"
+          fill: "#000000"
+          fontFamily: "Antonio"
+        layout:
+          width: 100
+          height: 40
+          anchor:
+            to: "nav.title_display"
+            element_point: "topLeft"
+            target_point: "bottomLeft"
+        interactions:
+          button:
+            enabled: true
+  
+  - group_id: "group_a"
+    elements:
+      - id: "content_a"
+        type: "rectangle"
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: "Content A Panel"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 200
+          height: 100
+          anchor:
+            to: "nav.button_a"
+            element_point: "topLeft"
+            target_point: "bottomLeft"
+  
+  - group_id: "group_b"
+    elements:
+      - id: "content_b"
+        type: "rectangle"
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: "Content B Panel"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 200
+          height: 100
+          anchor:
+            to: "nav.button_a"
+            element_point: "topLeft"
+            target_point: "bottomLeft"

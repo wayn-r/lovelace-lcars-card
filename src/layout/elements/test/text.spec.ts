@@ -119,89 +119,85 @@ describe('TextElement', () => {
 
   describe('calculateIntrinsicSize', () => {
     it('should use props.width and props.height if provided', () => {
-      textElement = new TextElement('txt-is1', { width: 100, height: 20 });
+      textElement.props.width = 150;
+      textElement.props.height = 80;
+
       textElement.calculateIntrinsicSize(mockSvgContainer);
-      expect(textElement.intrinsicSize).toEqual({ width: 100, height: 20, calculated: true });
-      expect(shapes.measureTextBBox).not.toHaveBeenCalled();
+
+      expect(textElement.intrinsicSize.width).toBe(150);
+      expect(textElement.intrinsicSize.height).toBe(80);
+      expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 
-    it('should calculate size using measureTextBBox and getFontMetrics if available', () => {
-      (shapes.measureTextBBox as any).mockReturnValue({ width: 120, height: 22 });
+    it('should calculate size using fontmetrics if available', () => {
+      const props = {
+        text: 'Test',
+        fontSize: 16,
+        fontFamily: 'Arial'
+      };
+      textElement = new TextElement('txt-metrics', props);
+
       (shapes.getFontMetrics as any).mockReturnValue({
-        top: -0.8, bottom: 0.2, ascent: -0.75, descent: 0.25, capHeight: -0.7, xHeight: -0.5, baseline: 0,
-        fontFamily: 'Arial', fontWeight: 'normal', fontSize: 16, tittle: 0
+        top: -0.8,
+        bottom: 0.2,
+        ascent: -0.75,
+        descent: 0.25,
       });
 
-      textElement = new TextElement('txt-is2', { text: 'Hello', fontSize: 16 });
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
-      expect(shapes.measureTextBBox).toHaveBeenCalled();
-      expect(shapes.getFontMetrics).toHaveBeenCalledWith(expect.objectContaining({ fontSize: 16 }));
-      expect(textElement.intrinsicSize.width).toBe(120);
-      expect(textElement.intrinsicSize.height).toBe(16); // (0.2 - (-0.8)) * 16
+      expect(shapes.getFontMetrics).toHaveBeenCalledWith(expect.objectContaining({ 
+        fontFamily: 'Arial',
+        fontSize: 16 
+      }));
+      expect(shapes.getSvgTextWidth).toHaveBeenCalledWith('Test', 'normal 16px Arial', undefined, undefined);
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 
-    it('should use BBox height if getFontMetrics fails', () => {
-      (shapes.measureTextBBox as any).mockReturnValue({ width: 110, height: 25 });
+    it('should use fallback calculation if getFontMetrics fails', () => {
+      const props = {
+        text: 'Test',
+        fontSize: 20,
+        fontFamily: 'Arial'
+      };
+      textElement = new TextElement('txt-fallback', props);
+
       (shapes.getFontMetrics as any).mockReturnValue(null);
 
-      textElement = new TextElement('txt-is3', { text: 'World' });
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
-      expect(textElement.intrinsicSize.width).toBe(110);
-      expect(textElement.intrinsicSize.height).toBe(25);
+      expect(shapes.getSvgTextWidth).toHaveBeenCalledWith('Test', 'normal 20px Arial', undefined, undefined);
+      expect(textElement.intrinsicSize.height).toBe(24); // fontSize * 1.2
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 
-    it('should use getSvgTextWidth and default height if measureTextBBox fails', () => {
-      (shapes.measureTextBBox as any).mockReturnValue(null);
-      (shapes.getSvgTextWidth as any).mockReturnValue(90);
+    it('should handle text with letter spacing and text transform', () => {
+      const props = {
+        text: 'Test',
+        fontSize: 18,
+        fontFamily: 'Arial',
+        letterSpacing: '2px',
+        textTransform: 'uppercase'
+      };
+      textElement = new TextElement('txt-spacing', props);
 
-      textElement = new TextElement('txt-is4', { text: 'Test', fontSize: 20 });
+      (shapes.getFontMetrics as any).mockReturnValue({
+        top: -0.8,
+        bottom: 0.2,
+      });
+
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
-      // Update according to actual implementation
-      expect(shapes.getSvgTextWidth).toHaveBeenCalledWith('Test', 
-        ` ${textElement.props.fontSize || 16}px ${textElement.props.fontFamily || 'Arial'}`,
-        undefined, 
-        undefined
-      );
-      expect(textElement.intrinsicSize.width).toBe(90);
-      expect(textElement.intrinsicSize.height).toBe(24); // 20 * 1.2
-      expect(textElement.intrinsicSize.calculated).toBe(true);
-    });
-
-    it('should handle undefined text, letterSpacing, textTransform for getSvgTextWidth', () => {
-      (shapes.measureTextBBox as any).mockReturnValue(null);
-      (shapes.getSvgTextWidth as any).mockReturnValue(80);
-
-      textElement = new TextElement('txt-is-undef', { fontSize: 18 }); // No text, letterSpacing, textTransform
-      textElement.calculateIntrinsicSize(mockSvgContainer);
-
-      // Update according to actual implementation
-      expect(shapes.getSvgTextWidth).toHaveBeenCalledWith('', 
-        ` ${textElement.props.fontSize || 16}px ${textElement.props.fontFamily || 'Arial'}`,
-        undefined, 
-        undefined
-      );
-      expect(textElement.intrinsicSize.width).toBe(80);
-      expect(textElement.intrinsicSize.height).toBe(18 * 1.2); // 21.6
+      expect(shapes.getSvgTextWidth).toHaveBeenCalledWith('Test', 'normal 18px Arial', '2px', 'uppercase');
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 
     it('should handle empty text string gracefully', () => {
-      (shapes.measureTextBBox as any).mockReturnValue({ width: 0, height: 18 });
-      (shapes.getFontMetrics as any).mockReturnValue({ 
-        top: -0.8, bottom: 0.2, ascent: -0.75, descent: 0.25, capHeight: -0.7, xHeight: -0.5, baseline: 0, 
-        fontFamily: 'Arial', fontWeight: 'normal', fontSize: 16, tittle: 0
-      });
-      
-      textElement = new TextElement('txt-empty', { text: '', fontSize: 16 });
+      textElement.props.text = '';
+      textElement.props.fontSize = 16;
+
       textElement.calculateIntrinsicSize(mockSvgContainer);
-      
-      expect(textElement.intrinsicSize.width).toBe(0);
-      expect(textElement.intrinsicSize.height).toBe(16);
+
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
   });

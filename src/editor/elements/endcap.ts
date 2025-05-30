@@ -1,27 +1,27 @@
 import { EditorElement, PropertyGroup, PropertyGroupDefinition } from './element';
 import { 
     ButtonActiveTransform,
-    ButtonCutoutText,
     ButtonEnabled,
-    ButtonFontFamily,
-    ButtonFontSize,
-    ButtonFontWeight,
-    ButtonLetterSpacing,
-    ButtonTextTransform,
-    ButtonTextAnchor,
-    ButtonDominantBaseline,
     ButtonHoverFill,
     ButtonActiveFill,
     ButtonHoverTransform,
     ButtonActionType,
-    ButtonTextColor,
-    ButtonText,
     Direction, 
     Width, 
     Height,
     Fill,
     OffsetX,
-    OffsetY
+    OffsetY,
+    TextContent,
+    TextColor,
+    FontFamily,
+    FontSize,
+    FontWeight,
+    LetterSpacing,
+    TextTransform,
+    TextAnchor,
+    DominantBaseline,
+    CutoutText
 } from '../properties/properties';
 
 export class Endcap extends EditorElement {
@@ -39,16 +39,6 @@ export class Endcap extends EditorElement {
             [PropertyGroup.BUTTON]: {
                 properties: [
                     ButtonEnabled, 
-                    ButtonText, 
-                    ButtonCutoutText, 
-                    ButtonTextColor,
-                    ButtonFontFamily, 
-                    ButtonFontSize, 
-                    ButtonFontWeight,
-                    ButtonLetterSpacing,
-                    ButtonTextTransform,
-                    ButtonTextAnchor,
-                    ButtonDominantBaseline,
                     ButtonHoverFill,
                     ButtonActiveFill,
                     ButtonHoverTransform,
@@ -58,6 +48,20 @@ export class Endcap extends EditorElement {
             },
             [PropertyGroup.DIMENSIONS]: {
                 properties: [Width, Height]
+            },
+            [PropertyGroup.TEXT]: {
+                properties: [
+                    TextContent,
+                    TextColor,
+                    FontFamily,
+                    FontSize,
+                    FontWeight,
+                    LetterSpacing,
+                    TextTransform,
+                    TextAnchor,
+                    DominantBaseline,
+                    CutoutText
+                ]
             },
             [PropertyGroup.POSITIONING]: {
                 properties: [OffsetX, OffsetY]

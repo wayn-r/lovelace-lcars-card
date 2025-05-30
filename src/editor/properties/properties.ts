@@ -414,6 +414,30 @@ export class TextContent implements LcarsPropertyBase {
         };
     }
 }
+
+export class TextColor implements LcarsPropertyBase {
+    name = 'textColor';
+    label = 'Text Color';
+    configPath = 'props.textColor';
+    propertyGroup: PropertyGroup = PropertyGroup.TEXT;
+    layout: Layout = Layout.HALF;
+
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { 
+                color_rgb: {},
+                // Additional metadata for dynamic color support
+                __dynamic_color_support: true
+            },
+            type: 'custom'
+        };
+    }
+
+    formatValueForForm = Fill.prototype.formatValueForForm; // Reuse Fill's color formatting
+}
+
 export class FontSize implements LcarsPropertyBase {
     name = 'fontSize';
     label = 'Font Size (px)';
@@ -554,6 +578,48 @@ export class TextTransform implements LcarsPropertyBase {
     }
 }
 
+export class CutoutText implements LcarsPropertyBase {
+    name = 'cutoutText';
+    label = 'Cutout Text';
+    configPath = 'props.cutoutText';
+    propertyGroup: PropertyGroup = PropertyGroup.TEXT;
+    layout: Layout = Layout.HALF;
+
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: { boolean: {} },
+            default: false,
+        };
+    }
+}
+
+export class ElbowTextPosition implements LcarsPropertyBase {
+    name = 'elbowTextPosition';
+    label = 'Text Position';
+    configPath = 'props.elbow_text_position';
+    propertyGroup: PropertyGroup = PropertyGroup.TEXT;
+    layout: Layout = Layout.HALF;
+        
+    getSchema(): HaFormSchema {
+        return {
+            name: this.name,
+            label: this.label,
+            selector: {
+                select: {
+                    options: [
+                        { value: 'top', label: 'Top (Horizontal Section)' },
+                        { value: 'side', label: 'Side (Vertical Section)' }
+                    ],
+                    mode: 'dropdown'
+                }
+            },
+            default: 'top'
+        };
+    }
+}
+
 // --- Elbow Element Props ---
 
 export class Orientation implements LcarsPropertyBase {
@@ -685,171 +751,6 @@ export class ButtonEnabled implements LcarsPropertyBase {
         };
     }
 }
-export class ButtonText implements LcarsPropertyBase {
-    name = 'button.text';
-    label = 'Button Text';
-    configPath = 'button.text';
-    propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
-    layout: Layout = Layout.HALF;
-
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            selector: { text: {} },
-        };
-    }
-}
-export class ButtonCutoutText implements LcarsPropertyBase {
-    name = 'button.cutout_text';
-    label = 'Cutout Text';
-    configPath = 'button.cutout_text';
-    propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
-    layout: Layout = Layout.HALF;
-
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            selector: { boolean: {} },
-            default: false,
-        };
-    }
-}
-
-// --- Button Text Styling Properties ---
-export class ButtonTextColor implements LcarsPropertyBase {
-    name = 'button.text_color';
-    label = 'Button Text Color';
-    configPath = 'button.text_color';
-    propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
-    layout: Layout = Layout.HALF;
-
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { color_rgb: {} } }; }
-    formatValueForForm = Fill.prototype.formatValueForForm; // Reuse Fill's hexToRgb
-}
-export class ButtonFontFamily implements LcarsPropertyBase {
-    name = 'button.font_family';
-    label = 'Button Font Family';
-    configPath = 'button.font_family';
-    propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
-    layout: Layout = Layout.HALF;
-
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { text: {} } }; }
-}
-export class ButtonFontSize implements LcarsPropertyBase {
-    name = 'button.font_size';
-    label = 'Button Font Size (px)';
-    configPath = 'button.font_size';
-    propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
-    layout: Layout = Layout.HALF;
-    
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { number: { mode: 'box', step: 1, min: 1 } } }; }
-}
-export class ButtonFontWeight implements LcarsPropertyBase {
-    name = 'button.font_weight';
-    label = 'Button Font Weight';
-    configPath = 'button.font_weight';
-    propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
-    layout: Layout = Layout.HALF;
-    
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            selector: {
-              select: {
-                options: [
-                  { value: '', label: '' },
-                  { value: 'normal', label: 'Normal' },
-                  { value: 'bold', label: 'Bold' },
-                  { value: 'bolder', label: 'Bolder' },
-                  { value: 'lighter', label: 'Lighter' },
-                  { value: '100', label: '100' }, { value: '200', label: '200' }, { value: '300', label: '300' },
-                  { value: '400', label: '400' }, { value: '500', label: '500' }, { value: '600', label: '600' },
-                  { value: '700', label: '700' }, { value: '800', label: '800' }, { value: '900', label: '900' },
-                ],
-              },
-            }
-        };
-    }
-}
-export class ButtonLetterSpacing implements LcarsPropertyBase {
-    name = 'button.letter_spacing';
-    label = 'Button Letter Spacing';
-    configPath = 'button.letter_spacing';
-    propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
-    layout: Layout = Layout.HALF;
-    
-    getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { text: {} } }; }
-}
-export class ButtonTextTransform implements LcarsPropertyBase {
-    name = 'button.text_transform';
-    label = 'Button Text Transform';
-    configPath = 'button.text_transform';
-    propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
-    layout: Layout = Layout.HALF;
-    
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            selector: { text: {} }
-        };
-    }
-}
-export class ButtonTextAnchor implements LcarsPropertyBase {
-    name = 'button.text_anchor';
-    label = 'Button Text Anchor';
-    configPath = 'button.text_anchor';
-    propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
-    layout: Layout = Layout.HALF;
-    
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            selector: {
-              select: {
-                options: [
-                  { value: '', label: '' },
-                  { value: 'start', label: 'Start' },
-                  { value: 'middle', label: 'Middle' },
-                  { value: 'end', label: 'End' },
-                ],
-                mode: 'dropdown'
-              },
-            }
-        };
-    }
-}
-export class ButtonDominantBaseline implements LcarsPropertyBase {
-    name = 'button.dominant_baseline';
-    label = 'Button Dominant Baseline';
-    configPath = 'button.dominant_baseline';
-    propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
-    layout: Layout = Layout.HALF;
-    
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            selector: {
-              select: {
-                options: [
-                  { value: '', label: '' },
-                  { value: 'auto', label: 'Auto' },
-                  { value: 'middle', label: 'Middle' },
-                  { value: 'central', label: 'Central' },
-                  { value: 'hanging', label: 'Hanging' },
-                ],
-                mode: 'dropdown'
-              },
-            }
-        };
-    }
-}
-
 
 // --- Button State Styling Properties ---
 export class ButtonHoverFill implements LcarsPropertyBase {
@@ -890,30 +791,6 @@ export class ButtonActiveTransform implements LcarsPropertyBase {
     
     getSchema(): HaFormSchema { return { name: this.name, label: this.label, selector: { text: {} } }; }
 }
-export class ElbowTextPosition implements LcarsPropertyBase {
-    name = 'elbow_text_position';
-    label = 'Text Position';
-    configPath = 'props.elbow_text_position';
-    propertyGroup: PropertyGroup = PropertyGroup.BUTTON;
-    layout: Layout = Layout.HALF;
-        
-    getSchema(): HaFormSchema {
-        return {
-            name: this.name,
-            label: this.label,
-            selector: {
-                select: {
-                    options: [
-                        { value: 'top', label: 'Top (Horizontal Section)' },
-                        { value: 'side', label: 'Side (Vertical Section)' }
-                    ],
-                    mode: 'dropdown'
-                }
-            },
-            default: 'top'
-        };
-    }
-} 
 
 // --- Button Action Properties ---
 export class ButtonActionType implements LcarsPropertyBase {

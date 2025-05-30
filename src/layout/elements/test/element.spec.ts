@@ -4,6 +4,7 @@ import { LayoutElementProps, LayoutConfigOptions, LayoutState, IntrinsicSize } f
 import { HomeAssistant } from 'custom-card-helpers';
 import { SVGTemplateResult, svg } from 'lit';
 import { animationManager } from '../../../utils/animation.js';
+import { Color } from '../../../utils/color.js';
 
 // Mock gsap
 vi.mock('gsap', () => {
@@ -50,9 +51,15 @@ class MockLayoutElement extends LayoutElement {
     return svg`<rect id=${this.id} x=${this.layout.x} y=${this.layout.y} width=${this.layout.width} height=${this.layout.height} />`;
   }
 
-  // Expose color formatting method for testing through animation manager
+  // Expose color formatting method for testing through Color class
   public testFormatColorValue(color: any): string | undefined {
-    return (animationManager as any).formatColorValueFromInput(color);
+    try {
+      const colorInstance = Color.fromValue(color, 'transparent');
+      const result = colorInstance.toStaticString();
+      return result === 'transparent' ? undefined : result;
+    } catch {
+      return undefined;
+    }
   }
 }
 
@@ -459,7 +466,7 @@ describe('LayoutElement', () => {
     });
   });
 
-  describe('_formatColorValue', () => {
+  describe('Color class formatting', () => {
     beforeEach(() => {
         element = new MockLayoutElement('color-test');
     });

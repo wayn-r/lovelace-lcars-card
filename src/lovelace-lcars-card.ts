@@ -2,101 +2,26 @@ import { LitElement, html, css, SVGTemplateResult, TemplateResult, svg } from 'l
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardEditor } from 'custom-card-helpers';
 import { CARD_TYPE, CARD_NAME, DEFAULT_FONT_SIZE, DEFAULT_TITLE, DEFAULT_TEXT } from './constants';
-import './types';
+import { 
+  LcarsCardConfig, 
+  GroupConfig, 
+  ElementConfig,
+  StateManagementConfig
+} from './types.js';
 import gsap from 'gsap';
 
 import { LayoutEngine, Group } from './layout/engine.js';
 import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext } from './utils/animation.js';
+import { ViewChangeDetector } from './utils/view-change-detector.js';
+import { DynamicColorManager } from './utils/dynamic-color-manager.js';
 
-import './editor/lcars-card-editor.js';
+// Editor temporarily disabled - import './editor/lcars-card-editor.js';
 
 import { editorStyles } from './styles/styles.js';
 
-export interface LcarsCardConfig {
-  type: string;
-  title?: string;
-  text?: string;
-  fontSize?: number;
-  elements?: LcarsElementConfig[];
-}
-
-export interface LcarsButtonActionConfig {
-  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none';
-  service?: string;
-  service_data?: Record<string, any>;
-  navigation_path?: string;
-  url_path?: string;
-  entity?: string;
-  confirmation?: boolean | {
-    text?: string;
-    exemptions?: Array<{
-      user: string;
-    }>;
-  };
-}
-
-export interface LcarsButtonElementConfig {
-  enabled?: boolean;
-  text?: string;
-  cutout_text?: boolean;
-
-  text_color?: any;
-  font_family?: string;
-  font_size?: number;
-  font_weight?: string;
-  letter_spacing?: string | number;
-  text_transform: 'none' | 'capitalize' | 'uppercase' | 'lowercase';
-  text_anchor?: 'start' | 'middle' | 'end';
-  dominant_baseline?: 'auto' | 'middle' | 'central' | 'hanging' | 'text-bottom' | 'text-top' | 'alphabetic' | 'ideographic';
-
-
-  hover_fill?: any;
-  active_fill?: any;
-  hover_stroke?: string;
-  active_stroke?: string;
-  hover_text_color?: any;
-  active_text_color?: any;
-
-  hover_transform?: string;
-  active_transform?: string;
-
-  action_config?: LcarsButtonActionConfig;
-}
-
-export interface LcarsElementConfig {
-  id: string;
-  type: string;
-  props?: Record<string, any>;
-  layout?: LcarsLayoutConfig;
-  group?: string;
-  button?: LcarsButtonElementConfig;
-}
-
-export interface LcarsLayoutConfig {
-  width?: number | string;
-  height?: number | string;
-  offsetX?: number | string;
-  offsetY?: number | string;
-  
-  anchor?: {
-    anchorTo: string;
-    anchorPoint?: string;
-    targetAnchorPoint?: string;
-  };
-  
-  stretch?: {
-    stretchTo1?: string;
-    stretchAxis1?: 'X' | 'Y';
-    targetStretchAnchorPoint1?: string;
-    stretchPadding1?: number;
-    stretchTo2?: string;
-    stretchAxis2?: 'X' | 'Y';
-    targetStretchAnchorPoint2?: string;
-    stretchPadding2?: number;
-  };
-}
+// Interfaces moved to types.ts - keeping import only
 
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -111,279 +36,177 @@ export class LcarsCard extends LitElement {
   @property({ attribute: false }) private _config!: LcarsCardConfig;
   @state() private _layoutElementTemplates: SVGTemplateResult[] = [];
   @state() private _viewBox: string = '0 0 100 100';
-  @state() private _elementStateNeedsRefresh: boolean = false;
   @state() private _calculatedHeight: number = 100;
   
   private _layoutEngine: LayoutEngine = new LayoutEngine();
   private _resizeObserver?: ResizeObserver;
   private _containerRect?: DOMRect;
   private _lastConfig?: LcarsCardConfig;
-  private _layoutCalculationPending: boolean = false;
-  @state() private _hasRenderedOnce: boolean = false;
-  @state() private _hasMeasuredRenderedText: boolean = false;
-  private _fontsLoaded: boolean = false;
-  private _fontLoadAttempts: number = 0;
-  private _maxFontLoadAttempts: number = 3;
-  private _initialLoadComplete: boolean = false;
-  private _resizeTimeout: ReturnType<typeof setTimeout> | undefined;
-  private _editModeObserver?: MutationObserver;
-  private _forceRecalcRetryCount: number = 0;
-  private _maxForceRecalcRetries: number = 10;
-  private _visibilityChangeTimeout?: ReturnType<typeof setTimeout>;
-  private _isForceRecalculating: boolean = false;
-  private _visibilityChangeCount: number = 0;
   
-  // Dynamic color monitoring
+  // Utility classes for better organization
+  private _viewChangeDetector: ViewChangeDetector = new ViewChangeDetector();
+  private _dynamicColorManager: DynamicColorManager = new DynamicColorManager();
+  
+  // Legacy state tracking for compatibility
   private _lastHassStates?: { [entityId: string]: any };
-  private _dynamicColorCheckScheduled: boolean = false;
 
   static styles = [editorStyles];
 
-  public setConfig(config: LcarsCardConfig): void {
+  public setConfig(config: LcarsCardConfig | any): void {
     if (!config) {
       throw new Error('Invalid configuration');
     }
     if (JSON.stringify(config) === JSON.stringify(this._lastConfig)) {
         return;
     }
-    this._config = {
-      ...config,
-      title: config.title || DEFAULT_TITLE,
-      text: config.text || DEFAULT_TEXT,
-      fontSize: config.fontSize || DEFAULT_FONT_SIZE,
-      elements: config.elements || []
-    };
+    
+    // Convert legacy configuration to new format if necessary
+    const normalizedConfig = this._normalizeConfig(config);
+    this._config = normalizedConfig;
     this._lastConfig = config;
     
-    this._layoutCalculationPending = true;
+    // Trigger update - layout will happen in updated() if container is ready
     this.requestUpdate(); 
+  }
+
+  private _normalizeConfig(config: any): LcarsCardConfig {
+    // Validate that we have the new format
+    if (!config.groups || !Array.isArray(config.groups)) {
+      throw new Error('Invalid configuration: groups array is required. Please update to the new YAML format.');
+    }
+
+    // Validate groups structure
+    config.groups.forEach((group: any, index: number) => {
+      if (!group.group_id || typeof group.group_id !== 'string') {
+        throw new Error(`Invalid configuration: group at index ${index} is missing group_id`);
+      }
+      if (!group.elements || !Array.isArray(group.elements)) {
+        throw new Error(`Invalid configuration: group "${group.group_id}" is missing elements array`);
+      }
+    });
+
+    return {
+      type: config.type,
+      title: config.title,
+      groups: config.groups,
+      state_management: config.state_management
+    };
   }
 
   connectedCallback(): void {
     super.connectedCallback();
-    if (!this._resizeObserver) {
-       this._resizeObserver = new ResizeObserver(this._handleResize.bind(this));
-    }
     
-    // Listen for window resize as a backup to ResizeObserver
-    window.addEventListener('resize', this._handleWindowResize.bind(this));
-
-    // Handle page visibility changes to recalculate on tab switch
-    document.addEventListener('visibilitychange', this._handleVisibilityChange.bind(this));
-    
-    // Listen for potential panel/edit mode changes
-    this._setupEditModeObserver();
-    
-    if (document.readyState === 'complete') {
-      this._triggerRecalc();
-    } else {
-      window.addEventListener('load', () => this._triggerRecalc(), { once: true });
-    }
-    
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(() => {
-        this._layoutCalculationPending = true;
-        this.requestUpdate();
-      });
-    }
-
-    // Force layout recalculation after a short timeout to ensure dimensions are correct
-    // This helps ensure proper initial layout, especially in complex layouts like grid views
-    setTimeout(() => {
-      // Only force recalculation if we don't already have valid templates and layout isn't pending
-      if (this._layoutElementTemplates.length === 0 && !this._layoutCalculationPending && !this._isForceRecalculating) {
-        this._forceLayoutRecalculation();
-      }
-    }, 100);
-    
-    // Backup recalculation in case the initial one didn't work due to container not being ready
-    setTimeout(() => {
-      if (!this._initialLoadComplete) {
-        // Only force if we still don't have templates and no other calculation is in progress
-        if (this._layoutElementTemplates.length === 0 && !this._layoutCalculationPending && !this._isForceRecalculating) {
-          this._forceLayoutRecalculation();
-        }
-        this._initialLoadComplete = true;
-      }
-    }, 1000);
+    // Set up resize observer
+    this._resizeObserver = new ResizeObserver((entries) => {
+      this._handleResize(entries);
+    });
   }
   
   public firstUpdated() {
     const container = this.shadowRoot?.querySelector('.card-container');
     if (container && this._resizeObserver) {
       this._resizeObserver.observe(container);
-      this._loadFontsAndInitialize();
-    } else {
-      console.error("[firstUpdated] Could not find .card-container to observe.");
     }
-    this._hasRenderedOnce = true;
+    
+    // Use event-driven approach for initial layout calculation
+    this._scheduleInitialLayout();
   }
 
-  private _loadFontsAndInitialize(): void {
-    // Collect all fonts used in the card
-    const fontLoadPromises: Promise<FontFace[]>[] = [];
-    const fontFamilies = new Set<string>();
+  private _scheduleInitialLayout(): void {
+    // Wait for browser to complete layout using requestAnimationFrame
+    requestAnimationFrame(() => {
+      this._tryCalculateInitialLayout();
+    });
     
-    // Add fonts from text elements
-    if (this._config.elements) {
-      this._config.elements.forEach(el => {
-        if (el.type?.toLowerCase() === 'text' && el.props) {
-          const ff = (el.props.fontFamily || 'sans-serif').toString();
-          fontFamilies.add(ff);
-          const fs = (el.props.fontSize || DEFAULT_FONT_SIZE).toString();
-          const fw = (el.props.fontWeight || 'normal').toString();
-          try {
-            fontLoadPromises.push(document.fonts.load(`${fw} ${fs}px ${ff}`));
-          } catch (_e) {
-            console.warn(`Failed to load font: ${fw} ${fs}px ${ff}`, _e);
-          }
-        } else if (el.type?.toLowerCase() === 'top_header' && el.props) {
-          const ff = (el.props.fontFamily || 'Antonio').toString();
-          fontFamilies.add(ff);
-          const fw = (el.props.fontWeight || 'normal').toString();
-          // Load at multiple sizes to ensure proper metrics
-          try {
-            fontLoadPromises.push(document.fonts.load(`${fw} 16px ${ff}`));
-            fontLoadPromises.push(document.fonts.load(`${fw} 24px ${ff}`));
-            fontLoadPromises.push(document.fonts.load(`${fw} 32px ${ff}`));
-            fontLoadPromises.push(document.fonts.load(`${fw} 48px ${ff}`));
-            fontLoadPromises.push(document.fonts.load(`${fw} 64px ${ff}`));
-            fontLoadPromises.push(document.fonts.load(`${fw} 200px ${ff}`)); // For metrics calculation
-          } catch (_e) {
-            console.warn(`Failed to load font: ${fw} <size>px ${ff}`, _e);
-          }
-        }
-      });
+    // Also listen for load event as fallback
+    if (document.readyState !== 'complete') {
+      window.addEventListener('load', () => {
+        this._tryCalculateInitialLayout();
+      }, { once: true });
+    }
+  }
+
+  private _tryCalculateInitialLayout(): void {
+    // Only calculate if we haven't already successfully calculated
+    if (this._containerRect && this._layoutElementTemplates.length > 0) {
+      return; // Already calculated
     }
     
-    // If no specific fonts, ensure system fonts are ready
-    if (fontLoadPromises.length === 0) {
-      fontLoadPromises.push(document.fonts.load('normal 16px sans-serif'));
+    const container = this.shadowRoot?.querySelector('.card-container');
+    if (!container || !this._config) {
+      return; // Not ready yet
     }
     
-    // Wait for fonts to load before calculating layout
-    const fontsLoaded = Promise.all(fontLoadPromises);
-    
-    Promise.all([this.updateComplete, fontsLoaded])
-      .then(() => {
-        this._fontsLoaded = true;
-        this._fontLoadAttempts = 0;
-        // Use double requestAnimationFrame to ensure browser has time to process font loading
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            this._scheduleInitialCalculation();
-          });
-        });
-      })
-      .catch((error) => {
-        console.warn('Font loading error:', error);
-        this._fontLoadAttempts++;
-        
-        if (this._fontLoadAttempts < this._maxFontLoadAttempts) {
-          // Retry loading fonts with a delay
-          setTimeout(() => {
-            this._loadFontsAndInitialize();
-          }, 200 * this._fontLoadAttempts); // Increasing delay for each attempt
-        } else {
-          // Proceed anyway after max attempts
-          this._fontsLoaded = true;
-          console.warn(`Proceeding with layout after ${this._maxFontLoadAttempts} font load attempts`);
-          requestAnimationFrame(() => {
-            this._scheduleInitialCalculation();
-          });
-        }
+    const rect = container.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      this._containerRect = rect;
+      this._performLayoutCalculation(rect);
+    } else {
+      // If still no dimensions, try again next frame
+      requestAnimationFrame(() => {
+        this._tryCalculateInitialLayout();
       });
+    }
   }
 
   disconnectedCallback(): void {
     this._resizeObserver?.disconnect();
-    window.removeEventListener('resize', this._handleWindowResize.bind(this));
-    document.removeEventListener('visibilitychange', this._handleVisibilityChange.bind(this));
     
-    // Clean up timeouts
-    if (this._resizeTimeout) {
-      clearTimeout(this._resizeTimeout);
-      this._resizeTimeout = undefined;
-    }
-    
-    if (this._visibilityChangeTimeout) {
-      clearTimeout(this._visibilityChangeTimeout);
-      this._visibilityChangeTimeout = undefined;
-    }
-    
-    // Clear recalculation flags
-    this._isForceRecalculating = false;
-    this._forceRecalcRetryCount = 0;
-    this._visibilityChangeCount = 0;
-    
-    // Clean up edit mode observer
-    if (this._editModeObserver) {
-      this._editModeObserver.disconnect();
-      this._editModeObserver = undefined;
-    }
+    // Clean up utility classes
+    this._dynamicColorManager.cleanup();
     
     // Clean up all element animations and entity monitoring
     for (const group of this._layoutEngine.layoutGroups) {
       for (const element of group.elements) {
-                    animationManager.cleanupElementAnimationTracking(element.id);
+        animationManager.cleanupElementAnimationTracking(element.id);
       }
     }
     
     super.disconnectedCallback();
-  }
-  
-  private _scheduleInitialCalculation(): void {
-    if (!this._containerRect) {
-        const container = this.shadowRoot?.querySelector('.card-container');
-        if (container) {
-            const initialRect = container.getBoundingClientRect();
-            if (initialRect.width > 0 && initialRect.height > 0) {
-                this._containerRect = initialRect;
-                this._performLayoutCalculation(this._containerRect);
-            } else {
-                console.warn("[_scheduleInitialCalculation] Initial Rect still zero dimensions. Relying on ResizeObserver.");
-                // Set flag to try again on next update cycle
-                this._layoutCalculationPending = true;
-                this.requestUpdate();
-            }
-        } else {
-            console.warn("[_scheduleInitialCalculation] Container element not found.");
-            // Schedule retry
-            setTimeout(() => this._scheduleInitialCalculation(), 50);
-        }
-    } else {
-         if(this._layoutCalculationPending){
-            this._performLayoutCalculation(this._containerRect);
-         }
-    }
   }
 
   protected updated(changedProperties: Map<string | number | symbol, unknown>): void {
     const hasHassChanged = changedProperties.has('hass');
     const hasConfigChanged = changedProperties.has('_config');
 
+    // // Handle view changes using the new ViewChangeDetector
+    // if (hasHassChanged && this.hass) {
+    //   const viewChangeDetected = this._viewChangeDetector.detectViewChange(this.hass);
+    //   if (viewChangeDetected) {
+    //     this._handleViewChange();
+    //   }
+    // }
+
     if (hasConfigChanged || hasHassChanged) {
       this._updateLayoutEngineWithHass();
     }
 
-    if (hasConfigChanged) {
-      if (this._containerRect) {
+    // Simple logic: if we have both config and container, calculate layout
+    if (this._config && this._containerRect) {
+      if (hasConfigChanged) {
+        // Config changed - always recalculate
         this._performLayoutCalculation(this._containerRect);
-      } else {
-        // If config changed but container rect is not available yet, mark as pending
-        // The layout calculation will be triggered when container rect becomes available
-        this._layoutCalculationPending = true;
+      } else if (hasHassChanged && this._lastHassStates) {
+        // Check for significant entity changes using the DynamicColorManager
+        const hasSignificantEntityChanges = this._dynamicColorManager.hasSignificantEntityChanges(
+          this._layoutEngine.layoutGroups,
+          this._lastHassStates,
+          this.hass
+        );
+        
+        if (hasSignificantEntityChanges) {
+          this._performLayoutCalculation(this._containerRect);
+        }
       }
     }
 
-    // Handle element state changes (hover/active states, etc.)
-    if (this._elementStateNeedsRefresh) {
-      this._refreshElementRenders();
-    }
-
-    // Handle dynamic color changes
+    // Handle dynamic color changes using the DynamicColorManager
     if (hasHassChanged && this.hass && this._lastHassStates) {
-      this._checkDynamicColorChanges();
+      this._dynamicColorManager.checkDynamicColorChanges(
+        this._layoutEngine.layoutGroups,
+        this.hass,
+        () => this._refreshElementRenders()
+      );
     }
 
     // Store current hass states for next comparison
@@ -391,40 +214,64 @@ export class LcarsCard extends LitElement {
       this._lastHassStates = { ...this.hass.states };
     }
   }
+
+  private _handleViewChange(): void {
+    console.log('[LCARS Card] View change detected, refreshing dynamic color system');
+    
+    // Clear all dynamic color caches and entity monitoring using the DynamicColorManager
+    this._dynamicColorManager.clearAllCaches(this._layoutEngine.layoutGroups);
+    
+    // Force invalidation of last hass states to ensure fresh comparison
+    this._lastHassStates = undefined;
+    
+    // Schedule a dynamic color refresh using the DynamicColorManager
+    this._dynamicColorManager.scheduleDynamicColorRefresh(
+      this.hass,
+      this._containerRect,
+      () => this._dynamicColorManager.checkDynamicColorChanges(
+        this._layoutEngine.layoutGroups,
+        this.hass,
+        () => this._refreshElementRenders()
+      ),
+      () => this._refreshElementRenders()
+    );
+  }
   
   private _calculateRequiredHeight(containerWidth: number, containerHeight: number): number {
     // Analyze elements to determine the minimum container height needed
     // for proper anchoring and positioning
     let requiredHeight = containerHeight; // Start with original height
     
-    if (!this._config?.elements) {
+    if (!this._config?.groups) {
       return requiredHeight;
     }
     
     // Find elements that directly define height requirements
-    for (const elementConfig of this._config.elements) {
-      if (!elementConfig.layout || !elementConfig.props) continue;
-      
-      const height = this._parseSize(elementConfig.layout.height, containerHeight);
-      const anchor = elementConfig.layout.anchor;
-      
-      // For center-anchored elements, ensure container is at least as tall as the element
-      if (anchor?.anchorTo === 'container' && 
-          anchor.anchorPoint === 'center' && 
-          anchor.targetAnchorPoint === 'center') {
-        requiredHeight = Math.max(requiredHeight, height);
-      }
-      
-      // For bottom-anchored elements, ensure container has enough space
-      if (anchor?.anchorTo === 'container' && 
-          anchor.targetAnchorPoint?.includes('bottom')) {
-        requiredHeight = Math.max(requiredHeight, height);
-      }
-      
-      // For top-anchored elements with significant height
-      if (anchor?.anchorTo === 'container' && 
-          anchor.targetAnchorPoint?.includes('top')) {
-        requiredHeight = Math.max(requiredHeight, height);
+    for (const group of this._config.groups) {
+      for (const elementConfig of group.elements) {
+        if (!elementConfig.layout) continue;
+        
+        const height = this._parseSize(elementConfig.layout.height, containerHeight);
+        const anchor = elementConfig.layout.anchor;
+        
+        // For center-anchored elements, ensure container is at least as tall as the element
+        if (anchor?.to === 'container' && 
+            anchor.element_point === 'center' && 
+            anchor.target_point === 'center') {
+          requiredHeight = Math.max(requiredHeight, height);
+        }
+        
+        // For bottom-anchored elements, ensure container has enough space
+        if (anchor?.to === 'container' && 
+            anchor.target_point?.includes('bottom')) {
+          requiredHeight = Math.max(requiredHeight, height);
+        }
+        
+        // For top-anchored elements with significant height
+        if (anchor?.to === 'container' && 
+            anchor.target_point?.includes('top')) {
+          requiredHeight = Math.max(requiredHeight, height);
+        }
       }
     }
     
@@ -448,87 +295,105 @@ export class LcarsCard extends LitElement {
   private _performLayoutCalculation(rect: DOMRect): void {
     if (!this._config || !rect || rect.width <= 0 || rect.height <= 0) {
         console.warn("[_performLayoutCalculation] Skipping, invalid config or rect", this._config, rect);
-        this._layoutCalculationPending = false;
         return;
     }
 
-
-    const svgElement = this.shadowRoot?.querySelector('.card-container svg') as SVGSVGElement | null;
-    if (svgElement) {
-      (this._layoutEngine as any).tempSvgContainer = svgElement;
-    }
-    
-    // Clear previous layout
-    this._layoutEngine.clearLayout();
-    
-    // Parse config and add elements to layout engine
-    const getShadowElement = (id: string): Element | null => {
-      return this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
-    };
-    
-    const groups = parseConfig(this._config, this.hass, () => { 
-      this._elementStateNeedsRefresh = true; 
-      this.requestUpdate(); 
-    }, getShadowElement); 
-    
-    groups.forEach((group: Group) => { 
-      this._layoutEngine.addGroup(group); 
-    });
-
-    // Clear all entity monitoring and animation state before recalculating layout
-    for (const group of this._layoutEngine.layoutGroups) {
-      for (const element of group.elements) {
-        element.clearMonitoredEntities();
-        element.cleanupAnimations();
+    try {
+      const svgElement = this.shadowRoot?.querySelector('.card-container svg') as SVGSVGElement | null;
+      if (svgElement) {
+        (this._layoutEngine as any).tempSvgContainer = svgElement;
       }
+      
+      // Clear previous layout
+      this._layoutEngine.clearLayout();
+      
+      // Parse config and add elements to layout engine
+      const getShadowElement = (id: string): Element | null => {
+        return this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
+      };
+      
+      const groups = parseConfig(this._config, this.hass, () => { 
+        this.requestUpdate(); 
+      }, getShadowElement); 
+      
+      groups.forEach((group: Group) => { 
+        this._layoutEngine.addGroup(group); 
+      });
+
+      // Clear all entity monitoring and animation state before recalculating layout
+      for (const group of this._layoutEngine.layoutGroups) {
+        for (const element of group.elements) {
+          try {
+            element.clearMonitoredEntities();
+            element.cleanupAnimations();
+          } catch (error) {
+            console.error("[_performLayoutCalculation] Error clearing element state", element.id, error);
+          }
+        }
+      }
+
+      // For dynamic height mode, we need to pre-determine the required container height
+      // by analyzing element size requirements, then perform layout with that height
+      const inputRect = new DOMRect(rect.x, rect.y, rect.width, rect.height);
+      
+      // Pre-calculate required height by examining element constraints
+      const requiredHeight = this._calculateRequiredHeight(rect.width, rect.height);
+      
+      // Use the required height for layout calculation to ensure proper anchoring
+      const finalContainerRect = new DOMRect(rect.x, rect.y, rect.width, requiredHeight);
+      const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(finalContainerRect, { dynamicHeight: true });
+      
+      // Store the calculated height for rendering
+      this._calculatedHeight = layoutDimensions.height;
+
+      // Render elements
+      const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
+          group.elements
+              .map(el => {
+                try {
+                  return el.render();
+                } catch (error) {
+                  console.error("[_performLayoutCalculation] Error rendering element", el.id, error);
+                  return null;
+                }
+              })
+              .filter((template): template is SVGTemplateResult => template !== null)
+      );
+
+      const TOP_MARGIN = 8;  // offset for broken HA UI
+      
+      // Update viewBox to match container dimensions and calculated height
+      const newViewBox = `0 ${-TOP_MARGIN} ${rect.width} ${this._calculatedHeight + TOP_MARGIN}`;
+
+      
+      if (JSON.stringify(newTemplates.map(t => ({s: t.strings, v: (t.values || []).map(val => String(val))}))) !==
+          JSON.stringify(this._layoutElementTemplates.map(t => ({s:t.strings, v: (t.values || []).map(val => String(val))}))) || newViewBox !== this._viewBox) {
+          this._layoutElementTemplates = newTemplates;
+          this._viewBox = newViewBox;
+          // Trigger re-render to show the new content
+          this.requestUpdate();
+      }
+      
+    } catch (error) {
+      console.error("[_performLayoutCalculation] Layout calculation failed with error:", error);
+      console.error("[_performLayoutCalculation] Error stack:", (error as Error).stack);
+      // Set a fallback state to prevent infinite pending
+      this._layoutElementTemplates = [];
+      this._viewBox = `0 0 ${rect.width} 100`;
+      this._calculatedHeight = 100;
     }
-
-    // For dynamic height mode, we need to pre-determine the required container height
-    // by analyzing element size requirements, then perform layout with that height
-    const inputRect = new DOMRect(rect.x, rect.y, rect.width, rect.height);
-    
-    // Pre-calculate required height by examining element constraints
-    const requiredHeight = this._calculateRequiredHeight(rect.width, rect.height);
-    
-    // Use the required height for layout calculation to ensure proper anchoring
-    const finalContainerRect = new DOMRect(rect.x, rect.y, rect.width, requiredHeight);
-    const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(finalContainerRect, { dynamicHeight: true });
-    
-    // Store the calculated height for rendering
-    this._calculatedHeight = layoutDimensions.height;
-
-    // Render elements
-    const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
-        group.elements
-            .map(el => el.render())
-            .filter((template): template is SVGTemplateResult => template !== null)
-    );
-
-    const TOP_MARGIN = 8;  // offset for broken HA UI
-    
-    // Update viewBox to match container dimensions and calculated height
-    const newViewBox = `0 ${-TOP_MARGIN} ${rect.width} ${this._calculatedHeight + TOP_MARGIN}`;
-
-    
-    if (JSON.stringify(newTemplates.map(t => ({s: t.strings, v: (t.values || []).map(val => String(val))}))) !==
-        JSON.stringify(this._layoutElementTemplates.map(t => ({s:t.strings, v: (t.values || []).map(val => String(val))}))) || newViewBox !== this._viewBox) {
-        this._layoutElementTemplates = newTemplates;
-        this._viewBox = newViewBox;
-    }
-    
-    this._layoutCalculationPending = false;
   }
 
   private _refreshElementRenders(): void {
     if (!this._config || !this._containerRect || this._layoutEngine.layoutGroups.length === 0) {
-        this._elementStateNeedsRefresh = false;
         return;
     }
 
     // Update hass references for all elements before re-rendering
     this._layoutEngine.layoutGroups.forEach(group => {
         group.elements.forEach(el => {
-            const layoutEl = el as any;
+            // Ensure el is treated as LayoutElement for type safety
+            const layoutEl = el as LayoutElement; 
             if (layoutEl.updateHass) {
                 layoutEl.updateHass(this.hass);
             }
@@ -553,70 +418,25 @@ export class LcarsCard extends LitElement {
     );
 
     this._layoutElementTemplates = newTemplates;
-
-    // After re-render, restore animation states using animation manager
-    if (animationStates.size > 0) {
-        const context: AnimationContext = {
-            elementId: '', // Not used in restoration context
-            getShadowElement: (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null,
-            hass: this.hass,
-            requestUpdateCallback: this.requestUpdate.bind(this)
-        };
-
-        animationManager.restoreAnimationStates(animationStates, context);
-    }
-
-    this._elementStateNeedsRefresh = false;
-  }
-
-  private _handleVisibilityChange(): void {
-    // Track multiple rapid visibility changes for debugging
-    this._visibilityChangeCount++;
     
-    // Clear any existing timeout
-    if (this._visibilityChangeTimeout) {
-      clearTimeout(this._visibilityChangeTimeout);
-    }
-    
-    if (document.visibilityState === 'visible') {
-        // If we're already in a recalculation cycle, skip this event
-        if (this._isForceRecalculating) {
-            return;
+    // Trigger LitElement re-render to update non-button elements with new colors
+    // Button elements handle their color updates directly via _updateButtonAppearanceDirectly()
+    this.requestUpdate();
+
+    // Schedule animation restoration to occur after the next render cycle
+    Promise.resolve().then(() => {
+        if (animationStates.size > 0) {
+            const context: AnimationContext = {
+                elementId: '', // Not used in restoration context for multiple elements
+                getShadowElement: (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null,
+                hass: this.hass,
+                requestUpdateCallback: this.requestUpdate.bind(this)
+            };
+            animationManager.restoreAnimationStates(animationStates, context, () => {
+                 // Optional callback after all animations are restored
+            });
         }
-        
-        // Add a longer delay to give the browser more time to restore the layout properly
-        // and to debounce rapid visibility changes more aggressively
-        this._visibilityChangeTimeout = setTimeout(() => {
-            // Double check that we're still visible and not already recalculating
-            if (document.visibilityState === 'visible' && !this._isForceRecalculating) {
-                // Reset retry counter for a fresh start, but only if we're not already retrying
-                this._forceRecalcRetryCount = 0;
-                
-                requestAnimationFrame(() => {
-                    this._forceLayoutRecalculation();
-                });
-            }
-            this._visibilityChangeTimeout = undefined;
-        }, 500); // Increased from 250ms to 500ms for more aggressive debouncing
-    }
-  }
-
-  private _handleWindowResize(): void {
-    // Debounce resize handling to avoid excessive calculations
-    if (this._resizeTimeout) {
-        clearTimeout(this._resizeTimeout);
-    }
-    
-    this._resizeTimeout = setTimeout(() => {
-        const container = this.shadowRoot?.querySelector('.card-container');
-        if (container) {
-            const newRect = container.getBoundingClientRect();
-            if (newRect.width > 0 && newRect.height > 0) {
-                this._handleDimensionChange(newRect);
-            }
-        }
-        this._resizeTimeout = undefined;
-    }, 50);
+    });
   }
 
   private _handleResize(entries: ResizeObserverEntry[]): void {
@@ -627,27 +447,6 @@ export class LcarsCard extends LitElement {
     
     // Only process if dimensions are valid
     if (newRect.width > 0 && newRect.height > 0) {
-        this._handleDimensionChange(newRect);
-    } else {
-        console.warn("ResizeObserver received invalid dimensions:", newRect);
-        // If we got invalid dimensions from ResizeObserver, check directly
-        const container = this.shadowRoot?.querySelector('.card-container');
-        if (container) {
-            const directRect = container.getBoundingClientRect();
-            if (directRect.width > 0 && directRect.height > 0) {
-                this._handleDimensionChange(directRect);
-            }
-        }
-    }
-  }
-
-  private _handleDimensionChange(newRect: DOMRect): void {
-    // Check if dimensions have changed significantly
-    if (!this._containerRect || 
-        Math.abs(this._containerRect.width - newRect.width) > 1 ||
-        Math.abs(this._containerRect.height - newRect.height) > 1) 
-    {
-        
         // Update container dimensions
         this._containerRect = newRect;
         
@@ -660,93 +459,25 @@ export class LcarsCard extends LitElement {
             });
         }
         
-        // Only mark for recalculation but don't change height yet - that will be done in _performLayoutCalculation
-        this._layoutCalculationPending = true;
-        this.requestUpdate();
-        
-        // If this is the first successful resize with valid dimensions, mark initial load complete
-        if (!this._initialLoadComplete && newRect.width > 50 && newRect.height > 50) {
-            this._initialLoadComplete = true;
-        }
-    }
-  }
-
-  private _forceLayoutRecalculation(): void {
-    // If we're already recalculating, avoid overlapping attempts
-    if (this._isForceRecalculating) {
-      return;
-    }
-    
-    // If we already have templates and the layout is stable, avoid unnecessary recalculation
-    // This prevents interference with hover state changes
-    if (this._layoutElementTemplates.length > 0 && !this._layoutCalculationPending && this._initialLoadComplete) {
-      return;
-    }
-    
-    // Get current container dimensions
-    const container = this.shadowRoot?.querySelector('.card-container');
-    if (!container) {
-      console.warn("Container not found during force recalculation");
-      this._forceRecalcRetryCount = 0; // Reset counter
-      this._isForceRecalculating = false; // Clear flag
-      return;
-    }
-
-    const newRect = container.getBoundingClientRect();
-    
-    // Only proceed if container has non-zero dimensions
-    if (newRect.width > 0 && newRect.height > 0) {
-        
-        // Set the flag to indicate we're recalculating
-        this._isForceRecalculating = true;
-        
-        // Reset retry counter on success
-        this._forceRecalcRetryCount = 0;
-        
-        // Reset all layouts for recalculation
-        if (this._layoutEngine && this._layoutEngine.layoutGroups) {
-            this._layoutEngine.layoutGroups.forEach(group => {
-                group.elements.forEach(el => {
-                    el.resetLayout();
-                });
-            });
-        }
-        
-        // Update container rect and trigger recalculation
-        this._containerRect = newRect;
-        this._layoutCalculationPending = true;
-        this.requestUpdate();
-        
-        // Clear the flag after a short delay to allow the recalculation to complete
-        // We use a timeout here because requestUpdate is async
-        setTimeout(() => {
-            this._isForceRecalculating = false;
-        }, 100);
-    } else {
-        // If container has zero dimensions, check retry limit
-        this._forceRecalcRetryCount++;
-        
-        if (this._forceRecalcRetryCount <= this._maxForceRecalcRetries) {
-            console.warn(`Container has zero dimensions during force recalculation (attempt ${this._forceRecalcRetryCount}/${this._maxForceRecalcRetries})`);
-            
-            // Set flag to indicate we're in a retry cycle
-            this._isForceRecalculating = true;
-            
-            // Use increasing delays to give the browser more time to restore dimensions
-            const delay = Math.min(100 * this._forceRecalcRetryCount, 1000);
-            setTimeout(() => {
-                this._forceLayoutRecalculation();
-            }, delay);
-        } else {
-            console.warn(`Giving up force recalculation after ${this._maxForceRecalcRetries} attempts with zero dimensions`);
-            this._forceRecalcRetryCount = 0; // Reset for future attempts
-            this._isForceRecalculating = false; // Clear flag
+        // If we have config, immediately calculate layout
+        if (this._config) {
+          this._performLayoutCalculation(this._containerRect);
         }
     }
   }
 
   public static async getConfigElement(): Promise<LovelaceCardEditor> {
-    return document.createElement('lcars-card-editor') as LovelaceCardEditor;
+    // Visual editor temporarily disabled - YAML configuration only
+    const element = document.createElement('div') as any;
+    element.innerHTML = `
+      <div style="padding: 16px; background: #f5f5f5; border-radius: 4px; font-family: monospace;">
+        <h3 style="margin-top: 0; color: #d32f2f;">Visual Editor Disabled</h3>
+        <p style="color: #666;">The visual editor is temporarily disabled while we migrate to the new YAML configuration system.</p>
+        <p style="color: #666;">Please configure this card using YAML only. See the documentation for the new configuration format.</p>
+      </div>
+    `;
+    element.setConfig = () => {};
+    return element;
   }
 
   public getCardSize(): number {
@@ -754,50 +485,25 @@ export class LcarsCard extends LitElement {
   }
 
   protected render(): TemplateResult {
-    if (!this._config || !this.hass) {
-      return html``;
-    }
-
-    let svgContent: SVGTemplateResult | SVGTemplateResult[] | TemplateResult | string = '';
+    let svgContent: SVGTemplateResult[] = [];
     let defsContent: SVGTemplateResult[] = [];
-
-    if (!this._config.elements || this._config.elements.length === 0) {
-      const { title, text, fontSize } = this._config;
-      svgContent = svg`
-        <g>
-          <text x="16" y="30" font-weight="bold" fill="var(--primary-text-color, white)">${title}</text>
-          <text x="16" y="60" font-size="${fontSize}px" fill="var(--secondary-text-color, lightgrey)">${text}</text>
-        </g>
-      `;
-    } else {
+    
+    // Simple state logic: Show loading until we have both config and container
+    if (!this._config) {
+      svgContent = [svg`<text x="10" y="30" fill="orange" font-size="14">Loading configuration...</text>`];
+    } else if (!this._containerRect) {
+      svgContent = [svg`<text x="10" y="30" fill="orange" font-size="14">Waiting for container...</text>`];
+    } else if (this._layoutElementTemplates.length > 0) {
+      // Normal rendering with layout elements
       svgContent = this._layoutElementTemplates;
-
-      this._layoutEngine.layoutGroups.forEach(group => {
-        group.elements.forEach(el => {
-          const layoutEl = el as any;
-          if (layoutEl._maskDefinition && layoutEl._maskDefinition !== null) {
-            defsContent.push(layoutEl._maskDefinition);
-          }
-        });
-      });
-
-      if (this._layoutCalculationPending && this._layoutElementTemplates.length === 0 && this._hasRenderedOnce && !this._initialLoadComplete) {
-           svgContent = svg`<text x="10" y="20" fill="orange">Calculating layout...</text>`;
-           
-           // Log debug info
-           console.warn(`[RENDER] Showing 'calculating layout' - pending: ${this._layoutCalculationPending}, templates: ${this._layoutElementTemplates.length}, hasRendered: ${this._hasRenderedOnce}, containerRect: ${this._containerRect ? 'available' : 'missing'}`);
-           
-           // Safety timeout to prevent getting stuck in calculating state
-           setTimeout(() => {
-             if (this._layoutCalculationPending) {
-               console.warn("Layout calculation seems stuck, forcing retry...");
-               this._layoutCalculationPending = false;
-               if (this._containerRect) {
-                 this._performLayoutCalculation(this._containerRect);
-               }
-             }
-           }, 3000); // 3 second timeout
-      }
+      
+      // Collect defs content
+      defsContent = this._layoutEngine.layoutGroups.flatMap((group: any) =>
+        group.elements.flatMap((e: any) => e.renderDefs?.() || []).filter((d: any) => d !== null)
+      );
+    } else {
+      // We have config and container but no templates - show error
+      svgContent = [svg`<text x="10" y="30" fill="red" font-size="14">No layout elements to render</text>`];
     }
 
     // Extract dimensions from viewBox
@@ -809,11 +515,11 @@ export class LcarsCard extends LitElement {
     const width = this._containerRect ? this._containerRect.width : viewBoxWidth;
     const height = this._calculatedHeight || viewBoxHeight;
     
-    // Style for the SVG
-    const svgStyle = `width: 100%; height: ${height}px;`;
+    // Style for the SVG - ensure it takes full width and has proper minimum height
+    const svgStyle = `width: 100%; height: ${height}px; min-height: 50px;`;
     
-    // Simple container style
-    const containerStyle = `width: 100%; height: ${height}px;`;
+    // Container style - ensure proper width and minimum height
+    const containerStyle = `width: 100%; height: ${height}px; min-height: 50px; overflow: visible;`;
 
     return html`
       <ha-card>
@@ -833,110 +539,6 @@ export class LcarsCard extends LitElement {
     `;
   }
 
-  private _triggerRecalc(): void {
-    this._layoutCalculationPending = true;
-    this.requestUpdate();
-  }
-
-  private _measureAndRecalc(): void {
-    // Skip if fonts aren't loaded yet
-    if (!this._fontsLoaded) {
-      console.warn('Skipping measurement - fonts not fully loaded yet');
-      // Schedule another attempt
-      setTimeout(() => this._loadFontsAndInitialize(), 100);
-      return;
-    }
-    
-    const svg = this.shadowRoot?.querySelector<SVGSVGElement>('.card-container svg');
-    if (!svg || !this._containerRect) return;
-    
-    // Force a reflow to ensure accurate measurements
-    svg.style.display = 'none';
-    // Use getBoundingClientRect to force reflow without TypeScript errors
-    void svg.getBoundingClientRect();
-    svg.style.display = '';
-    
-    const measured: Record<string, {w: number; h: number}> = {};
-    svg.querySelectorAll<SVGTextElement>('text[id]').forEach(el => {
-      try {
-        const bbox = el.getBBox();
-        if (bbox.width > 0 && bbox.height > 0) {
-          measured[el.id] = { w: bbox.width, h: bbox.height };
-        }
-      } catch (e) {
-        console.warn(`Error measuring text element ${el.id}:`, e);
-      }
-    });
-    
-    // Create a map of updated sizes to pass to the engine
-    const updatedSizesMap = new Map<string, {width: number, height: number}>();
-    
-    // Compare measured sizes with current intrinsic sizes
-    const engineAny = this._layoutEngine as any;
-    const elementsMap: Map<string, any> = engineAny.elements;
-    
-    elementsMap.forEach((el: any, id: string) => {
-      const m = measured[id];
-      if (m && (el.intrinsicSize.width !== m.w || el.intrinsicSize.height !== m.h)) {
-        // Store the updated sizes in the map
-        updatedSizesMap.set(id, { width: m.w, height: m.h });
-      }
-    });
-    
-    if (updatedSizesMap.size > 0) {
-      // Pass the updated sizes to the layout engine for recalculation
-      const layoutDimensions = this._layoutEngine.updateIntrinsicSizesAndRecalculate(
-        updatedSizesMap, 
-        this._containerRect
-      );
-      
-      // Update the card's calculated height
-      this._calculatedHeight = layoutDimensions.height;
-      
-      // Update rendered elements
-      const newTemplates = this._layoutEngine.layoutGroups.flatMap((group: any) =>
-        group.elements.map((e: any) => e.render()).filter((t: any) => t !== null)
-      );
-      
-      // Update viewBox and trigger a re-render
-      this._layoutElementTemplates = newTemplates;
-      this._viewBox = `0 0 ${this._containerRect.width} ${this._calculatedHeight}`;
-      this.requestUpdate();
-    }
-  }
-
-  private _setupEditModeObserver(): void {
-    // Clean up any existing observer
-    if (this._editModeObserver) {
-      this._editModeObserver.disconnect();
-    }
-    
-    // Create a new observer to watch for changes in the DOM that might affect edit mode
-    this._editModeObserver = new MutationObserver((mutations) => {
-      // If any mutation might have affected the edit mode or panel layout, adjust
-      const shouldCheck = mutations.some(mutation => {
-        // Check for relevant class changes
-        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-          return true;
-        }
-        // Check for added/removed nodes that might affect layout
-        if (mutation.type === 'childList' && 
-            (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)) {
-          return true;
-        }
-        return false;
-      });
-    });
-    
-    // Observe changes to document body and its children
-    this._editModeObserver.observe(document.body, {
-      attributes: true,
-      childList: true,
-      subtree: true,
-      attributeFilter: ['class']
-    });
-  }
-
   private _updateLayoutEngineWithHass(): void {
     // Update all layout elements with new hass instance
     for (const group of this._layoutEngine.layoutGroups) {
@@ -944,42 +546,5 @@ export class LcarsCard extends LitElement {
         element.updateHass(this.hass);
       }
     }
-  }
-
-  private _checkDynamicColorChanges(): void {
-    if (this._dynamicColorCheckScheduled) return;
-    
-    this._dynamicColorCheckScheduled = true;
-    
-    // Use longer delay for complex layouts to reduce frequency of checks
-    const hasComplexLayout = this._layoutEngine.layoutGroups.length > 1 || 
-                             this._layoutEngine.layoutGroups.some(group => group.elements.length > 5);
-    const checkDelay = hasComplexLayout ? 150 : 100;
-    
-    setTimeout(() => {
-      this._dynamicColorCheckScheduled = false;
-      
-      let needsRefresh = false;
-      let elementsChecked = 0;
-      
-      // Check all layout elements for entity changes
-      for (const group of this._layoutEngine.layoutGroups) {
-        for (const element of group.elements) {
-          elementsChecked++;
-          if (element.checkEntityChanges(this.hass!)) {
-            needsRefresh = true;
-            // For complex layouts, we can break early to improve performance
-            if (hasComplexLayout) {
-              break;
-            }
-          }
-        }
-        if (needsRefresh && hasComplexLayout) break; // Break outer loop too for complex layouts
-      }
-      
-      if (needsRefresh) {
-        this._refreshElementRenders();
-      }
-    }, checkDelay);
   }
 }

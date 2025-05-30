@@ -1,6 +1,7 @@
 import { EditorElement, PropertyGroup, PropertyGroupDefinition } from './element';
 import {
     TextContent, 
+    TextColor,
     FontSize, 
     FontFamily, 
     FontWeight, 
@@ -8,23 +9,14 @@ import {
     TextAnchor, 
     DominantBaseline, 
     TextTransform,
+    CutoutText,
     Fill,
     ButtonEnabled,
-    ButtonCutoutText,
-    ButtonTextColor,
-    ButtonFontFamily,
-    ButtonFontSize,
-    ButtonFontWeight,
-    ButtonLetterSpacing,
-    ButtonTextTransform,
-    ButtonTextAnchor,
-    ButtonDominantBaseline,
     ButtonHoverFill,
     ButtonActiveFill,
     ButtonHoverTransform,
     ButtonActiveTransform,
     ButtonActionType,
-    ButtonText,
     OffsetX,
     OffsetY,
     Height,
@@ -46,16 +38,6 @@ export class Text extends EditorElement {
             [PropertyGroup.BUTTON]: {
                 properties: [
                     ButtonEnabled, 
-                    ButtonText, 
-                    ButtonCutoutText, 
-                    ButtonTextColor,
-                    ButtonFontFamily, 
-                    ButtonFontSize, 
-                    ButtonFontWeight,
-                    ButtonLetterSpacing,
-                    ButtonTextTransform,
-                    ButtonTextAnchor,
-                    ButtonDominantBaseline,
                     ButtonHoverFill,
                     ButtonActiveFill,
                     ButtonHoverTransform,
@@ -69,13 +51,15 @@ export class Text extends EditorElement {
             [PropertyGroup.TEXT]: {
                 properties: [
                     TextContent,
+                    TextColor,
                     FontSize, 
                     FontFamily, 
                     FontWeight, 
                     LetterSpacing, 
                     TextAnchor, 
                     DominantBaseline, 
-                    TextTransform
+                    TextTransform,
+                    CutoutText
                 ]
             },
             [PropertyGroup.POSITIONING]: {

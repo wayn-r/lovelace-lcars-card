@@ -181,4 +181,67 @@ describe('Button Text Positioning', () => {
       );
     });
   });
+
+  describe('hover state handling', () => {
+    it('should update appearance directly without triggering global re-render for hover states', () => {
+      const mockElement = document.createElement('path');
+      mockElement.id = 'test-button';
+      
+      const mockGetShadowElement = vi.fn().mockReturnValue(mockElement);
+      const mockRequestUpdate = vi.fn();
+      
+      const button = new Button('test-button', {
+        fill: '#FF0000',
+        button: {
+          enabled: true,
+          hover_fill: '#00FF00'
+        }
+      }, undefined, mockRequestUpdate, mockGetShadowElement);
+      
+      // Initially not hovering
+      expect(button.isHovering).toBe(false);
+      
+      // Set hovering to true
+      button.isHovering = true;
+      
+      // Wait for the debounced update
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          // Should not have triggered global re-render immediately
+          expect(mockRequestUpdate).not.toHaveBeenCalled();
+          
+          // Should have tried to update the element directly
+          expect(mockGetShadowElement).toHaveBeenCalledWith('test-button');
+          
+          resolve();
+        }, 15); // Wait longer than the 10ms debounce
+      });
+    });
+    
+    it('should fall back to global update if direct DOM update fails', () => {
+      const mockGetShadowElement = vi.fn().mockReturnValue(null); // Element not found
+      const mockRequestUpdate = vi.fn();
+      
+      const button = new Button('test-button', {
+        fill: '#FF0000',
+        button: {
+          enabled: true,
+          hover_fill: '#00FF00'
+        }
+      }, undefined, mockRequestUpdate, mockGetShadowElement);
+      
+      // Set hovering to true
+      button.isHovering = true;
+      
+      // Wait for the debounced update
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          // Should have fallen back to global re-render
+          expect(mockRequestUpdate).toHaveBeenCalled();
+          
+          resolve();
+        }, 15); // Wait longer than the 10ms debounce
+      });
+    });
+  });
 }); 

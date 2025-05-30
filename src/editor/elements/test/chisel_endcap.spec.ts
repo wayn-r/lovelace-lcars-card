@@ -67,6 +67,15 @@ vi.mock('../element', () => {
                             schema.push({ name: instance.name });
                         });
                     }
+                    
+                    // Include TEXT group properties when buttons are enabled
+                    const textGroupDef = groups[PGMock.TEXT];
+                    if (textGroupDef?.properties) {
+                        textGroupDef.properties.forEach((prop: any) => {
+                            const instance = new (prop as any)();
+                            schema.push({ name: instance.name });
+                        });
+                    }
                 } else {
                      schema.push({ name: 'button.enabled' }); // Only ButtonEnabled if not enabled
                 }
@@ -311,12 +320,12 @@ import { EditorElement, PropertyGroup } from '../element'; // Mocked base class 
 // Import all the required properties from the properties module
 import {
     Width, Height, Fill, Direction, // Appearance properties for ChiselEndcap
-    ButtonEnabled, ButtonText, ButtonCutoutText, ButtonTextColor,
-    ButtonFontFamily, ButtonFontSize, ButtonFontWeight, ButtonLetterSpacing,
-    ButtonTextTransform, ButtonTextAnchor, ButtonDominantBaseline, ButtonHoverFill,
-    ButtonActiveFill, ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
+    ButtonEnabled, ButtonHoverFill, ButtonActiveFill, ButtonHoverTransform, 
+    ButtonActiveTransform, ButtonActionType,
     OffsetX, OffsetY, Type,
-    AnchorTo, AnchorPoint, TargetAnchorPoint // Anchor properties are used by ChiselEndcap
+    AnchorTo, AnchorPoint, TargetAnchorPoint, // Anchor properties are used by ChiselEndcap
+    TextContent, TextColor, FontFamily, FontSize, FontWeight,
+    LetterSpacing, TextTransform, TextAnchor, DominantBaseline, CutoutText
 } from '../../properties/properties';
 
 // Import ChiselEndcap after setting up the mock
@@ -401,13 +410,20 @@ describe('ChiselEndcap EditorElement', () => {
             expect(groups[PropertyGroup.BUTTON]).toBeDefined();
             const buttonProps = groups[PropertyGroup.BUTTON]?.properties;
             const expectedButtonProps = [
-                ButtonEnabled, ButtonText, ButtonCutoutText, ButtonTextColor,
-                ButtonFontFamily, ButtonFontSize, ButtonFontWeight,
-                ButtonLetterSpacing, ButtonTextTransform, ButtonTextAnchor,
-                ButtonDominantBaseline, ButtonHoverFill, ButtonActiveFill,
+                ButtonEnabled, ButtonHoverFill, ButtonActiveFill,
                 ButtonHoverTransform, ButtonActiveTransform, ButtonActionType
             ];
             expect(buttonProps).toEqual(expectedButtonProps);
+        });
+
+        it('should define TEXT group with text properties', () => {
+            expect(groups[PropertyGroup.TEXT]).toBeDefined();
+            const textProps = groups[PropertyGroup.TEXT]?.properties;
+            const expectedTextProps = [
+                TextContent, TextColor, FontFamily, FontSize, FontWeight, 
+                LetterSpacing, TextTransform, TextAnchor, DominantBaseline, CutoutText
+            ];
+            expect(textProps).toEqual(expectedTextProps);
         });
 
         it('should define DIMENSIONS group with Width and Height', () => {
@@ -472,13 +488,19 @@ describe('ChiselEndcap EditorElement', () => {
             
             // Instantiate expected properties to get their names
             const expectedButtonPropInstances = [
-                new ButtonEnabled(), new ButtonText(), new ButtonCutoutText(), new ButtonTextColor(),
-                new ButtonFontFamily(), new ButtonFontSize(), new ButtonFontWeight(),
-                new ButtonLetterSpacing(), new ButtonTextTransform(), new ButtonTextAnchor(),
-                new ButtonDominantBaseline(), new ButtonHoverFill(), new ButtonActiveFill(),
+                new ButtonEnabled(), new ButtonHoverFill(), new ButtonActiveFill(),
                 new ButtonHoverTransform(), new ButtonActiveTransform(), new ButtonActionType()
             ];
             expectedButtonPropInstances.forEach(instance => {
+                expect(schema.find(s => s.name === instance.name)).toBeDefined();
+            });
+            
+            // Text properties should also be available when button is enabled
+            const expectedTextPropInstances = [
+                new TextContent(), new TextColor(), new FontFamily(), new FontSize(), new FontWeight(),
+                new LetterSpacing(), new TextTransform(), new TextAnchor(), new DominantBaseline(), new CutoutText()
+            ];
+            expectedTextPropInstances.forEach(instance => {
                 expect(schema.find(s => s.name === instance.name)).toBeDefined();
             });
         });

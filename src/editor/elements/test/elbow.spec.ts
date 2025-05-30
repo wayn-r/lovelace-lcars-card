@@ -69,7 +69,19 @@ vi.mock('../element', () => {
                      schema.push({ name: 'button.enabled' }); 
                 }
                 
-                // 4. Dimension properties
+                // 4. TEXT properties (when buttons are enabled or TEXT group has properties)
+                const textGroupDef = groups[PGMock.TEXT];
+                const buttonEnabled = Boolean(this.config.button?.enabled);
+                if ((textGroupDef && textGroupDef.properties.length > 0) || buttonEnabled) {
+                    if (textGroupDef?.properties) {
+                        textGroupDef.properties.forEach((prop: any) => {
+                            const instance = new (prop as any)();
+                            schema.push({ name: instance.name });
+                        });
+                    }
+                }
+                
+                // 5. Dimension properties
                 const dimensionGroup = groups[PGMock.DIMENSIONS];
                 if (dimensionGroup?.properties) {
                     dimensionGroup.properties.forEach((prop: any) => {
@@ -78,7 +90,7 @@ vi.mock('../element', () => {
                     });
                 }
                 
-                // 5. Appearance properties
+                // 6. Appearance properties
                 const appearanceGroup = groups[PGMock.APPEARANCE];
                 if (appearanceGroup?.properties) {
                     appearanceGroup.properties.forEach((prop: any) => {
@@ -87,7 +99,7 @@ vi.mock('../element', () => {
                     });
                 }
                 
-                // 6. Positioning properties
+                // 7. Positioning properties
                 const positioningGroup = groups[PGMock.POSITIONING];
                 if (positioningGroup?.properties) {
                     positioningGroup.properties.forEach((prop: any) => {
@@ -96,7 +108,7 @@ vi.mock('../element', () => {
                     });
                 }
                 
-                // 7. Stretch properties (dynamic based on config, as in base EditorElement)
+                // 8. Stretch properties (dynamic based on config, as in base EditorElement)
                 const stretchGroupDef = groups[PGMock.STRETCH];
                 if (stretchGroupDef !== null && stretchGroupDef) { // For Elbow, this is true
                     const stretch = this.config.layout.stretch || {};
@@ -285,12 +297,12 @@ import { EditorElement, PropertyGroup } from '../element'; // Mocked base class 
 
 import {
     Orientation, Width, Height, BodyWidth, ArmHeight, ElbowTextPosition, Fill,
-    ButtonEnabled, ButtonText, ButtonCutoutText, ButtonTextColor,
-    ButtonFontFamily, ButtonFontSize, ButtonFontWeight, ButtonLetterSpacing,
-    ButtonTextTransform, ButtonTextAnchor, ButtonDominantBaseline, ButtonHoverFill,
-    ButtonActiveFill, ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
-    OffsetX, OffsetY, Type,
-    AnchorTo, AnchorPoint, TargetAnchorPoint // Anchor properties are used by Elbow
+    ButtonEnabled, ButtonHoverFill, ButtonActiveFill, ButtonHoverTransform, 
+    ButtonActiveTransform, ButtonActionType, OffsetX, OffsetY, Type,
+    AnchorTo, AnchorPoint, TargetAnchorPoint, // Anchor properties are used by Elbow
+    TextContent, TextColor, FontFamily, FontSize, FontWeight, 
+    LetterSpacing, TextTransform, TextAnchor, DominantBaseline, 
+    CutoutText
 } from '../../properties/properties';
 
 import { Elbow } from '../elbow'; // The class under test
@@ -360,18 +372,25 @@ describe('Elbow EditorElement', () => {
             expect(groups[PropertyGroup.APPEARANCE]?.properties).toEqual([Fill, Orientation]);
         });
 
-        it('should define BUTTON group with standard button properties and ElbowTextPosition', () => {
+        it('should define BUTTON group with standard button properties (behavior only)', () => {
             expect(groups[PropertyGroup.BUTTON]).toBeDefined();
             const buttonProps = groups[PropertyGroup.BUTTON]?.properties;
             const expectedButtonProps = [
-                ButtonEnabled, ButtonText, ButtonCutoutText, ButtonTextColor,
-                ButtonFontFamily, ButtonFontSize, ButtonFontWeight,
-                ButtonLetterSpacing, ButtonTextTransform, ButtonTextAnchor,
-                ButtonDominantBaseline, ButtonHoverFill, ButtonActiveFill,
-                ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
-                ElbowTextPosition // Specific to Elbow's button group
+                ButtonEnabled, ButtonHoverFill, ButtonActiveFill,
+                ButtonHoverTransform, ButtonActiveTransform, ButtonActionType
             ];
             expect(buttonProps).toEqual(expectedButtonProps);
+        });
+
+        it('should define TEXT group with text properties including ElbowTextPosition', () => {
+            expect(groups[PropertyGroup.TEXT]).toBeDefined();
+            const textProps = groups[PropertyGroup.TEXT]?.properties;
+            const expectedTextProps = [
+                TextContent, TextColor, FontFamily, FontSize, FontWeight, 
+                LetterSpacing, TextTransform, TextAnchor, DominantBaseline, 
+                CutoutText, ElbowTextPosition
+            ];
+            expect(textProps).toEqual(expectedTextProps);
         });
 
         it('should define DIMENSIONS group with Width, Height, BodyWidth, and ArmHeight', () => {
@@ -425,21 +444,20 @@ describe('Elbow EditorElement', () => {
             expect(buttonSchemaItems[0].name).toBe('button.enabled');
         });
 
-        it('should include all defined button properties (including ElbowTextPosition) if button.enabled is true', () => {
+        it('should include all defined button properties if button.enabled is true', () => {
             elbowEditorElement.config.button = { enabled: true };
             const schema = elbowEditorElement.getSchema();
             
             const expectedButtonPropInstances = [
-                new ButtonEnabled(), new ButtonText(), new ButtonCutoutText(), new ButtonTextColor(),
-                new ButtonFontFamily(), new ButtonFontSize(), new ButtonFontWeight(),
-                new ButtonLetterSpacing(), new ButtonTextTransform(), new ButtonTextAnchor(),
-                new ButtonDominantBaseline(), new ButtonHoverFill(), new ButtonActiveFill(),
-                new ButtonHoverTransform(), new ButtonActiveTransform(), new ButtonActionType(),
-                new ElbowTextPosition() // Ensure ElbowTextPosition is checked
+                new ButtonEnabled(), new ButtonHoverFill(), new ButtonActiveFill(),
+                new ButtonHoverTransform(), new ButtonActiveTransform(), new ButtonActionType()
             ];
             expectedButtonPropInstances.forEach(instance => {
                 expect(schema.find(s => s.name === instance.name)).toBeDefined();
             });
+            
+            // ElbowTextPosition should be in the TEXT group properties and appear in schema
+            expect(schema.find(s => s.name === 'elbowTextPosition')).toBeDefined();
         });
 
         it('should include appearance properties (Fill, Orientation)', () => {

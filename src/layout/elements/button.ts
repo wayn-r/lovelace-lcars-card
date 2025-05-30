@@ -1,10 +1,11 @@
-import { LcarsButtonElementConfig } from "../../lovelace-lcars-card.js";
+import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { HomeAssistant } from "custom-card-helpers";
-import { colorResolver, InteractiveStateContext } from "../../utils/color-resolver.js";
+import { colorResolver } from "../../utils/color-resolver.js";
 import { AnimationContext } from "../../utils/animation.js";
+import { Color, ColorStateContext } from "../../utils/color.js";
 
-export type ButtonPropertyName = 'fill' | 'stroke' | 'text_color' | 'strokeWidth' | 
+export type ButtonPropertyName = 'fill' | 'stroke' | 'textColor' | 'strokeWidth' | 
                         'fontFamily' | 'fontSize' | 'fontWeight' | 'letterSpacing' | 
                         'textAnchor' | 'dominantBaseline';
 
@@ -16,6 +17,10 @@ export class Button {
     private _requestUpdateCallback?: () => void;
     private _id: string;
     private _getShadowElement?: (id: string) => Element | null;
+    private _hoverTimeout?: ReturnType<typeof setTimeout>;
+    private _lastHoverState = false;
+    private _activeTimeout?: ReturnType<typeof setTimeout>;
+    private _lastActiveState = false;
 
     constructor(id: string, props: any, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this._id = id;
@@ -30,8 +35,25 @@ export class Button {
     }
 
     set isHovering(value: boolean) {
+        if (this._isHovering === value) return;
+        
         this._isHovering = value;
-        this._requestUpdateCallback?.();
+        
+        // Clear any existing timeout
+        if (this._hoverTimeout) {
+            clearTimeout(this._hoverTimeout);
+        }
+        
+        // Debounce hover state changes to prevent flickering
+        this._hoverTimeout = setTimeout(() => {
+            if (this._lastHoverState !== this._isHovering) {
+                this._lastHoverState = this._isHovering;
+                
+                // Instead of triggering a global re-render, try to update just this button's appearance
+                this._updateButtonAppearanceDirectly();
+            }
+            this._hoverTimeout = undefined;
+        }, 10); // Reduced from 50ms to 10ms for better responsiveness
     }
 
     get isActive(): boolean {
@@ -39,18 +61,25 @@ export class Button {
     }
 
     set isActive(value: boolean) {
+        if (this._isActive === value) return;
+        
         this._isActive = value;
-        this._requestUpdateCallback?.();
-    }
-
-    formatColorValue(color: any): string | undefined {
-        if (typeof color === 'string') {
-            return color;
+        
+        // Clear any existing timeout
+        if (this._activeTimeout) {
+            clearTimeout(this._activeTimeout);
         }
-        if (Array.isArray(color) && color.length === 3 && color.every(num => typeof num === 'number')) {
-            return `rgb(${color[0]},${color[1]},${color[2]})`;
-        }
-        return undefined;
+        
+        // Debounce active state changes to prevent flickering
+        this._activeTimeout = setTimeout(() => {
+            if (this._lastActiveState !== this._isActive) {
+                this._lastActiveState = this._isActive;
+                
+                // Instead of triggering a global re-render, try to update just this button's appearance
+                this._updateButtonAppearanceDirectly();
+            }
+            this._activeTimeout = undefined;
+        }, 10); // Reduced from 50ms to 10ms for better responsiveness
     }
 
     /**
@@ -68,7 +97,7 @@ export class Button {
     /**
      * Get the current state context for this button
      */
-    private getStateContext(): InteractiveStateContext {
+    private getStateContext(): ColorStateContext {
         return {
             isCurrentlyHovering: this._isHovering,
             isCurrentlyActive: this._isActive
@@ -131,8 +160,10 @@ export class Button {
     }
     
     private formatValueForProperty<T>(propName: ButtonPropertyName, value: any): T | string | undefined {
-        if ((propName === 'fill' || propName === 'stroke' || propName === 'text_color') && value !== undefined) {
-            return this.formatColorValue(value);
+        if ((propName === 'fill' || propName === 'stroke' || propName === 'textColor') && value !== undefined) {
+            // Use the new Color class for color formatting
+            const color = Color.fromValue(value, 'transparent');
+            return color.toStaticString();
         }
         
         return value;
@@ -173,8 +204,13 @@ export class Button {
             />
         `);
         
-        if (options.hasText && buttonConfig.text) {
+        if (options.hasText) {
             const textConfig = this.getTextConfig(buttonConfig);
+            
+            // Get text content from multiple possible locations for backward compatibility
+            const buttonText = buttonConfig?.text;
+            const mainText = this._props.text;
+            const textContent = buttonText || mainText || '';
             
             let textX: number;
             let textY: number;
@@ -206,7 +242,7 @@ export class Button {
                     width,
                     height,
                     pathData,
-                    buttonConfig.text as string,
+                    textContent,
                     textConfig,
                     textX,
                     textY
@@ -215,7 +251,7 @@ export class Button {
                 elements.push(this.createText(
                     textX,
                     textY,
-                    buttonConfig.text as string,
+                    textContent,
                     {
                         ...textConfig,
                         fill: resolvedColors.textColor,
@@ -455,11 +491,23 @@ export class Button {
                 
                 try {
                     handleAction(targetElement, hass, actionConfig as any, "tap");
+                    
+                    // Force immediate update for state-changing actions
+                    const actionType = actionConfig?.tap_action?.action;
+                    if (actionType === 'toggle' || actionType === 'call-service') {
+                        // Use shorter timeout for immediate responsiveness to action feedback
+                        setTimeout(() => {
+                            this._requestUpdateCallback?.();
+                        }, 25); // Quick feedback for user actions
+                    } else {
+                        // Normal update callback for other actions
+                        this._requestUpdateCallback?.();
+                    }
                 } catch (error) {
                     console.error(`[${this._id}] handleAction failed:`, error);
+                    // Still trigger update even if action failed
+                    this._requestUpdateCallback?.();
                 }
-                
-                this._requestUpdateCallback?.();
             }).catch(error => {
                 console.error(`[${this._id}] Failed to import handleAction:`, error);
             });
@@ -470,5 +518,67 @@ export class Button {
 
     updateHass(hass?: HomeAssistant): void {
         this._hass = hass;
+    }
+
+    // Add cleanup method for timeouts
+    cleanup(): void {
+        if (this._hoverTimeout) {
+            clearTimeout(this._hoverTimeout);
+            this._hoverTimeout = undefined;
+        }
+        if (this._activeTimeout) {
+            clearTimeout(this._activeTimeout);
+            this._activeTimeout = undefined;
+        }
+    }
+
+    private _updateButtonAppearanceDirectly(): void {
+        // Try to update the button's appearance directly in the DOM to avoid global re-renders
+        if (!this._getShadowElement) {
+            // Fallback to global update if we can't target the specific element
+            this._requestUpdateCallback?.();
+            return;
+        }
+        
+        // Find the button's DOM element
+        const buttonElement = this._getShadowElement(this._id);
+        if (!buttonElement) {
+            // Element not found in DOM yet, fall back to global update
+            this._requestUpdateCallback?.();
+            return;
+        }
+        
+        try {
+            // Get the resolved colors with current interactive state
+            const resolvedColors = this.getResolvedColors();
+            
+            // Update the fill color directly if it exists
+            if (resolvedColors.fillColor) {
+                buttonElement.setAttribute('fill', resolvedColors.fillColor);
+            }
+            
+            // Update stroke color if it exists
+            if (resolvedColors.strokeColor && resolvedColors.strokeColor !== 'none') {
+                buttonElement.setAttribute('stroke', resolvedColors.strokeColor);
+            }
+            
+            // Update stroke width if it exists
+            if (resolvedColors.strokeWidth) {
+                buttonElement.setAttribute('stroke-width', resolvedColors.strokeWidth);
+            }
+            
+            // For button groups, we may need to update text color too
+            const textElements = buttonElement.querySelectorAll('text');
+            textElements.forEach(textElement => {
+                if (resolvedColors.textColor) {
+                    textElement.setAttribute('fill', resolvedColors.textColor);
+                }
+            });
+            
+        } catch (error) {
+            console.warn(`[${this._id}] Direct appearance update failed, falling back to global update:`, error);
+            // Fall back to global update if direct update fails
+            this._requestUpdateCallback?.();
+        }
     }
 } 

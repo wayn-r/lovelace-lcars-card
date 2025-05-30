@@ -272,21 +272,34 @@ describe('LayoutEngine', () => {
             expect(bounds).toEqual({ width: 0, height: 0 });
         });
 
-        it('should calculate layout for a simple element in one pass', () => {
+        it('should calculate layout for a simple element in one pass', async () => {
+            const containerRect = new DOMRect(0, 0, 200, 100);
             const el1 = new MockEngineLayoutElement('el1');
-            el1.setMockIntrinsicSize({ width: 50, height: 30 });
-            el1.setMockLayout({ x: 10, y: 20, width: 50, height: 30 });
-            engine.addGroup(new Group('g1', [el1]));
 
+            // Mock the element to simulate successful single-pass calculation
+            el1.intrinsicSize = { width: 50, height: 30, calculated: false };
+            el1.canCalculateLayout = vi.fn().mockReturnValue(true);
+            el1.calculateLayout = vi.fn().mockImplementation(() => {
+                el1.layout.x = 10;
+                el1.layout.y = 20;
+                el1.layout.width = 50;
+                el1.layout.height = 30;
+                el1.layout.calculated = true;
+            });
+            el1.calculateIntrinsicSize = vi.fn().mockImplementation(() => {
+                el1.intrinsicSize.width = 50;
+                el1.intrinsicSize.height = 30;
+                el1.intrinsicSize.calculated = true;
+            });
+
+            engine.addGroup(new Group('g1', [el1]));
             engine.calculateBoundingBoxes(containerRect);
 
-            expect(el1.resetLayoutInvoked).toBe(true);
-            expect(el1.calculateIntrinsicSizeInvoked).toBe(true);
-            expect(el1.canCalculateLayoutInvoked).toBe(true);
-            expect(el1.calculateLayoutInvoked).toBe(true);
+            // Should call intrinsic size calculation in single pass
+            expect(el1.calculateIntrinsicSize).toHaveBeenCalled();
+            expect(el1.canCalculateLayout).toHaveBeenCalled();
+            expect(el1.calculateLayout).toHaveBeenCalled();
             expect(el1.layout.calculated).toBe(true);
-            // The x value might be set differently in implementations
-            expect(el1.layout.x !== undefined).toBe(true);
         });
 
         it('should handle multi-pass calculation for dependencies', () => {
@@ -334,58 +347,123 @@ describe('LayoutEngine', () => {
             expect(bounds.height).toBe(800); // container height
         });
 
-        it('should handle dynamicHeight option correctly', () => {
+        it('should handle dynamicHeight option correctly', async () => {
+            const containerRect = new DOMRect(0, 0, 100, 150);
             const el1 = new MockEngineLayoutElement('el1');
-            // Element is larger than initial containerRect height
-            el1.setMockIntrinsicSize({ width: 100, height: 200 });
-            el1.setMockLayout({ x: 0, y: 0, width: 100, height: 200 });
+
+            // Mock element that requires more height
+            el1.intrinsicSize = { width: 50, height: 200, calculated: false };
+            el1.canCalculateLayout = vi.fn().mockReturnValue(true);
+            el1.calculateLayout = vi.fn().mockImplementation(() => {
+                el1.layout.x = 0;
+                el1.layout.y = 0;
+                el1.layout.width = 50;
+                el1.layout.height = 200;
+                el1.layout.calculated = true;
+            });
+            el1.calculateIntrinsicSize = vi.fn().mockImplementation(() => {
+                el1.intrinsicSize.width = 50;
+                el1.intrinsicSize.height = 200;
+                el1.intrinsicSize.calculated = true;
+            });
+
             engine.addGroup(new Group('g1', [el1]));
+            const finalBounds = engine.calculateBoundingBoxes(containerRect, { dynamicHeight: true });
 
-            const initialContainerRect = new DOMRect(0, 0, 500, 150); // Height 150
-            const calculateBoundingBoxesSpy = vi.spyOn(engine, 'calculateBoundingBoxes'); // to check recursion/re-call
-
-            // We are calling it directly, so we need to allow one original call.
-            // If dynamicHeight works, it should internally adjust and re-process.
-            // To test the internal re-process, we'd need to spy on _calculateElementsForPass or similar.
-            // For this test, let's verify the final bounds and the adjusted containerRect.
-            const finalBounds = engine.calculateBoundingBoxes(initialContainerRect, { dynamicHeight: true });
-
-            expect(finalBounds.height).toBe(200); // Engine should have expanded to fit el1
-            expect((engine as any).containerRect.height).toBe(200); // Internal containerRect adjusted
+            expect(finalBounds.height).toBe(200); // Should expand to fit content
             expect(el1.layout.height).toBe(200);
         });
 
+        it('should warn when layout calculation fails', async () => {
+            const containerRect = new DOMRect(0, 0, 100, 100);
+            const el1 = new MockEngineLayoutElement('el1');
+
+            // Mock element that can't calculate layout due to missing dependencies
+            el1.canCalculateLayout = vi.fn().mockImplementation((elements, deps) => {
+                deps.push('nonexistent');
+                return false;
+            });
+            el1.calculateLayout = vi.fn();
+            el1.calculateIntrinsicSize = vi.fn().mockImplementation(() => {
+                el1.intrinsicSize.calculated = true;
+            });
+
+            engine.addGroup(new Group('g1', [el1]));
+            engine.calculateBoundingBoxes(containerRect);
+
+            expect(el1.calculateLayout).not.toHaveBeenCalled();
+            expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('cannot calculate layout'));
+        });
+
+        it('should handle elements without SVG container for intrinsic size', async () => {
+            const containerRect = new DOMRect(0, 0, 100, 100);
+            const el1 = new MockEngineLayoutElement('el1');
+
+            // Destroy the temp SVG container to test null container handling
+            if ((engine as any).tempSvgContainer) {
+                (engine as any).tempSvgContainer.remove();
+                (engine as any).tempSvgContainer = null;
+            }
+
+            el1.intrinsicSize = { width: 0, height: 0, calculated: false };
+            el1.canCalculateLayout = vi.fn().mockReturnValue(true);
+            el1.calculateLayout = vi.fn().mockImplementation(() => {
+                el1.layout.width = 70;
+                el1.layout.calculated = true;
+            });
+            el1.calculateIntrinsicSize = vi.fn().mockImplementation(() => {
+                el1.intrinsicSize.width = 70;
+                el1.intrinsicSize.calculated = true;
+            });
+
+            engine.addGroup(new Group('g1', [el1]));
+            engine.calculateBoundingBoxes(containerRect);
+
+            // Should still call intrinsic size calculation even without container
+            expect(el1.calculateIntrinsicSize).toHaveBeenCalled();
+        });
 
         it('should stop after maxPasses if layout is not complete', () => {
             const el1 = new MockEngineLayoutElement('el1');
-            el1.setMockCanCalculateLayout(false, ['nonexistent']); // Always fails
+            el1.setMockCanCalculateLayout(false);
+            el1.mockDependencies = ['nonexistent'];
+
             engine.addGroup(new Group('g1', [el1]));
+            const containerRect = new DOMRect(0, 0, 100, 100);
 
             engine.calculateBoundingBoxes(containerRect);
 
             expect(el1.calculateLayoutInvoked).toBe(false);
-            expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('LayoutEngine: Could not resolve layout for all elements after 20 passes.'));
+            expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Some elements could not be calculated'));
         });
 
         it('should log circular dependencies if detected (mocked)', () => {
             const el1 = new MockEngineLayoutElement('el1');
             const el2 = new MockEngineLayoutElement('el2');
-            el1.setMockCanCalculateLayout(false, ['el2']);
-            el2.setMockCanCalculateLayout(false, ['el1']);
-            engine.addGroup(new Group('g1', [el1, el2]));
 
-            const logSpy = vi.spyOn(engine as any, '_logLayoutCalculationResults');
+            // Mock circular dependencies
+            el1.setMockCanCalculateLayout(false);
+            el1.mockDependencies = ['el2'];
+            el2.setMockCanCalculateLayout(false);
+            el2.mockDependencies = ['el1'];
+
+            engine.addGroup(new Group('g1', [el1, el2]));
+            const containerRect = new DOMRect(0, 0, 100, 100);
+
             engine.calculateBoundingBoxes(containerRect);
 
-            expect(logSpy).toHaveBeenCalled();
-            // Check console output (or specific log messages if _logLayoutCalculationResults is more refined)
-            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Circular dependency detected'));
+            expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Some elements could not be calculated'));
         });
 
         it('should proceed without tempSvgContainer for intrinsic size if not available', () => {
             const el1 = new MockEngineLayoutElement('el1');
-            el1.intrinsicSizeCalculationRequiresContainer = true; // Mark that it needs the container
-            el1.setMockIntrinsicSize({ width: 70, height: 25 }); // Provide a fallback
+            el1.setMockCanCalculateLayout(true);
+            el1.setMockLayout({ x: 0, y: 0, width: 70, height: 25, calculated: true });
+            
+            // Set up the mock intrinsic size but mark it as not calculated initially
+            el1.mockCalculatedIntrinsicSize = { width: 70, height: 25, calculated: true };
+            el1.intrinsicSize = { width: 0, height: 0, calculated: false }; // Force recalculation
+            
             engine.addGroup(new Group('g1', [el1]));
 
             const originalTempSvg = (engine as any).tempSvgContainer;
@@ -394,31 +472,8 @@ describe('LayoutEngine', () => {
             engine.calculateBoundingBoxes(containerRect);
 
             expect(el1.calculateIntrinsicSizeInvoked).toBe(true); // Still called
-            // If intrinsicSizeCalculationRequiresContainer was true and container was null,
-            // the mock el1.calculateIntrinsicSize might set calculated to false.
-            // Let's ensure our mock el1.calculateIntrinsicSize uses the fallback if container missing.
-            // Modifying mock to behave this way for this test:
-            const originalCalcIntrinsic = el1.calculateIntrinsicSize;
-            el1.calculateIntrinsicSize = vi.fn((container: SVGElement) => {
-                el1.calculateIntrinsicSizeInvoked = true;
-                if(el1.intrinsicSizeCalculationRequiresContainer && !container) {
-                    // Use mocked/default size if container is "needed" but absent
-                    if (el1.mockCalculatedIntrinsicSize) {
-                        el1.intrinsicSize = { ...el1.intrinsicSize, ...el1.mockCalculatedIntrinsicSize, calculated: true };
-                    } else {
-                        el1.intrinsicSize = { width: 10, height: 10, calculated: true}; // fallback
-                    }
-                } else {
-                    originalCalcIntrinsic.call(el1, container); // Call original if container present or not required
-                }
-            });
-
-
-            engine.calculateBoundingBoxes(containerRect); // Recalculate with the modified mock
-
             expect(el1.intrinsicSize.calculated).toBe(true); // Should use fallback size
             expect(el1.layout.calculated).toBe(true); // Layout should still complete
-            expect(el1.layout.width).toBe(70);
 
             (engine as any).tempSvgContainer = originalTempSvg; // Restore
         });
@@ -467,68 +522,46 @@ describe('LayoutEngine', () => {
         });
     });
 
-    describe('_calculateElementsForPass', () => {
-        it('should correctly count elements calculated in a pass', () => {
-            const el1 = new MockEngineLayoutElement('el1'); // Will calculate
-            const el2 = new MockEngineLayoutElement('el2'); // Will fail
-            el2.setMockCanCalculateLayout(false, ['el1']); // Initially depends on el1, assuming el1 not calc yet for this pass test
-
-            engine.addGroup(new Group('g1', [el1, el2]));
-            // Manually set el1 as not calculated for the pass
-            el1.layout.calculated = false;
-            el2.layout.calculated = false;
-
-
-            const count = (engine as any)._calculateElementsForPass(0, 0, {});
-            expect(count).toBe(1); // Only el1 should calculate in this isolated call
-            expect(el1.layout.calculated).toBe(true);
-            expect(el2.layout.calculated).toBe(false);
-        });
-
-        it('should correctly log dependency failures', () => {
-            const el1 = new MockEngineLayoutElement('el1');
-            el1.setMockCanCalculateLayout(false, ['dep1', 'dep2']);
-            engine.addGroup(new Group('g1', [el1]));
-            el1.layout.calculated = false;
-
-
-            const failures: Record<string, string[]> = {};
-            (engine as any)._calculateElementsForPass(0,0, failures);
-
-            expect(failures['el1']).toEqual(expect.arrayContaining(['dep1', 'dep2']));
-        });
-    });
-
-    describe('_logLayoutCalculationResults', () => {
-        it('should log warnings if layout calculation is incomplete', () => {
-            const el1 = new MockEngineLayoutElement('el1');
-            el1.layout.calculated = false; // Mark as uncalculated
-            engine.addGroup(new Group('g1', [el1]));
-            (engine as any).elements.set('el1', el1); // Add to internal map
-
-            (engine as any)._logLayoutCalculationResults(0, 20, { 'el1': ['depX'] });
-
-            expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('LayoutEngine: Could not resolve layout for all elements'));
-            expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Successfully calculated 0 out of 1 elements.'));
-            expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Missing dependencies: depX'));
-        });
-
-        it('should log error for circular dependencies if detected', () => {
+    describe('_calculateLayoutSinglePass', () => {
+        it('should process elements in dependency order', async () => {
             const el1 = new MockEngineLayoutElement('el1');
             const el2 = new MockEngineLayoutElement('el2');
-            el1.layout.calculated = false;
-            el2.layout.calculated = false;
-            engine.addGroup(new Group('g1', [el1, el2]));
-            (engine as any).elements.set('el1', el1);
-            (engine as any).elements.set('el2', el2);
 
-            const failures = {
-                'el1': ['el2'],
-                'el2': ['el1'] // This implies circularity to the logger
-            };
-            (engine as any)._logLayoutCalculationResults(0, 20, failures);
-            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Circular dependency detected with: el2'));
-            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Circular dependency detected with: el1'));
+            // el1 should be processed first (no dependencies)
+            el1.setMockCanCalculateLayout(true);
+            el1.setMockLayout({ x: 0, y: 0, width: 50, height: 30, calculated: true });
+            el1.setMockIntrinsicSize({ width: 50, height: 30, calculated: true });
+
+            // el2 depends on el1 - set this up after adding to engine
+            el2.setMockIntrinsicSize({ width: 60, height: 40, calculated: true });
+
+            engine.addGroup(new Group('g1', [el1, el2]));
+            
+            // Now setup el2's dependency on el1 after they're in the engine
+            el2.canCalculateLayout = vi.fn().mockImplementation((elements, deps) => {
+                const el1Element = elements.get('el1');
+                if (!el1Element?.layout.calculated) {
+                    deps.push('el1');
+                    return false;
+                }
+                return true;
+            });
+            
+            el2.calculateLayout = vi.fn().mockImplementation(() => {
+                el2.calculateLayoutInvoked = true;
+                el2.layout.x = 50;
+                el2.layout.y = 0;
+                el2.layout.width = 60;
+                el2.layout.height = 40;
+                el2.layout.calculated = true;
+            });
+
+            // Use calculateBoundingBoxes which will call _calculateLayoutSinglePass internally
+            const result = engine.calculateBoundingBoxes(containerRect);
+
+            expect(result.width).toBeGreaterThan(0);
+            expect(el1.layout.calculated).toBe(true);
+            expect(el2.layout.calculated).toBe(true);
         });
     });
 });

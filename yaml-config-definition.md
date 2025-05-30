@@ -26,8 +26,8 @@ groups: <array>                  # Required: Defines groups of elements. Element
                                        #            "chisel-endcap", "top_header".
 
         appearance:                    # Optional: Defines the static visual style of the element's shape.
-          fill: <color_value>          # Primary fill color for the element's shape.
-          stroke: <color_value>        # Outline/border color for the element's shape.
+          fill: <color_property>       # Primary fill color for the element's shape.
+          stroke: <color_property>     # Outline/border color for the element's shape.
           strokeWidth: <number>        # Outline/border width in pixels for the element's shape.
 
           # --- Shape-Specific Appearance Properties ---
@@ -43,7 +43,7 @@ groups: <array>                  # Required: Defines groups of elements. Element
                                        #   buttonized elements (e.g., a rectangle button).
           content: <string>            # The text to display.
                                        #   For buttonized elements, this is the button's label.
-          color: <color_value>         # Color of the text.
+          fill: <color_property>       # Color of the text.
           fontFamily: <string>         # e.g., "Antonio, Arial, sans-serif". Default: "Antonio".
           fontSize: <number>           # Font size in pixels. Default: 16.
           fontWeight: <string|number>  # e.g., "normal", "bold", 400, 700. Default: "normal".
@@ -173,19 +173,19 @@ groups: <array>                  # Required: Defines groups of elements. Element
             appearance_states:         # Optional: Overrides for `appearance` and `text` properties on hover/active.
               hover:
                 appearance:              # Override base `appearance` properties.
-                  fill: <color_value>
-                  stroke: <color_value>
+                  fill: <color_property>
+                  stroke: <color_property>
                   # strokeWidth can also be overridden here
                 text:                    # Override base `text` properties.
-                  color: <color_value>
+                  fill: <color_property>
                   # Other text properties (fontSize, fontWeight) can also be overridden here
                 transform: <string>        # CSS transform string (e.g., "scale(1.05)").
               active:
                 appearance:
-                  fill: <color_value>
-                  stroke: <color_value>
+                  fill: <color_property>
+                  stroke: <color_property>
                 text:
-                  color: <color_value>
+                  fill: <color_property>
                 transform: <string>
 
             actions:                     # Defines actions for different types of interactions.
@@ -327,10 +327,10 @@ state_management:              # Optional: Enhanced state management configurati
 
 ## Helper Type Definitions
 
-=== Color Value Configuration ===
+=== Color Property Configuration ===
 
 ```yaml
-# === Color Value Configuration ===
+# === Color Property Configuration ===
 color_property: <string>             # Option 1: Static color string (e.g., "#FF9900", "rgb(255,153,0)", "red").
 
 color_property: <array>              # Option 2: Static color RGB array.
@@ -342,16 +342,16 @@ color_property:                      # Option 3: Dynamic color object (based on 
   entity: <string>                   # Required: Home Assistant entity ID (e.g., "light.living_room").
   attribute: <string>                # Optional: Entity attribute to use (e.g., "brightness"). Default: 'state'.
   mapping: <object>                  # Required: Object mapping entity values to static colors.
-    "<state_value_1>": <color_value> # e.g., "on": "#ffaa00"
-    "<state_value_2>": <color_value> # e.g., "off": [51, 51, 51]
+    "<state_value_1>": <color_property> # e.g., "on": "#ffaa00"
+    "<state_value_2>": <color_property> # e.g., "off": [51, 51, 51]
                                      # For numeric attributes with interpolate: true, keys should be numbers.
-  default: <color_value>             # Optional: Fallback color if no mapping matches.
+  default: <color_property>          # Optional: Fallback color if no mapping matches.
   interpolate: <boolean>             # Optional: If true, interpolates colors for numeric entity values. Default: false.
 
 color_property:                      # Option 4: Stateful color object (for hover/active states).
-  default: <color_value>             # Required: Base color for the normal state.
-  hover: <color_value>               # Optional: Color when the element is hovered.
-  active: <color_value>              # Optional: Color when the element is pressed/active.
+  default: <color_property>          # Required: Base color for the normal state.
+  hover: <color_property>            # Optional: Color when the element is hovered.
+  active: <color_property>           # Optional: Color when the element is pressed/active.
 ```
 
 === Home Assistant Action or Animation Action Configuration ===

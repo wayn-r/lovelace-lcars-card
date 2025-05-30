@@ -5,23 +5,23 @@ import {
     Height,
     Fill,
     ButtonEnabled,
-    ButtonCutoutText,
-    ButtonTextColor,
-    ButtonFontFamily,
-    ButtonFontSize,
-    ButtonFontWeight,
-    ButtonLetterSpacing,
-    ButtonTextTransform,
-    ButtonTextAnchor,
-    ButtonDominantBaseline,
+    OffsetX,
+    OffsetY,
     ButtonHoverFill,
     ButtonActiveFill,
     ButtonHoverTransform,
     ButtonActiveTransform,
     ButtonActionType,
-    ButtonText,
-    OffsetX,
-    OffsetY,
+    TextContent,
+    TextColor,
+    FontFamily,
+    FontSize,
+    FontWeight,
+    LetterSpacing,
+    TextTransform,
+    TextAnchor,
+    DominantBaseline,
+    CutoutText,
     Layout
 } from '../properties/properties';
 
@@ -37,16 +37,6 @@ export class ChiselEndcap extends EditorElement {
             [PropertyGroup.BUTTON]: {
                 properties: [
                     ButtonEnabled, 
-                    ButtonText, 
-                    ButtonCutoutText, 
-                    ButtonTextColor,
-                    ButtonFontFamily, 
-                    ButtonFontSize, 
-                    ButtonFontWeight,
-                    ButtonLetterSpacing,
-                    ButtonTextTransform,
-                    ButtonTextAnchor,
-                    ButtonDominantBaseline,
                     ButtonHoverFill,
                     ButtonActiveFill,
                     ButtonHoverTransform,
@@ -59,6 +49,20 @@ export class ChiselEndcap extends EditorElement {
             },
             [PropertyGroup.APPEARANCE]: {
                 properties: [Fill, Direction]
+            },
+            [PropertyGroup.TEXT]: {
+                properties: [
+                    TextContent,
+                    TextColor,
+                    FontFamily,
+                    FontSize,
+                    FontWeight,
+                    LetterSpacing,
+                    TextTransform,
+                    TextAnchor,
+                    DominantBaseline,
+                    CutoutText
+                ]
             },
             [PropertyGroup.POSITIONING]: {
                 properties: [OffsetX, OffsetY]

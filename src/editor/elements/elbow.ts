@@ -5,26 +5,26 @@ import {
     Height,
     BodyWidth, 
     ArmHeight, 
-    ElbowTextPosition,
     Fill,
     ButtonEnabled,
     OffsetX,
     OffsetY,
-    ButtonCutoutText,
-    ButtonTextColor,
-    ButtonFontFamily,
-    ButtonFontSize,
-    ButtonFontWeight,
-    ButtonLetterSpacing,
-    ButtonTextTransform,
-    ButtonTextAnchor,
-    ButtonDominantBaseline,
     ButtonHoverFill,
     ButtonActiveFill,
     ButtonHoverTransform,
     ButtonActiveTransform,
     ButtonActionType,
-    ButtonText
+    TextContent,
+    TextColor,
+    FontFamily,
+    FontSize,
+    FontWeight,
+    LetterSpacing,
+    TextTransform,
+    TextAnchor,
+    DominantBaseline,
+    CutoutText,
+    ElbowTextPosition
 } from '../properties/properties';
 
 export class Elbow extends EditorElement {
@@ -39,22 +39,11 @@ export class Elbow extends EditorElement {
             [PropertyGroup.BUTTON]: {
                 properties: [
                     ButtonEnabled, 
-                    ButtonText, 
-                    ButtonCutoutText, 
-                    ButtonTextColor,
-                    ButtonFontFamily, 
-                    ButtonFontSize, 
-                    ButtonFontWeight,
-                    ButtonLetterSpacing,
-                    ButtonTextTransform,
-                    ButtonTextAnchor,
-                    ButtonDominantBaseline,
                     ButtonHoverFill,
                     ButtonActiveFill,
                     ButtonHoverTransform,
                     ButtonActiveTransform,
-                    ButtonActionType,
-                    ElbowTextPosition
+                    ButtonActionType
                 ]
             },
             [PropertyGroup.DIMENSIONS]: {
@@ -62,6 +51,21 @@ export class Elbow extends EditorElement {
             },
             [PropertyGroup.APPEARANCE]: {
                 properties: [Fill, Orientation]
+            },
+            [PropertyGroup.TEXT]: {
+                properties: [
+                    TextContent,
+                    TextColor,
+                    FontFamily,
+                    FontSize,
+                    FontWeight,
+                    LetterSpacing,
+                    TextTransform,
+                    TextAnchor,
+                    DominantBaseline,
+                    CutoutText,
+                    ElbowTextPosition
+                ]
             },
             [PropertyGroup.POSITIONING]: {
                 properties: [OffsetX, OffsetY]

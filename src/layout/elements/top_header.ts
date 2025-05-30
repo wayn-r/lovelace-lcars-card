@@ -46,11 +46,7 @@ export class TopHeaderElement extends LayoutElement {
       direction: 'left',
       fill
     }, {
-      anchor: {
-        anchorTo: 'container',
-        anchorPoint: 'topLeft',
-        targetAnchorPoint: 'topLeft'
-      }
+      // No anchor - we'll position this manually in layoutEndcaps
     }, hass, requestUpdateCallback, getShadowElement);
   }
   
@@ -60,33 +56,24 @@ export class TopHeaderElement extends LayoutElement {
       direction: 'right',
       fill
     }, {
-      anchor: {
-        anchorTo: 'container',
-        anchorPoint: 'topRight',
-        targetAnchorPoint: 'topRight'
-      }
+      // No anchor - we'll position this manually in layoutEndcaps
     }, hass, requestUpdateCallback, getShadowElement);
   }
   
   private createTextElement(id: string, position: 'left' | 'right', props: LayoutElementProps, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): TextElement {
     const isLeft = position === 'left';
-    const textKey = isLeft ? 'leftText' : 'rightText';
-    const defaultText = isLeft ? 'LEFT' : 'RIGHT';
-    const anchorTo = `${id}_${position}_endcap`;
+    const textContent = isLeft ? (props.leftContent || 'LEFT') : (props.rightContent || 'RIGHT');
     
     return new TextElement(`${id}_${position}_text`, {
-      text: props[textKey] || defaultText,
+      text: textContent,
       fontFamily: props.fontFamily || 'Antonio',
       fontWeight: props.fontWeight || 'normal',
       letterSpacing: props.letterSpacing || 'normal',
       textTransform: props.textTransform || 'uppercase',
-      fill: '#FFFFFF'
+      fontSize: props.fontSize || 16,
+      fill: props.textColor || props.fill || '#FFFFFF'
     }, {
-      anchor: {
-        anchorTo,
-        anchorPoint: isLeft ? 'topLeft' : 'topRight',
-        targetAnchorPoint: isLeft ? 'topRight' : 'topLeft'
-      }
+      // No anchor - we'll position this manually in layoutTextElements
     }, hass, requestUpdateCallback, getShadowElement);
   }
   
@@ -194,16 +181,29 @@ export class TopHeaderElement extends LayoutElement {
   private layoutEndcaps(height: number, elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
     const fill = this.props.fill || '#99CCFF';
     const endcapWidth = height * 0.75;
+    const { x, y, width } = this.layout;
     
     // Configure and layout left endcap
     this.configureEndcap(this.leftEndcap, height, endcapWidth, fill);
     this.leftEndcap.calculateIntrinsicSize(containerRect as unknown as SVGElement);
-    this.leftEndcap.calculateLayout(elementsMap, containerRect);
+    
+    // Position left endcap manually at the start of the top_header
+    this.leftEndcap.layout.x = x;
+    this.leftEndcap.layout.y = y;
+    this.leftEndcap.layout.width = endcapWidth;
+    this.leftEndcap.layout.height = height;
+    this.leftEndcap.layout.calculated = true;
     
     // Configure and layout right endcap
     this.configureEndcap(this.rightEndcap, height, endcapWidth, fill);
     this.rightEndcap.calculateIntrinsicSize(containerRect as unknown as SVGElement);
-    this.rightEndcap.calculateLayout(elementsMap, containerRect);
+    
+    // Position right endcap manually at the end of the top_header
+    this.rightEndcap.layout.x = x + width - endcapWidth;
+    this.rightEndcap.layout.y = y;
+    this.rightEndcap.layout.width = endcapWidth;
+    this.rightEndcap.layout.height = height;
+    this.rightEndcap.layout.calculated = true;
   }
   
   private configureEndcap(endcap: EndcapElement, height: number, width: number, fill: string): void {
@@ -215,8 +215,8 @@ export class TopHeaderElement extends LayoutElement {
   private layoutTextElements(fontSize: number, fontConfig: FontConfig, x: number, y: number, offsetY: number, elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
     const height = this.layout.height;
     const fontString = `${fontConfig.fontWeight} ${fontSize}px ${fontConfig.fontFamily}`;
-    const leftTextContent = this.props.leftText || 'LEFT';
-    const rightTextContent = this.props.rightText || 'RIGHT';
+    const leftTextContent = this.props.leftContent || 'LEFT';
+    const rightTextContent = this.props.rightContent || 'RIGHT';
     
     const leftTextWidth = getSvgTextWidth(
       leftTextContent, 
@@ -241,35 +241,57 @@ export class TopHeaderElement extends LayoutElement {
   }
   
   private layoutTextWithMetrics(fontSize: number, fontConfig: FontConfig, y: number, offsetY: number, leftTextWidth: number, rightTextWidth: number, elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
-    const baselineY = y + offsetY;
+    const leftTextContent = this.props.leftContent || 'LEFT';
+    const rightTextContent = this.props.rightContent || 'RIGHT';
     
-    // Configure and layout left text
-    this.configureTextElement(this.leftText, fontSize, fontConfig, this.props.leftText || 'LEFT', leftTextWidth);
-    this.leftText.calculateLayout(elementsMap, containerRect);
-    this.leftText.layout.y = baselineY;
-    this.leftText.layout.x += this.textGap;
+    // Configure text elements
+    this.configureTextElement(this.leftText, fontSize, fontConfig, leftTextContent, leftTextWidth);
+    this.configureTextElement(this.rightText, fontSize, fontConfig, rightTextContent, rightTextWidth);
     
-    // Configure and layout right text
-    this.configureTextElement(this.rightText, fontSize, fontConfig, this.props.rightText || 'RIGHT', rightTextWidth);
-    this.rightText.calculateLayout(elementsMap, containerRect);
-    this.rightText.layout.y = baselineY;
-    this.rightText.layout.x -= this.textGap;
+    // Calculate intrinsic sizes
+    this.leftText.calculateIntrinsicSize(containerRect as unknown as SVGElement);
+    this.rightText.calculateIntrinsicSize(containerRect as unknown as SVGElement);
+    
+    // Position left text next to left endcap
+    this.leftText.layout.x = this.leftEndcap.layout.x + this.leftEndcap.layout.width + this.textGap;
+    this.leftText.layout.y = y + offsetY;
+    this.leftText.layout.width = leftTextWidth;
+    this.leftText.layout.height = fontSize;
+    this.leftText.layout.calculated = true;
+    
+    // Position right text next to right endcap (aligned to left edge of text area)
+    this.rightText.layout.x = this.rightEndcap.layout.x - rightTextWidth - this.textGap;
+    this.rightText.layout.y = y + offsetY;
+    this.rightText.layout.width = rightTextWidth;
+    this.rightText.layout.height = fontSize;
+    this.rightText.layout.calculated = true;
   }
   
   private layoutTextWithoutMetrics(fontSize: number, fontConfig: FontConfig, x: number, y: number, offsetY: number, height: number, leftTextWidth: number, rightTextWidth: number, elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
-    const bottomY = y + offsetY + height;
+    const leftTextContent = this.props.leftContent || 'LEFT';
+    const rightTextContent = this.props.rightContent || 'RIGHT';
     
-    // Configure and layout left text
-    this.configureTextElement(this.leftText, fontSize, fontConfig, this.props.leftText || 'LEFT', leftTextWidth);
-    this.leftText.calculateLayout(elementsMap, containerRect);
-    this.leftText.layout.y = bottomY;
-    this.leftText.layout.x += this.textGap;
+    // Configure text elements
+    this.configureTextElement(this.leftText, fontSize, fontConfig, leftTextContent, leftTextWidth);
+    this.configureTextElement(this.rightText, fontSize, fontConfig, rightTextContent, rightTextWidth);
     
-    // Configure and layout right text
-    this.configureTextElement(this.rightText, fontSize, fontConfig, this.props.rightText || 'RIGHT', rightTextWidth);
-    this.rightText.calculateLayout(elementsMap, containerRect);
-    this.rightText.layout.y = bottomY;
-    this.rightText.layout.x -= this.textGap;
+    // Calculate intrinsic sizes
+    this.leftText.calculateIntrinsicSize(containerRect as unknown as SVGElement);
+    this.rightText.calculateIntrinsicSize(containerRect as unknown as SVGElement);
+    
+    // Position left text next to left endcap
+    this.leftText.layout.x = this.leftEndcap.layout.x + this.leftEndcap.layout.width + this.textGap;
+    this.leftText.layout.y = y + offsetY;
+    this.leftText.layout.width = leftTextWidth;
+    this.leftText.layout.height = fontSize;
+    this.leftText.layout.calculated = true;
+    
+    // Position right text next to right endcap (aligned to left edge of text area)
+    this.rightText.layout.x = this.rightEndcap.layout.x - rightTextWidth - this.textGap;
+    this.rightText.layout.y = y + offsetY;
+    this.rightText.layout.width = rightTextWidth;
+    this.rightText.layout.height = fontSize;
+    this.rightText.layout.calculated = true;
   }
   
   private configureTextElement(textElement: TextElement, fontSize: number, fontConfig: FontConfig, text: string, textWidth: number): void {

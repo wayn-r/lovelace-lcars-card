@@ -1,7 +1,7 @@
 import { LitElement, html, TemplateResult, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardEditor, fireEvent } from 'custom-card-helpers';
-import { LcarsCardConfig } from '../lovelace-lcars-card.js';
+import { LcarsCardConfig, GroupConfig } from '../types.js';
 
 import { editorStyles } from '../styles/styles.js';
 import { 
@@ -92,13 +92,13 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     const prevConfig = this._config;
     this._config = {
         ...config,
-        elements: config.elements || []
+        groups: config.groups || []
     };
-    this._extractGroupsAndInitState(prevConfig?.elements);
+    this._extractGroupsAndInitState();
   }
 
-  private _extractGroupsAndInitState(prevElements?: any[]): void {
-    if (!this._config?.elements) {
+  private _extractGroupsAndInitState(): void {
+    if (!this._config?.groups) {
         this._groups = [];
         this._groupInstances.clear();
         this._collapsedGroups = {};
@@ -107,18 +107,18 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         return;
     }
 
-    const currentElements = this._config.elements;
     const currentGroupIds = new Set<string>();
     const currentElementMap = new Map<string, any>();
 
-    currentElements.forEach(el => {
+    // Extract elements from groups
+    this._config.groups.forEach(group => {
+      currentGroupIds.add(group.group_id);
+      group.elements.forEach(el => {
         if (el?.id) {
-            currentElementMap.set(el.id, el);
-            const groupId = el.id.split('.')[0];
-            if (groupId) {
-                currentGroupIds.add(groupId);
-            }
+          const fullId = `${group.group_id}.${el.id}`;
+          currentElementMap.set(fullId, el);
         }
+      });
     });
 
     const newGroups = Array.from(currentGroupIds).sort();
@@ -139,12 +139,15 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
         instance.isCollapsed = newCollapsedGroups[gid];
     });
 
-    currentElements.forEach(el => {
+    // Process elements from all groups
+    this._config.groups.forEach(group => {
+      group.elements.forEach(el => {
         if (el?.id) {
-            newCollapsedElements[el.id] = this._collapsedElements[el.id] ?? true;
-
-            newCollapsedPropertyGroups[el.id] = this._initCollapsedPG(el.id, this._collapsedPropertyGroups[el.id]);
+          const fullId = `${group.group_id}.${el.id}`;
+          newCollapsedElements[fullId] = this._collapsedElements[fullId] ?? true;
+          newCollapsedPropertyGroups[fullId] = this._initCollapsedPG(fullId, this._collapsedPropertyGroups[fullId]);
         }
+      });
     });
 
     this._groups = newGroups;
@@ -154,22 +157,40 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     this._collapsedPropertyGroups = newCollapsedPropertyGroups;
   }
 
-  private _updateConfig(newElements: any[]): void {
-      
-      const oldElementIds = this._config?.elements?.map(el => el.id) || [];
-      
-      this._config = { ...(this._config || { type: 'lcars-card' }), elements: newElements };
-      
-      const newElementIds = newElements.map(el => el.id);
-      const addedIds = newElementIds.filter(id => !oldElementIds.includes(id));
-      const removedIds = oldElementIds.filter(id => !newElementIds.includes(id));
+  private _updateConfig(newGroups: GroupConfig[]): void {
+      this._config = { ...(this._config || { type: 'lcars-card' }), groups: newGroups };
       
       this._extractGroupsAndInitState();
       fireEvent(this, 'config-changed', { config: this._config });
   }
 
   private _findElementIndex(elementId: string): number {
-      return this._config?.elements?.findIndex(el => el.id === elementId) ?? -1;
+      // Find element across all groups
+      let globalIndex = 0;
+      for (const group of this._config?.groups || []) {
+        for (const element of group.elements) {
+          const fullId = `${group.group_id}.${element.id}`;
+          if (fullId === elementId) {
+            return globalIndex;
+          }
+          globalIndex++;
+        }
+      }
+      return -1;
+  }
+
+  private _getAllElements(): any[] {
+    const allElements: any[] = [];
+    this._config?.groups?.forEach(group => {
+      group.elements.forEach(element => {
+        allElements.push({
+          ...element,
+          id: `${group.group_id}.${element.id}`,
+          group_id: group.group_id
+        });
+      });
+    });
+    return allElements;
   }
 
   private _toggleGroupCollapse(groupId: string): void { 
@@ -276,34 +297,55 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
        groupInstance.id = newId; 
        this._groupInstances.set(newId, groupInstance); 
        
-       const currentElements = this._config?.elements || [];
-       const newElements = currentElements.map(el => {
+       // Update group references in the config
+       const newGroups = (this._config?.groups || []).map(group => {
+         if (group.group_id === oldId) {
+           return { ...group, group_id: newId };
+         }
+         
+         // Update anchor references
+         const updatedElements = group.elements.map(el => {
            let updatedEl = { ...el };
-           if (updatedEl.id?.startsWith(oldId + '.')) {
-               const baseId = updatedEl.id.substring(oldId.length + 1);
-               updatedEl.id = `${newId}.${baseId}`;
+           if (updatedEl.layout?.anchor?.to?.startsWith(oldId + '.')) {
+               const targetBaseId = updatedEl.layout.anchor.to.substring(oldId.length + 1);
+               updatedEl = {
+                 ...updatedEl,
+                 layout: {
+                   ...updatedEl.layout,
+                   anchor: {
+                     ...updatedEl.layout.anchor,
+                     to: `${newId}.${targetBaseId}`
+                   }
+                 }
+               };
            }
-           
-           if (updatedEl.layout?.anchor?.anchorTo?.startsWith(oldId + '.')) {
-               const targetBaseId = updatedEl.layout.anchor.anchorTo.substring(oldId.length + 1);
-               if (!updatedEl.layout) updatedEl.layout = {};
-               if (!updatedEl.layout.anchor) updatedEl.layout.anchor = { anchorTo: '', anchorPoint: '', targetAnchorPoint: '' };
-               updatedEl.layout.anchor.anchorTo = `${newId}.${targetBaseId}`;
-           }
-           if (updatedEl.layout?.stretch?.stretchTo1?.startsWith(oldId + '.')) {
-               const targetBaseId = updatedEl.layout.stretch.stretchTo1.substring(oldId.length + 1);
-               if (!updatedEl.layout) updatedEl.layout = {};
-               if (!updatedEl.layout.stretch) updatedEl.layout.stretch = { stretchTo1: '', targetStretchAnchorPoint1: '' };
-               updatedEl.layout.stretch.stretchTo1 = `${newId}.${targetBaseId}`;
+           if (updatedEl.layout?.stretch?.target1?.id?.startsWith(oldId + '.')) {
+               const targetBaseId = updatedEl.layout.stretch.target1.id.substring(oldId.length + 1);
+               updatedEl = {
+                 ...updatedEl,
+                 layout: {
+                   ...updatedEl.layout,
+                   stretch: {
+                     ...updatedEl.layout.stretch,
+                     target1: {
+                       ...updatedEl.layout.stretch.target1,
+                       id: `${newId}.${targetBaseId}`
+                     }
+                   }
+                 }
+               };
            }
            return updatedEl;
+       });
+       
+       return { ...group, elements: updatedElements };
        });
 
        this._editingGroup = null;
        this._editingGroupInput = '';
        this._groupIdWarning = '';
        
-       this._updateConfig(newElements);
+       this._updateConfig(newGroups);
    }
   private _cancelEditGroup(): void { 
       this._editingGroup = null;
@@ -312,7 +354,9 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       this.requestUpdate();
   }
   private _requestDeleteGroup(groupId: string): void { 
-      const hasElements = (this._config?.elements || []).some(el => el.id?.startsWith(groupId + '.'));
+      const hasElements = (this._config?.groups || []).some(group => 
+        group.group_id === groupId && group.elements.length > 0
+      );
       if (hasElements) {
           this._deleteWarningGroup = groupId;
           this.requestUpdate();
@@ -325,18 +369,23 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
        const { [groupId]: _removed, ...rest } = this._collapsedGroups;
        this._collapsedGroups = rest;
 
-       const currentElements = this._config?.elements || [];
-       const elementsToRemove = new Set(currentElements.filter(el => el.id?.startsWith(groupId + '.')).map(el => el.id));
-       const elementsToKeep = currentElements.filter(el => 
-           !el.id?.startsWith(groupId + '.') &&
-           !(el.layout?.anchor?.anchorTo && elementsToRemove.has(el.layout.anchor.anchorTo)) &&
-           !(el.layout?.stretch?.stretchTo1 && elementsToRemove.has(el.layout.stretch.stretchTo1))
-       );
+       // Remove the group and clean up any anchors pointing to its elements
+       const newGroups = (this._config?.groups || [])
+         .filter(group => group.group_id !== groupId)
+         .map(group => {
+           const cleanedElements = group.elements.filter(el => {
+             // Remove elements that anchor to elements in the deleted group
+             const anchorTarget = el.layout?.anchor?.to;
+             const stretchTarget = el.layout?.stretch?.target1?.id;
+             return !(anchorTarget?.startsWith(groupId + '.') || stretchTarget?.startsWith(groupId + '.'));
+           });
+           return { ...group, elements: cleanedElements };
+         });
        
        if (this._editingGroup === groupId) this._cancelEditGroup(); 
        this._deleteWarningGroup = null;
 
-       this._updateConfig(elementsToKeep);
+       this._updateConfig(newGroups);
   }
   private _cancelDeleteGroup(): void { 
       this._deleteWarningGroup = null;
@@ -376,9 +425,9 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       }
 
       const existingElementIdsInGroup = new Set(
-          (this._config?.elements || [])
-              .filter(el => el.id?.startsWith(groupId + '.'))
-              .map(el => el.id)
+          (this._config?.groups || [])
+              .filter(g => g.group_id === groupId)
+              .flatMap(g => g.elements.map(el => el.id))
       );
 
       const result = groupInstance.requestAddElement(baseId, existingElementIdsInGroup);
@@ -390,8 +439,8 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       }
 
       if (result.newElementConfig) {
-          const currentElements = this._config?.elements || [];
-          const newElements = [...currentElements, result.newElementConfig];
+          const currentGroups = this._config?.groups || [];
+          const newGroups = [...currentGroups, result.newElementConfig];
           
           const newElementId = result.newElementConfig.id;
           this._collapsedElements = { ...(this._collapsedElements || {}), [newElementId]: false }; 
@@ -405,7 +454,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           this._addElementInput = '';
           this._addElementWarning = '';
           
-          this._updateConfig(newElements);
+          this._updateConfig(newGroups);
       } else {
            console.warn("requestAddElement returned no config and no error");
            this._cancelAddElement(); 
@@ -418,12 +467,15 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       this.requestUpdate();
   }
   private _handleDeleteElement(elementId: string): void {
-      const currentElements = this._config?.elements || [];
-      const newElements = currentElements.filter(el => 
+      const currentGroups = this._config?.groups || [];
+      const newGroups = currentGroups.map(group => {
+        const cleanedElements = group.elements.filter(el => 
            el.id !== elementId && 
-           el.layout?.anchor?.anchorTo !== elementId && 
-           el.layout?.stretch?.stretchTo1 !== elementId
-      );
+           el.layout?.anchor?.to !== elementId && 
+           el.layout?.stretch?.target1?.id !== elementId
+        );
+        return { ...group, elements: cleanedElements };
+      });
 
       const { [elementId]: _r, ...restCol } = this._collapsedElements;
       this._collapsedElements = restCol;
@@ -435,7 +487,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           this._cancelEditElementId();
       }
 
-      this._updateConfig(newElements);
+      this._updateConfig(newGroups);
   }
   private _startEditElementId(elementId: string): void { 
       const elementInstance = this._getElementInstance(elementId); 
@@ -475,13 +527,13 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
 
       const { oldId, newId } = result;
 
-      if (this._config?.elements?.some(el => el.id === newId && el.id !== oldId)) {
+      if (this._config?.groups?.some(g => g.group_id === newId && g.elements.some(el => el.id !== oldId))) {
           this._elementIdWarning = 'ID already exists in this group.';
           this.requestUpdate();
           return;
       }
 
-      const currentElements = this._config?.elements || [];
+      const currentGroups = this._config?.groups || [];
       
       const index = this._findElementIndex(oldId);
       if (index === -1) {
@@ -491,45 +543,53 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           return;
       }
       
-      const newElements = [...currentElements];
+      const newGroups = [...currentGroups];
       
-      const updatedElement = { ...newElements[index], id: newId };
-      newElements[index] = updatedElement;
+      const updatedGroup = { ...newGroups[index], group_id: newId };
+      newGroups[index] = updatedGroup;
       
-      for (let i = 0; i < newElements.length; i++) {
+      for (let i = 0; i < newGroups.length; i++) {
           if (i === index) continue; 
           
-          const el = newElements[i];
+          const group = newGroups[i];
           let needsUpdate = false;
           
-          let updatedLayout = el.layout;
-          
-          if (el.layout?.anchor?.anchorTo === oldId) {
-              if (!needsUpdate) {
-                  updatedLayout = { ...el.layout };
-                  if (updatedLayout && !updatedLayout.anchor) updatedLayout.anchor = { anchorTo: '' };
-                  needsUpdate = true;
+          let updatedElements = group.elements.map(el => {
+              let updatedEl = { ...el };
+              if (el.layout?.anchor?.to === oldId) {
+                  if (!needsUpdate) {
+                      updatedEl = { ...el };
+                      if (updatedEl && !updatedEl.layout.anchor) updatedEl.layout = { anchor: { to: '' } };
+                      needsUpdate = true;
+                  }
+                  if(updatedEl?.layout?.anchor) updatedEl.layout.anchor.to = newId;
               }
-              if(updatedLayout?.anchor) updatedLayout.anchor.anchorTo = newId;
-          }
-          
-          if (el.layout?.stretch?.stretchTo1 === oldId) {
-              if (!needsUpdate) {
-                  updatedLayout = { ...el.layout };
-                  if (updatedLayout && !updatedLayout.stretch) updatedLayout.stretch = { stretchTo1: '', targetStretchAnchorPoint1: '' };
-                  needsUpdate = true;
+              
+              if (el.layout?.stretch?.target1?.id === oldId) {
+                  if (!needsUpdate) {
+                      updatedEl = { ...el };
+                      if (updatedEl && !updatedEl.layout.stretch) updatedEl.layout.stretch = { target1: { id: '' } };
+                      needsUpdate = true;
+                  }
+                  if(updatedEl?.layout?.stretch) updatedEl.layout.stretch.target1.id = newId;
               }
-              if(updatedLayout?.stretch) updatedLayout.stretch.stretchTo1 = newId;
-          }
-          
-          if (needsUpdate) {
-              newElements[i] = { ...el, layout: updatedLayout };
+              
+              if (needsUpdate) {
+                  updatedEl = { ...el, layout: updatedEl.layout };
+              }
+              return updatedEl;
+          });
+
+          if (i === index) {
+              newGroups[i] = { ...group, elements: updatedElements };
+          } else {
+              newGroups[i] = { ...group, elements: updatedElements };
           }
       }
 
       const { [oldId]: oldCollapseVal, ...restCol } = this._collapsedElements;
-      this._collapsedElements = { ...restCol, [newId]: oldCollapseVal ?? false }; 
-      
+      this._collapsedElements = restCol;
+
       const oldPropGroupState = this._collapsedPropertyGroups[oldId] || {};
       const { [oldId]: _rOldProp, ...restPropGroupStates } = this._collapsedPropertyGroups;
       this._collapsedPropertyGroups = { ...restPropGroupStates };
@@ -539,7 +599,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       this._editingElementIdInput = '';
       this._elementIdWarning = '';
 
-      this._updateConfig(newElements);
+      this._updateConfig(newGroups);
   }
   private _cancelEditElementId(): void { 
       this._editingElementId = null;
@@ -550,11 +610,12 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
 
   private _getElementInstance(elementId: string): EditorElement | null {
       const index = this._findElementIndex(elementId);
-      if (index === -1 || !this._config?.elements) {
+      if (index === -1 || !this._config?.groups) {
           console.error(`Element with ID ${elementId} not found in config.`);
           return null;
       }
-      const elementConfig = this._config.elements[index];
+      const group = this._config.groups[index];
+      const elementConfig = group.elements.find(el => el.id === elementId);
       const instance = EditorElement.create(elementConfig);
       if (!instance) {
            console.error(`Could not create instance for element ID ${elementId} with type ${elementConfig?.type}`);
@@ -623,16 +684,16 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           this._onDragEnd(ev);
           return;
       }
-      const elements = [...(this._config?.elements || [])];
-      const draggedIndex = elements.findIndex(el => el.id === this._draggedElementId);
-      const targetIndex = elements.findIndex(el => el.id === targetElementId);
+      const elements = [...(this._config?.groups || [])];
+      const draggedIndex = elements.findIndex(g => g.group_id === draggedGroup);
+      const targetIndex = elements.findIndex(g => g.group_id === targetGroup);
       if (draggedIndex === -1 || targetIndex === -1) {
           this._onDragEnd(ev);
           return;
       }
       
-      const [movedElement] = elements.splice(draggedIndex, 1);
-      elements.splice(targetIndex, 0, movedElement);
+      const [movedGroup] = elements.splice(draggedIndex, 1);
+      elements.splice(targetIndex, 0, movedGroup);
       
       this._draggedElementId = null;
       this._dragOverElementId = null;
@@ -658,7 +719,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           @iron-select=${(ev: CustomEvent) => (this._selectedTabIndex = parseInt(ev.detail.item.getAttribute('data-tab-index'), 10))}
         >
             <paper-tab data-tab-index="0">
-                LCARS Elements (${this._config.elements?.length || 0})
+                LCARS Elements (${this._config.groups?.length || 0})
             </paper-tab>
             <paper-tab data-tab-index="1">
                 Card Config (TBD)
@@ -675,11 +736,11 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   }
 
   private _renderGroupListUsingModules(): TemplateResult {
-    const elements = this._config?.elements || [];
+    const elements = this._config?.groups || [];
     const groupedElements: { [groupId: string]: any[] } = {};
 
     elements.forEach(el => {
-        const gid = el.id?.split('.')[0] || '__ungrouped__';
+        const gid = el.group_id || '__ungrouped__';
         if (!groupedElements[gid]) groupedElements[gid] = [];
         groupedElements[gid].push(el);
     });
@@ -766,7 +827,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   static styles = editorStyles;
 
 private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
-    if (!this._config?.elements) return;
+    if (!this._config?.groups) return;
     ev.stopPropagation();
     const index = this._findElementIndex(elementId);
     if (index === -1) return;
@@ -785,8 +846,8 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
         // Handle dynamic color configurations
         if (property && property.name === 'fill' && isDynamicColorConfig(value)) {
             // Store dynamic color config directly
-            this._updateElementConfigValue(this._config.elements[index], property.configPath, value);
-            this._updateConfig(this._config.elements);
+            this._updateElementConfigValue(this._config.groups[index].elements.find(el => el.id === elementId), property.configPath, value);
+            this._updateConfig(this._config.groups);
             return;
         }
 
@@ -796,8 +857,8 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
             processedValue = this._rgbArrayToHex(value);
         }
 
-        this._updateElementConfigValue(this._config.elements[index], property?.configPath || name, processedValue);
-        this._updateConfig(this._config.elements);
+        this._updateElementConfigValue(this._config.groups[index].elements.find(el => el.id === elementId), property?.configPath || name, processedValue);
+        this._updateConfig(this._config.groups);
         return;
     }
 
@@ -809,17 +870,19 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
             return;
         }
 
-        const newElementsConfig = structuredClone(this._config.elements);
-        const elementToUpdate = newElementsConfig[index];
-        elementToUpdate.type = newType;
+        const newGroupsConfig = structuredClone(this._config.groups);
+        const elementToUpdate = newGroupsConfig[index].elements.find(el => el.id === elementId);
+        if (elementToUpdate) {
+            elementToUpdate.type = newType;
+        }
 
-        this._updateConfig(newElementsConfig);
+        this._updateConfig(newGroupsConfig);
         this.requestUpdate();
         return;
     }
 
-    const currentElementConfig = this._config.elements[index];
-    const elementInstance = EditorElement.create(currentElementConfig);
+    const currentGroup = this._config.groups[index];
+    const elementInstance = EditorElement.create(currentGroup.elements.find(el => el.id === elementId));
     if (!elementInstance) {
         console.error(`Could not get element instance for handler (Element ID: ${elementId})`);
         return;
@@ -827,7 +890,7 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
 
     const cleanedData = elementInstance.processDataUpdate(formData);
 
-    let newElementConfig: any = { id: currentElementConfig.id, type: currentElementConfig.type };
+    let newElementConfig: any = { id: elementId, type: currentGroup.elements.find(el => el.id === elementId)?.type };
 
     const propertiesMap = elementInstance.getPropertiesMap();
 
@@ -861,10 +924,16 @@ private _handleFormValueChanged(ev: CustomEvent, elementId: string): void {
         }
     }
 
-    const updatedElementsArray = [...this._config.elements];
-    updatedElementsArray[index] = newElementConfig;
+    const updatedGroupsArray = [...this._config.groups];
+    const updatedElements = updatedGroupsArray[index].elements.map(el => {
+        if (el.id === elementId) {
+            return newElementConfig;
+        }
+        return el;
+    });
+    updatedGroupsArray[index] = { ...updatedGroupsArray[index], elements: updatedElements };
 
-    this._updateConfig(updatedElementsArray);
+    this._updateConfig(updatedGroupsArray);
     this.requestUpdate();
 }
   

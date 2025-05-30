@@ -1,6 +1,7 @@
 import { LayoutElementProps } from '../layout/engine';
-import { ColorValue, isStatefulColorConfig } from '../types';
-import { animationManager, AnimationContext } from './animation.js';
+import { ColorValue } from '../types';
+import { AnimationContext } from './animation.js';
+import { Color, ColorStateContext } from './color.js';
 
 /**
  * Computed color values for an element after resolution
@@ -24,15 +25,12 @@ export interface ColorResolutionDefaults {
 
 /**
  * Interactive state context for determining hover/active colors
+ * @deprecated Use ColorStateContext from color.ts instead
  */
-export interface InteractiveStateContext {
-  isCurrentlyHovering?: boolean;
-  isCurrentlyActive?: boolean;
-}
+export interface InteractiveStateContext extends ColorStateContext {}
 
 /**
- * Centralized color resolution service that handles entity-state-based colors,
- * interactive states (hover/active), and coordinates with animation transitions
+ * Simplified color resolution service using the unified Color class
  */
 export class ColorResolver {
   /**
@@ -43,7 +41,7 @@ export class ColorResolver {
     elementProps: LayoutElementProps,
     animationContext: AnimationContext,
     colorDefaults: ColorResolutionDefaults = {},
-    interactiveState: InteractiveStateContext = {}
+    interactiveState: ColorStateContext = {}
   ): ComputedElementColors {
     const {
       fallbackFillColor = 'none',
@@ -52,97 +50,26 @@ export class ColorResolver {
       fallbackTextColor = 'currentColor'
     } = colorDefaults;
 
-    // Resolve fill color with animation and interactive state support
-    let computedFillColor = fallbackFillColor;
-    if (elementProps.fill !== undefined) {
-      const resolvedFillValue = this.resolveColorValueWithInteractiveStates(
-        elementId,
-        elementProps.fill,
-        'fill',
-        animationContext,
-        interactiveState
-      );
-      computedFillColor = resolvedFillValue || elementProps.fill.toString();
-    }
+    // Create Color instances for each property
+    const fillColor = elementProps.fill !== undefined 
+      ? Color.withFallback(elementProps.fill, fallbackFillColor)
+      : Color.from(fallbackFillColor);
+      
+    const strokeColor = elementProps.stroke !== undefined
+      ? Color.withFallback(elementProps.stroke, fallbackStrokeColor) 
+      : Color.from(fallbackStrokeColor);
+      
+    const textColor = elementProps.textColor !== undefined
+      ? Color.withFallback(elementProps.textColor, fallbackTextColor)
+      : Color.from(fallbackTextColor);
 
-    // Resolve stroke color with animation and interactive state support
-    let computedStrokeColor = fallbackStrokeColor;
-    if (elementProps.stroke !== undefined) {
-      const resolvedStrokeValue = this.resolveColorValueWithInteractiveStates(
-        elementId,
-        elementProps.stroke,
-        'stroke',
-        animationContext,
-        interactiveState
-      );
-      computedStrokeColor = resolvedStrokeValue || elementProps.stroke.toString();
-    }
-
-    // Resolve text color with interactive state support
-    let computedTextColor = fallbackTextColor;
-    if (elementProps.text_color !== undefined) {
-      const resolvedTextColorValue = this.resolveColorValueWithInteractiveStates(
-        elementId,
-        elementProps.text_color,
-        'fill', // Text color uses fill internally for animation purposes
-        animationContext,
-        interactiveState
-      );
-      computedTextColor = resolvedTextColorValue || elementProps.text_color.toString();
-    }
-
-    // Resolve stroke width
-    const computedStrokeWidth = elementProps.strokeWidth?.toString() ?? fallbackStrokeWidth;
-
+    // Resolve all colors with context
     return {
-      fillColor: computedFillColor,
-      strokeColor: computedStrokeColor,
-      strokeWidth: computedStrokeWidth,
-      textColor: computedTextColor
+      fillColor: fillColor.resolve(elementId, 'fill', animationContext, interactiveState),
+      strokeColor: strokeColor.resolve(elementId, 'stroke', animationContext, interactiveState),
+      strokeWidth: elementProps.strokeWidth?.toString() ?? fallbackStrokeWidth,
+      textColor: textColor.resolve(elementId, 'textColor', animationContext, interactiveState)
     };
-  }
-
-  /**
-   * Resolve a color value considering interactive states (hover/active) and animation
-   */
-  private resolveColorValueWithInteractiveStates(
-    elementId: string,
-    colorConfiguration: ColorValue,
-    animationProperty: 'fill' | 'stroke',
-    animationContext: AnimationContext,
-    interactiveState: InteractiveStateContext
-  ): string | undefined {
-    // Check if this is a stateful color configuration with hover/active states
-    if (isStatefulColorConfig(colorConfiguration)) {
-      // Determine which color to use based on state priority: active > hover > default
-      let selectedColorValue = colorConfiguration.default;
-      
-      if (interactiveState.isCurrentlyActive && colorConfiguration.active !== undefined) {
-        selectedColorValue = colorConfiguration.active;
-      } else if (interactiveState.isCurrentlyHovering && colorConfiguration.hover !== undefined) {
-        selectedColorValue = colorConfiguration.hover;
-      }
-      
-      // If we have a selected color value, resolve it (which may be dynamic or static)
-      if (selectedColorValue !== undefined) {
-        return animationManager.resolveDynamicColorWithAnimation(
-          elementId,
-          selectedColorValue,
-          animationProperty,
-          animationContext
-        );
-      }
-      
-      return undefined;
-    }
-    
-    // For non-stateful colors, use existing resolution logic
-    return animationManager.resolveDynamicColorWithAnimation(
-      elementId,
-      colorConfiguration,
-      animationProperty,
-      animationContext
-    );
   }
 
   /**
@@ -153,7 +80,7 @@ export class ColorResolver {
     elementId: string,
     originalElementProps: LayoutElementProps,
     animationContext: AnimationContext,
-    interactiveState: InteractiveStateContext = {}
+    interactiveState: ColorStateContext = {}
   ): LayoutElementProps {
     const computedColors = this.resolveAllElementColors(elementId, originalElementProps, animationContext, {
       fallbackTextColor: 'white' // Default text color for interactive elements
@@ -170,8 +97,8 @@ export class ColorResolver {
       propsWithResolvedColors.stroke = computedColors.strokeColor;
     }
 
-    if (originalElementProps.text_color !== undefined) {
-      propsWithResolvedColors.text_color = computedColors.textColor;
+    if (originalElementProps.textColor !== undefined) {
+      propsWithResolvedColors.textColor = computedColors.textColor;
     }
 
     return propsWithResolvedColors;
@@ -185,7 +112,7 @@ export class ColorResolver {
     elementId: string,
     elementProps: LayoutElementProps,
     colorDefaults: ColorResolutionDefaults = {},
-    interactiveState: InteractiveStateContext = {}
+    interactiveState: ColorStateContext = {}
   ): ComputedElementColors {
     const basicAnimationContext: AnimationContext = {
       elementId,
@@ -195,6 +122,21 @@ export class ColorResolver {
     };
 
     return this.resolveAllElementColors(elementId, elementProps, basicAnimationContext, colorDefaults, interactiveState);
+  }
+
+  /**
+   * Resolve a single color value using the Color class
+   */
+  resolveColor(
+    colorValue: ColorValue,
+    elementId?: string,
+    animationProperty?: 'fill' | 'stroke' | 'textColor',
+    animationContext?: AnimationContext,
+    stateContext?: ColorStateContext,
+    fallback: string = 'transparent'
+  ): string {
+    const color = Color.withFallback(colorValue, fallback);
+    return color.resolve(elementId, animationProperty, animationContext, stateContext);
   }
 }
 

@@ -1,0 +1,107 @@
+type: custom:lovelace-lcars-card
+card_title: "Context-Aware Dynamic Button Example"
+
+# LCARS-specific configuration
+lcars_config:
+  state_management:
+    state_groups:
+      - group_name: "main_navigation"
+        exclusive: true
+        members:
+          - type: "group"
+            id: "group_a"
+        default_visible: "group_a"
+
+groups:
+  - group_id: "controls"
+    elements:
+      - id: "title_display"
+        type: "rectangle"
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: "Context-Aware Dynamic Button Example"
+          fill: "#000000"
+          fontSize: 16
+          fontWeight: "bold"
+          fontFamily: "Antonio"
+        layout:
+          width: 500
+          height: 40
+      - id: "dynamic_button"
+        type: "rectangle"
+        appearance:
+          fill: "#9966CC"
+        text:
+          content: "SMART BUTTON"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 120
+          height: 45
+          anchor:
+            to: "controls.title_display"
+            element_point: "topLeft"
+            target_point: "bottomLeft"
+        interactions:
+          button:
+            enabled: true
+          visibility_triggers:
+            - trigger_source:
+                element_id_ref: "self"
+                event: "click"
+              conditional_actions:
+                - condition:
+                    state_group: "main_navigation"
+                    current_state: "group_a"
+                  action: "hide"
+                  targets:
+                    - type: "group"
+                      id: "group_a"
+                - condition:
+                    element_hidden: "group_a"
+                  action: "show"
+                  targets:
+                    - type: "group"
+                      id: "group_a"
+                  additional_hide:
+                    - type: "element"
+                      id: "nav.button_b"
+
+  - group_id: "nav"
+    elements:
+      - id: "button_b"
+        type: "rectangle"
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: "BUTTON B"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 100
+          height: 40
+          anchor:
+            to: "controls.dynamic_button"
+            element_point: "topLeft"
+            target_point: "topRight"
+  
+  - group_id: "group_a"
+    elements:
+      - id: "status_panel"
+        type: "rectangle"
+        appearance:
+          fill: "#333333"
+          stroke: "#9966CC"
+          strokeWidth: 1
+        text:
+          content: "Group A is currently visible\nClick smart button to hide"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 250
+          height: 60
+          anchor:
+            to: "controls.dynamic_button"
+            element_point: "topLeft"
+            target_point: "bottomLeft"

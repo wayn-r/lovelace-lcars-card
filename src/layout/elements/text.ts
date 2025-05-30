@@ -1,7 +1,7 @@
 import { LayoutElement } from "./element.js";
 import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant, handleAction } from "custom-card-helpers";
-import { LcarsButtonElementConfig } from "../../lovelace-lcars-card.js";
+import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { getFontMetrics, measureTextBBox, getSvgTextWidth, getTextWidth } from "../../utils/shapes.js";
 
@@ -16,7 +16,7 @@ export class TextElement extends LayoutElement {
   
     /**
      * Calculates the intrinsic size of the text based on its content.
-     * @param container - The SVG container element.
+     * Uses fontmetrics for precise measurement without DOM dependency.
      */
     calculateIntrinsicSize(container: SVGElement): void {
       if (this.props.width && this.props.height) {
@@ -26,46 +26,46 @@ export class TextElement extends LayoutElement {
         return;
       }
       
-      const tempText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      tempText.textContent = this.props.text || '';
-      tempText.setAttribute('font-family', this.props.fontFamily || 'sans-serif');
-      tempText.setAttribute('font-size', `${this.props.fontSize || 16}px`);
-      tempText.setAttribute('font-weight', this.props.fontWeight || 'normal');
-      if (this.props.letterSpacing) {
-        tempText.setAttribute('letter-spacing', this.props.letterSpacing);
-      }
-      if (this.props.textTransform) {
-        tempText.setAttribute('text-transform', this.props.textTransform);
-      }
+      const text = this.props.text || '';
+      const fontFamily = this.props.fontFamily || 'Arial';
+      const fontSize = this.props.fontSize || 16;
+      const fontWeight = this.props.fontWeight || 'normal';
       
-      container.appendChild(tempText);
+      // Use fontmetrics for precise text measurement
+      const metrics = getFontMetrics({
+        fontFamily,
+        fontWeight,
+        fontSize,
+        origin: 'baseline',
+      });
       
-      const bbox = measureTextBBox(tempText);
-      
-      container.removeChild(tempText);
-      
-      if (bbox) {
-        this.intrinsicSize.width = bbox.width;
-        const metrics = getFontMetrics({
-          fontFamily: this.props.fontFamily || 'Arial',
-          fontWeight: this.props.fontWeight || 'normal',
-          fontSize: this.props.fontSize || 16,
-          origin: 'baseline',
-        });
-        if (metrics) {
-          const normalizedHeight = (metrics.bottom - metrics.top) * (this.props.fontSize || 16);
-          this.intrinsicSize.height = normalizedHeight;
-          (this as any)._fontMetrics = metrics;
-        } else {
-          this.intrinsicSize.height = bbox.height;
-        }
-      } else {
-        this.intrinsicSize.width = getSvgTextWidth(this.props.text || '', 
-          `${this.props.fontWeight || ''} ${this.props.fontSize || 16}px ${this.props.fontFamily || 'Arial'}`,
+      if (metrics) {
+        // Calculate width using fontmetrics and text content
+        this.intrinsicSize.width = getSvgTextWidth(
+          text, 
+          `${fontWeight} ${fontSize}px ${fontFamily}`,
           this.props.letterSpacing || undefined,
           this.props.textTransform || undefined
         );
-        this.intrinsicSize.height = this.props.fontSize ? parseInt(this.props.fontSize.toString()) * 1.2 : 20;
+        
+        // Calculate height using fontmetrics (more accurate than DOM bbox)
+        const normalizedHeight = (metrics.bottom - metrics.top) * fontSize;
+        this.intrinsicSize.height = normalizedHeight;
+        
+        // Cache metrics for consistent rendering
+        (this as any)._fontMetrics = metrics;
+        this._cachedMetrics = metrics;
+      } else {
+        // Fallback calculation if fontmetrics fails
+        console.warn(`FontMetrics failed for ${fontFamily}, using fallback calculation`);
+        
+        this.intrinsicSize.width = getSvgTextWidth(
+          text,
+          `${fontWeight} ${fontSize}px ${fontFamily}`,
+          this.props.letterSpacing || undefined,
+          this.props.textTransform || undefined
+        );
+        this.intrinsicSize.height = fontSize * 1.2; // Standard line height multiplier
       }
       
       this.intrinsicSize.calculated = true;

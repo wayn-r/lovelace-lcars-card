@@ -307,13 +307,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EditorElement, PropertyGroup } from '../element'; // Mocked base class and real enum
 
 import {
-    TextContent, FontSize, FontFamily, FontWeight, LetterSpacing, TextAnchor, DominantBaseline, TextTransform, // Text specific
+    TextContent, TextColor, FontSize, FontFamily, FontWeight, LetterSpacing, TextAnchor, DominantBaseline, TextTransform, CutoutText, // Text specific
     Fill, // Appearance for Text
     Width, Height, // Dimensions for Text
-    ButtonEnabled, ButtonText, ButtonCutoutText, ButtonTextColor,
-    ButtonFontFamily, ButtonFontSize, ButtonFontWeight, ButtonLetterSpacing,
-    ButtonTextTransform, ButtonTextAnchor, ButtonDominantBaseline, ButtonHoverFill,
-    ButtonActiveFill, ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
+    ButtonEnabled, ButtonHoverFill, ButtonActiveFill, ButtonHoverTransform, ButtonActiveTransform, ButtonActionType,
     OffsetX, OffsetY, Type,
     AnchorTo, AnchorPoint, TargetAnchorPoint // Anchor properties are used by Text
 } from '../../properties/properties';
@@ -389,8 +386,8 @@ describe('Text EditorElement', () => {
             expect(groups[PropertyGroup.TEXT]).toBeDefined();
             const textProps = groups[PropertyGroup.TEXT]?.properties;
             const expectedTextProps = [
-                TextContent, FontSize, FontFamily, FontWeight, LetterSpacing,
-                TextAnchor, DominantBaseline, TextTransform
+                TextContent, TextColor, FontSize, FontFamily, FontWeight, LetterSpacing,
+                TextAnchor, DominantBaseline, TextTransform, CutoutText
             ];
             expect(textProps).toEqual(expectedTextProps);
         });
@@ -399,10 +396,7 @@ describe('Text EditorElement', () => {
             expect(groups[PropertyGroup.BUTTON]).toBeDefined();
             const buttonProps = groups[PropertyGroup.BUTTON]?.properties;
             const expectedButtonProps = [
-                ButtonEnabled, ButtonText, ButtonCutoutText, ButtonTextColor,
-                ButtonFontFamily, ButtonFontSize, ButtonFontWeight,
-                ButtonLetterSpacing, ButtonTextTransform, ButtonTextAnchor,
-                ButtonDominantBaseline, ButtonHoverFill, ButtonActiveFill,
+                ButtonEnabled, ButtonHoverFill, ButtonActiveFill,
                 ButtonHoverTransform, ButtonActiveTransform, ButtonActionType
             ];
             expect(buttonProps).toEqual(expectedButtonProps);
@@ -464,10 +458,7 @@ describe('Text EditorElement', () => {
             const schema = textEditorElement.getSchema();
             
             const expectedButtonPropInstances = [
-                new ButtonEnabled(), new ButtonText(), new ButtonCutoutText(), new ButtonTextColor(),
-                new ButtonFontFamily(), new ButtonFontSize(), new ButtonFontWeight(),
-                new ButtonLetterSpacing(), new ButtonTextTransform(), new ButtonTextAnchor(),
-                new ButtonDominantBaseline(), new ButtonHoverFill(), new ButtonActiveFill(),
+                new ButtonEnabled(), new ButtonHoverFill(), new ButtonActiveFill(),
                 new ButtonHoverTransform(), new ButtonActiveTransform(), new ButtonActionType()
             ];
             expectedButtonPropInstances.forEach(instance => {
@@ -483,8 +474,8 @@ describe('Text EditorElement', () => {
         it('should include text-specific properties', () => {
             const schema = textEditorElement.getSchema();
             const expectedTextPropInstances = [
-                new TextContent(), new FontSize(), new FontFamily(), new FontWeight(), 
-                new LetterSpacing(), new TextAnchor(), new DominantBaseline(), new TextTransform()
+                new TextContent(), new TextColor(), new FontSize(), new FontFamily(), 
+                new FontWeight(), new LetterSpacing(), new TextAnchor(), new DominantBaseline(), new TextTransform()
             ];
             expectedTextPropInstances.forEach(instance => {
                 expect(schema.find(s => s.name === instance.name)).toBeDefined();

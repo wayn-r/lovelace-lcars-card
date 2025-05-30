@@ -282,13 +282,13 @@ describe('ElbowElement', () => {
 
       describe('Custom Text Position Calculation', () => {
         const testCases = [
-          // elbow_text_position: 'top' (default)
+          // elbowTextPosition: 'top' (default)
           { elbowTextPos: 'top', orientation: 'top-left', expectedX: layoutX + propsElbowWidth / 2, expectedY: layoutY + propsArmHeight / 2 },
           { elbowTextPos: 'top', orientation: 'top-right', expectedX: layoutX + propsElbowWidth / 2, expectedY: layoutY + propsArmHeight / 2 },
           { elbowTextPos: 'top', orientation: 'bottom-left', expectedX: layoutX + propsElbowWidth / 2, expectedY: layoutY + propsArmHeight / 2 },
           { elbowTextPos: 'top', orientation: 'bottom-right', expectedX: layoutX + propsElbowWidth / 2, expectedY: layoutY + propsArmHeight / 2 },
 
-          // elbow_text_position: 'side'
+          // elbowTextPosition: 'side'
           { elbowTextPos: 'side', orientation: 'top-left',
             expectedX: layoutX + propsBodyWidth / 2,
             expectedY: layoutY + propsArmHeight + (layoutHeight - propsArmHeight) / 2 },
@@ -304,9 +304,9 @@ describe('ElbowElement', () => {
         ];
 
         testCases.forEach(({ elbowTextPos, orientation, expectedX, expectedY }) => {
-          it(`should calculate text position correctly for elbow_text_position: ${elbowTextPos}, orientation: ${orientation}`, () => {
+          it(`should calculate text position correctly for elbowTextPosition: ${elbowTextPos}, orientation: ${orientation}`, () => {
             elbowElement.props.button.text = "Test Text";
-            elbowElement.props.elbow_text_position = elbowTextPos;
+            elbowElement.props.elbowTextPosition = elbowTextPos;
             elbowElement.props.orientation = orientation as any;
             elbowElement.render();
 

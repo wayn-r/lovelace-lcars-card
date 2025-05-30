@@ -2,8 +2,8 @@ import { LayoutElementProps, LayoutState, IntrinsicSize, LayoutConfigOptions } f
 import { HomeAssistant } from "custom-card-helpers";
 import { gsap } from "gsap";
 import { generateRectanglePath, generateEndcapPath, generateElbowPath, generateChiselEndcapPath, getTextWidth, measureTextBBox, getFontMetrics } from '../../utils/shapes.js';
-import { SVGTemplateResult } from 'lit';
-import { LcarsButtonElementConfig } from '../../lovelace-lcars-card.js';
+import { SVGTemplateResult, html, svg } from 'lit';
+import { LcarsButtonElementConfig } from '../../types.js';
 import { StretchContext } from '../engine.js';
 import { Button } from './button.js';
 import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../../types';
@@ -677,5 +677,126 @@ export abstract class LayoutElement {
         if (this.button) {
             this.button.updateHass(hass);
         }
+    }
+
+    /**
+     * Checks if the element has non-button text to render
+     */
+    protected _hasNonButtonText(): boolean {
+        const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
+        const isButton = Boolean(buttonConfig?.enabled);
+        return !isButton && Boolean(this.props.text && this.props.text.trim() !== '');
+    }
+
+    /**
+     * Checks if the element has button text to render
+     */
+    protected _hasButtonText(): boolean {
+        const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
+        const isButton = Boolean(buttonConfig?.enabled);
+        
+        if (!isButton) {
+            return false;
+        }
+        
+        // Check for text in both old and new property locations for backward compatibility
+        // Old location: this.props.button.text
+        // New location: this.props.text
+        const buttonText = buttonConfig?.text;
+        const mainText = this.props.text;
+        
+        return Boolean(
+            (buttonText && buttonText.trim() !== '') || 
+            (mainText && mainText.trim() !== '')
+        );
+    }
+
+    /**
+     * Checks if button text should be rendered as cutout
+     */
+    protected _isCutoutText(): boolean {
+        const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
+        const isButton = Boolean(buttonConfig?.enabled);
+        
+        if (!isButton || !this._hasButtonText()) {
+            return false;
+        }
+        
+        // Check for cutout setting in both old and new property locations for backward compatibility
+        // Old location: this.props.button.cutout_text
+        // New location: this.props.cutoutText
+        const buttonCutout = buttonConfig?.cutout_text;
+        const mainCutout = this.props.cutoutText;
+        
+        return Boolean(buttonCutout || mainCutout);
+    }
+
+    /**
+     * Renders text for non-button elements with standard positioning
+     * @param x - X position for text
+     * @param y - Y position for text  
+     * @param colors - Resolved colors for the element
+     * @returns SVG text element or null if no text
+     */
+    protected _renderNonButtonText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
+        if (!this._hasNonButtonText()) return null;
+
+        return svg`
+          <text
+            x=${x}
+            y=${y}
+            fill=${colors.textColor}
+            font-family=${this.props.fontFamily || 'sans-serif'}
+            font-size=${`${this.props.fontSize || 16}px`}
+            font-weight=${this.props.fontWeight || 'normal'}
+            letter-spacing=${this.props.letterSpacing || 'normal'}
+            text-anchor=${this.props.textAnchor || 'middle'}
+            dominant-baseline=${this.props.dominantBaseline || 'middle'}
+            style="pointer-events: none; text-transform: ${this.props.textTransform || 'none'};"
+          >
+            ${this.props.text}
+          </text>
+        `;
+    }
+
+    /**
+     * Renders the element with optional text wrapping
+     * @param pathElement - The main path/shape element
+     * @param textElement - Optional text element (null if no text)
+     * @returns SVG template result with proper grouping
+     */
+    protected _renderWithOptionalText(pathElement: SVGTemplateResult, textElement: SVGTemplateResult | null): SVGTemplateResult {
+        if (textElement) {
+            return svg`
+              <g>
+                ${pathElement}
+                ${textElement}
+              </g>
+            `;
+        } else {
+            return pathElement;
+        }
+    }
+
+    /**
+     * Gets the default text position for standard elements (center of element)
+     * Can be overridden by specific elements that need custom text positioning
+     * @returns Object with x and y coordinates for text positioning
+     */
+    protected _getDefaultTextPosition(): { x: number, y: number } {
+        const { x, y, width, height } = this.layout;
+        return {
+            x: x + width / 2,
+            y: y + height / 2
+        };
+    }
+
+    /**
+     * Gets the text position for the element, allowing custom positioning logic
+     * This method can be overridden by specific elements like Elbow
+     * @returns Object with x and y coordinates for text positioning
+     */
+    protected _getTextPosition(): { x: number, y: number } {
+        return this._getDefaultTextPosition();
     }
 } 

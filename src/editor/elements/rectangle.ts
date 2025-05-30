@@ -4,21 +4,6 @@ import {
     Height,
     Fill,
     ButtonEnabled,
-    ButtonCutoutText,
-    ButtonTextColor,
-    ButtonFontFamily,
-    ButtonFontSize,
-    ButtonFontWeight,
-    ButtonLetterSpacing,
-    ButtonTextTransform,
-    ButtonTextAnchor,
-    ButtonDominantBaseline,
-    ButtonHoverFill,
-    ButtonActiveFill,
-    ButtonHoverTransform,
-    ButtonActiveTransform,
-    ButtonActionType,
-    ButtonText,
     OffsetX,
     OffsetY,
     ButtonActionService,
@@ -26,7 +11,22 @@ import {
     ButtonActionNavigationPath,
     ButtonActionUrlPath,
     ButtonActionEntity,
-    ButtonActionConfirmation
+    ButtonActionConfirmation,
+    ButtonHoverFill,
+    ButtonActiveFill,
+    ButtonHoverTransform,
+    ButtonActiveTransform,
+    ButtonActionType,
+    TextContent,
+    TextColor,
+    FontFamily,
+    FontSize,
+    FontWeight,
+    LetterSpacing,
+    TextTransform,
+    TextAnchor,
+    DominantBaseline,
+    CutoutText
 } from '../properties/properties';
 
 export class Rectangle extends EditorElement {
@@ -41,16 +41,6 @@ export class Rectangle extends EditorElement {
             [PropertyGroup.BUTTON]: {
                 properties: [
                     ButtonEnabled, 
-                    ButtonText, 
-                    ButtonCutoutText, 
-                    ButtonTextColor,
-                    ButtonFontFamily, 
-                    ButtonFontSize, 
-                    ButtonFontWeight,
-                    ButtonLetterSpacing,
-                    ButtonTextTransform,
-                    ButtonTextAnchor,
-                    ButtonDominantBaseline,
                     ButtonHoverFill,
                     ButtonActiveFill,
                     ButtonHoverTransform,
@@ -69,6 +59,20 @@ export class Rectangle extends EditorElement {
             },
             [PropertyGroup.APPEARANCE]: {
                 properties: [Fill]
+            },
+            [PropertyGroup.TEXT]: {
+                properties: [
+                    TextContent,
+                    TextColor,
+                    FontFamily,
+                    FontSize,
+                    FontWeight,
+                    LetterSpacing,
+                    TextTransform,
+                    TextAnchor,
+                    DominantBaseline,
+                    CutoutText
+                ]
             },
             [PropertyGroup.POSITIONING]: {
                 properties: [OffsetX, OffsetY]

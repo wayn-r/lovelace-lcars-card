@@ -19,12 +19,11 @@ import {
     Orientation, BodyWidth, ArmHeight,
     Type,
     Direction,
-    ButtonEnabled, ButtonText, ButtonCutoutText, ButtonTextColor,
-    ButtonFontFamily, ButtonFontSize, ButtonFontWeight, ButtonLetterSpacing,
-    ButtonTextTransform, ButtonTextAnchor, ButtonDominantBaseline, ButtonHoverFill,
+    ButtonEnabled, ButtonHoverFill,
     ButtonActiveFill, ButtonHoverTransform, ButtonActiveTransform, ElbowTextPosition,
     ButtonActionType, ButtonActionService, ButtonActionServiceData,
-    ButtonActionNavigationPath, ButtonActionUrlPath, ButtonActionEntity, ButtonActionConfirmation
+    ButtonActionNavigationPath, ButtonActionUrlPath, ButtonActionEntity, ButtonActionConfirmation,
+    TextColor, CutoutText
 } from '../properties';
 
 // Helper for context
@@ -424,73 +423,6 @@ describe('ButtonEnabled Property', () => {
     });
 });
 
-describe('ButtonText Property', () => {
-    const prop = new ButtonText();
-    testCommonProperties(prop, 'button.text', 'Button Text', 'button.text', PropertyGroup.BUTTON, Layout.HALF);
-    it('should return correct schema', () => {
-        expect(prop.getSchema()).toEqual({ name: 'button.text', label: 'Button Text', selector: { text: {} } });
-    });
-});
-
-describe('ButtonCutoutText Property', () => {
-    const prop = new ButtonCutoutText();
-    testCommonProperties(prop, 'button.cutout_text', 'Cutout Text', 'button.cutout_text', PropertyGroup.BUTTON, Layout.HALF);
-    it('should return correct schema for boolean selector', () => {
-        expect(prop.getSchema()).toEqual({ name: 'button.cutout_text', label: 'Cutout Text', selector: { boolean: {} }, default: false });
-    });
-});
-
-describe('ButtonTextColor Property', () => {
-    const prop = new ButtonTextColor();
-    testCommonProperties(prop, 'button.text_color', 'Button Text Color', 'button.text_color', PropertyGroup.BUTTON, Layout.HALF);
-    it('should return correct schema for color_rgb selector', () => {
-        expect(prop.getSchema()).toEqual({ name: 'button.text_color', label: 'Button Text Color', selector: { color_rgb: {} } });
-    });
-    it('should use Fill.prototype.formatValueForForm', () => {
-        expect(prop.formatValueForForm).toBe(Fill.prototype.formatValueForForm);
-    });
-});
-
-// ... (Similar structure for all Button* styling properties, checking common props and schema) ...
-// For brevity, let's pick a few representative ones that reuse other schemas
-
-describe('ButtonFontWeight Property', () => {
-    const prop = new ButtonFontWeight();
-    testCommonProperties(prop, 'button.font_weight', 'Button Font Weight', 'button.font_weight', PropertyGroup.BUTTON, Layout.HALF);
-    it('should return correct schema with font weight options', () => {
-        expect(prop.getSchema()).toEqual({
-            name: 'button.font_weight',
-            label: 'Button Font Weight',
-            selector: {
-              select: {
-                options: [
-                  { value: '', label: '' },
-                  { value: 'normal', label: 'Normal' },
-                  { value: 'bold', label: 'Bold' },
-                  { value: 'bolder', label: 'Bolder' },
-                  { value: 'lighter', label: 'Lighter' },
-                  { value: '100', label: '100' }, { value: '200', label: '200' }, { value: '300', label: '300' },
-                  { value: '400', label: '400' }, { value: '500', label: '500' }, { value: '600', label: '600' },
-                  { value: '700', label: '700' }, { value: '800', label: '800' }, { value: '900', label: '900' },
-                ],
-              },
-            }
-        });
-    });
-});
-
-describe('ButtonTextTransform Property', () => {
-    const prop = new ButtonTextTransform();
-    testCommonProperties(prop, 'button.text_transform', 'Button Text Transform', 'button.text_transform', PropertyGroup.BUTTON, Layout.HALF);
-    it('should return correct schema for text selector', () => {
-        expect(prop.getSchema()).toEqual({ 
-            name: 'button.text_transform', 
-            label: 'Button Text Transform', 
-            selector: { text: {} } 
-        });
-    });
-});
-
 describe('ButtonHoverFill Property', () => {
     const prop = new ButtonHoverFill();
     testCommonProperties(prop, 'button.hover_fill', 'Hover Fill Color', 'button.hover_fill', PropertyGroup.BUTTON, Layout.HALF);
@@ -512,15 +444,17 @@ describe('ButtonHoverTransform Property', () => {
 
 describe('ElbowTextPosition Property', () => {
     const prop = new ElbowTextPosition();
-    testCommonProperties(prop, 'elbow_text_position', 'Text Position', 'props.elbow_text_position', PropertyGroup.BUTTON, Layout.HALF);
+    testCommonProperties(prop, 'elbowTextPosition', 'Text Position', 'props.elbow_text_position', PropertyGroup.TEXT, Layout.HALF);
     it('should return correct schema with select options', () => {
-        const schema = prop.getSchema();
-        expect(schema.name).toBe('elbow_text_position');
-        expect(schema.selector.select.options).toEqual([
-            { value: 'top', label: 'Top (Horizontal Section)' },
-            { value: 'side', label: 'Side (Vertical Section)' }
-        ]);
-        expect(schema.default).toBe('top');
+        expect(prop.getSchema()).toEqual({
+            name: 'elbowTextPosition',
+            label: 'Text Position', 
+            selector: { select: { options: [
+                { value: 'top', label: 'Top (Horizontal Section)' },
+                { value: 'side', label: 'Side (Vertical Section)' }
+            ], mode: 'dropdown' }},
+            default: 'top'
+        });
     });
 });
 
@@ -583,79 +517,6 @@ describe('ButtonActionConfirmation Property', () => {
     testCommonProperties(prop, 'button.action_config.confirmation', 'Require Confirmation', 'button.action_config.confirmation', PropertyGroup.BUTTON, Layout.HALF);
     it('should return correct schema for boolean selector', () => {
         expect(prop.getSchema()).toEqual({ name: 'button.action_config.confirmation', label: 'Require Confirmation', selector: { boolean: {} } });
-    });
-});
-
-// Properties that have slightly different definitions
-// (ButtonFontFamily, ButtonFontSize, ButtonLetterSpacing, ButtonTextAnchor, ButtonDominantBaseline, ButtonActiveTransform)
-// will be similar to ButtonHoverTransform if they are simple text selectors, or like ButtonFontWeight if they reuse a base schema.
-
-describe('ButtonFontFamily Property', () => {
-    const prop = new ButtonFontFamily();
-    testCommonProperties(prop, 'button.font_family', 'Button Font Family', 'button.font_family', PropertyGroup.BUTTON, Layout.HALF);
-    it('should return correct schema for text selector', () => {
-        expect(prop.getSchema()).toEqual({ name: 'button.font_family', label: 'Button Font Family', selector: { text: {} } });
-    });
-});
-
-describe('ButtonFontSize Property', () => {
-    const prop = new ButtonFontSize();
-    testCommonProperties(prop, 'button.font_size', 'Button Font Size (px)', 'button.font_size', PropertyGroup.BUTTON, Layout.HALF);
-    it('should return correct schema for number selector', () => {
-        expect(prop.getSchema()).toEqual({ name: 'button.font_size', label: 'Button Font Size (px)', selector: { number: { mode: 'box', step: 1, min: 1 } } });
-    });
-});
-
-describe('ButtonLetterSpacing Property', () => {
-    const prop = new ButtonLetterSpacing();
-    testCommonProperties(prop, 'button.letter_spacing', 'Button Letter Spacing', 'button.letter_spacing', PropertyGroup.BUTTON, Layout.HALF);
-    it('should return correct schema for text selector', () => { // In properties.ts, this is {text: {}}
-        expect(prop.getSchema()).toEqual({ name: 'button.letter_spacing', label: 'Button Letter Spacing', selector: { text: {} } });
-    });
-});
-
-describe('ButtonTextAnchor Property', () => {
-    const prop = new ButtonTextAnchor();
-    testCommonProperties(prop, 'button.text_anchor', 'Button Text Anchor', 'button.text_anchor', PropertyGroup.BUTTON, Layout.HALF);
-    it('should return correct schema with text anchor options', () => {
-        expect(prop.getSchema()).toEqual({
-            name: 'button.text_anchor',
-            label: 'Button Text Anchor',
-            selector: {
-              select: {
-                options: [
-                  { value: '', label: '' },
-                  { value: 'start', label: 'Start' },
-                  { value: 'middle', label: 'Middle' },
-                  { value: 'end', label: 'End' },
-                ],
-                mode: 'dropdown'
-              },
-            }
-        });
-    });
-});
-
-describe('ButtonDominantBaseline Property', () => {
-    const prop = new ButtonDominantBaseline();
-    testCommonProperties(prop, 'button.dominant_baseline', 'Button Dominant Baseline', 'button.dominant_baseline', PropertyGroup.BUTTON, Layout.HALF);
-    it('should return correct schema with dominant baseline options', () => {
-        expect(prop.getSchema()).toEqual({
-            name: 'button.dominant_baseline',
-            label: 'Button Dominant Baseline',
-            selector: {
-              select: {
-                options: [
-                  { value: '', label: '' },
-                  { value: 'auto', label: 'Auto' },
-                  { value: 'middle', label: 'Middle' },
-                  { value: 'central', label: 'Central' },
-                  { value: 'hanging', label: 'Hanging' },
-                ],
-                mode: 'dropdown'
-              },
-            }
-        });
     });
 });
 

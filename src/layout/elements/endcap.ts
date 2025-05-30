@@ -1,7 +1,7 @@
 import { LayoutElement } from "./element.js";
 import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant } from "custom-card-helpers";
-import { LcarsButtonElementConfig } from "../../lovelace-lcars-card.js";
+import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { generateEndcapPath } from "../../utils/shapes.js";
 
@@ -70,8 +70,6 @@ export class EndcapElement extends LayoutElement {
       
       const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
       const isButton = Boolean(buttonConfig?.enabled);
-      const hasText = isButton && Boolean(buttonConfig?.text);
-      const isCutout = hasText && Boolean(buttonConfig?.cutout_text);
       
       if (isButton && this.button) {
         // Let the button handle its own color resolution with current state
@@ -83,8 +81,8 @@ export class EndcapElement extends LayoutElement {
           width,
           height,
           {
-            hasText,
-            isCutout,
+            hasText: this._hasButtonText(),
+            isCutout: this._isCutoutText(),
             rx: 0
           }
         );
@@ -92,7 +90,8 @@ export class EndcapElement extends LayoutElement {
         // Use centralized color resolution for non-button elements
         const colors = this._resolveElementColors();
         
-        return svg`
+        // Create the path element
+        const pathElement = svg`
           <path
             id=${this.id}
             d=${pathData}
@@ -101,6 +100,13 @@ export class EndcapElement extends LayoutElement {
             stroke-width=${colors.strokeWidth}
           />
         `;
+        
+        // Get text position and render text if present
+        const textPosition = this._getTextPosition();
+        const textElement = this._renderNonButtonText(textPosition.x, textPosition.y, colors);
+        
+        // Return element with optional text wrapping
+        return this._renderWithOptionalText(pathElement, textElement);
       }
     }
   }

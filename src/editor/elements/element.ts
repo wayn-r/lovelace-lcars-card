@@ -4,7 +4,9 @@ import {
     StretchTarget, StretchDirection, StretchPadding,
     ButtonEnabled, 
     PropertySchemaContext, HaFormSchema, LcarsPropertyBase,
-    PropertyGroup, Layout
+    PropertyGroup, Layout,
+    TextContent, TextColor, FontFamily, FontSize, FontWeight,
+    LetterSpacing, TextTransform, TextAnchor, DominantBaseline, CutoutText
 } from '../properties/properties';
 import { LcarsGroup } from '../group';
 
@@ -132,41 +134,71 @@ export abstract class EditorElement {
         // Get property groups as defined by the element
         const groups = this.getPropertyGroups();
         
+        // Check if buttons are enabled to determine if we need TEXT properties
+        const buttonEnabled = Boolean(this.config.button?.enabled);
+        
         // Add properties from each group
         for (const [groupKey, groupDef] of Object.entries(groups)) {
-            const propertyGroup = groupKey as PropertyGroup;
-
-            if (propertyGroup === PropertyGroup.ANCHOR) {
+            const group = groupKey as PropertyGroup;
+            
+            if (groupDef === null) {
+                // Explicitly disabled group, skip it
+                continue;
+            }
+            
+            if (groupDef === undefined) {
+                // Group not defined by element, skip
+                continue;
+            }
+            
+            // Handle TEXT group: include if group has properties OR if buttons are enabled
+            if (group === PropertyGroup.TEXT) {
+                if (groupDef.properties && groupDef.properties.length > 0) {
+                    // Element defines specific text properties - always include them
+                    allProperties.push(...groupDef.properties);
+                } else if (buttonEnabled) {
+                    // No element-defined text properties, but buttons are enabled - add fallback text properties
+                    allProperties.push(
+                        TextContent, TextColor, FontFamily, FontSize, FontWeight,
+                        LetterSpacing, TextTransform, TextAnchor, DominantBaseline, CutoutText
+                    );
+                }
+                continue;
+            }
+            
+            // Handle STRETCH group properties dynamically
+            if (group === PropertyGroup.STRETCH) {
+                allProperties.push(...this.getStretchProperties());
+                continue;
+            }
+            
+            // Handle BUTTON group with conditional properties
+            if (group === PropertyGroup.BUTTON) {
+                allProperties.push(...this.getButtonProperties(groupDef));
+                continue;
+            }
+            
+            // Handle ANCHOR group (base class adds anchor properties automatically if enabled)
+            if (group === PropertyGroup.ANCHOR) {
                 if (groupDef !== null) {
                     allProperties.push(AnchorTo, AnchorPoint, TargetAnchorPoint);
                 }
                 continue;
             }
-            if (propertyGroup === PropertyGroup.STRETCH) {
-                if (groupDef === null || groupDef) {
-                    allProperties.push(...this.getStretchProperties());
-                }
-                continue;
-            }
-            // Handle BUTTON group
-            if (propertyGroup === PropertyGroup.BUTTON) {
-                allProperties.push(...this.getButtonProperties(groupDef));
-                continue;
-            }
             
-            // Handle all other groups - only include if defined with properties
-            if (groupDef && groupDef.properties.length > 0) {
-                // Check custom isEnabled condition if provided
+            // For all other groups, add properties if they exist
+            if (groupDef.properties) {
+                // Check if group has an isEnabled condition
                 if (groupDef.isEnabled && !groupDef.isEnabled(this.config)) {
-                    continue;
+                    continue; // Skip disabled group
                 }
                 
+                // Add all properties in this group
                 allProperties.push(...groupDef.properties);
             }
         }
         
-        // Ensure uniqueness
-        return Array.from(new Set(allProperties));
+        return allProperties;
     }
 
     getSchema(context?: PropertySchemaContext): HaFormSchema[] {

@@ -1,0 +1,87 @@
+type: custom:lovelace-lcars-card
+card_title: "Advanced Layout and Positioning Example"
+groups:
+  - group_id: "layout_examples"
+    elements:
+      - id: "title_display"
+        type: "rectangle"
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: "Advanced Layout and Positioning Example"
+          fill: "#000000"
+          fontSize: 16
+          fontWeight: "bold"
+          fontFamily: "Antonio"
+        layout:
+          width: 450
+          height: 40
+      # Basic positioning with percentages
+      - id: "percentage_element"
+        type: "rectangle"
+        appearance:
+          fill: "#CC6600"
+        text:
+          content: "PERCENTAGE"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: "25%"
+          height: "10%"
+          offsetX: "5%"
+          offsetY: "5%"
+          anchor:
+            to: "layout_examples.title_display"
+            element_point: "topLeft"
+            target_point: "bottomLeft"
+      
+      # Anchoring to container
+      - id: "container_anchor"
+        type: "rectangle"
+        appearance:
+          fill: "#009966"
+        text:
+          content: "CONTAINER ANCHOR"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 150
+          height: 30
+          anchor:
+            to: "container"
+            element_point: "topRight"
+            target_point: "topRight"
+      
+      # Anchoring to another element
+      - id: "element_anchor"
+        type: "text"
+        text:
+          content: "STATUS: NOMINAL"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          anchor:
+            to: "layout_examples.percentage_element"
+            element_point: "centerLeft"
+            target_point: "centerRight"
+      
+      # Stretching between elements
+      - id: "stretch_bar"
+        type: "rectangle"
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: "STRETCH BAR"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          height: 20
+          stretch:
+            target1:
+              id: "layout_examples.percentage_element"
+              edge: "right"
+              padding: 10
+            target2:
+              id: "layout_examples.container_anchor"
+              edge: "left"
+              padding: 10
