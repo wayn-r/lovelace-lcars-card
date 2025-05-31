@@ -6,7 +6,8 @@ import {
   LcarsCardConfig, 
   GroupConfig, 
   ElementConfig,
-  StateManagementConfig
+  StateManagementConfig,
+  VisibilityTriggerConfig // Added for visibility interactions
 } from './types.js';
 import gsap from 'gsap';
 
@@ -39,6 +40,8 @@ export class LcarsCard extends LitElement {
   
   private _layoutEngine: LayoutEngine = new LayoutEngine();
   private _resizeObserver?: ResizeObserver;
+  private _elementsToRevertOnClickOutside: Map<string, VisibilityTriggerConfig> = new Map(); // Added for click-outside handling
+  private _hideTimeouts: Map<string, number> = new Map(); // For hover hide delays
   private _containerRect?: DOMRect;
   private _lastConfig?: LcarsCardConfig;
   
@@ -98,6 +101,8 @@ export class LcarsCard extends LitElement {
     this._resizeObserver = new ResizeObserver((entries) => {
       this._handleResize(entries);
     });
+    // Add global click listener for click-outside handling
+    document.addEventListener('click', this._handleGlobalClick);
   }
   
   public firstUpdated() {
@@ -149,6 +154,8 @@ export class LcarsCard extends LitElement {
 
   disconnectedCallback(): void {
     this._resizeObserver?.disconnect();
+    // Remove global click listener
+    document.removeEventListener('click', this._handleGlobalClick);
     
     // Clean up utility classes
     this._dynamicColorManager.cleanup();
@@ -159,6 +166,10 @@ export class LcarsCard extends LitElement {
         animationManager.cleanupElementAnimationTracking(element.id);
       }
     }
+
+    // Clear any active timeouts for hover effects
+    this._hideTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+    this._hideTimeouts.clear();
     
     super.disconnectedCallback();
   }
@@ -296,6 +307,8 @@ export class LcarsCard extends LitElement {
       
       // Clear previous layout
       this._layoutEngine.clearLayout();
+      // Clear visibility state map as elements are being recalculated
+      this._elementsToRevertOnClickOutside.clear();
       
       // Parse config and add elements to layout engine
       const getShadowElement = (id: string): Element | null => {
@@ -308,6 +321,62 @@ export class LcarsCard extends LitElement {
       
       groups.forEach((group: Group) => { 
         this._layoutEngine.addGroup(group); 
+      });
+
+      // Attach event listeners for visibility triggers
+      // This must happen AFTER elements are parsed and in the layoutEngine
+      this._layoutEngine.layoutGroups.forEach(group => {
+        group.elements.forEach(element => { // element is the source of the trigger
+          const interactions = element.props.interactions;
+          if (interactions?.visibility_triggers) {
+            interactions.visibility_triggers.forEach(triggerConfig => {
+              const triggerSourceRenderedElement = getShadowElement(element.id);
+
+              if (triggerSourceRenderedElement) {
+                // Store the trigger source ID on the config for later reference
+                triggerConfig.trigger_source_id = element.id;
+
+                // To prevent duplicate listeners if this runs multiple times without full re-render,
+                // ideally, store and remove specific listeners. For now, assume full re-render or manage outside.
+
+                if (triggerConfig.event === 'click' || triggerConfig.event === 'both') {
+                  triggerSourceRenderedElement.addEventListener('click', (e: Event) => {
+                    e.stopPropagation(); // Important: prevent global click handler if click is on trigger source
+                    this._processVisibilityTrigger(triggerConfig, 'click');
+                  });
+                }
+                if (triggerConfig.event === 'hover' || triggerConfig.event === 'both') {
+                  triggerSourceRenderedElement.addEventListener('mouseenter', () => {
+                    this._processVisibilityTrigger(triggerConfig, 'hover');
+                  });
+                  triggerSourceRenderedElement.addEventListener('mouseleave', () => {
+                    let leaveAction = triggerConfig.action; // Default for toggle
+                    if (triggerConfig.action === 'show') {
+                      leaveAction = 'hide';
+                    }
+                    // If original action was 'hide', mouseleave doesn't typically trigger 'show'
+                    // unless explicitly defined (which is not part of this basic setup).
+                    // So, we only create a leaveTriggerConfig if the action is changing (show->hide) or toggle.
+
+                    if (leaveAction === 'hide' || triggerConfig.action === 'toggle') {
+                        const leaveTriggerConfig = { ...triggerConfig, action: leaveAction };
+                        if (triggerConfig.hover_options?.mode === 'delay' && triggerConfig.hover_options.hide_delay && leaveAction === 'hide') {
+                            console.log(`[LcarsCard] Mouseleave on ${element.id} (trigger source). Hide action for targets of ${triggerConfig.trigger_source_id} would be delayed by ${triggerConfig.hover_options.hide_delay}ms.`);
+                            // Actual timeout will be handled in step 2 by _processVisibilityTrigger or the element itself.
+                            // For now, logging is sufficient. The call below will log the "hide" intent.
+                            this._processVisibilityTrigger(leaveTriggerConfig, 'hover'); // Pass 'hover' to indicate it's part of hover interaction
+                        } else {
+                            this._processVisibilityTrigger(leaveTriggerConfig, 'hover');
+                        }
+                    }
+                  });
+                }
+              } else {
+                console.warn(`[LcarsCard] Could not find element with ID ${element.id} (trigger source) to attach visibility listeners.`);
+              }
+            });
+          }
+        });
       });
 
       // Clear all entity monitoring and animation state before recalculating layout
@@ -372,6 +441,133 @@ export class LcarsCard extends LitElement {
       this._viewBox = `0 0 ${rect.width} 100`;
       this._calculatedHeight = 100;
     }
+  }
+
+  // Method to handle global clicks for click-outside behavior
+  private _handleGlobalClick = (event: MouseEvent): void => {
+    if (!this.shadowRoot || this._elementsToRevertOnClickOutside.size === 0) return;
+
+    const clickedPath = event.composedPath();
+
+    // Iterate backwards as an element might remove itself from the map
+    const elementIds = Array.from(this._elementsToRevertOnClickOutside.keys());
+    for (let i = elementIds.length - 1; i >= 0; i--) {
+      const elementId = elementIds[i]; // This ID is the ID of the TARGET element.
+      const triggerConfig = this._elementsToRevertOnClickOutside.get(elementId);
+
+      if (!triggerConfig) continue;
+
+      // Check if the click was inside the target element
+      const targetRenderedElement = this.shadowRoot.querySelector(`#${CSS.escape(elementId)}`);
+      if (targetRenderedElement && clickedPath.includes(targetRenderedElement)) {
+        continue; // Click was inside this target element, so don't revert it.
+      }
+
+      // Check if the click was inside the original trigger source element for this specific triggerConfig
+      // Assuming triggerConfig stores the ID of the element that initiated it (e.g., element.id from _performLayoutCalculation)
+      if (triggerConfig.trigger_source_id) {
+         const triggerSourceRenderedElement = this.shadowRoot.querySelector(`#${CSS.escape(triggerConfig.trigger_source_id)}`);
+         if (triggerSourceRenderedElement && clickedPath.includes(triggerSourceRenderedElement)) {
+           continue; // Click was inside the trigger source for this target, so don't revert.
+         }
+      }
+
+      console.log(`[LcarsCard] Click outside detected for target ${elementId}. Reverting visibility.`);
+      this._processVisibilityTrigger(triggerConfig, 'click', true); // true indicates revert
+      this._elementsToRevertOnClickOutside.delete(elementId);
+    }
+  };
+
+  private _processVisibilityTrigger(triggerConfig: VisibilityTriggerConfig, eventType: 'click' | 'hover', revert: boolean = false): void {
+    console.log(`[LcarsCard] Processing visibility trigger. Event: ${eventType}, Revert: ${revert}, Config:`, triggerConfig);
+
+    const { targets, action, hover_options, click_options } = triggerConfig;
+
+    targets.forEach(targetId => {
+      const targetLayoutElement = this._layoutEngine.getElementById(targetId);
+      const targetGroup = !targetLayoutElement ? this._layoutEngine.getGroupById(targetId) : undefined;
+
+      if (!targetLayoutElement && !targetGroup) {
+        console.warn(`[LcarsCard] Target '${targetId}' not found for visibility trigger (Source: ${triggerConfig.trigger_source_id}).`);
+        return;
+      }
+
+      const targetObject = targetLayoutElement || targetGroup;
+      const targetType = targetLayoutElement ? 'Element' : 'Group';
+
+      let effectiveAction = action;
+      if (revert && click_options?.behavior === 'toggle_and_revert_on_click_outside') {
+        effectiveAction = 'toggle';
+      }
+
+      // Helper function to apply action to a single element
+      const applyToElement = (el: LayoutElement, act: string) => {
+        console.log(`[LcarsCard] Applying action '${act}' to element '${el.id}'`);
+        if (act === 'show') el.show();
+        else if (act === 'hide') el.hide();
+        else if (act === 'toggle') el.toggle();
+      };
+
+      // Helper function to apply action to a group
+      const applyToGroup = (grp: Group, act: string) => {
+        console.log(`[LcarsCard] Applying action '${act}' to group '${grp.id}'`);
+        grp.elements.forEach(el => applyToElement(el, act));
+      };
+
+      // Clear any pending hide timeout for this target on any new interaction
+      if (this._hideTimeouts.has(targetId)) {
+        clearTimeout(this._hideTimeouts.get(targetId)!);
+        this._hideTimeouts.delete(targetId);
+      }
+
+      if (eventType === 'click') {
+        const behavior = click_options?.behavior || 'toggle'; // Default to toggle
+        let actionToPerform = effectiveAction; // Use 'toggle' if reverting
+
+        if (!revert) { // Only use specific behaviors if not reverting
+            if (behavior === 'show_only') actionToPerform = 'show';
+            else if (behavior === 'hide_only') actionToPerform = 'hide';
+            else actionToPerform = 'toggle'; // Default for 'toggle' behavior
+        }
+
+        if (targetLayoutElement) applyToElement(targetLayoutElement, actionToPerform);
+        else if (targetGroup) applyToGroup(targetGroup, actionToPerform);
+
+        if (click_options?.behavior === 'toggle_and_revert_on_click_outside' && !revert) {
+          console.log(`[LcarsCard] Registering target ${targetId} (from trigger ${triggerConfig.trigger_source_id}) for potential revert.`);
+          this._elementsToRevertOnClickOutside.set(targetId, triggerConfig);
+        }
+
+      } else if (eventType === 'hover') {
+        // The 'action' in triggerConfig for hover is set by mouseenter/mouseleave listeners in _performLayoutCalculation
+        // 'show' on mouseenter, 'hide' or 'toggle' on mouseleave.
+        const currentAction = effectiveAction; // This is 'show', 'hide', or 'toggle'
+
+        if (currentAction === 'show') { // Mouseenter
+          if (targetLayoutElement) applyToElement(targetLayoutElement, 'show');
+          else if (targetGroup) applyToGroup(targetGroup, 'show');
+        } else if (currentAction === 'hide') { // Mouseleave, configured to hide
+          if (hover_options?.hide_delay && hover_options.hide_delay > 0) {
+            console.log(`[LcarsCard] Hover: Scheduling hide for ${targetId} in ${hover_options.hide_delay}ms`);
+            const timeoutId = window.setTimeout(() => {
+              if (targetLayoutElement) applyToElement(targetLayoutElement, 'hide');
+              else if (targetGroup) applyToGroup(targetGroup, 'hide');
+              this._hideTimeouts.delete(targetId);
+            }, hover_options.hide_delay);
+            this._hideTimeouts.set(targetId, timeoutId);
+          } else {
+            if (targetLayoutElement) applyToElement(targetLayoutElement, 'hide');
+            else if (targetGroup) applyToGroup(targetGroup, 'hide');
+          }
+        } else if (currentAction === 'toggle') { // Can be mouseenter or mouseleave if mode is toggle
+            if (targetLayoutElement) applyToElement(targetLayoutElement, 'toggle');
+            else if (targetGroup) applyToGroup(targetGroup, 'toggle');
+            // If this toggle was on mouseleave and part of a toggle_on_enter_hide_on_leave,
+            // the hide_on_leave part would be handled by the action being 'hide' if that's desired.
+            // The current logic passes 'toggle' if original action was 'toggle'.
+        }
+      }
+    });
   }
 
   private _refreshElementRenders(): void {

@@ -20,6 +20,7 @@ export abstract class LayoutElement {
     public requestUpdateCallback?: () => void;
     public button?: Button;
     public getShadowElement?: (id: string) => Element | null;
+    public isVisible: boolean = true; // Controls visibility
 
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this.id = id;
@@ -603,6 +604,10 @@ export abstract class LayoutElement {
      * Elements should not override this - they should implement renderShape() instead
      */
     render(): SVGTemplateResult | null {
+        if (!this.isVisible) {
+            return null; // Don't render if not visible
+        }
+
         const shapeElement = this.renderShape();
         if (!shapeElement) return null;
 
@@ -815,5 +820,36 @@ export abstract class LayoutElement {
      */
     protected _renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
         return this._renderNonButtonText(x, y, colors);
+    }
+
+    /**
+     * Shows the element by setting isVisible to true and requesting an update.
+     */
+    public show(): void {
+        if (!this.isVisible) {
+            this.isVisible = true;
+            this.requestUpdateCallback?.();
+            console.log(`[LayoutElement ${this.id}] show() called, isVisible: ${this.isVisible}`);
+        }
+    }
+
+    /**
+     * Hides the element by setting isVisible to false and requesting an update.
+     */
+    public hide(): void {
+        if (this.isVisible) {
+            this.isVisible = false;
+            this.requestUpdateCallback?.();
+            console.log(`[LayoutElement ${this.id}] hide() called, isVisible: ${this.isVisible}`);
+        }
+    }
+
+    /**
+     * Toggles the visibility of the element and requests an update.
+     */
+    public toggle(): void {
+        this.isVisible = !this.isVisible;
+        this.requestUpdateCallback?.();
+        console.log(`[LayoutElement ${this.id}] toggle() called, isVisible: ${this.isVisible}`);
     }
 } 

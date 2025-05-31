@@ -240,7 +240,7 @@ export class Button {
                     return; 
                 }
                 
-                ev.stopPropagation();
+                // ev.stopPropagation(); // Removed to allow event bubbling for LcarsCard visibility triggers
             
                 const actionConfig = this.createActionConfig(buttonConfig);
                 this.executeAction(actionConfig, ev.currentTarget as Element);
