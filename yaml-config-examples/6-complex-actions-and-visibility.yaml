@@ -1,120 +1,124 @@
 type: custom:lovelace-lcars-card
-card_title: "Complex Interactions and Visibility Example"
+card_title: Complex Interactions and Visibility Example
 groups:
-  - group_id: "main_controls"
+  - group_id: nav_header
     elements:
-      - id: "title_display"
-        type: "rectangle"
+      - id: main_header
+        type: top_header
         appearance:
-          fill: "#FF9900"
+          fill: "#CC6600"
         text:
-          content: "Complex Interactions and Visibility Example"
-          fill: "#000000"
-          fontSize: 16
-          fontWeight: "bold"
-          fontFamily: "Antonio"
+          left_content: LCARS Shape Elements Example
+          right_content: example
+          fill: "#FFFFFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
         layout:
-          width: 500
+          width: 100%
           height: 40
-      - id: "menu_trigger"
-        type: "rectangle"
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: main_controls
+    elements:
+      - id: menu_trigger
+        type: rectangle
         appearance:
           fill: "#FF9900"
         text:
-          content: "MENU"
+          content: MENU
           fill: "#000000"
+          fontFamily: Antonio
         layout:
           width: 100
           height: 40
           anchor:
-            to: "main_controls.title_display"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
         interactions:
           button:
             enabled: true
           visibility_triggers:
             - trigger_source:
-                element_id_ref: "main_controls.menu_trigger"
-                event: "hover"
+                element_id_ref: main_controls.menu_trigger
+                event: hover
               targets:
-                - type: "group"
-                  id: "menu_items"
-              action: "show"
+                - type: group
+                  id: menu_items
+              action: show
               hover_options:
-                mode: "show_on_enter_hide_on_leave"
+                mode: show_on_enter_hide_on_leave
                 hide_delay: 500
-            
             - trigger_source:
-                element_id_ref: "main_controls.menu_trigger"
-                event: "click"
+                element_id_ref: main_controls.menu_trigger
+                event: click
               targets:
-                - type: "element"
-                  id: "details.info_panel"
-              action: "toggle"
+                - type: element
+                  id: details.info_panel
+              action: toggle
               click_options:
-                behavior: "toggle"
+                behavior: toggle
                 revert_on_click_outside: true
-
-  - group_id: "menu_items"
+  - group_id: menu_items
     elements:
-      - id: "option_1"
-        type: "rectangle"
+      - id: option_1
+        type: rectangle
         appearance:
           fill: "#0099CC"
         text:
-          content: "SYSTEMS"
+          content: SYSTEMS
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          fontFamily: Antonio
         layout:
           width: 90
           height: 30
           anchor:
-            to: "main_controls.menu_trigger"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            to: main_controls.menu_trigger
+            element_point: topLeft
+            target_point: bottomLeft
         interactions:
           button:
             enabled: true
             actions:
               tap:
-                action: "call-service"
-                service: "homeassistant.toggle"
+                action: call-service
+                service: homeassistant.toggle
                 service_data:
-                  entity_id: "switch.main_systems"
-      
-      - id: "option_2"
-        type: "rectangle"
+                  entity_id: switch.main_systems
+      - id: option_2
+        type: rectangle
         appearance:
           fill: "#CC3300"
         text:
-          content: "ALERTS"
+          content: ALERTS
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          fontFamily: Antonio
         layout:
           width: 90
           height: 30
           anchor:
-            to: "menu_items.option_1"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
-
-  - group_id: "details"
+            to: menu_items.option_1
+            element_point: topLeft
+            target_point: bottomLeft
+  - group_id: details
     elements:
-      - id: "info_panel"
-        type: "rectangle"
+      - id: info_panel
+        type: rectangle
         appearance:
           fill: "#333333"
           stroke: "#CC6600"
           strokeWidth: 2
         text:
-          content: "DETAILED INFORMATION PANEL"
+          content: DETAILED INFORMATION PANEL
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          fontFamily: Antonio
         layout:
           width: 300
           height: 150
           anchor:
-            to: "container"
-            element_point: "center"
-            target_point: "center"
+            to: nav_header.main_header
+            element_point: topCenter
+            target_point: bottomCenter

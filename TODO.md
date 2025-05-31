@@ -15,5 +15,5 @@
     - textTransform only seems to work with uppercase and lowercase; integrate css logic or add other transforms
 - determine an appropriate way to handle groups of elements that curve into other groups of elements. visually, these look like they might be the same concept to group into a larger section
 
-### Features
-- determine a way to implement animation logic for elements
+### Animation
+- add interpolated fade transition between stateful fill changes

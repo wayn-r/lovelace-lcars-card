@@ -17,10 +17,25 @@ export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant, reque
   return config.groups.map(groupConfig => {
     const layoutElements: LayoutElement[] = groupConfig.elements.map(element => {
       const fullId = `${groupConfig.group_id}.${element.id}`;
+      
+      // Convert element props and resolve "self" references in visibility triggers
+      const props = convertNewElementToProps(element);
+      if (props.visibility_triggers) {
+        props.visibility_triggers = props.visibility_triggers.map((trigger: any) => ({
+          ...trigger,
+          trigger_source: {
+            ...trigger.trigger_source,
+            element_id_ref: trigger.trigger_source.element_id_ref === 'self' 
+              ? fullId 
+              : trigger.trigger_source.element_id_ref
+          }
+        }));
+      }
+      
       return createLayoutElement(
         fullId,
         element.type,
-        convertNewElementToProps(element),
+        props,
         convertNewLayoutToEngineFormat(element.layout),
         hass,
         requestUpdateCallback,
@@ -119,6 +134,11 @@ function convertNewElementToProps(element: ElementConfig): any {
         };
       }
     }
+  }
+
+  // Convert visibility triggers
+  if (element.interactions?.visibility_triggers) {
+    props.visibility_triggers = element.interactions.visibility_triggers;
   }
   
   return props;

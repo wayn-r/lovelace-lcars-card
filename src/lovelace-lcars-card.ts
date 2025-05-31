@@ -15,6 +15,7 @@ import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext } from './utils/animation.js';
 import { DynamicColorManager } from './utils/dynamic-color-manager.js';
+import { VisibilityManager } from './utils/visibility-manager.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
 
@@ -44,6 +45,7 @@ export class LcarsCard extends LitElement {
   
   // Utility classes for better organization
   private _dynamicColorManager: DynamicColorManager = new DynamicColorManager();
+  private _visibilityManager: VisibilityManager = new VisibilityManager(() => this._refreshElementRenders());
   
   // Legacy state tracking for compatibility
   private _lastHassStates?: { [entityId: string]: any };
@@ -152,6 +154,7 @@ export class LcarsCard extends LitElement {
     
     // Clean up utility classes
     this._dynamicColorManager.cleanup();
+    this._visibilityManager.cleanup();
     
     // Clean up all element animations and entity monitoring
     for (const group of this._layoutEngine.layoutGroups) {
@@ -294,8 +297,9 @@ export class LcarsCard extends LitElement {
         (this._layoutEngine as any).tempSvgContainer = svgElement;
       }
       
-      // Clear previous layout
+      // Clear previous layout and visibility triggers
       this._layoutEngine.clearLayout();
+      this._visibilityManager.clearTriggers();
       
       // Parse config and add elements to layout engine
       const getShadowElement = (id: string): Element | null => {
@@ -309,6 +313,33 @@ export class LcarsCard extends LitElement {
       groups.forEach((group: Group) => { 
         this._layoutEngine.addGroup(group); 
       });
+
+      // Collect all element IDs, group IDs, and visibility triggers
+      const elementIds: string[] = [];
+      const groupIds: string[] = [];
+      const allVisibilityTriggers: any[] = [];
+
+      groups.forEach(group => {
+        groupIds.push(group.id);
+        console.log(`[LcarsCard] Processing group: ${group.id}`);
+        group.elements.forEach(element => {
+          elementIds.push(element.id);
+          console.log(`[LcarsCard] Processing element: ${element.id}`);
+          
+          // Collect visibility triggers from element props
+          if (element.props.visibility_triggers) {
+            console.log(`[LcarsCard] Found ${element.props.visibility_triggers.length} visibility triggers for element ${element.id}:`, element.props.visibility_triggers);
+            allVisibilityTriggers.push(...element.props.visibility_triggers);
+          }
+        });
+      });
+
+      console.log(`[LcarsCard] Total visibility triggers collected: ${allVisibilityTriggers.length}`, allVisibilityTriggers);
+
+      // Initialize visibility manager
+      this._visibilityManager.initializeVisibility(elementIds, groupIds);
+      this._visibilityManager.registerVisibilityTriggers(allVisibilityTriggers);
+      this._visibilityManager.applyInitialVisibilityStates();
 
       // Clear all entity monitoring and animation state before recalculating layout
       for (const group of this._layoutEngine.layoutGroups) {
@@ -336,9 +367,22 @@ export class LcarsCard extends LitElement {
       // Store the calculated height for rendering
       this._calculatedHeight = layoutDimensions.height;
 
-      // Render elements
-      const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
-          group.elements
+      // Render elements with visibility filtering
+      const newTemplates = this._layoutEngine.layoutGroups.flatMap(group => {
+          console.log(`[LcarsCard] Checking group visibility for: ${group.id}`);
+          // Check if group is visible
+          if (!this._visibilityManager.getGroupVisibility(group.id)) {
+            console.log(`[LcarsCard] Group ${group.id} is hidden, skipping elements`);
+            return [];
+          }
+          
+          return group.elements
+              .filter(el => {
+                // Check if element should be visible (both element and group visibility)
+                const shouldBeVisible = this._visibilityManager.shouldElementBeVisible(el.id, group.id);
+                console.log(`[LcarsCard] Element ${el.id} should be visible: ${shouldBeVisible}`);
+                return shouldBeVisible;
+              })
               .map(el => {
                 try {
                   return el.render();
@@ -347,8 +391,8 @@ export class LcarsCard extends LitElement {
                   return null;
                 }
               })
-              .filter((template): template is SVGTemplateResult => template !== null)
-      );
+              .filter((template): template is SVGTemplateResult => template !== null);
+      });
 
       const TOP_MARGIN = 8;  // offset for broken HA UI
       
@@ -362,6 +406,18 @@ export class LcarsCard extends LitElement {
           this._viewBox = newViewBox;
           // Trigger re-render to show the new content
           this.requestUpdate();
+          
+          // Set up event listeners for visibility triggers after DOM elements are rendered
+          // Use a longer timeout to ensure DOM is fully ready
+          setTimeout(() => {
+            console.log('[LcarsCard] Setting up visibility event listeners...');
+            this._visibilityManager.setupEventListeners((id: string) => {
+              console.log(`[LcarsCard] Looking for element: #${CSS.escape(id)}`);
+              const element = this.shadowRoot?.querySelector(`#${CSS.escape(id)}`);
+              console.log(`[LcarsCard] Found element:`, element);
+              return element || null;
+            });
+          }, 100);
       }
       
     } catch (error) {
@@ -401,11 +457,20 @@ export class LcarsCard extends LitElement {
         (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null
     );
 
-    const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
-        group.elements
+    const newTemplates = this._layoutEngine.layoutGroups.flatMap(group => {
+        // Check if group is visible
+        if (!this._visibilityManager.getGroupVisibility(group.id)) {
+          return [];
+        }
+        
+        return group.elements
+            .filter(el => {
+              // Check if element should be visible (both element and group visibility)
+              return this._visibilityManager.shouldElementBeVisible(el.id, group.id);
+            })
             .map(el => el.render())
-            .filter((template): template is SVGTemplateResult => template !== null)
-    );
+            .filter((template): template is SVGTemplateResult => template !== null);
+    });
 
     this._layoutElementTemplates = newTemplates;
     

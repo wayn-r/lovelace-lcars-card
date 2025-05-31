@@ -49,12 +49,13 @@ lovelace-lcars-card/
 │       ├── dynamic-color-manager.ts
 │       ├── fontmetrics.d.ts
 │       ├── shapes.ts
-│       └── test/
-│           ├── animation.spec.ts
-│           ├── color-resolver.spec.ts
-│           ├── color.spec.ts
-│           ├── dynamic-color-manager.spec.ts
-│           └── shapes.spec.ts
+│       ├── test/
+│       │   ├── animation.spec.ts
+│       │   ├── color-resolver.spec.ts
+│       │   ├── color.spec.ts
+│       │   ├── dynamic-color-manager.spec.ts
+│       │   └── shapes.spec.ts
+│       └── visibility-manager.ts
 ├── TODO.md
 ├── tsconfig.json
 ├── vite.config.ts
@@ -1428,6 +1429,7 @@ export class ElbowElement extends LayoutElement {
 
     /**
      * Override text position calculation for elbow-specific positioning
+     * Considers textAnchor to position text relative to the arm or body subsection edges
      */
     protected _getTextPosition(): { x: number, y: number } {
         const { x, y, width, height } = this.layout;
@@ -1435,6 +1437,7 @@ export class ElbowElement extends LayoutElement {
         const bodyWidth = this.props.bodyWidth || 30;
         const armHeight = this.props.armHeight || 30;
         const elbowTextPosition = this.props.elbowTextPosition;
+        const textAnchor = this.props.textAnchor || 'middle';
         
         // Use calculated layout width if stretching is applied, otherwise use configured width
         const hasStretchConfig = Boolean(this.layoutConfig.stretch?.stretchTo1 || this.layoutConfig.stretch?.stretchTo2);
@@ -1448,41 +1451,113 @@ export class ElbowElement extends LayoutElement {
                 ? y + armHeight / 2 
                 : y + height - armHeight / 2;
             
+            // Calculate arm boundaries based on orientation
+            let armLeftX: number, armRightX: number;
+            if (orientation === 'top-left' || orientation === 'bottom-left') {
+                // Arm extends from left body to the right
+                armLeftX = x + bodyWidth;
+                armRightX = x + elbowWidth;
+            } else {
+                // top-right or bottom-right: Arm extends from right body to the left
+                armLeftX = x;
+                armRightX = x + (elbowWidth - bodyWidth);
+            }
+            
+            // Calculate X position based on textAnchor relative to arm boundaries
+            let armTextX: number;
+            switch (textAnchor) {
+                case 'start':
+                    armTextX = armLeftX;
+                    break;
+                case 'end':
+                    armTextX = armRightX;
+                    break;
+                case 'middle':
+                default:
+                    armTextX = armLeftX + (armRightX - armLeftX) / 2;
+                    break;
+            }
+            
             return {
-                x: x + elbowWidth / 2,
+                x: armTextX,
                 y: armCenterY
             };
         } else if (elbowTextPosition === 'body') {
             // Position text in the body (vertical) part of the elbow based on orientation
+            let bodyCenterX: number, bodyCenterY: number;
+            let bodyLeftX: number, bodyRightX: number;
+            
             if (orientation === 'top-left') {
-                return {
-                    x: x + bodyWidth / 2,
-                    y: y + armHeight + (height - armHeight) / 2
-                };
+                bodyCenterY = y + armHeight + (height - armHeight) / 2;
+                bodyLeftX = x;
+                bodyRightX = x + bodyWidth;
             } else if (orientation === 'top-right') {
-                return {
-                    x: x + elbowWidth - bodyWidth / 2,
-                    y: y + armHeight + (height - armHeight) / 2
-                };
+                bodyCenterY = y + armHeight + (height - armHeight) / 2;
+                bodyLeftX = x + elbowWidth - bodyWidth;
+                bodyRightX = x + elbowWidth;
             } else if (orientation === 'bottom-left') {
-                return {
-                    x: x + bodyWidth / 2,
-                    y: y + (height - armHeight) / 2
-                };
+                bodyCenterY = y + (height - armHeight) / 2;
+                bodyLeftX = x;
+                bodyRightX = x + bodyWidth;
             } else { // bottom-right
-                return {
-                    x: x + elbowWidth - bodyWidth / 2,
-                    y: y + (height - armHeight) / 2
-                };
+                bodyCenterY = y + (height - armHeight) / 2;
+                bodyLeftX = x + elbowWidth - bodyWidth;
+                bodyRightX = x + elbowWidth;
             }
+            
+            // Calculate X position based on textAnchor relative to body boundaries
+            switch (textAnchor) {
+                case 'start':
+                    bodyCenterX = bodyLeftX;
+                    break;
+                case 'end':
+                    bodyCenterX = bodyRightX;
+                    break;
+                case 'middle':
+                default:
+                    bodyCenterX = bodyLeftX + (bodyRightX - bodyLeftX) / 2;
+                    break;
+            }
+            
+            return {
+                x: bodyCenterX,
+                y: bodyCenterY
+            };
         } else {
             // Default to arm positioning if not specified
             const armCenterY = orientation.startsWith('top') 
                 ? y + armHeight / 2 
                 : y + height - armHeight / 2;
             
+            // Calculate arm boundaries based on orientation
+            let armLeftX: number, armRightX: number;
+            if (orientation === 'top-left' || orientation === 'bottom-left') {
+                // Arm extends from left body to the right
+                armLeftX = x + bodyWidth;
+                armRightX = x + elbowWidth;
+            } else {
+                // top-right or bottom-right: Arm extends from right body to the left
+                armLeftX = x;
+                armRightX = x + (elbowWidth - bodyWidth);
+            }
+            
+            // Calculate X position based on textAnchor relative to arm boundaries
+            let armTextX: number;
+            switch (textAnchor) {
+                case 'start':
+                    armTextX = armLeftX;
+                    break;
+                case 'end':
+                    armTextX = armRightX;
+                    break;
+                case 'middle':
+                default:
+                    armTextX = armLeftX + (armRightX - armLeftX) / 2;
+                    break;
+            }
+            
             return {
-                x: x + elbowWidth / 2,
+                x: armTextX,
                 y: armCenterY
             };
         }
@@ -2312,14 +2387,36 @@ export abstract class LayoutElement {
     }
 
     /**
-     * Gets the default text position for standard elements (center of element)
-     * Can be overridden by specific elements that need custom text positioning
+     * Gets the default text position for standard elements
+     * Considers textAnchor to position text relative to element edges
      * @returns Object with x and y coordinates for text positioning
      */
     protected _getDefaultTextPosition(): { x: number, y: number } {
         const { x, y, width, height } = this.layout;
+        const textAnchor = this.props.textAnchor || 'middle';
+        
+        let textX: number;
+        
+        // Calculate X position based on textAnchor
+        switch (textAnchor) {
+            case 'start':
+                // Left-align text to the left edge of the element
+                textX = x;
+                break;
+            case 'end':
+                // Right-align text to the right edge of the element  
+                textX = x + width;
+                break;
+            case 'middle':
+            default:
+                // Center text in the middle of the element
+                textX = x + width / 2;
+                break;
+        }
+        
+        // Y position remains centered vertically
         return {
-            x: x + width / 2,
+            x: textX,
             y: y + height / 2
         };
     }
@@ -3494,8 +3591,8 @@ describe('ElbowElement', () => {
       elbowElement.props.orientation = 'top-left'; // arm is at top for top orientations
       const position = (elbowElement as any)._getTextPosition();
       
-      // Should position at center of arm (horizontal part)
-      expect(position.x).toBe(60); // x + width / 2 = 10 + 100/2
+      // Should position at center of arm (horizontal part extending from left body)
+      expect(position.x).toBe(75); // x + bodyWidth + (width - bodyWidth) / 2 = 10 + 30 + (100-30)/2 = 75
       expect(position.y).toBe(32.5); // y + armHeight / 2 = 20 + 25/2 (top orientation)
     });
 
@@ -3543,8 +3640,8 @@ describe('ElbowElement', () => {
       // Don't set elbowTextPosition, default orientation is top-left
       const position = (elbowElement as any)._getTextPosition();
       
-      // Should default to arm positioning
-      expect(position.x).toBe(60); // x + width / 2 = 10 + 100/2
+      // Should default to arm positioning (extending from left body)
+      expect(position.x).toBe(75); // x + bodyWidth + (width - bodyWidth) / 2 = 10 + 30 + (100-30)/2 = 75
       expect(position.y).toBe(32.5); // y + armHeight / 2 = 20 + 25/2 (top orientation)
     });
 
@@ -3553,9 +3650,19 @@ describe('ElbowElement', () => {
       elbowElement.props.orientation = 'bottom-left'; // arm is at bottom for bottom orientations
       const position = (elbowElement as any)._getTextPosition();
       
-      // Should position at center of arm at the bottom
-      expect(position.x).toBe(60); // x + width / 2 = 10 + 100/2
+      // Should position at center of arm at the bottom (extending from left body)
+      expect(position.x).toBe(75); // x + bodyWidth + (width - bodyWidth) / 2 = 10 + 30 + (100-30)/2 = 75
       expect(position.y).toBe(87.5); // y + height - armHeight / 2 = 20 + 80 - 25/2 = 87.5
+    });
+
+    it('should position text in arm correctly for right-side orientations', () => {
+      elbowElement.props.elbowTextPosition = 'arm';
+      elbowElement.props.orientation = 'top-right'; // arm is at top, body on right
+      const position = (elbowElement as any)._getTextPosition();
+      
+      // Should position at center of arm (extending from right body to left)
+      expect(position.x).toBe(45); // x + (width - bodyWidth) / 2 = 10 + (100-30)/2 = 45
+      expect(position.y).toBe(32.5); // y + armHeight / 2 = 20 + 25/2 (top orientation)
     });
 
     it('should handle stretching correctly when positioning text', () => {
@@ -3568,8 +3675,8 @@ describe('ElbowElement', () => {
       
       const position = (elbowElement as any)._getTextPosition();
       
-      // Should use stretched width for positioning
-      expect(position.x).toBe(85); // x + stretchedWidth / 2 = 10 + 150/2
+      // Should use stretched width for arm positioning (extending from left body)
+      expect(position.x).toBe(100); // x + bodyWidth + (stretchedWidth - bodyWidth) / 2 = 10 + 30 + (150-30)/2 = 100
       expect(position.y).toBe(32.5); // y + armHeight / 2 = 20 + 25/2 (top orientation)
     });
   });
@@ -6776,10 +6883,25 @@ export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant, reque
   return config.groups.map(groupConfig => {
     const layoutElements: LayoutElement[] = groupConfig.elements.map(element => {
       const fullId = `${groupConfig.group_id}.${element.id}`;
+      
+      // Convert element props and resolve "self" references in visibility triggers
+      const props = convertNewElementToProps(element);
+      if (props.visibility_triggers) {
+        props.visibility_triggers = props.visibility_triggers.map((trigger: any) => ({
+          ...trigger,
+          trigger_source: {
+            ...trigger.trigger_source,
+            element_id_ref: trigger.trigger_source.element_id_ref === 'self' 
+              ? fullId 
+              : trigger.trigger_source.element_id_ref
+          }
+        }));
+      }
+      
       return createLayoutElement(
         fullId,
         element.type,
-        convertNewElementToProps(element),
+        props,
         convertNewLayoutToEngineFormat(element.layout),
         hass,
         requestUpdateCallback,
@@ -6878,6 +7000,11 @@ function convertNewElementToProps(element: ElementConfig): any {
         };
       }
     }
+  }
+
+  // Convert visibility triggers
+  if (element.interactions?.visibility_triggers) {
+    props.visibility_triggers = element.interactions.visibility_triggers;
   }
   
   return props;
@@ -8148,6 +8275,7 @@ import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext } from './utils/animation.js';
 import { DynamicColorManager } from './utils/dynamic-color-manager.js';
+import { VisibilityManager } from './utils/visibility-manager.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
 
@@ -8177,6 +8305,7 @@ export class LcarsCard extends LitElement {
   
   // Utility classes for better organization
   private _dynamicColorManager: DynamicColorManager = new DynamicColorManager();
+  private _visibilityManager: VisibilityManager = new VisibilityManager(() => this._refreshElementRenders());
   
   // Legacy state tracking for compatibility
   private _lastHassStates?: { [entityId: string]: any };
@@ -8285,6 +8414,7 @@ export class LcarsCard extends LitElement {
     
     // Clean up utility classes
     this._dynamicColorManager.cleanup();
+    this._visibilityManager.cleanup();
     
     // Clean up all element animations and entity monitoring
     for (const group of this._layoutEngine.layoutGroups) {
@@ -8427,8 +8557,9 @@ export class LcarsCard extends LitElement {
         (this._layoutEngine as any).tempSvgContainer = svgElement;
       }
       
-      // Clear previous layout
+      // Clear previous layout and visibility triggers
       this._layoutEngine.clearLayout();
+      this._visibilityManager.clearTriggers();
       
       // Parse config and add elements to layout engine
       const getShadowElement = (id: string): Element | null => {
@@ -8442,6 +8573,33 @@ export class LcarsCard extends LitElement {
       groups.forEach((group: Group) => { 
         this._layoutEngine.addGroup(group); 
       });
+
+      // Collect all element IDs, group IDs, and visibility triggers
+      const elementIds: string[] = [];
+      const groupIds: string[] = [];
+      const allVisibilityTriggers: any[] = [];
+
+      groups.forEach(group => {
+        groupIds.push(group.id);
+        console.log(`[LcarsCard] Processing group: ${group.id}`);
+        group.elements.forEach(element => {
+          elementIds.push(element.id);
+          console.log(`[LcarsCard] Processing element: ${element.id}`);
+          
+          // Collect visibility triggers from element props
+          if (element.props.visibility_triggers) {
+            console.log(`[LcarsCard] Found ${element.props.visibility_triggers.length} visibility triggers for element ${element.id}:`, element.props.visibility_triggers);
+            allVisibilityTriggers.push(...element.props.visibility_triggers);
+          }
+        });
+      });
+
+      console.log(`[LcarsCard] Total visibility triggers collected: ${allVisibilityTriggers.length}`, allVisibilityTriggers);
+
+      // Initialize visibility manager
+      this._visibilityManager.initializeVisibility(elementIds, groupIds);
+      this._visibilityManager.registerVisibilityTriggers(allVisibilityTriggers);
+      this._visibilityManager.applyInitialVisibilityStates();
 
       // Clear all entity monitoring and animation state before recalculating layout
       for (const group of this._layoutEngine.layoutGroups) {
@@ -8469,9 +8627,22 @@ export class LcarsCard extends LitElement {
       // Store the calculated height for rendering
       this._calculatedHeight = layoutDimensions.height;
 
-      // Render elements
-      const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
-          group.elements
+      // Render elements with visibility filtering
+      const newTemplates = this._layoutEngine.layoutGroups.flatMap(group => {
+          console.log(`[LcarsCard] Checking group visibility for: ${group.id}`);
+          // Check if group is visible
+          if (!this._visibilityManager.getGroupVisibility(group.id)) {
+            console.log(`[LcarsCard] Group ${group.id} is hidden, skipping elements`);
+            return [];
+          }
+          
+          return group.elements
+              .filter(el => {
+                // Check if element should be visible (both element and group visibility)
+                const shouldBeVisible = this._visibilityManager.shouldElementBeVisible(el.id, group.id);
+                console.log(`[LcarsCard] Element ${el.id} should be visible: ${shouldBeVisible}`);
+                return shouldBeVisible;
+              })
               .map(el => {
                 try {
                   return el.render();
@@ -8480,8 +8651,8 @@ export class LcarsCard extends LitElement {
                   return null;
                 }
               })
-              .filter((template): template is SVGTemplateResult => template !== null)
-      );
+              .filter((template): template is SVGTemplateResult => template !== null);
+      });
 
       const TOP_MARGIN = 8;  // offset for broken HA UI
       
@@ -8495,6 +8666,18 @@ export class LcarsCard extends LitElement {
           this._viewBox = newViewBox;
           // Trigger re-render to show the new content
           this.requestUpdate();
+          
+          // Set up event listeners for visibility triggers after DOM elements are rendered
+          // Use a longer timeout to ensure DOM is fully ready
+          setTimeout(() => {
+            console.log('[LcarsCard] Setting up visibility event listeners...');
+            this._visibilityManager.setupEventListeners((id: string) => {
+              console.log(`[LcarsCard] Looking for element: #${CSS.escape(id)}`);
+              const element = this.shadowRoot?.querySelector(`#${CSS.escape(id)}`);
+              console.log(`[LcarsCard] Found element:`, element);
+              return element || null;
+            });
+          }, 100);
       }
       
     } catch (error) {
@@ -8534,11 +8717,20 @@ export class LcarsCard extends LitElement {
         (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null
     );
 
-    const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
-        group.elements
+    const newTemplates = this._layoutEngine.layoutGroups.flatMap(group => {
+        // Check if group is visible
+        if (!this._visibilityManager.getGroupVisibility(group.id)) {
+          return [];
+        }
+        
+        return group.elements
+            .filter(el => {
+              // Check if element should be visible (both element and group visibility)
+              return this._visibilityManager.shouldElementBeVisible(el.id, group.id);
+            })
             .map(el => el.render())
-            .filter((template): template is SVGTemplateResult => template !== null)
-    );
+            .filter((template): template is SVGTemplateResult => template !== null);
+    });
 
     this._layoutElementTemplates = newTemplates;
     
@@ -14176,12 +14368,393 @@ describe('shapes.ts utility functions', () => {
 });
 ```
 
+## File: src/utils/visibility-manager.ts
+
+```typescript
+import { VisibilityTriggerConfig, TargetConfig } from '../types.js';
+import { HomeAssistant } from 'custom-card-helpers';
+import { animationManager } from './animation.js';
+
+export interface VisibilityState {
+  visible: boolean;
+  animated?: boolean;
+}
+
+export interface TriggerState {
+  hovered: boolean;
+  clicked: boolean;
+  hoverTimeoutId?: ReturnType<typeof setTimeout>;
+}
+
+export class VisibilityManager {
+  private elementVisibility = new Map<string, VisibilityState>();
+  private groupVisibility = new Map<string, VisibilityState>();
+  private triggerStates = new Map<string, TriggerState>();
+  private visibilityTriggers: VisibilityTriggerConfig[] = [];
+  private elementListeners = new Map<string, { element: Element; listeners: Array<{ event: string; handler: EventListener }> }>();
+  private requestUpdateCallback?: () => void;
+
+  constructor(requestUpdateCallback?: () => void) {
+    this.requestUpdateCallback = requestUpdateCallback;
+  }
+
+  /**
+   * Initialize visibility states for all elements and groups
+   */
+  initializeVisibility(elementIds: string[], groupIds: string[]): void {
+    // Initialize all elements as visible by default
+    elementIds.forEach(id => {
+      if (!this.elementVisibility.has(id)) {
+        this.elementVisibility.set(id, { visible: true });
+      }
+    });
+
+    // Initialize all groups as visible by default
+    groupIds.forEach(id => {
+      if (!this.groupVisibility.has(id)) {
+        this.groupVisibility.set(id, { visible: true });
+      }
+    });
+
+    // Note: Initial visibility states will be applied after triggers are registered
+  }
+
+  /**
+   * Apply initial visibility states based on trigger configurations
+   * This should be called after registerVisibilityTriggers()
+   */
+  applyInitialVisibilityStates(): void {
+    console.log('[VisibilityManager] Applying initial visibility states...');
+    console.log('[VisibilityManager] Found', this.visibilityTriggers.length, 'visibility triggers');
+    
+    // Groups that have show triggers should start hidden
+    this.visibilityTriggers.forEach(trigger => {
+      console.log('[VisibilityManager] Processing trigger:', trigger);
+      if (trigger.action === 'show' && trigger.targets) {
+        trigger.targets.forEach(target => {
+          console.log('[VisibilityManager] Hiding target initially:', target.type, target.id);
+          if (target.type === 'group') {
+            this.setGroupVisibility(target.id, false, false);
+          } else if (target.type === 'element') {
+            this.setElementVisibility(target.id, false, false);
+          }
+        });
+      }
+    });
+    
+    console.log('[VisibilityManager] Group visibility states:', Array.from(this.groupVisibility.entries()));
+    console.log('[VisibilityManager] Element visibility states:', Array.from(this.elementVisibility.entries()));
+  }
+
+  /**
+   * Register visibility triggers from element configurations
+   */
+  registerVisibilityTriggers(triggers: VisibilityTriggerConfig[]): void {
+    this.visibilityTriggers = [...this.visibilityTriggers, ...triggers];
+  }
+
+  /**
+   * Clear all registered triggers (useful for config changes)
+   */
+  clearTriggers(): void {
+    this.visibilityTriggers = [];
+    this.cleanupEventListeners();
+  }
+
+  /**
+   * Set up event listeners for trigger sources
+   */
+  setupEventListeners(getShadowElement: (id: string) => Element | null): void {
+    console.log('[VisibilityManager] Setting up event listeners...');
+    this.cleanupEventListeners();
+
+    this.visibilityTriggers.forEach((trigger, index) => {
+      console.log(`[VisibilityManager] Setting up trigger ${index}:`, trigger);
+      const sourceId = trigger.trigger_source.element_id_ref;
+      const event = trigger.trigger_source.event;
+      
+      // Handle "self" reference by using the sourceId as-is
+      const actualSourceId = sourceId === 'self' ? sourceId : sourceId;
+      
+      console.log(`[VisibilityManager] Looking for element with ID: ${actualSourceId}`);
+      const element = getShadowElement(actualSourceId);
+      if (!element) {
+        console.warn(`[VisibilityManager] Visibility trigger source element not found: ${actualSourceId}`);
+        // Try without CSS escaping in case that's the issue
+        const fallbackElement = getShadowElement(actualSourceId.replace(/\./g, '\\.'));
+        if (fallbackElement) {
+          console.log(`[VisibilityManager] Found element with fallback selector: ${actualSourceId}`);
+        } else {
+          console.warn(`[VisibilityManager] Element still not found with fallback selector`);
+        }
+        return;
+      }
+
+      console.log(`[VisibilityManager] Found element for trigger:`, element);
+      
+      // Initialize trigger state
+      if (!this.triggerStates.has(actualSourceId)) {
+        this.triggerStates.set(actualSourceId, { hovered: false, clicked: false });
+      }
+      
+      const listeners: Array<{ event: string; handler: EventListener }> = [];
+      
+      if (event === 'hover') {
+        const mouseEnterHandler = () => {
+          console.log(`[VisibilityManager] Mouse enter on ${actualSourceId}`);
+          this.handleHoverEnter(trigger, actualSourceId);
+        };
+        const mouseLeaveHandler = () => {
+          console.log(`[VisibilityManager] Mouse leave on ${actualSourceId}`);
+          this.handleHoverLeave(trigger, actualSourceId);
+        };
+        
+        element.addEventListener('mouseenter', mouseEnterHandler);
+        element.addEventListener('mouseleave', mouseLeaveHandler);
+        listeners.push({ event: 'mouseenter', handler: mouseEnterHandler });
+        listeners.push({ event: 'mouseleave', handler: mouseLeaveHandler });
+        console.log(`[VisibilityManager] Added hover listeners to ${actualSourceId}`);
+      } else if (event === 'click') {
+        const clickHandler = (e: Event) => {
+          console.log(`[VisibilityManager] Click on ${actualSourceId}`);
+          this.handleClick(trigger, actualSourceId, e);
+        };
+        
+        element.addEventListener('click', clickHandler);
+        listeners.push({ event: 'click', handler: clickHandler });
+        console.log(`[VisibilityManager] Added click listener to ${actualSourceId}`);
+      }
+      
+      this.elementListeners.set(actualSourceId, { element, listeners });
+    });
+    
+    console.log(`[VisibilityManager] Set up ${this.elementListeners.size} element listeners`);
+    
+    // Set up global click listener for click-outside behavior
+    document.addEventListener('click', this.handleGlobalClick.bind(this));
+  }
+
+  private handleHoverEnter(trigger: VisibilityTriggerConfig, sourceId: string): void {
+    const triggerState = this.triggerStates.get(sourceId);
+    if (!triggerState) return;
+
+    triggerState.hovered = true;
+
+    // Clear any existing timeout
+    if (triggerState.hoverTimeoutId) {
+      clearTimeout(triggerState.hoverTimeoutId);
+      triggerState.hoverTimeoutId = undefined;
+    }
+
+    const mode = trigger.hover_options?.mode || 'show_on_enter_hide_on_leave';
+    
+    if (mode === 'show_on_enter_hide_on_leave') {
+      if (trigger.action === 'show') {
+        this.executeAction(trigger);
+      }
+    } else if (mode === 'toggle_on_enter_hide_on_leave') {
+      if (trigger.action === 'toggle') {
+        this.executeAction(trigger);
+      }
+    }
+  }
+
+  private handleHoverLeave(trigger: VisibilityTriggerConfig, sourceId: string): void {
+    const triggerState = this.triggerStates.get(sourceId);
+    if (!triggerState) return;
+
+    triggerState.hovered = false;
+
+    const mode = trigger.hover_options?.mode || 'show_on_enter_hide_on_leave';
+    const hideDelay = trigger.hover_options?.hide_delay || 0;
+
+    if (mode === 'show_on_enter_hide_on_leave') {
+      if (trigger.action === 'show') {
+        // Execute hide action with delay
+        if (hideDelay > 0) {
+          triggerState.hoverTimeoutId = setTimeout(() => {
+            this.executeHideAction(trigger);
+          }, hideDelay);
+        } else {
+          this.executeHideAction(trigger);
+        }
+      }
+    } else if (mode === 'toggle_on_enter_hide_on_leave') {
+      // Hide on leave for toggle mode
+      if (hideDelay > 0) {
+        triggerState.hoverTimeoutId = setTimeout(() => {
+          this.executeHideAction(trigger);
+        }, hideDelay);
+      } else {
+        this.executeHideAction(trigger);
+      }
+    }
+  }
+
+  private handleClick(trigger: VisibilityTriggerConfig, sourceId: string, event: Event): void {
+    event.stopPropagation();
+    
+    const triggerState = this.triggerStates.get(sourceId);
+    if (!triggerState) return;
+
+    triggerState.clicked = true;
+    this.executeAction(trigger);
+  }
+
+  private handleGlobalClick(event: Event): void {
+    // Handle revert_on_click_outside for click triggers
+    this.visibilityTriggers.forEach(trigger => {
+      if (trigger.trigger_source.event === 'click' && 
+          trigger.click_options?.revert_on_click_outside) {
+        
+        const sourceElement = this.elementListeners.get(trigger.trigger_source.element_id_ref)?.element;
+        if (sourceElement && !sourceElement.contains(event.target as Node)) {
+          // Click was outside the trigger source, revert visibility
+          this.executeHideAction(trigger);
+        }
+      }
+    });
+  }
+
+  private executeAction(trigger: VisibilityTriggerConfig): void {
+    console.log('[VisibilityManager] Executing action:', trigger.action, 'for targets:', trigger.targets);
+    if (!trigger.targets) return;
+
+    trigger.targets.forEach(target => {
+      console.log('[VisibilityManager] Processing target:', target.type, target.id);
+      if (trigger.action === 'show') {
+        this.showTarget(target);
+      } else if (trigger.action === 'hide') {
+        this.hideTarget(target);
+      } else if (trigger.action === 'toggle') {
+        this.toggleTarget(target);
+      }
+    });
+
+    // Trigger re-render
+    console.log('[VisibilityManager] Triggering re-render after action execution');
+    this.requestUpdateCallback?.();
+  }
+
+  private executeHideAction(trigger: VisibilityTriggerConfig): void {
+    if (!trigger.targets) return;
+
+    trigger.targets.forEach(target => {
+      this.hideTarget(target);
+    });
+
+    this.requestUpdateCallback?.();
+  }
+
+  private showTarget(target: TargetConfig): void {
+    if (target.type === 'group') {
+      this.setGroupVisibility(target.id, true, true);
+    } else if (target.type === 'element') {
+      this.setElementVisibility(target.id, true, true);
+    }
+  }
+
+  private hideTarget(target: TargetConfig): void {
+    if (target.type === 'group') {
+      this.setGroupVisibility(target.id, false, true);
+    } else if (target.type === 'element') {
+      this.setElementVisibility(target.id, false, true);
+    }
+  }
+
+  private toggleTarget(target: TargetConfig): void {
+    if (target.type === 'group') {
+      const current = this.getGroupVisibility(target.id);
+      this.setGroupVisibility(target.id, !current, true);
+    } else if (target.type === 'element') {
+      const current = this.getElementVisibility(target.id);
+      this.setElementVisibility(target.id, !current, true);
+    }
+  }
+
+  /**
+   * Set element visibility
+   */
+  setElementVisibility(elementId: string, visible: boolean, animated: boolean = false): void {
+    this.elementVisibility.set(elementId, { visible, animated });
+  }
+
+  /**
+   * Set group visibility
+   */
+  setGroupVisibility(groupId: string, visible: boolean, animated: boolean = false): void {
+    this.groupVisibility.set(groupId, { visible, animated });
+  }
+
+  /**
+   * Get element visibility
+   */
+  getElementVisibility(elementId: string): boolean {
+    const visible = this.elementVisibility.get(elementId)?.visible ?? true;
+    console.log(`[VisibilityManager] getElementVisibility(${elementId}): ${visible}`);
+    return visible;
+  }
+
+  /**
+   * Get group visibility
+   */
+  getGroupVisibility(groupId: string): boolean {
+    const visible = this.groupVisibility.get(groupId)?.visible ?? true;
+    console.log(`[VisibilityManager] getGroupVisibility(${groupId}): ${visible}`);
+    return visible;
+  }
+
+  /**
+   * Check if an element should be rendered based on its own visibility and its group's visibility
+   */
+  shouldElementBeVisible(elementId: string, groupId: string): boolean {
+    const elementVisible = this.getElementVisibility(elementId);
+    const groupVisible = this.getGroupVisibility(groupId);
+    const result = elementVisible && groupVisible;
+    console.log(`[VisibilityManager] shouldElementBeVisible(${elementId}, ${groupId}): element=${elementVisible}, group=${groupVisible}, result=${result}`);
+    return result;
+  }
+
+  /**
+   * Cleanup event listeners
+   */
+  private cleanupEventListeners(): void {
+    this.elementListeners.forEach(({ element, listeners }) => {
+      listeners.forEach(({ event, handler }) => {
+        element.removeEventListener(event, handler);
+      });
+    });
+    this.elementListeners.clear();
+
+    // Remove global click listener
+    document.removeEventListener('click', this.handleGlobalClick.bind(this));
+  }
+
+  /**
+   * Cleanup all resources
+   */
+  cleanup(): void {
+    this.cleanupEventListeners();
+    
+    // Clear any pending timeouts
+    this.triggerStates.forEach(state => {
+      if (state.hoverTimeoutId) {
+        clearTimeout(state.hoverTimeoutId);
+      }
+    });
+    
+    this.elementVisibility.clear();
+    this.groupVisibility.clear();
+    this.triggerStates.clear();
+    this.visibilityTriggers = [];
+  }
+}
+```
+
 ## File: TODO.md
 
 ```markdown
 ## BUGS
-- top header is implemented, but there is a bug where anchoring to it doesn't properly position the element.
-
 ## TODOs:
 
 ### Tests
@@ -14189,12 +14762,17 @@ describe('shapes.ts utility functions', () => {
 
 ### Components
 - implement headerbar as a standalone element
+- implement pill element
 
 ### Layout
+- implement text features:
+    - cutout and dominantBaseline not implemented
+    - fontWeight doesn't seem to work with smaller values - that might be inherent to fontWeight
+    - textTransform only seems to work with uppercase and lowercase; integrate css logic or add other transforms
 - determine an appropriate way to handle groups of elements that curve into other groups of elements. visually, these look like they might be the same concept to group into a larger section
 
-### Features
-- determine a way to implement animation logic for elements
+### Animation
+- add interpolated fade transition between stateful fill changes
 ```
 
 ## File: tsconfig.json
