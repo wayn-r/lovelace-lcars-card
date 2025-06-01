@@ -66,7 +66,12 @@ export interface ElementConfig {
   appearance?: AppearanceConfig;
   text?: TextConfig;
   layout?: LayoutConfig;
-  interactions?: InteractionsConfig;
+  
+  // Direct properties as per YAML definition
+  button?: ButtonConfig;
+  state_management?: ElementStateManagementConfig;
+  visibility_rules?: VisibilityRulesConfig;
+  visibility_triggers?: VisibilityTriggerConfig[];
   animations?: AnimationsConfig;
 }
 
@@ -139,124 +144,55 @@ export interface StretchTargetConfig {
   padding?: number;
 }
 
-// ============================================================================
-// Interactions Configuration
-// ============================================================================
 
-export interface InteractionsConfig {
-  visibility_triggers?: VisibilityTriggerConfig[];
-  button?: ButtonConfig;
-}
-
-export interface VisibilityTriggerConfig {
-  trigger_source: TriggerSourceConfig;
-  targets?: TargetConfig[];
-  action?: 'show' | 'hide' | 'toggle';
-  orchestrated_action?: OrchestratedActionConfig;
-  conditional_actions?: ConditionalActionConfig[];
-  hover_options?: HoverOptionsConfig;
-  click_options?: ClickOptionsConfig;
-}
-
-export interface TriggerSourceConfig {
-  element_id_ref: string;
-  event: 'hover' | 'click';
-}
-
-export interface TargetConfig {
-  type: 'element' | 'group';
-  id: string;
-}
-
-export interface OrchestratedActionConfig {
-  type: 'state_transition' | 'toggle_with_dependencies';
-  state_group?: string; // for state_transition
-  target_state?: string; // for state_transition
-  primary_target?: TargetConfig; // for toggle_with_dependencies
-  when_showing?: ActionGroupConfig;
-  when_hiding?: ActionGroupConfig;
-  additional_actions?: AdditionalActionConfig[];
-  timing?: TimingConfig;
-}
-
-export interface ActionGroupConfig {
-  hide?: TargetConfig[];
-  show?: TargetConfig[];
-}
-
-export interface AdditionalActionConfig {
-  targets: TargetConfig[];
-  action: 'show' | 'hide' | 'toggle';
-}
-
-export interface TimingConfig {
-  hide_first?: boolean;
-  hide_delay?: number;
-  show_delay?: number;
-  stagger_hide?: number;
-  stagger_show?: number;
-}
-
-export interface ConditionalActionConfig {
-  condition: ConditionConfig;
-  action: 'show' | 'hide' | 'toggle';
-  targets: TargetConfig[];
-  additional_hide?: TargetConfig[];
-  additional_show?: TargetConfig[];
-}
-
-export interface ConditionConfig {
-  state_group?: string;
-  current_state?: string;
-  element_visible?: string;
-  element_hidden?: string;
-}
-
-export interface HoverOptionsConfig {
-  mode?: 'show_on_enter_hide_on_leave' | 'toggle_on_enter_hide_on_leave';
-  hide_delay?: number;
-}
-
-export interface ClickOptionsConfig {
-  behavior?: 'toggle' | 'show_only' | 'hide_only';
-  revert_on_leave_source?: boolean;
-  revert_on_click_outside?: boolean;
-}
 
 // ============================================================================
-// Button Configuration
+// Button Configuration (Updated to match YAML definition)
 // ============================================================================
 
 export interface ButtonConfig {
   enabled: boolean;
-  appearance_states?: AppearanceStatesConfig;
-  actions?: ButtonActionsConfig;
+  actions?: {
+    tap?: ActionDefinition;
+    hold?: HoldActionDefinition;
+    double_tap?: ActionDefinition;
+  };
 }
 
-export interface AppearanceStatesConfig {
-  hover?: StateAppearanceConfig;
-  active?: StateAppearanceConfig;
+
+
+export interface HoldActionDefinition extends ActionDefinition {
+  duration?: number; // Hold duration in milliseconds, default 500
 }
 
-export interface StateAppearanceConfig {
-  appearance?: Partial<AppearanceConfig>;
-  text?: Partial<TextConfig>;
-  transform?: string;
-}
-
-export interface ButtonActionsConfig {
-  tap?: HomeAssistantActionConfig | AnimationActionConfig;
-  hold?: HoldActionConfig;
-  double_tap?: DoubleTabActionConfig;
-}
-
-export interface HoldActionConfig {
-  duration?: number;
-  action: HomeAssistantActionConfig | AnimationActionConfig;
-}
-
-export interface DoubleTabActionConfig {
-  action: HomeAssistantActionConfig | AnimationActionConfig;
+export interface ActionDefinition {
+  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none';
+  
+  // Service call specific
+  service?: string;
+  service_data?: Record<string, any>;
+  target?: Record<string, any>;
+  
+  // Navigation specific
+  navigation_path?: string;
+  
+  // URL specific
+  url_path?: string;
+  
+  // Entity specific (toggle, more-info)
+  entity?: string;
+  
+  // State setting specific
+  target_id?: string;
+  state?: string;
+  
+  // General properties
+  confirmation?: boolean | {
+    text?: string;
+    exemptions?: Array<{
+      user: string;
+    }>;
+  };
 }
 
 // ============================================================================
@@ -365,13 +301,12 @@ export interface ScaleParams {
 export interface StateManagementConfig {
   state_groups?: StateGroupConfig[];
   state_machine?: StateMachineConfig;
-  global_interactions?: GlobalInteractionsConfig;
 }
 
 export interface StateGroupConfig {
   group_name: string;
   exclusive: boolean;
-  members: TargetConfig[];
+  members: string[]; // Array of element/group IDs
   default_visible?: string;
 }
 
@@ -388,7 +323,10 @@ export interface StateConfig {
 export interface TransitionConfig {
   from: string;
   to: string;
-  trigger: TriggerSourceConfig;
+  trigger: {
+    element_id_ref: string;
+    event: 'hover' | 'click';
+  };
   animation_sequence?: AnimationPhaseConfig[];
 }
 
@@ -396,10 +334,6 @@ export interface AnimationPhaseConfig {
   phase: 'hide' | 'show';
   targets: string[];
   delay?: number;
-}
-
-export interface GlobalInteractionsConfig {
-  visibility_triggers?: VisibilityTriggerConfig[];
 }
 
 // ============================================================================
@@ -430,4 +364,72 @@ export interface LcarsButtonActionConfig {
       user: string;
     }>;
   };
+}
+
+// ============================================================================
+// Visibility Rules Configuration
+// ============================================================================
+
+export interface VisibilityRulesConfig {
+  operator: 'and' | 'or' | 'not' | 'xor';
+  conditions: VisibilityConditionConfig[];
+}
+
+// ============================================================================
+// Visibility Triggers Configuration
+// ============================================================================
+
+export interface VisibilityTriggerConfig {
+  action: 'show' | 'hide' | 'toggle';
+  trigger_source: TriggerSourceConfig;
+  targets?: TargetConfig[];
+  hover_options?: HoverOptionsConfig;
+  click_options?: ClickOptionsConfig;
+}
+
+export interface TriggerSourceConfig {
+  element_id_ref: string;
+  event: 'hover' | 'click';
+}
+
+export interface TargetConfig {
+  type: 'element' | 'group';
+  id: string;
+}
+
+export interface HoverOptionsConfig {
+  mode?: 'show_on_enter_hide_on_leave' | 'toggle_on_enter_hide_on_leave';
+  hide_delay?: number;
+}
+
+export interface ClickOptionsConfig {
+  revert_on_click_outside?: boolean;
+}
+
+export interface VisibilityConditionConfig {
+  type: 'state' | 'entity_state' | 'group';
+  negate?: boolean;
+  
+  // For type: "state" (custom state)
+  target_id?: string;
+  state?: string;
+  
+  // For type: "entity_state" (Home Assistant entity)
+  entity_id?: string;
+  attribute?: string;
+  value?: any;
+  
+  // For type: "group" (nested condition group)
+  operator?: 'and' | 'or' | 'not' | 'xor';
+  conditions?: VisibilityConditionConfig[];
+}
+
+// ============================================================================
+// State Management Configuration
+// ============================================================================
+
+export interface ElementStateManagementConfig {
+  default_state?: string;
+  entity_id?: string;
+  attribute?: string; // defaults to 'state'
 } 

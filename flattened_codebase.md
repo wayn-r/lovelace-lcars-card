@@ -1,5 +1,7 @@
 ```text
 lovelace-lcars-card/
+├── .cursor/
+│   └── rules/
 ├── .github/
 │   └── workflows/
 ├── .gitignore
@@ -6960,51 +6962,48 @@ function convertNewElementToProps(element: ElementConfig): any {
   }
   
   // Convert button configuration
-  if (element.interactions?.button) {
-    const buttonConfig = element.interactions.button;
+  if (element.button) {
+    const buttonConfig = element.button;
     props.button = {
       enabled: buttonConfig.enabled
     };
     
-    // Convert appearance states
-    if (buttonConfig.appearance_states) {
-      if (buttonConfig.appearance_states.hover) {
-        const hover = buttonConfig.appearance_states.hover;
-        if (hover.appearance?.fill) props.button.hover_fill = hover.appearance.fill;
-        if (hover.appearance?.stroke) props.button.hover_stroke = hover.appearance.stroke;
-        if (hover.transform) props.button.hover_transform = hover.transform;
-      }
-      
-      if (buttonConfig.appearance_states.active) {
-        const active = buttonConfig.appearance_states.active;
-        if (active.appearance?.fill) props.button.active_fill = active.appearance.fill;
-        if (active.appearance?.stroke) props.button.active_stroke = active.appearance.stroke;
-        if (active.transform) props.button.active_transform = active.transform;
-      }
-    }
-    
-    // Convert actions
+    // Convert actions with new structure
     if (buttonConfig.actions?.tap) {
       const tapAction = buttonConfig.actions.tap;
-      // Check if it's a Home Assistant action (not an animation action)
-      if ('action' in tapAction && tapAction.action !== 'animate') {
-        props.button.action_config = {
-          type: tapAction.action,
-          service: tapAction.service,
-          service_data: tapAction.service_data,
-          target: tapAction.target,
-          navigation_path: tapAction.navigation_path,
-          url_path: tapAction.url_path,
-          entity: tapAction.entity,
-          confirmation: tapAction.confirmation
-        };
-      }
+      props.button.action_config = {
+        type: tapAction.action,
+        service: tapAction.service,
+        service_data: tapAction.service_data,
+        target: tapAction.target,
+        navigation_path: tapAction.navigation_path,
+        url_path: tapAction.url_path,
+        entity: tapAction.entity,
+        confirmation: tapAction.confirmation
+      };
     }
+    
+    // TODO: Handle hold and double_tap actions when implemented
   }
 
+  // Convert visibility rules
+  if (element.visibility_rules) {
+    props.visibility_rules = element.visibility_rules;
+  }
+  
   // Convert visibility triggers
-  if (element.interactions?.visibility_triggers) {
-    props.visibility_triggers = element.interactions.visibility_triggers;
+  if (element.visibility_triggers) {
+    props.visibility_triggers = element.visibility_triggers;
+  }
+  
+  // Convert state management
+  if (element.state_management) {
+    props.state_management = element.state_management;
+  }
+  
+  // Convert animations
+  if (element.animations) {
+    props.animations = element.animations;
   }
   
   return props;
@@ -8144,47 +8143,7 @@ describe('parseConfig', () => {
     });
 
     describe('Button Configuration Conversion', () => {
-      it('should convert button interactions to engine button config', () => {
-        const config: LcarsCardConfig = {
-          type: 'lcars-card',
-          groups: [
-            {
-              group_id: 'buttonGroup',
-              elements: [
-                {
-                  id: 'button1',
-                  type: 'rectangle',
-                  text: { content: 'Click Me' },
-                  interactions: {
-                    button: {
-                      enabled: true,
-                      actions: {
-                        tap: {
-                          action: 'call-service',
-                          service: 'light.turn_on',
-                          service_data: { entity_id: 'light.test' }
-                        }
-                      }
-                    }
-                  }
-                }
-              ]
-            }
-          ]
-        };
 
-        parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
-
-        const call = mockRectangleElementConstructor.mock.calls[0];
-        const props = call[1];
-
-        expect(props.button).toBeDefined();
-        expect(props.button.enabled).toBe(true);
-        expect(props.text).toBe('Click Me');
-        expect(props.button.action_config).toBeDefined();
-        expect(props.button.action_config.type).toBe('call-service');
-        expect(props.button.action_config.service).toBe('light.turn_on');
-      });
 
       it('should handle elements without button configuration', () => {
         const config: LcarsCardConfig = {
@@ -8211,28 +8170,26 @@ describe('parseConfig', () => {
         expect(props.button).toBeUndefined();
       });
 
-      it('should convert button appearance states', () => {
+
+
+      it('should convert new direct button configuration structure', () => {
         const config: LcarsCardConfig = {
           type: 'lcars-card',
           groups: [
             {
-              group_id: 'styledButtonGroup',
+              group_id: 'newButtonGroup',
               elements: [
                 {
-                  id: 'styledButton',
+                  id: 'newButton',
                   type: 'rectangle',
-                  text: { content: 'Styled Button' },
-                  interactions: {
-                    button: {
-                      enabled: true,
-                      appearance_states: {
-                        hover: {
-                          appearance: { fill: '#FF0000' },
-                          text: { fill: '#FFFFFF' }
-                        },
-                        active: {
-                          appearance: { fill: '#AA0000' }
-                        }
+                  text: { content: 'New Button' },
+                  button: {
+                    enabled: true,
+                    actions: {
+                      tap: {
+                        action: 'toggle',
+                        entity: 'light.living_room',
+                        confirmation: true
                       }
                     }
                   }
@@ -8247,8 +8204,13 @@ describe('parseConfig', () => {
         const call = mockRectangleElementConstructor.mock.calls[0];
         const props = call[1];
 
-        expect(props.button.hover_fill).toBe('#FF0000');
-        expect(props.button.active_fill).toBe('#AA0000');
+        expect(props.button).toBeDefined();
+        expect(props.button.enabled).toBe(true);
+        expect(props.text).toBe('New Button');
+        expect(props.button.action_config).toBeDefined();
+        expect(props.button.action_config.type).toBe('toggle');
+        expect(props.button.action_config.entity).toBe('light.living_room');
+        expect(props.button.action_config.confirmation).toBe(true);
       });
     });
   });
@@ -9402,7 +9364,12 @@ export interface ElementConfig {
   appearance?: AppearanceConfig;
   text?: TextConfig;
   layout?: LayoutConfig;
-  interactions?: InteractionsConfig;
+  
+  // Direct properties as per YAML definition
+  button?: ButtonConfig;
+  state_management?: ElementStateManagementConfig;
+  visibility_rules?: VisibilityRulesConfig;
+  visibility_triggers?: VisibilityTriggerConfig[];
   animations?: AnimationsConfig;
 }
 
@@ -9475,124 +9442,55 @@ export interface StretchTargetConfig {
   padding?: number;
 }
 
-// ============================================================================
-// Interactions Configuration
-// ============================================================================
 
-export interface InteractionsConfig {
-  visibility_triggers?: VisibilityTriggerConfig[];
-  button?: ButtonConfig;
-}
-
-export interface VisibilityTriggerConfig {
-  trigger_source: TriggerSourceConfig;
-  targets?: TargetConfig[];
-  action?: 'show' | 'hide' | 'toggle';
-  orchestrated_action?: OrchestratedActionConfig;
-  conditional_actions?: ConditionalActionConfig[];
-  hover_options?: HoverOptionsConfig;
-  click_options?: ClickOptionsConfig;
-}
-
-export interface TriggerSourceConfig {
-  element_id_ref: string;
-  event: 'hover' | 'click';
-}
-
-export interface TargetConfig {
-  type: 'element' | 'group';
-  id: string;
-}
-
-export interface OrchestratedActionConfig {
-  type: 'state_transition' | 'toggle_with_dependencies';
-  state_group?: string; // for state_transition
-  target_state?: string; // for state_transition
-  primary_target?: TargetConfig; // for toggle_with_dependencies
-  when_showing?: ActionGroupConfig;
-  when_hiding?: ActionGroupConfig;
-  additional_actions?: AdditionalActionConfig[];
-  timing?: TimingConfig;
-}
-
-export interface ActionGroupConfig {
-  hide?: TargetConfig[];
-  show?: TargetConfig[];
-}
-
-export interface AdditionalActionConfig {
-  targets: TargetConfig[];
-  action: 'show' | 'hide' | 'toggle';
-}
-
-export interface TimingConfig {
-  hide_first?: boolean;
-  hide_delay?: number;
-  show_delay?: number;
-  stagger_hide?: number;
-  stagger_show?: number;
-}
-
-export interface ConditionalActionConfig {
-  condition: ConditionConfig;
-  action: 'show' | 'hide' | 'toggle';
-  targets: TargetConfig[];
-  additional_hide?: TargetConfig[];
-  additional_show?: TargetConfig[];
-}
-
-export interface ConditionConfig {
-  state_group?: string;
-  current_state?: string;
-  element_visible?: string;
-  element_hidden?: string;
-}
-
-export interface HoverOptionsConfig {
-  mode?: 'show_on_enter_hide_on_leave' | 'toggle_on_enter_hide_on_leave';
-  hide_delay?: number;
-}
-
-export interface ClickOptionsConfig {
-  behavior?: 'toggle' | 'show_only' | 'hide_only';
-  revert_on_leave_source?: boolean;
-  revert_on_click_outside?: boolean;
-}
 
 // ============================================================================
-// Button Configuration
+// Button Configuration (Updated to match YAML definition)
 // ============================================================================
 
 export interface ButtonConfig {
   enabled: boolean;
-  appearance_states?: AppearanceStatesConfig;
-  actions?: ButtonActionsConfig;
+  actions?: {
+    tap?: ActionDefinition;
+    hold?: HoldActionDefinition;
+    double_tap?: ActionDefinition;
+  };
 }
 
-export interface AppearanceStatesConfig {
-  hover?: StateAppearanceConfig;
-  active?: StateAppearanceConfig;
+
+
+export interface HoldActionDefinition extends ActionDefinition {
+  duration?: number; // Hold duration in milliseconds, default 500
 }
 
-export interface StateAppearanceConfig {
-  appearance?: Partial<AppearanceConfig>;
-  text?: Partial<TextConfig>;
-  transform?: string;
-}
-
-export interface ButtonActionsConfig {
-  tap?: HomeAssistantActionConfig | AnimationActionConfig;
-  hold?: HoldActionConfig;
-  double_tap?: DoubleTabActionConfig;
-}
-
-export interface HoldActionConfig {
-  duration?: number;
-  action: HomeAssistantActionConfig | AnimationActionConfig;
-}
-
-export interface DoubleTabActionConfig {
-  action: HomeAssistantActionConfig | AnimationActionConfig;
+export interface ActionDefinition {
+  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none';
+  
+  // Service call specific
+  service?: string;
+  service_data?: Record<string, any>;
+  target?: Record<string, any>;
+  
+  // Navigation specific
+  navigation_path?: string;
+  
+  // URL specific
+  url_path?: string;
+  
+  // Entity specific (toggle, more-info)
+  entity?: string;
+  
+  // State setting specific
+  target_id?: string;
+  state?: string;
+  
+  // General properties
+  confirmation?: boolean | {
+    text?: string;
+    exemptions?: Array<{
+      user: string;
+    }>;
+  };
 }
 
 // ============================================================================
@@ -9701,13 +9599,12 @@ export interface ScaleParams {
 export interface StateManagementConfig {
   state_groups?: StateGroupConfig[];
   state_machine?: StateMachineConfig;
-  global_interactions?: GlobalInteractionsConfig;
 }
 
 export interface StateGroupConfig {
   group_name: string;
   exclusive: boolean;
-  members: TargetConfig[];
+  members: string[]; // Array of element/group IDs
   default_visible?: string;
 }
 
@@ -9724,7 +9621,10 @@ export interface StateConfig {
 export interface TransitionConfig {
   from: string;
   to: string;
-  trigger: TriggerSourceConfig;
+  trigger: {
+    element_id_ref: string;
+    event: 'hover' | 'click';
+  };
   animation_sequence?: AnimationPhaseConfig[];
 }
 
@@ -9732,10 +9632,6 @@ export interface AnimationPhaseConfig {
   phase: 'hide' | 'show';
   targets: string[];
   delay?: number;
-}
-
-export interface GlobalInteractionsConfig {
-  visibility_triggers?: VisibilityTriggerConfig[];
 }
 
 // ============================================================================
@@ -9766,6 +9662,74 @@ export interface LcarsButtonActionConfig {
       user: string;
     }>;
   };
+}
+
+// ============================================================================
+// Visibility Rules Configuration
+// ============================================================================
+
+export interface VisibilityRulesConfig {
+  operator: 'and' | 'or' | 'not' | 'xor';
+  conditions: VisibilityConditionConfig[];
+}
+
+// ============================================================================
+// Visibility Triggers Configuration
+// ============================================================================
+
+export interface VisibilityTriggerConfig {
+  action: 'show' | 'hide' | 'toggle';
+  trigger_source: TriggerSourceConfig;
+  targets?: TargetConfig[];
+  hover_options?: HoverOptionsConfig;
+  click_options?: ClickOptionsConfig;
+}
+
+export interface TriggerSourceConfig {
+  element_id_ref: string;
+  event: 'hover' | 'click';
+}
+
+export interface TargetConfig {
+  type: 'element' | 'group';
+  id: string;
+}
+
+export interface HoverOptionsConfig {
+  mode?: 'show_on_enter_hide_on_leave' | 'toggle_on_enter_hide_on_leave';
+  hide_delay?: number;
+}
+
+export interface ClickOptionsConfig {
+  revert_on_click_outside?: boolean;
+}
+
+export interface VisibilityConditionConfig {
+  type: 'state' | 'entity_state' | 'group';
+  negate?: boolean;
+  
+  // For type: "state" (custom state)
+  target_id?: string;
+  state?: string;
+  
+  // For type: "entity_state" (Home Assistant entity)
+  entity_id?: string;
+  attribute?: string;
+  value?: any;
+  
+  // For type: "group" (nested condition group)
+  operator?: 'and' | 'or' | 'not' | 'xor';
+  conditions?: VisibilityConditionConfig[];
+}
+
+// ============================================================================
+// State Management Configuration
+// ============================================================================
+
+export interface ElementStateManagementConfig {
+  default_state?: string;
+  entity_id?: string;
+  attribute?: string; // defaults to 'state'
 }
 ```
 
@@ -14431,7 +14395,7 @@ export class VisibilityManager {
     this.visibilityTriggers.forEach(trigger => {
       console.log('[VisibilityManager] Processing trigger:', trigger);
       if (trigger.action === 'show' && trigger.targets) {
-        trigger.targets.forEach(target => {
+        trigger.targets.forEach((target: TargetConfig) => {
           console.log('[VisibilityManager] Hiding target initially:', target.type, target.id);
           if (target.type === 'group') {
             this.setGroupVisibility(target.id, false, false);
@@ -14473,20 +14437,13 @@ export class VisibilityManager {
       const sourceId = trigger.trigger_source.element_id_ref;
       const event = trigger.trigger_source.event;
       
-      // Handle "self" reference by using the sourceId as-is
-      const actualSourceId = sourceId === 'self' ? sourceId : sourceId;
+      // Handle "self" reference - should already be resolved by parser, but keep as-is for safety
+      const actualSourceId = sourceId;
       
       console.log(`[VisibilityManager] Looking for element with ID: ${actualSourceId}`);
       const element = getShadowElement(actualSourceId);
       if (!element) {
         console.warn(`[VisibilityManager] Visibility trigger source element not found: ${actualSourceId}`);
-        // Try without CSS escaping in case that's the issue
-        const fallbackElement = getShadowElement(actualSourceId.replace(/\./g, '\\.'));
-        if (fallbackElement) {
-          console.log(`[VisibilityManager] Found element with fallback selector: ${actualSourceId}`);
-        } else {
-          console.warn(`[VisibilityManager] Element still not found with fallback selector`);
-        }
         return;
       }
 
@@ -14513,7 +14470,7 @@ export class VisibilityManager {
         element.addEventListener('mouseleave', mouseLeaveHandler);
         listeners.push({ event: 'mouseenter', handler: mouseEnterHandler });
         listeners.push({ event: 'mouseleave', handler: mouseLeaveHandler });
-        console.log(`[VisibilityManager] Added hover listeners to ${actualSourceId}`);
+        console.log(`[VisibilityManager] Added hover listeners to ${actualSourceId}`, element);
       } else if (event === 'click') {
         const clickHandler = (e: Event) => {
           console.log(`[VisibilityManager] Click on ${actualSourceId}`);
@@ -14522,7 +14479,7 @@ export class VisibilityManager {
         
         element.addEventListener('click', clickHandler);
         listeners.push({ event: 'click', handler: clickHandler });
-        console.log(`[VisibilityManager] Added click listener to ${actualSourceId}`);
+        console.log(`[VisibilityManager] Added click listener to ${actualSourceId}`, element);
       }
       
       this.elementListeners.set(actualSourceId, { element, listeners });
@@ -14620,7 +14577,7 @@ export class VisibilityManager {
     console.log('[VisibilityManager] Executing action:', trigger.action, 'for targets:', trigger.targets);
     if (!trigger.targets) return;
 
-    trigger.targets.forEach(target => {
+    trigger.targets.forEach((target: TargetConfig) => {
       console.log('[VisibilityManager] Processing target:', target.type, target.id);
       if (trigger.action === 'show') {
         this.showTarget(target);
@@ -14639,7 +14596,7 @@ export class VisibilityManager {
   private executeHideAction(trigger: VisibilityTriggerConfig): void {
     if (!trigger.targets) return;
 
-    trigger.targets.forEach(target => {
+    trigger.targets.forEach((target: TargetConfig) => {
       this.hideTarget(target);
     });
 
@@ -14676,6 +14633,7 @@ export class VisibilityManager {
    * Set element visibility
    */
   setElementVisibility(elementId: string, visible: boolean, animated: boolean = false): void {
+    console.log(`[VisibilityManager] Setting element ${elementId} visibility to ${visible}`);
     this.elementVisibility.set(elementId, { visible, animated });
   }
 
@@ -14683,6 +14641,7 @@ export class VisibilityManager {
    * Set group visibility
    */
   setGroupVisibility(groupId: string, visible: boolean, animated: boolean = false): void {
+    console.log(`[VisibilityManager] Setting group ${groupId} visibility to ${visible}`);
     this.groupVisibility.set(groupId, { visible, animated });
   }
 

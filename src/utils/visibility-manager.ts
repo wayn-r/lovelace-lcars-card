@@ -58,7 +58,7 @@ export class VisibilityManager {
     this.visibilityTriggers.forEach(trigger => {
       console.log('[VisibilityManager] Processing trigger:', trigger);
       if (trigger.action === 'show' && trigger.targets) {
-        trigger.targets.forEach(target => {
+        trigger.targets.forEach((target: TargetConfig) => {
           console.log('[VisibilityManager] Hiding target initially:', target.type, target.id);
           if (target.type === 'group') {
             this.setGroupVisibility(target.id, false, false);
@@ -100,20 +100,13 @@ export class VisibilityManager {
       const sourceId = trigger.trigger_source.element_id_ref;
       const event = trigger.trigger_source.event;
       
-      // Handle "self" reference by using the sourceId as-is
-      const actualSourceId = sourceId === 'self' ? sourceId : sourceId;
+      // Handle "self" reference - should already be resolved by parser, but keep as-is for safety
+      const actualSourceId = sourceId;
       
       console.log(`[VisibilityManager] Looking for element with ID: ${actualSourceId}`);
       const element = getShadowElement(actualSourceId);
       if (!element) {
         console.warn(`[VisibilityManager] Visibility trigger source element not found: ${actualSourceId}`);
-        // Try without CSS escaping in case that's the issue
-        const fallbackElement = getShadowElement(actualSourceId.replace(/\./g, '\\.'));
-        if (fallbackElement) {
-          console.log(`[VisibilityManager] Found element with fallback selector: ${actualSourceId}`);
-        } else {
-          console.warn(`[VisibilityManager] Element still not found with fallback selector`);
-        }
         return;
       }
 
@@ -140,7 +133,7 @@ export class VisibilityManager {
         element.addEventListener('mouseleave', mouseLeaveHandler);
         listeners.push({ event: 'mouseenter', handler: mouseEnterHandler });
         listeners.push({ event: 'mouseleave', handler: mouseLeaveHandler });
-        console.log(`[VisibilityManager] Added hover listeners to ${actualSourceId}`);
+        console.log(`[VisibilityManager] Added hover listeners to ${actualSourceId}`, element);
       } else if (event === 'click') {
         const clickHandler = (e: Event) => {
           console.log(`[VisibilityManager] Click on ${actualSourceId}`);
@@ -149,7 +142,7 @@ export class VisibilityManager {
         
         element.addEventListener('click', clickHandler);
         listeners.push({ event: 'click', handler: clickHandler });
-        console.log(`[VisibilityManager] Added click listener to ${actualSourceId}`);
+        console.log(`[VisibilityManager] Added click listener to ${actualSourceId}`, element);
       }
       
       this.elementListeners.set(actualSourceId, { element, listeners });
@@ -247,7 +240,7 @@ export class VisibilityManager {
     console.log('[VisibilityManager] Executing action:', trigger.action, 'for targets:', trigger.targets);
     if (!trigger.targets) return;
 
-    trigger.targets.forEach(target => {
+    trigger.targets.forEach((target: TargetConfig) => {
       console.log('[VisibilityManager] Processing target:', target.type, target.id);
       if (trigger.action === 'show') {
         this.showTarget(target);
@@ -266,7 +259,7 @@ export class VisibilityManager {
   private executeHideAction(trigger: VisibilityTriggerConfig): void {
     if (!trigger.targets) return;
 
-    trigger.targets.forEach(target => {
+    trigger.targets.forEach((target: TargetConfig) => {
       this.hideTarget(target);
     });
 
@@ -303,6 +296,7 @@ export class VisibilityManager {
    * Set element visibility
    */
   setElementVisibility(elementId: string, visible: boolean, animated: boolean = false): void {
+    console.log(`[VisibilityManager] Setting element ${elementId} visibility to ${visible}`);
     this.elementVisibility.set(elementId, { visible, animated });
   }
 
@@ -310,6 +304,7 @@ export class VisibilityManager {
    * Set group visibility
    */
   setGroupVisibility(groupId: string, visible: boolean, animated: boolean = false): void {
+    console.log(`[VisibilityManager] Setting group ${groupId} visibility to ${visible}`);
     this.groupVisibility.set(groupId, { visible, animated });
   }
 

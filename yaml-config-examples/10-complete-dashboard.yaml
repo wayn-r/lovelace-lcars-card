@@ -67,17 +67,12 @@ groups:
             to: "navigation.nav_bar"
             element_point: "centerLeft"
             target_point: "centerLeft"
-        interactions:
-          button:
-            enabled: true
-            appearance_states:
-              hover:
-                appearance:
-                  fill: "#00CCFF"
-            actions:
-              tap:
-                action: "navigate"
-                navigation_path: "/lovelace/0"
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: "navigate"
+              navigation_path: "/lovelace/0"
 
   - group_id: "systems"
     elements:
@@ -106,13 +101,12 @@ groups:
             to: "navigation.nav_bar"
             element_point: "topLeft"
             target_point: "bottomLeft"
-        interactions:
-          button:
-            enabled: true
-            actions:
-              tap:
-                action: "more-info"
-                entity: "sensor.kevv_heat_index_temperature"
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: "more-info"
+              entity: "sensor.kevv_heat_index_temperature"
       
       - id: "shields_control"
         type: "elbow"
@@ -138,14 +132,13 @@ groups:
             to: "systems.power_status"
             element_point: "topLeft"
             target_point: "topRight"
-        interactions:
-          button:
-            enabled: true
-            actions:
-              tap:
-                action: "toggle"
-                entity: "binary_sensor.ep1_kitchen_occupancy"
-                confirmation: true
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: "toggle"
+              entity: "binary_sensor.ep1_kitchen_occupancy"
+              confirmation: true
         animations:
           on_load:
             type: "fade"
@@ -174,17 +167,8 @@ groups:
             to: "container"
             element_point: "bottomRight"
             target_point: "bottomRight"
-        interactions:
-          visibility_triggers:
-            - trigger_source:
-                element_id_ref: "alerts.alert_panel"
-                event: "click"
-              targets:
-                - type: "element"
-                  id: "alerts.alert_details"
-              action: "toggle"
-          button:
-            enabled: true
+        button:
+          enabled: true
         animations:
           on_show:
             type: "scale"

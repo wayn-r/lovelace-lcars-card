@@ -42,20 +42,12 @@ groups:
             to: "nav_header.main_header"
             element_point: "topLeft"
             target_point: "bottomLeft"
-        interactions:
-          button:
-            enabled: true
-            appearance_states:
-              hover:
-                appearance:
-                  fill: "#00CCFF"
-              active:
-                appearance:
-                  fill: "#0066AA"
-            actions:
-              tap:
-                action: "navigate"
-                navigation_path: "/lovelace/0"
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: "navigate"
+              navigation_path: "/lovelace/0"
 
       - id: "lights_button"
         type: "endcap"
@@ -73,10 +65,9 @@ groups:
             to: "nav_controls.home_button"
             element_point: "topLeft"
             target_point: "topRight"
-        interactions:
-          button:
-            enabled: true
-            actions:
-              tap:
-                action: "navigate"
-                navigation_path: "/lovelace/lights"
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: "navigate"
+              navigation_path: "/lovelace/lights"

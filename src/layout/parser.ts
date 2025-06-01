@@ -94,51 +94,48 @@ function convertNewElementToProps(element: ElementConfig): any {
   }
   
   // Convert button configuration
-  if (element.interactions?.button) {
-    const buttonConfig = element.interactions.button;
+  if (element.button) {
+    const buttonConfig = element.button;
     props.button = {
       enabled: buttonConfig.enabled
     };
     
-    // Convert appearance states
-    if (buttonConfig.appearance_states) {
-      if (buttonConfig.appearance_states.hover) {
-        const hover = buttonConfig.appearance_states.hover;
-        if (hover.appearance?.fill) props.button.hover_fill = hover.appearance.fill;
-        if (hover.appearance?.stroke) props.button.hover_stroke = hover.appearance.stroke;
-        if (hover.transform) props.button.hover_transform = hover.transform;
-      }
-      
-      if (buttonConfig.appearance_states.active) {
-        const active = buttonConfig.appearance_states.active;
-        if (active.appearance?.fill) props.button.active_fill = active.appearance.fill;
-        if (active.appearance?.stroke) props.button.active_stroke = active.appearance.stroke;
-        if (active.transform) props.button.active_transform = active.transform;
-      }
-    }
-    
-    // Convert actions
+    // Convert actions with new structure
     if (buttonConfig.actions?.tap) {
       const tapAction = buttonConfig.actions.tap;
-      // Check if it's a Home Assistant action (not an animation action)
-      if ('action' in tapAction && tapAction.action !== 'animate') {
-        props.button.action_config = {
-          type: tapAction.action,
-          service: tapAction.service,
-          service_data: tapAction.service_data,
-          target: tapAction.target,
-          navigation_path: tapAction.navigation_path,
-          url_path: tapAction.url_path,
-          entity: tapAction.entity,
-          confirmation: tapAction.confirmation
-        };
-      }
+      props.button.action_config = {
+        type: tapAction.action,
+        service: tapAction.service,
+        service_data: tapAction.service_data,
+        target: tapAction.target,
+        navigation_path: tapAction.navigation_path,
+        url_path: tapAction.url_path,
+        entity: tapAction.entity,
+        confirmation: tapAction.confirmation
+      };
     }
+    
+    // TODO: Handle hold and double_tap actions when implemented
   }
 
+  // Convert visibility rules
+  if (element.visibility_rules) {
+    props.visibility_rules = element.visibility_rules;
+  }
+  
   // Convert visibility triggers
-  if (element.interactions?.visibility_triggers) {
-    props.visibility_triggers = element.interactions.visibility_triggers;
+  if (element.visibility_triggers) {
+    props.visibility_triggers = element.visibility_triggers;
+  }
+  
+  // Convert state management
+  if (element.state_management) {
+    props.state_management = element.state_management;
+  }
+  
+  // Convert animations
+  if (element.animations) {
+    props.animations = element.animations;
   }
   
   return props;

@@ -89,22 +89,21 @@ groups:
             to: "animated_elements.fade_in_element"
             element_point: "topLeft"
             target_point: "bottomLeft"
-        interactions:
-          button:
-            enabled: true
-            actions:
-              tap:
-                action: "animate"
-                animation:
-                  target_elements_ref: ["animated_elements.sliding_panel"]
-                  type: "scale"
-                  scale_params:
-                    scale_start: 1.0
-                    scale_end: 1.2
-                    transform_origin: "center center"
-                  duration: 0.3
-                  repeat: 1
-                  yoyo: true
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: "animate"
+              animation:
+                target_elements_ref: ["animated_elements.sliding_panel"]
+                type: "scale"
+                scale_params:
+                  scale_start: 1.0
+                  scale_end: 1.2
+                  transform_origin: "center center"
+                duration: 0.3
+                repeat: 1
+                yoyo: true
       
       # Complex animation sequence
       - id: "sequence_element"
@@ -166,17 +165,16 @@ groups:
             to: "animated_elements.animation_trigger"
             element_point: "topLeft"
             target_point: "bottomLeft"
-        interactions:
-          button:
-            enabled: true
-            actions:
-              tap:
-                action: "animate"
-                animation:
-                  target_self: true
-                  type: "custom_gsap"
-                  custom_gsap_vars:
-                    rotation: 360
-                    transformOrigin: "center center"
-                    ease: "bounce.out"
-                  duration: 1.0
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: "animate"
+              animation:
+                target_self: true
+                type: "custom_gsap"
+                custom_gsap_vars:
+                  rotation: 360
+                  transformOrigin: "center center"
+                  ease: "bounce.out"
+                duration: 1.0

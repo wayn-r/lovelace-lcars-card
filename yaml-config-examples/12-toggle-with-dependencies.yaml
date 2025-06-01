@@ -4,32 +4,7 @@ card_title: "Toggle with Dependencies Example"
 # LCARS-specific configuration
 lcars_config:
   state_management:
-    # Button A: Toggle group_a and manage button visibility
-    global_interactions:
-      visibility_triggers:
-        - trigger_source:
-            element_id_ref: "nav.button_a"
-            event: "click"
-          orchestrated_action:
-            type: "toggle_with_dependencies"
-            primary_target:
-              type: "group"
-              id: "group_a"
-            when_showing:
-              hide:
-                - type: "element"
-                  id: "nav.button_b"
-                - type: "element"
-                  id: "nav.button_c"
-            when_hiding:
-              show:
-                - type: "element"
-                  id: "nav.button_b"
-                - type: "element"
-                  id: "nav.button_c"
-            timing:
-              hide_first: true
-              show_delay: 250
+
 
 groups:
   - group_id: "nav"
@@ -62,13 +37,8 @@ groups:
             to: "nav.title_display"
             element_point: "topLeft"
             target_point: "bottomLeft"
-        interactions:
-          button:
-            enabled: true
-            appearance_states:
-              hover:
-                appearance:
-                  fill: "#FFCC66"
+        button:
+          enabled: true
       
       - id: "button_b"
         type: "rectangle"
@@ -85,9 +55,8 @@ groups:
             to: "nav.button_a"
             element_point: "topLeft"
             target_point: "topRight"
-        interactions:
-          button:
-            enabled: true
+        button:
+          enabled: true
       
       - id: "button_c"
         type: "rectangle"
@@ -104,9 +73,8 @@ groups:
             to: "nav.button_b"
             element_point: "topLeft"
             target_point: "topRight"
-        interactions:
-          button:
-            enabled: true
+        button:
+          enabled: true
 
   - group_id: "group_a"
     elements:

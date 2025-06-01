@@ -15,26 +15,7 @@ lcars_config:
             id: "group_b"
         default_visible: "group_a"
 
-    # Use orchestrated actions for clean state transitions
-    global_interactions:
-      visibility_triggers:
-        - trigger_source:
-            element_id_ref: "nav.button_a"
-            event: "click"
-          orchestrated_action:
-            type: "state_transition"
-            state_group: "main_navigation"
-            target_state: "group_a"
-            additional_actions:
-              - targets:
-                  - type: "element"
-                    id: "nav.button_b"
-                  - type: "element"
-                    id: "nav.button_c"
-                action: "hide"
-            timing:
-              hide_first: true
-              show_delay: 250
+
 
 groups:
   - group_id: "nav"
@@ -67,9 +48,8 @@ groups:
             to: "nav.title_display"
             element_point: "topLeft"
             target_point: "bottomLeft"
-        interactions:
-          button:
-            enabled: true
+        button:
+          enabled: true
   
   - group_id: "group_a"
     elements:

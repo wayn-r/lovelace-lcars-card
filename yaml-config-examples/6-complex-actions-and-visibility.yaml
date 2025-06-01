@@ -38,30 +38,21 @@ groups:
             to: nav_header.main_header
             element_point: topLeft
             target_point: bottomLeft
-        interactions:
-          button:
-            enabled: true
-          visibility_triggers:
-            - trigger_source:
-                element_id_ref: main_controls.menu_trigger
-                event: hover
-              targets:
-                - type: group
-                  id: menu_items
-              action: show
-              hover_options:
-                mode: show_on_enter_hide_on_leave
-                hide_delay: 500
-            - trigger_source:
-                element_id_ref: main_controls.menu_trigger
-                event: click
-              targets:
-                - type: element
-                  id: details.info_panel
-              action: toggle
-              click_options:
-                behavior: toggle
-                revert_on_click_outside: true
+        button:
+          enabled: true
+        visibility_triggers:
+          - action: show
+            trigger_source:
+              element_id_ref: self
+              event: hover
+            targets:
+              - type: group
+                id: menu_items
+              - type: group
+                id: details
+            hover_options:
+              mode: show_on_enter_hide_on_leave
+              hide_delay: 500
   - group_id: menu_items
     elements:
       - id: option_1
@@ -79,15 +70,14 @@ groups:
             to: main_controls.menu_trigger
             element_point: topLeft
             target_point: bottomLeft
-        interactions:
-          button:
-            enabled: true
-            actions:
-              tap:
-                action: call-service
-                service: homeassistant.toggle
-                service_data:
-                  entity_id: switch.main_systems
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: call-service
+              service: homeassistant.toggle
+              service_data:
+                entity_id: switch.main_systems
       - id: option_2
         type: rectangle
         appearance:

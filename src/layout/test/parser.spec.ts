@@ -420,47 +420,7 @@ describe('parseConfig', () => {
     });
 
     describe('Button Configuration Conversion', () => {
-      it('should convert button interactions to engine button config', () => {
-        const config: LcarsCardConfig = {
-          type: 'lcars-card',
-          groups: [
-            {
-              group_id: 'buttonGroup',
-              elements: [
-                {
-                  id: 'button1',
-                  type: 'rectangle',
-                  text: { content: 'Click Me' },
-                  interactions: {
-                    button: {
-                      enabled: true,
-                      actions: {
-                        tap: {
-                          action: 'call-service',
-                          service: 'light.turn_on',
-                          service_data: { entity_id: 'light.test' }
-                        }
-                      }
-                    }
-                  }
-                }
-              ]
-            }
-          ]
-        };
 
-        parseConfig(config, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
-
-        const call = mockRectangleElementConstructor.mock.calls[0];
-        const props = call[1];
-
-        expect(props.button).toBeDefined();
-        expect(props.button.enabled).toBe(true);
-        expect(props.text).toBe('Click Me');
-        expect(props.button.action_config).toBeDefined();
-        expect(props.button.action_config.type).toBe('call-service');
-        expect(props.button.action_config.service).toBe('light.turn_on');
-      });
 
       it('should handle elements without button configuration', () => {
         const config: LcarsCardConfig = {
@@ -487,28 +447,26 @@ describe('parseConfig', () => {
         expect(props.button).toBeUndefined();
       });
 
-      it('should convert button appearance states', () => {
+
+
+      it('should convert new direct button configuration structure', () => {
         const config: LcarsCardConfig = {
           type: 'lcars-card',
           groups: [
             {
-              group_id: 'styledButtonGroup',
+              group_id: 'newButtonGroup',
               elements: [
                 {
-                  id: 'styledButton',
+                  id: 'newButton',
                   type: 'rectangle',
-                  text: { content: 'Styled Button' },
-                  interactions: {
-                    button: {
-                      enabled: true,
-                      appearance_states: {
-                        hover: {
-                          appearance: { fill: '#FF0000' },
-                          text: { fill: '#FFFFFF' }
-                        },
-                        active: {
-                          appearance: { fill: '#AA0000' }
-                        }
+                  text: { content: 'New Button' },
+                  button: {
+                    enabled: true,
+                    actions: {
+                      tap: {
+                        action: 'toggle',
+                        entity: 'light.living_room',
+                        confirmation: true
                       }
                     }
                   }
@@ -523,8 +481,13 @@ describe('parseConfig', () => {
         const call = mockRectangleElementConstructor.mock.calls[0];
         const props = call[1];
 
-        expect(props.button.hover_fill).toBe('#FF0000');
-        expect(props.button.active_fill).toBe('#AA0000');
+        expect(props.button).toBeDefined();
+        expect(props.button.enabled).toBe(true);
+        expect(props.text).toBe('New Button');
+        expect(props.button.action_config).toBeDefined();
+        expect(props.button.action_config.type).toBe('toggle');
+        expect(props.button.action_config.entity).toBe('light.living_room');
+        expect(props.button.action_config.confirmation).toBe(true);
       });
     });
   });

@@ -15,18 +15,7 @@ state_management:
           id: "kitchen"
       default_visible: "living_room"
 
-  global_interactions:
-    visibility_triggers:
-      - trigger_source:
-          element_id_ref: "nav.living_room_btn"
-          event: "click"
-        orchestrated_action:
-          type: "state_transition"
-          state_group: "room_controls"
-          target_state: "living_room"
-          timing:
-            hide_first: true
-            show_delay: 200
+
 
 groups:
   - group_id: "nav"
@@ -60,15 +49,14 @@ groups:
             to: "nav.title_display"
             element_point: "topLeft"
             target_point: "bottomLeft"
-        interactions:
-          button:
-            enabled: true
-            actions:
-              tap:
-                action: "call-service"
-                service: "scene.turn_on"
-                service_data:
-                  entity_id: "scene.living_room_active"
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: "call-service"
+              service: "scene.turn_on"
+              service_data:
+                entity_id: "scene.living_room_active"
 
   - group_id: "living_room"
     elements:
@@ -92,13 +80,12 @@ groups:
             to: "nav.living_room_btn"
             element_point: "topLeft"
             target_point: "bottomLeft"
-        interactions:
-          button:
-            enabled: true
-            actions:
-              tap:
-                action: "toggle"
-                entity: "light.kitchen_sink_light"
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: "toggle"
+              entity: "light.kitchen_sink_light"
       
       - id: "temperature_display"
         type: "rectangle"
@@ -115,10 +102,9 @@ groups:
             to: "living_room.lights_control"
             element_point: "topLeft"
             target_point: "bottomLeft"
-        interactions:
-          button:
-            enabled: true
-            actions:
-              tap:
-                action: "more-info"
-                entity: "climate.living_room"
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: "more-info"
+              entity: "climate.living_room"

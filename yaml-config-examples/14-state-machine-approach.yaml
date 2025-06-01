@@ -82,9 +82,8 @@ groups:
             to: "header.title_display"
             element_point: "topLeft"
             target_point: "bottomLeft"
-        interactions:
-          button:
-            enabled: true
+        button:
+          enabled: true
       
       - id: "button_b"
         type: "rectangle"
@@ -101,9 +100,8 @@ groups:
             to: "nav.button_a"
             element_point: "topLeft"
             target_point: "topRight"
-        interactions:
-          button:
-            enabled: true
+        button:
+          enabled: true
       
       - id: "button_c"
         type: "rectangle"
@@ -120,9 +118,8 @@ groups:
             to: "nav.button_b"
             element_point: "topLeft"
             target_point: "topRight"
-        interactions:
-          button:
-            enabled: true
+        button:
+          enabled: true
 
   - group_id: "group_a"
     elements:

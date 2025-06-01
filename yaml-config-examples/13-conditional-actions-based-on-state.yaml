@@ -43,30 +43,8 @@ groups:
             to: "controls.title_display"
             element_point: "topLeft"
             target_point: "bottomLeft"
-        interactions:
-          button:
-            enabled: true
-          visibility_triggers:
-            - trigger_source:
-                element_id_ref: "self"
-                event: "click"
-              conditional_actions:
-                - condition:
-                    state_group: "main_navigation"
-                    current_state: "group_a"
-                  action: "hide"
-                  targets:
-                    - type: "group"
-                      id: "group_a"
-                - condition:
-                    element_hidden: "group_a"
-                  action: "show"
-                  targets:
-                    - type: "group"
-                      id: "group_a"
-                  additional_hide:
-                    - type: "element"
-                      id: "nav.button_b"
+        button:
+          enabled: true
 
   - group_id: "nav"
     elements:

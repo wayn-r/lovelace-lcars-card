@@ -84,13 +84,12 @@ groups: <array>                  # Required: Defines groups of elements. Element
         button:                    # Optional: Configuration if this element should act as a button.
           enabled: <boolean>         # True if it's a button. Default: false.
           actions:                   # Defines actions for different types of interactions.
-            tap:                     # Action for a standard click/tap.
-              action: <action_definition> # See action_definition below.
+            tap: <action_definition>   # Action for a standard click/tap. See action_definition below.
             hold:                    # Optional: Action for a click-and-hold.
               duration: <number>       # Optional (ms): Hold duration. Default: 500.
-              action: <action_definition>  # See action_definition below.
-            double_tap:              # Optional: Action for a double-tap.
-              action: <action_definition>  # See action_definition below.
+              action: <string>         # Required: Type of action (same as action_definition).
+              # ... other action_definition properties (service, entity, etc.)
+            double_tap: <action_definition>  # Optional: Action for a double-tap. See action_definition below.
 
         state_management: <state_management_config>  # Optional: Local state management for this element.
 
@@ -105,18 +104,7 @@ groups: <array>                  # Required: Defines groups of elements. Element
             - state: <string>          # Required: State name that triggers this animation.
               animation: <animation_definition>  # Required: Animation to play when state is active.
 
-    state_management: <state_management_config>  # Optional: Local state management for this group.
 
-    visibility_rules: <visibility_rules_config>  # Optional: Rules controlling group visibility.
-
-    animations:                    # Optional: Group-level animations.
-      on_load: <animation_definition>      # Optional: Animation when card loads.
-      on_show: <animation_definition>      # Optional: Animation when group becomes visible.
-      on_hide: <animation_definition>      # Optional: Animation when group is hidden.
-      custom_states: <array>         # Optional: State-based animations.
-        # --- Custom State Animation (Each item in the 'custom_states' array) ---
-        - state: <string>              # Required: State name that triggers this animation.
-          animation: <animation_definition>  # Required: Animation to play when state is active.
 
 
 ## Helper Type Definitions
@@ -161,36 +149,19 @@ color_property: <array>              # Option 2: Static color RGB array [red, gr
   - <number_0_to_255>                # Blue component.
   # Example: [255, 153, 0] for orange
 
-color_property:                      # Option 3: Dynamic color mapping based on states and entities.
-  mapping:
-    entity:                          # Optional: Map colors based on Home Assistant entity values.
-      entity_id: <string>            # Required: Home Assistant entity ID.
-      attribute: <string>            # Optional: Entity attribute to use. Default: 'state'.
-      values:                        # Required: Object mapping entity values to colors.
-        "<entity_value_1>": <color_property>  # e.g., "on": "#ffaa00"
-        "<entity_value_2>": <color_property>  # e.g., "off": [51, 51, 51]
-      interpolate: <boolean>         # Optional: Interpolate colors for numeric values within this entity. Default: false.
-    
-    group:                           # Optional: Map colors based on group state.
-      group_id: <string>             # Required: Target group ID.
-      values:                        # Required: Object mapping group states to colors.
-        "<state_1>": <color_property>
-        "<state_2>": <color_property>
-      interpolate: <boolean>         # Optional: Interpolate colors for numeric values within this group. Default: false.
-    
-    element:                         # Optional: Map colors based on element state.
-      element_id: <string>           # Required: Full element ID ("group_id.element_id").
-      values:                        # Required: Object mapping element states to colors.
-        "<state_1>": <color_property>
-        "<state_2>": <color_property>
-      interpolate: <boolean>         # Optional: Interpolate colors for numeric values within this element. Default: false.
-    
-    hover: <color_property>          # Optional: Color when element is hovered (for interactive elements).
-    active: <color_property>         # Optional: Color when element is pressed/active (for interactive elements).
-    
-    default: <color_property>        # Optional: Fallback color when no mapping matches.
-    interpolate: <boolean>           # Optional: Interpolate colors across all numeric state values globally. Default: false.
-                                     #   Note: String values (e.g., "off") are still handled explicitly even with global interpolation.
+color_property:                      # Option 3: Dynamic color mapping based on Home Assistant entity values.
+  entity: <string>                   # Required: Home Assistant entity ID.
+  attribute: <string>                # Optional: Entity attribute to use. Default: 'state'.
+  mapping: <object>                  # Required: Object mapping entity values to colors.
+    "<entity_value_1>": <color_property>  # e.g., "on": "#ffaa00"
+    "<entity_value_2>": <color_property>  # e.g., "off": [51, 51, 51]
+  default: <color_property>          # Optional: Fallback color when no mapping matches.
+  interpolate: <boolean>             # Optional: Interpolate colors for numeric values. Default: false.
+
+color_property:                      # Option 4: Stateful color configuration for interactive elements.
+  default: <color_property>          # Optional: Default color (static string, array, or dynamic config).
+  hover: <color_property>            # Optional: Color when element is hovered.
+  active: <color_property>           # Optional: Color when element is pressed/active.
 
 
 # === Action Definition ===
@@ -225,60 +196,63 @@ action_definition:                   # Action configuration object.
 
 # === Animation Definition ===
 animation_definition:                # Animation definition for elements and groups.
-  target_elements: <array>           # Optional: Array of element IDs to animate (groups only). Default: all elements in group.
   type: <string>                     # Required: Animation type.
-                                     #   Options: "fade", "slide", "scale", "rotate", "morph".
+                                     #   Options: "fade", "slide", "scale", "custom_gsap".
   
-  # --- Fade Animation Parameters (if type: "fade") ---
-  opacity: <number>                  # Optional: Target opacity (0-1). Default: 1 for show, 0 for hide.
+  # --- Type-specific parameters ---
+  fade_params:                       # Optional: Parameters for fade animations (if type: "fade").
+    opacity_start: <number>          # Optional: Starting opacity (0-1).
+    opacity_end: <number>            # Optional: Ending opacity (0-1).
   
-  # --- Slide Animation Parameters (if type: "slide") ---
-  direction: <string>                # Required: Slide direction - "left", "right", "up", "down".
-  distance: <number>                 # Optional: Distance in pixels. Default: 100.
+  slide_params:                      # Optional: Parameters for slide animations (if type: "slide").
+    direction: <string>              # Required: Slide direction - "up", "down", "left", "right".
+    distance: <string>               # Required: Distance as string (e.g., "100px").
+    opacity_start: <number>          # Optional: Starting opacity (0-1).
   
-  # --- Scale Animation Parameters (if type: "scale") ---
-  scale: <number>                    # Optional: Target scale factor. Default: 1.
-  origin: <string>                   # Optional: Transform origin - "center", "top", "bottom", "left", "right". Default: "center".
+  scale_params:                      # Optional: Parameters for scale animations (if type: "scale").
+    scale_start: <number>            # Optional: Starting scale factor.
+    scale_end: <number>              # Optional: Ending scale factor.
+    transform_origin: <string>       # Optional: Transform origin point.
   
-  # --- Rotate Animation Parameters (if type: "rotate") ---
-  rotation: <number>                 # Required: Rotation in degrees.
-  origin: <string>                   # Optional: Transform origin - "center", "top", "bottom", "left", "right". Default: "center".
-  
-  # --- Morph Animation Parameters (if type: "morph") ---
-  width: <number>                    # Optional: Target width in pixels.
-  height: <number>                   # Optional: Target height in pixels.
-  x: <number>                        # Optional: Target x position in pixels.
-  y: <number>                        # Optional: Target y position in pixels.
+  custom_gsap_vars: <object>         # Optional: Custom GSAP animation variables (if type: "custom_gsap").
   
   # --- Common Animation Properties ---
-  duration: <number>                 # Optional: Duration in milliseconds. Default: 300.
+  duration: <number>                 # Required: Duration in milliseconds.
   delay: <number>                    # Optional: Delay before animation starts in milliseconds. Default: 0.
   ease: <string>                     # Optional: GSAP easing function. Default: "power2.out".
-                                     #   Common options: "linear", "power1.out", "power2.out", "power3.out", 
-                                     #                   "back.out", "bounce.out", "elastic.out", "sine.out".
   repeat: <number>                   # Optional: Number of times to repeat (-1 for infinite). Default: 0.
   yoyo: <boolean>                    # Optional: Reverse animation on repeat. Default: false.
+  
+  # --- Targeting ---
+  target_self: <boolean>             # Optional: Target this element itself. Default: false.
+  target_elements_ref: <array>       # Optional: Array of element IDs to target.
+    - <string>                       # Element ID reference.
+  target_groups_ref: <array>         # Optional: Array of group IDs to target.
+    - <string>                       # Group ID reference.
 
 
-# === Complex Animation Definition (for sequencing) ===
-animation_definition:                # Alternative: Complex animation with sequencing (groups only).
+# === Animation Sequence Definition (for complex multi-step animations) ===
+animation_sequence:                  # Alternative: Animation sequence with multiple steps.
+  target_self: <boolean>             # Optional: Target this element itself. Default: false.
+  target_elements_ref: <array>       # Optional: Array of element IDs to target.
+    - <string>                       # Element ID reference.
+  target_groups_ref: <array>         # Optional: Array of group IDs to target.
+    - <string>                       # Group ID reference.
+  
   steps: <array>                     # Required: Array of animation steps.
     # --- Animation Step Configuration (Each item in the 'steps' array) ---
     - index: <number>                # Required: Execution order. Same index = concurrent execution.
-                                     #   Higher indices wait for all lower indices to complete.
-      target_elements: <array>       # Optional: Array of element IDs to animate in this step.
-      type: <string>                 # Required: Animation type for this step.
-      opacity: <number>              # Optional: Target opacity (if type: "fade").
-      direction: <string>            # Optional: Slide direction (if type: "slide").
-      distance: <number>             # Optional: Distance (if type: "slide").
-      scale: <number>                # Optional: Target scale (if type: "scale").
-      rotation: <number>             # Optional: Rotation in degrees (if type: "rotate").
-      origin: <string>               # Optional: Transform origin (if type: "scale" or "rotate").
-      width: <number>                # Optional: Target width (if type: "morph").
-      height: <number>               # Optional: Target height (if type: "morph").
-      x: <number>                    # Optional: Target x position (if type: "morph").
-      y: <number>                    # Optional: Target y position (if type: "morph").
-      duration: <number>             # Optional: Duration for this step.
+      target_self: <boolean>         # Optional: Target this element for this step.
+      target_elements_ref: <array>   # Optional: Element IDs to target for this step.
+      target_groups_ref: <array>     # Optional: Group IDs to target for this step.
+      
+      type: <string>                 # Required: Animation type - "fade", "slide", "scale", "custom_gsap".
+      fade_params: <fade_params>     # Optional: Fade parameters (if type: "fade").
+      slide_params: <slide_params>   # Optional: Slide parameters (if type: "slide").
+      scale_params: <scale_params>   # Optional: Scale parameters (if type: "scale").
+      custom_gsap_vars: <object>     # Optional: Custom GSAP vars (if type: "custom_gsap").
+      
+      duration: <number>             # Required: Duration for this step.
       delay: <number>                # Optional: Delay for this step.
       ease: <string>                 # Optional: Easing for this step.
       repeat: <number>               # Optional: Repeat count for this step.

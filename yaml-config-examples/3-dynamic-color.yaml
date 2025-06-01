@@ -924,10 +924,9 @@ groups:
             to: stateful_description.stateful_example_line3
             element_point: topLeft
             target_point: bottomLeft
-        interactions:
-          button:
-            enabled: true
-            actions:
-              tap:
-                action: toggle
-                entity: light.kitchen_sink_light
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: toggle
+              entity: light.kitchen_sink_light
