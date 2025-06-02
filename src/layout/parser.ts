@@ -111,7 +111,13 @@ function convertNewElementToProps(element: ElementConfig): any {
         navigation_path: tapAction.navigation_path,
         url_path: tapAction.url_path,
         entity: tapAction.entity,
-        confirmation: tapAction.confirmation
+        confirmation: tapAction.confirmation,
+        // Custom action properties
+        target_element_ref: tapAction.target_element_ref,
+        state: tapAction.state,
+        states: tapAction.states,
+        actions: tapAction.actions,
+        animation: tapAction.animation
       };
     }
     

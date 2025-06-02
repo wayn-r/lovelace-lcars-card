@@ -4,16 +4,14 @@ lovelace-lcars-card/
 │   └── settings.local.json
 ├── .cursor/
 │   └── rules/
-├── .github/
-│   └── workflows/
 ├── .gitignore
 ├── CHANGELOG.md
-├── dist/
 ├── DYNAMIC_COLORS_EXAMPLE.md
+├── TODO.md
+├── dist/
 ├── flatten-codebase.js
 ├── git-history-diff.js
 ├── package.json
-├── reference-files/
 ├── src/
 │   ├── constants.ts
 │   ├── layout/
@@ -52,7 +50,9 @@ lovelace-lcars-card/
 │       ├── color.ts
 │       ├── dynamic-color-manager.ts
 │       ├── fontmetrics.d.ts
+│       ├── layout-coordinator.ts
 │       ├── shapes.ts
+│       ├── state-manager.ts
 │       ├── test/
 │       │   ├── animation.spec.ts
 │       │   ├── color-resolver.spec.ts
@@ -60,7 +60,6 @@ lovelace-lcars-card/
 │       │   ├── dynamic-color-manager.spec.ts
 │       │   └── shapes.spec.ts
 │       └── visibility-manager.ts
-├── TODO.md
 ├── tsconfig.json
 ├── vite.config.ts
 ├── vitest.config.ts
@@ -266,6 +265,30 @@ The dynamic color system uses GSAP (GreenSock Animation Platform) for smooth, hi
 - The color picker in the editor shows live previews of your configurations
 - Transition animations only apply to dynamic colors - static colors change immediately
 - Element IDs can contain special characters (dots, hyphens, etc.) without affecting functionality
+```
+
+## File: TODO.md
+
+```markdown
+## BUGS
+## TODOs:
+
+### Tests
+- Implement a way to automate testing to ensure updates don't break existing functionality.
+
+### Components
+- implement headerbar as a standalone element
+- implement pill element
+
+### Layout
+- implement text features:
+    - cutout and dominantBaseline not implemented
+    - fontWeight doesn't seem to work with smaller values - that might be inherent to fontWeight
+    - textTransform only seems to work with uppercase and lowercase; integrate css logic or add other transforms
+- determine an appropriate way to handle groups of elements that curve into other groups of elements. visually, these look like they might be the same concept to group into a larger section
+
+### Animation
+- add interpolated fade transition between stateful fill changes
 ```
 
 ## File: flatten-codebase.js
@@ -861,7 +884,6 @@ try {
         "vitest": "^3.1.3"
     },
     "dependencies": {
-        "@rollup/rollup-win32-x64-msvc": "^4.41.1",
         "fontfaceobserver": "^2.3.0",
         "fontmetrics": "^1.0.0",
         "gsap": "^3.12.7",
@@ -1176,6 +1198,12 @@ export class Button {
                 navigation_path: buttonConfig.action_config?.navigation_path,
                 url: buttonConfig.action_config?.url_path,
                 entity: buttonConfig.action_config?.entity,
+                // Custom action properties
+                target_element_ref: buttonConfig.action_config?.target_element_ref,
+                state: buttonConfig.action_config?.state,
+                states: buttonConfig.action_config?.states,
+                actions: buttonConfig.action_config?.actions,
+                animation: buttonConfig.action_config?.animation,
             },
             confirmation: buttonConfig.action_config?.confirmation,
         };
@@ -1200,8 +1228,16 @@ export class Button {
     
     private executeAction(actionConfig: any, element?: Element): void {
         const hass = this._hass;
+        const actionType = actionConfig?.tap_action?.action;
+        
+        // Handle custom actions
+        if (this.isCustomAction(actionType)) {
+            this.executeCustomAction(actionConfig);
+            return;
+        }
+        
+        // Handle standard Home Assistant actions
         if (hass) {
-            
             import("custom-card-helpers").then(({ handleAction }) => {
                 // Use the provided element from the event, or try to find it, or create a fallback
                 let targetElement: HTMLElement = element as HTMLElement;
@@ -1221,12 +1257,10 @@ export class Button {
                     console.warn(`[${this._id}] Could not find DOM element, using fallback`);
                 }
                 
-                
                 try {
                     handleAction(targetElement, hass, actionConfig as any, "tap");
                     
                     // Force immediate update for state-changing actions
-                    const actionType = actionConfig?.tap_action?.action;
                     if (actionType === 'toggle' || actionType === 'call-service') {
                         // Use shorter timeout for immediate responsiveness to action feedback
                         setTimeout(() => {
@@ -1247,6 +1281,177 @@ export class Button {
         } else {
             console.error(`[${this._id}] No hass object available for action execution`);
         }
+    }
+
+    private isCustomAction(actionType: string): boolean {
+        return ['set_state', 'toggle_state', 'multi_action', 'animate'].includes(actionType);
+    }
+
+    private executeCustomAction(actionConfig: any): void {
+        const actionType = actionConfig?.tap_action?.action;
+        
+        // Import stateManager dynamically to avoid circular dependencies
+        import('../../utils/state-manager.js').then(({ stateManager }) => {
+            try {
+                this._dispatchCustomAction(actionType, actionConfig, stateManager);
+                this._requestUpdateCallback?.();
+            } catch (error) {
+                console.error(`[${this._id}] Custom action execution failed:`, error);
+                this._requestUpdateCallback?.();
+            }
+        }).catch(error => {
+            console.error(`[${this._id}] Failed to import stateManager:`, error);
+        });
+    }
+
+    private _dispatchCustomAction(actionType: string, actionConfig: any, stateManager: any): void {
+        switch (actionType) {
+            case 'set_state':
+                this._executeSetStateAction(actionConfig, stateManager);
+                break;
+            case 'toggle_state':
+                this._executeToggleStateAction(actionConfig, stateManager);
+                break;
+            case 'multi_action':
+                this._executeMultiAction(actionConfig, stateManager);
+                break;
+            case 'animate':
+                this._executeAnimateAction(actionConfig);
+                break;
+            default:
+                console.warn(`[${this._id}] Unknown custom action: ${actionType}`);
+        }
+    }
+
+    private _executeSetStateAction(actionConfig: any, stateManager: any): void {
+        const targetElementRef = actionConfig.tap_action.target_element_ref;
+        const state = actionConfig.tap_action.state;
+        
+        if (!targetElementRef || !state) {
+            console.warn(`[${this._id}] set_state action missing target_element_ref or state`);
+            return;
+        }
+        
+        stateManager.setState(targetElementRef, state);
+    }
+
+    private _executeToggleStateAction(actionConfig: any, stateManager: any): void {
+        const targetElementRef = actionConfig.tap_action.target_element_ref;
+        const states = actionConfig.tap_action.states;
+        
+        if (!targetElementRef || !states || !Array.isArray(states)) {
+            console.warn(`[${this._id}] toggle_state action missing target_element_ref or states array`);
+            return;
+        }
+        
+        stateManager.toggleState(targetElementRef, states);
+    }
+
+    private _executeMultiAction(actionConfig: any, stateManager: any): void {
+        const actions = actionConfig.tap_action.actions;
+        
+        if (!actions || !Array.isArray(actions)) {
+            console.warn(`[${this._id}] multi_action missing actions array`);
+            return;
+        }
+        
+        // Execute each action in sequence
+        actions.forEach((action: any, index: number) => {
+            try {
+                switch (action.action) {
+                    case 'set_state':
+                        if (action.target_element_ref && action.state) {
+                            stateManager.setState(action.target_element_ref, action.state);
+                        }
+                        break;
+                    case 'toggle_state':
+                        if (action.target_element_ref && action.states) {
+                            stateManager.toggleState(action.target_element_ref, action.states);
+                        }
+                        break;
+                    case 'animate':
+                        this._executeAnimateAction({ tap_action: action });
+                        break;
+                    default:
+                        console.warn(`[${this._id}] Unknown action in multi_action[${index}]: ${action.action}`);
+                }
+            } catch (error) {
+                console.error(`[${this._id}] Error executing multi_action[${index}]:`, error);
+            }
+        });
+    }
+
+    private _executeAnimateAction(actionConfig: any): void {
+        const animation = actionConfig.tap_action.animation;
+        
+        if (!animation) {
+            console.warn(`[${this._id}] animate action missing animation config`);
+            return;
+        }
+        
+        // Handle target_self
+        const targetSelf = animation.target_self;
+        const targetElements = animation.target_elements_ref || [];
+        
+        const elementsToAnimate: string[] = [];
+        if (targetSelf) {
+            elementsToAnimate.push(this._id);
+        }
+        elementsToAnimate.push(...targetElements);
+        
+        // Import GSAP and execute animation
+        import('gsap').then(({ gsap }) => {
+            elementsToAnimate.forEach(elementId => {
+                const targetElement = this._getShadowElement?.(elementId);
+                if (!targetElement) {
+                    console.warn(`[${this._id}] Animation target element not found: ${elementId}`);
+                    return;
+                }
+                
+                this.executeAnimationOnElement(targetElement, animation, gsap);
+            });
+        }).catch(error => {
+            console.error(`[${this._id}] GSAP import failed for animation:`, error);
+        });
+    }
+
+    private executeAnimationOnElement(element: Element, animation: any, gsap: any): void {
+        const { type, duration = 1, ease = 'power2.out', repeat, yoyo } = animation;
+        
+        const animationProps: any = {
+            duration,
+            ease
+        };
+        
+        if (repeat !== undefined) animationProps.repeat = repeat;
+        if (yoyo !== undefined) animationProps.yoyo = yoyo;
+        
+        switch (type) {
+            case 'scale':
+                const { scale_params } = animation;
+                if (scale_params) {
+                    if (scale_params.scale_start !== undefined) {
+                        gsap.set(element, { 
+                            scale: scale_params.scale_start,
+                            transformOrigin: scale_params.transform_origin || 'center center'
+                        });
+                    }
+                    animationProps.scale = scale_params.scale_end || 1;
+                    animationProps.transformOrigin = scale_params.transform_origin || 'center center';
+                }
+                break;
+            case 'custom_gsap':
+                const { custom_gsap_vars } = animation;
+                if (custom_gsap_vars) {
+                    Object.assign(animationProps, custom_gsap_vars);
+                }
+                break;
+            default:
+                console.warn(`[${this._id}] Unknown animation type: ${type}`);
+                return;
+        }
+        
+        gsap.to(element, animationProps);
     }
 
     updateHass(hass?: HomeAssistant): void {
@@ -1678,6 +1883,18 @@ export abstract class LayoutElement {
     public button?: Button;
     public getShadowElement?: (id: string) => Element | null;
 
+    // Transform tracking for anchor calculations
+    private _activeTransforms: {
+        scale?: number;
+        scaleX?: number;
+        scaleY?: number;
+        x?: number;
+        y?: number;
+        rotation?: number;
+    } = {};
+    private _transformOrigin: string = 'center center';
+    private _dependentElements: Set<string> = new Set();
+
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this.id = id;
         this.props = props;
@@ -1947,11 +2164,17 @@ export abstract class LayoutElement {
             return null;
         }
 
+        // Register this element as dependent on the target's transforms
+        targetElement.addDependentElement(this.id);
+
         const elementAnchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
         const targetElementPos = targetElement._getRelativeAnchorPosition(targetAnchorPoint);
+        
+        // Use transform-aware bounds for the target element position
+        const targetBounds = targetElement.getTransformAwareBounds();
 
-        const x = targetElement.layout.x + targetElementPos.x - elementAnchorPos.x;
-        const y = targetElement.layout.y + targetElementPos.y - elementAnchorPos.y;
+        const x = targetBounds.x + targetElementPos.x - elementAnchorPos.x;
+        const y = targetBounds.y + targetElementPos.y - elementAnchorPos.y;
 
         return { x, y };
     }
@@ -2091,12 +2314,18 @@ export abstract class LayoutElement {
             return null; 
         }
         
+        // Register this element as dependent on the target's transforms
+        targetElement.addDependentElement(this.id);
+        
         const anchorPointToUse = this._mapSimpleDirectionToAnchorPoint(targetAnchorPoint, isHorizontal);
         const targetRelativePos = targetElement._getRelativeAnchorPosition(anchorPointToUse);
         
+        // Use transform-aware bounds for the target element position
+        const targetBounds = targetElement.getTransformAwareBounds();
+        
         return isHorizontal
-            ? targetElement.layout.x + targetRelativePos.x
-            : targetElement.layout.y + targetRelativePos.y;
+            ? targetBounds.x + targetRelativePos.x
+            : targetBounds.y + targetRelativePos.y;
     }
 
     private _mapSimpleDirectionToAnchorPoint(direction: string, isHorizontal: boolean): string {
@@ -2211,8 +2440,6 @@ export abstract class LayoutElement {
         }
     }
 
-
-
     private _getAnchorAwareStretchEdge(
         initialPosition: number, 
         initialSize: number, 
@@ -2282,22 +2509,45 @@ export abstract class LayoutElement {
     }
 
     _getRelativeAnchorPosition(anchorPoint: string, width?: number, height?: number): { x: number; y: number } {
-        const w = width !== undefined ? width : this.layout.width;
-        const h = height !== undefined ? height : this.layout.height;
-        
-        switch (anchorPoint) {
-            case 'topLeft': return { x: 0, y: 0 };
-            case 'topCenter': return { x: w / 2, y: 0 };
-            case 'topRight': return { x: w, y: 0 };
-            case 'centerLeft': return { x: 0, y: h / 2 };
-            case 'center': return { x: w / 2, y: h / 2 };
-            case 'centerRight': return { x: w, y: h / 2 };
-            case 'bottomLeft': return { x: 0, y: h };
-            case 'bottomCenter': return { x: w / 2, y: h };
-            case 'bottomRight': return { x: w, y: h };
-            default: 
-                console.warn(`Unknown anchor point: ${anchorPoint}. Defaulting to topLeft.`);
-                return { x: 0, y: 0 };
+        // Use transform-aware dimensions if available
+        if (width === undefined || height === undefined) {
+            const transformAwareBounds = this.getTransformAwareBounds();
+            const w = width !== undefined ? width : transformAwareBounds.width;
+            const h = height !== undefined ? height : transformAwareBounds.height;
+            
+            switch (anchorPoint) {
+                case 'topLeft': return { x: 0, y: 0 };
+                case 'topCenter': return { x: w / 2, y: 0 };
+                case 'topRight': return { x: w, y: 0 };
+                case 'centerLeft': return { x: 0, y: h / 2 };
+                case 'center': return { x: w / 2, y: h / 2 };
+                case 'centerRight': return { x: w, y: h / 2 };
+                case 'bottomLeft': return { x: 0, y: h };
+                case 'bottomCenter': return { x: w / 2, y: h };
+                case 'bottomRight': return { x: w, y: h };
+                default: 
+                    console.warn(`Unknown anchor point: ${anchorPoint}. Defaulting to topLeft.`);
+                    return { x: 0, y: 0 };
+            }
+        } else {
+            // Use explicit dimensions when provided (original behavior)
+            const w = width;
+            const h = height;
+            
+            switch (anchorPoint) {
+                case 'topLeft': return { x: 0, y: 0 };
+                case 'topCenter': return { x: w / 2, y: 0 };
+                case 'topRight': return { x: w, y: 0 };
+                case 'centerLeft': return { x: 0, y: h / 2 };
+                case 'center': return { x: w / 2, y: h / 2 };
+                case 'centerRight': return { x: w, y: h / 2 };
+                case 'bottomLeft': return { x: 0, y: h };
+                case 'bottomCenter': return { x: w / 2, y: h };
+                case 'bottomRight': return { x: w, y: h };
+                default: 
+                    console.warn(`Unknown anchor point: ${anchorPoint}. Defaulting to topLeft.`);
+                    return { x: 0, y: 0 };
+            }
         }
     }
 
@@ -2408,6 +2658,135 @@ export abstract class LayoutElement {
         if (this.button) {
             this.button.updateHass(hass);
         }
+    }
+
+    /**
+     * Track active CSS transforms for anchor calculations
+     */
+    public updateActiveTransforms(transforms: {
+        scale?: number;
+        scaleX?: number;
+        scaleY?: number;
+        x?: number;
+        y?: number;
+        rotation?: number;
+    }, transformOrigin?: string): void {
+        this._activeTransforms = { ...transforms };
+        if (transformOrigin) {
+            this._transformOrigin = transformOrigin;
+        }
+        
+        // Notify dependent elements to recalculate their positions
+        this._notifyDependentElements();
+    }
+
+    /**
+     * Get current transform-aware bounds for anchor calculations
+     */
+    public getTransformAwareBounds(): { x: number, y: number, width: number, height: number } {
+        const originalBounds = {
+            x: this.layout.x,
+            y: this.layout.y,
+            width: this.layout.width,
+            height: this.layout.height
+        };
+
+        // If no active transforms, return original bounds
+        if (Object.keys(this._activeTransforms).length === 0) {
+            return originalBounds;
+        }
+
+        // Calculate transform-aware dimensions
+        const scaleX = this._activeTransforms.scaleX ?? this._activeTransforms.scale ?? 1;
+        const scaleY = this._activeTransforms.scaleY ?? this._activeTransforms.scale ?? 1;
+        
+        const transformedWidth = originalBounds.width * scaleX;
+        const transformedHeight = originalBounds.height * scaleY;
+        
+        // Calculate position offset due to scaling from transform origin
+        const { offsetX, offsetY } = this._calculateTransformOffset(
+            originalBounds.width,
+            originalBounds.height,
+            scaleX,
+            scaleY,
+            this._transformOrigin
+        );
+
+        return {
+            x: originalBounds.x + offsetX + (this._activeTransforms.x ?? 0),
+            y: originalBounds.y + offsetY + (this._activeTransforms.y ?? 0),
+            width: transformedWidth,
+            height: transformedHeight
+        };
+    }
+
+    /**
+     * Register an element as dependent on this element's transforms
+     */
+    public addDependentElement(elementId: string): void {
+        this._dependentElements.add(elementId);
+    }
+
+    /**
+     * Remove an element from the dependent elements list
+     */
+    public removeDependentElement(elementId: string): void {
+        this._dependentElements.delete(elementId);
+    }
+
+    /**
+     * Calculate position offset due to transform origin and scaling
+     */
+    private _calculateTransformOffset(
+        originalWidth: number,
+        originalHeight: number,
+        scaleX: number,
+        scaleY: number,
+        transformOrigin: string
+    ): { offsetX: number, offsetY: number } {
+        // Parse transform origin (e.g., "center center", "top left", "50% 25%")
+        const originParts = transformOrigin.split(' ');
+        let originX = 0.5; // Default to center
+        let originY = 0.5; // Default to center
+
+        if (originParts.length >= 1) {
+            const xPart = originParts[0];
+            if (xPart === 'left') originX = 0;
+            else if (xPart === 'right') originX = 1;
+            else if (xPart === 'center') originX = 0.5;
+            else if (xPart.includes('%')) originX = parseFloat(xPart) / 100;
+        }
+
+        if (originParts.length >= 2) {
+            const yPart = originParts[1];
+            if (yPart === 'top') originY = 0;
+            else if (yPart === 'bottom') originY = 1;
+            else if (yPart === 'center') originY = 0.5;
+            else if (yPart.includes('%')) originY = parseFloat(yPart) / 100;
+        }
+
+        // Calculate offset needed to maintain transform origin position
+        const deltaWidth = originalWidth * (scaleX - 1);
+        const deltaHeight = originalHeight * (scaleY - 1);
+        
+        const offsetX = -deltaWidth * originX;
+        const offsetY = -deltaHeight * originY;
+
+        return { offsetX, offsetY };
+    }
+
+    /**
+     * Notify dependent elements that this element's transform has changed
+     */
+    private _notifyDependentElements(): void {
+        // Import layout coordinator dynamically to avoid circular dependencies
+        import('../../utils/layout-coordinator.js').then(({ layoutCoordinator }) => {
+            layoutCoordinator.updateDependentElements(this.id);
+        }).catch(error => {
+            console.error('[LayoutElement] Error importing layout coordinator:', error);
+            // Fallback to simple re-render request
+            this.requestUpdateCallback?.();
+        });
     }
 
     /**
@@ -7196,7 +7575,13 @@ function convertNewElementToProps(element: ElementConfig): any {
         navigation_path: tapAction.navigation_path,
         url_path: tapAction.url_path,
         entity: tapAction.entity,
-        confirmation: tapAction.confirmation
+        confirmation: tapAction.confirmation,
+        // Custom action properties
+        target_element_ref: tapAction.target_element_ref,
+        state: tapAction.state,
+        states: tapAction.states,
+        actions: tapAction.actions,
+        animation: tapAction.animation
       };
     }
     
@@ -8630,6 +9015,8 @@ import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext } from './utils/animation.js';
 import { DynamicColorManager } from './utils/dynamic-color-manager.js';
 import { VisibilityManager } from './utils/visibility-manager.js';
+import { stateManager } from './utils/state-manager.js';
+import { layoutCoordinator } from './utils/layout-coordinator.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
 
@@ -8955,6 +9342,25 @@ export class LcarsCard extends LitElement {
       this._visibilityManager.registerVisibilityTriggers(allVisibilityTriggers);
       this._visibilityManager.applyInitialVisibilityStates();
 
+      // Initialize state manager
+      const animationContext: AnimationContext = {
+        elementId: 'card',
+        getShadowElement: getShadowElement,
+        hass: this.hass,
+        requestUpdateCallback: () => this.requestUpdate()
+      };
+      
+      const elementsMap = new Map<string, LayoutElement>();
+      groups.forEach(group => {
+        group.elements.forEach(element => {
+          elementsMap.set(element.id, element);
+        });
+      });
+      
+      stateManager.setAnimationContext(animationContext, elementsMap);
+      this._initializeElementStates(groups);
+      this._setupStateChangeHandling(elementsMap);
+
       // Clear all entity monitoring and animation state before recalculating layout
       for (const group of this._layoutEngine.layoutGroups) {
         for (const element of group.elements) {
@@ -8976,37 +9382,17 @@ export class LcarsCard extends LitElement {
       
       // Use the required height for layout calculation to ensure proper anchoring
       const finalContainerRect = new DOMRect(rect.x, rect.y, rect.width, requiredHeight);
+      
+      // Set layout coordinator context after finalContainerRect is available
+      layoutCoordinator.setLayoutContext(elementsMap, finalContainerRect);
+      
       const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(finalContainerRect, { dynamicHeight: true });
       
       // Store the calculated height for rendering
       this._calculatedHeight = layoutDimensions.height;
 
       // Render elements with visibility filtering
-      const newTemplates = this._layoutEngine.layoutGroups.flatMap(group => {
-          console.log(`[LcarsCard] Checking group visibility for: ${group.id}`);
-          // Check if group is visible
-          if (!this._visibilityManager.getGroupVisibility(group.id)) {
-            console.log(`[LcarsCard] Group ${group.id} is hidden, skipping elements`);
-            return [];
-          }
-          
-          return group.elements
-              .filter(el => {
-                // Check if element should be visible (both element and group visibility)
-                const shouldBeVisible = this._visibilityManager.shouldElementBeVisible(el.id, group.id);
-                console.log(`[LcarsCard] Element ${el.id} should be visible: ${shouldBeVisible}`);
-                return shouldBeVisible;
-              })
-              .map(el => {
-                try {
-                  return el.render();
-                } catch (error) {
-                  console.error("[_performLayoutCalculation] Error rendering element", el.id, error);
-                  return null;
-                }
-              })
-              .filter((template): template is SVGTemplateResult => template !== null);
-      });
+      const newTemplates = this._renderVisibleElements();
 
       const TOP_MARGIN = 8;  // offset for broken HA UI
       
@@ -9021,16 +9407,15 @@ export class LcarsCard extends LitElement {
           // Trigger re-render to show the new content
           this.requestUpdate();
           
-          // Set up event listeners for visibility triggers after DOM elements are rendered
-          // Use a longer timeout to ensure DOM is fully ready
+          // Set up event listeners and trigger lifecycle animations after DOM elements are rendered
           setTimeout(() => {
-            console.log('[LcarsCard] Setting up visibility event listeners...');
             this._visibilityManager.setupEventListeners((id: string) => {
-              console.log(`[LcarsCard] Looking for element: #${CSS.escape(id)}`);
               const element = this.shadowRoot?.querySelector(`#${CSS.escape(id)}`);
-              console.log(`[LcarsCard] Found element:`, element);
               return element || null;
             });
+            
+            // Trigger on_load animations for all elements
+            this._triggerOnLoadAnimations(groups);
           }, 100);
       }
       
@@ -9215,6 +9600,79 @@ export class LcarsCard extends LitElement {
         element.updateHass(this.hass);
       }
     }
+  }
+
+  private _initializeElementStates(groups: Group[]): void {
+    groups.forEach(group => {
+      group.elements.forEach(element => {
+        // Initialize elements that have state management or animations
+        if (element.props.state_management || element.props.animations) {
+          stateManager.initializeElementState(
+            element.id,
+            element.props.state_management,
+            element.props.animations
+          );
+        }
+      });
+    });
+  }
+
+  private _setupStateChangeHandling(elementsMap: Map<string, LayoutElement>): void {
+    stateManager.onStateChange((event) => {
+      this.updateStatusIndicators(elementsMap);
+      this.requestUpdate();
+    });
+  }
+
+  private _renderVisibleElements(): SVGTemplateResult[] {
+    return this._layoutEngine.layoutGroups.flatMap(group => {
+      if (!this._visibilityManager.getGroupVisibility(group.id)) {
+        return [];
+      }
+      
+      return group.elements
+        .filter(el => this._visibilityManager.shouldElementBeVisible(el.id, group.id))
+        .map(el => {
+          try {
+            return el.render();
+          } catch (error) {
+            console.error("[_performLayoutCalculation] Error rendering element", el.id, error);
+            return null;
+          }
+        })
+        .filter((template): template is SVGTemplateResult => template !== null);
+    });
+  }
+
+  private _triggerOnLoadAnimations(groups: Group[]): void {
+    groups.forEach(group => {
+      group.elements.forEach(element => {
+        if (element.props.animations?.on_load) {
+          stateManager.triggerLifecycleAnimation(element.id, 'on_load');
+        }
+      });
+    });
+  }
+
+  private updateStatusIndicators(elementsMap: Map<string, LayoutElement>): void {
+    // Import state manager to get current states
+    import('./utils/state-manager.js').then(({ stateManager: sm }) => {
+      // Update panel status indicator
+      const panelStatus = elementsMap.get('status_indicators.panel_status');
+      if (panelStatus && panelStatus.props) {
+        const panelState = sm.getState('animated_elements.sliding_panel') || 'hidden';
+        panelStatus.props.text = `Panel: ${panelState}`;
+      }
+
+      // Update scale status indicator
+      const scaleStatus = elementsMap.get('status_indicators.scale_status');
+      if (scaleStatus && scaleStatus.props) {
+        const scaleState = sm.getState('animated_elements.scale_target') || 'normal';
+        scaleStatus.props.text = `Scale: ${scaleState}`;
+      }
+    }).catch(error => {
+      console.error('[LcarsCard] Error importing state manager for status update:', error);
+    });
   }
 }
 ```
@@ -9856,7 +10314,7 @@ export interface HoldActionDefinition extends ActionDefinition {
 }
 
 export interface ActionDefinition {
-  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none';
+  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state' | 'multi_action' | 'animate';
   
   // Service call specific
   service?: string;
@@ -9872,9 +10330,15 @@ export interface ActionDefinition {
   // Entity specific (toggle, more-info)
   entity?: string;
   
-  // State setting specific
+  // State setting specific (legacy)
   target_id?: string;
   state?: string;
+  
+  // Custom state management actions
+  target_element_ref?: string;
+  states?: string[];
+  actions?: ActionDefinition[];
+  animation?: AnimationDefinition;
   
   // General properties
   confirmation?: boolean | {
@@ -9913,6 +10377,12 @@ export interface AnimationsConfig {
   on_load?: AnimationDefinition | AnimationSequence;
   on_show?: AnimationDefinition | AnimationSequence;
   on_hide?: AnimationDefinition | AnimationSequence;
+  on_state_change?: StateChangeAnimationConfig[];
+}
+
+export interface StateChangeAnimationConfig extends AnimationDefinition {
+  from_state: string;
+  to_state: string;
 }
 
 export interface AnimationActionConfig {
@@ -10042,7 +10512,7 @@ export interface LcarsButtonElementConfig {
 }
 
 export interface LcarsButtonActionConfig {
-  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none';
+  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state' | 'multi_action' | 'animate';
   service?: string;
   service_data?: Record<string, any>;
   navigation_path?: string;
@@ -10054,6 +10524,12 @@ export interface LcarsButtonActionConfig {
       user: string;
     }>;
   };
+  // Custom action properties
+  target_element_ref?: string;
+  state?: string;
+  states?: string[];
+  actions?: ActionDefinition[];
+  animation?: AnimationDefinition;
 }
 
 // ============================================================================
@@ -11856,6 +12332,156 @@ declare module 'fontmetrics' {
 }
 ```
 
+## File: src/utils/layout-coordinator.ts
+
+```typescript
+import { LayoutElement } from '../layout/elements/element.js';
+
+/**
+ * Coordinates layout updates when elements with transforms change
+ * Manages dependencies between elements for anchor/stretch relationships
+ */
+export class LayoutCoordinator {
+  private static instance: LayoutCoordinator;
+  private elementsMap?: Map<string, LayoutElement>;
+  private containerRect?: DOMRect;
+  private updateInProgress = false;
+
+  private constructor() {}
+
+  public static getInstance(): LayoutCoordinator {
+    if (!LayoutCoordinator.instance) {
+      LayoutCoordinator.instance = new LayoutCoordinator();
+    }
+    return LayoutCoordinator.instance;
+  }
+
+  /**
+   * Set the current elements map and container rect for dependency resolution
+   */
+  public setLayoutContext(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
+    this.elementsMap = elementsMap;
+    this.containerRect = containerRect;
+  }
+
+  /**
+   * Update dependent elements when a transform changes
+   */
+  public updateDependentElements(changedElementId: string): void {
+    if (!this.elementsMap || !this.containerRect || this.updateInProgress) {
+      return;
+    }
+
+    this.updateInProgress = true;
+
+    try {
+      // Find all elements that depend on the changed element
+      const dependentElements = this._findDependentElements(changedElementId);
+      
+      // Recalculate layout for dependent elements
+      for (const dependentElement of dependentElements) {
+        this._recalculateElementLayout(dependentElement);
+      }
+    } catch (error) {
+      console.error('[LayoutCoordinator] Error updating dependent elements:', error);
+    } finally {
+      this.updateInProgress = false;
+    }
+  }
+
+  /**
+   * Find all elements that depend on the given element
+   */
+  private _findDependentElements(targetElementId: string): LayoutElement[] {
+    if (!this.elementsMap) return [];
+
+    const dependentElements: LayoutElement[] = [];
+
+    for (const [elementId, element] of this.elementsMap) {
+      if (elementId === targetElementId) continue;
+
+      // Check if this element anchors to the target
+      if (this._elementAnchoredTo(element, targetElementId)) {
+        dependentElements.push(element);
+      }
+
+      // Check if this element stretches to the target
+      if (this._elementStretchesTo(element, targetElementId)) {
+        dependentElements.push(element);
+      }
+    }
+
+    return dependentElements;
+  }
+
+  /**
+   * Check if an element is anchored to a target element
+   */
+  private _elementAnchoredTo(element: LayoutElement, targetElementId: string): boolean {
+    const anchorTo = element.layoutConfig.anchor?.anchorTo;
+    return anchorTo === targetElementId;
+  }
+
+  /**
+   * Check if an element stretches to a target element
+   */
+  private _elementStretchesTo(element: LayoutElement, targetElementId: string): boolean {
+    const stretch = element.layoutConfig.stretch;
+    return stretch?.stretchTo1 === targetElementId || stretch?.stretchTo2 === targetElementId;
+  }
+
+  /**
+   * Recalculate layout for a specific element
+   */
+  private _recalculateElementLayout(element: LayoutElement): void {
+    if (!this.elementsMap || !this.containerRect) return;
+
+    try {
+      // Store the old layout for comparison
+      const oldLayout = { ...element.layout };
+      
+      // Reset the element's layout state
+      element.resetLayout();
+      
+      // Recalculate layout with current dependencies
+      element.calculateLayout(this.elementsMap, this.containerRect);
+      
+      // Check if the layout actually changed
+      const layoutChanged = 
+        oldLayout.x !== element.layout.x ||
+        oldLayout.y !== element.layout.y ||
+        oldLayout.width !== element.layout.width ||
+        oldLayout.height !== element.layout.height;
+      
+      if (layoutChanged) {
+        console.log(`[LayoutCoordinator] Layout changed for ${element.id}:`, {
+          old: oldLayout,
+          new: element.layout
+        });
+        
+        // Force a complete re-render by triggering the parent card's update
+        if (element.requestUpdateCallback) {
+          element.requestUpdateCallback();
+        }
+      }
+    } catch (error) {
+      console.error(`[LayoutCoordinator] Error recalculating layout for ${element.id}:`, error);
+    }
+  }
+
+  /**
+   * Clear the layout context
+   */
+  public clearContext(): void {
+    this.elementsMap = undefined;
+    this.containerRect = undefined;
+  }
+}
+
+// Export singleton instance
+export const layoutCoordinator = LayoutCoordinator.getInstance();
+```
+
 ## File: src/utils/shapes.ts
 
 ```typescript
@@ -12409,6 +13035,686 @@ export function getFontMetrics({
     return null;
   }
 }
+```
+
+## File: src/utils/state-manager.ts
+
+```typescript
+import { AnimationDefinition, AnimationSequence, ElementStateManagementConfig } from '../types.js';
+import { animationManager, AnimationContext } from './animation.js';
+import { HomeAssistant } from 'custom-card-helpers';
+import { LayoutElement } from '../layout/elements/element.js';
+
+export interface ElementState {
+  currentState: string;
+  previousState?: string;
+  lastChange: number;
+}
+
+export interface StateChangeEvent {
+  elementId: string;
+  fromState: string;
+  toState: string;
+  timestamp: number;
+}
+
+export type StateChangeCallback = (event: StateChangeEvent) => void;
+
+/**
+ * Manages element states and triggers animations based on state changes
+ */
+export class StateManager {
+  private elementStates = new Map<string, ElementState>();
+  private stateConfigs = new Map<string, ElementStateManagementConfig>();
+  private animationConfigs = new Map<string, any>();
+  private stateChangeCallbacks: StateChangeCallback[] = [];
+  private elementsMap?: Map<string, LayoutElement>;
+  private animationContext?: AnimationContext;
+
+  /**
+   * Initialize an element's state management
+   */
+  initializeElementState(
+    elementId: string, 
+    stateConfig?: ElementStateManagementConfig,
+    animationConfig?: any
+  ): void {
+    if (stateConfig) {
+      this.stateConfigs.set(elementId, stateConfig);
+      
+      // Set initial state
+      const initialState = stateConfig.default_state || 'default';
+      this.elementStates.set(elementId, {
+        currentState: initialState,
+        lastChange: Date.now()
+      });
+    }
+
+    if (animationConfig) {
+      this.animationConfigs.set(elementId, animationConfig);
+    }
+  }
+
+  /**
+   * Set the animation context for triggering animations
+   */
+  setAnimationContext(context: AnimationContext, elementsMap?: Map<string, LayoutElement>): void {
+    this.animationContext = context;
+    this.elementsMap = elementsMap;
+  }
+
+  /**
+   * Set element state and trigger any associated animations
+   */
+  setState(elementId: string, newState: string): boolean {
+    if (!this._isElementInitialized(elementId)) {
+      return false;
+    }
+
+    const currentStateData = this.elementStates.get(elementId)!;
+    if (this._isAlreadyInState(currentStateData, newState)) {
+      return false;
+    }
+
+    const previousState = currentStateData.currentState;
+    this._updateElementState(elementId, newState, previousState);
+    this._notifyStateChangeCallbacks(elementId, previousState, newState);
+    this._triggerStateChangeAnimations(elementId, previousState, newState);
+
+    return true;
+  }
+
+  /**
+   * Get current state of an element
+   */
+  getState(elementId: string): string | undefined {
+    return this.elementStates.get(elementId)?.currentState;
+  }
+
+  /**
+   * Toggle between two states
+   */
+  toggleState(elementId: string, states: string[]): boolean {
+    if (states.length < 2) {
+      console.warn(`[StateManager] Toggle requires at least 2 states, got ${states.length}`);
+      return false;
+    }
+
+    const currentState = this.getState(elementId);
+    if (!currentState) {
+      console.warn(`[StateManager] Element ${elementId} not initialized for state management`);
+      return false;
+    }
+
+    const currentIndex = states.indexOf(currentState);
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % states.length;
+    const nextState = states[nextIndex];
+
+    return this.setState(elementId, nextState);
+  }
+
+  /**
+   * Add a callback for state changes
+   */
+  onStateChange(callback: StateChangeCallback): void {
+    this.stateChangeCallbacks.push(callback);
+  }
+
+  /**
+   * Remove a state change callback
+   */
+  removeStateChangeCallback(callback: StateChangeCallback): void {
+    const index = this.stateChangeCallbacks.indexOf(callback);
+    if (index !== -1) {
+      this.stateChangeCallbacks.splice(index, 1);
+    }
+  }
+
+  /**
+   * Get all element states for template access
+   */
+  getAllStates(): Record<string, ElementState> {
+    const result: Record<string, ElementState> = {};
+    this.elementStates.forEach((state, elementId) => {
+      result[elementId] = state;
+    });
+    return result;
+  }
+
+  /**
+   * Check if element is initialized for state management
+   */
+  private _isElementInitialized(elementId: string): boolean {
+    const isInitialized = this.elementStates.has(elementId);
+    if (!isInitialized) {
+      console.warn(`[StateManager] Element ${elementId} not initialized for state management`);
+    }
+    return isInitialized;
+  }
+
+  /**
+   * Check if element is already in the target state
+   */
+  private _isAlreadyInState(currentStateData: ElementState, newState: string): boolean {
+    return currentStateData.currentState === newState;
+  }
+
+  /**
+   * Update element state data
+   */
+  private _updateElementState(elementId: string, newState: string, previousState: string): void {
+    this.elementStates.set(elementId, {
+      currentState: newState,
+      previousState: previousState,
+      lastChange: Date.now()
+    });
+  }
+
+  /**
+   * Notify all registered state change callbacks
+   */
+  private _notifyStateChangeCallbacks(elementId: string, fromState: string, toState: string): void {
+    const stateChangeEvent: StateChangeEvent = {
+      elementId,
+      fromState,
+      toState,
+      timestamp: Date.now()
+    };
+
+    this.stateChangeCallbacks.forEach(callback => {
+      try {
+        callback(stateChangeEvent);
+      } catch (error) {
+        console.error('[StateManager] Error in state change callback:', error);
+      }
+    });
+  }
+
+  /**
+   * Trigger state change animations
+   */
+  private _triggerStateChangeAnimations(elementId: string, fromState: string, toState: string): void {
+    this.triggerStateChangeAnimations(elementId, fromState, toState);
+  }
+
+  /**
+   * Trigger animations based on state changes
+   */
+  private triggerStateChangeAnimations(elementId: string, fromState: string, toState: string): void {
+    const animationConfig = this.animationConfigs.get(elementId);
+    if (!animationConfig?.on_state_change || !this.animationContext) {
+      return;
+    }
+
+    // Find matching animation configuration
+    const stateChangeAnimations = animationConfig.on_state_change;
+    if (!Array.isArray(stateChangeAnimations)) {
+      return;
+    }
+
+    for (const animConfig of stateChangeAnimations) {
+      if (this._animationMatchesStateTransition(animConfig, fromState, toState)) {
+        this._executeAnimation(elementId, animConfig);
+        break; // Execute first matching animation only
+      }
+    }
+  }
+
+  /**
+   * Check if animation configuration matches the state transition
+   */
+  private _animationMatchesStateTransition(animConfig: any, fromState: string, toState: string): boolean {
+    return animConfig.from_state === fromState && animConfig.to_state === toState;
+  }
+
+  /**
+   * Execute an animation configuration
+   */
+  private _executeAnimation(elementId: string, animConfig: any): void {
+    if (!this.animationContext || !this.elementsMap) {
+      console.warn('[StateManager] Cannot execute animation: missing context or elements map');
+      return;
+    }
+
+    const element = this.elementsMap.get(elementId);
+    if (!element) {
+      console.warn(`[StateManager] Cannot execute animation: element ${elementId} not found`);
+      return;
+    }
+
+    // Get target element for animation
+    const targetElement = this.animationContext.getShadowElement?.(elementId);
+    if (!targetElement) {
+      console.warn(`[StateManager] Cannot execute animation: DOM element ${elementId} not found`);
+      return;
+    }
+
+    try {
+      // Execute animation based on type
+      switch (animConfig.type) {
+        case 'fade':
+          this.executeFadeAnimation(targetElement, animConfig);
+          break;
+        case 'slide':
+          this.executeSlideAnimation(targetElement, animConfig);
+          break;
+        case 'scale':
+          this.executeScaleAnimation(targetElement, animConfig);
+          break;
+        case 'custom_gsap':
+          this.executeCustomGsapAnimation(targetElement, animConfig);
+          break;
+        default:
+          console.warn(`[StateManager] Unknown animation type: ${animConfig.type}`);
+      }
+    } catch (error) {
+      console.error(`[StateManager] Error executing animation for ${elementId}:`, error);
+    }
+  }
+
+  /**
+   * Execute fade animation
+   */
+  private executeFadeAnimation(element: Element, config: any): void {
+    const { fade_params, duration = 0.5, ease = 'power2.out' } = config;
+    const { opacity_start, opacity_end } = fade_params || {};
+
+    // Import GSAP dynamically to ensure it's available
+    import('gsap').then(({ gsap }) => {
+      if (opacity_start !== undefined) {
+        gsap.set(element, { opacity: opacity_start });
+      }
+      
+      gsap.to(element, {
+        opacity: opacity_end !== undefined ? opacity_end : 1,
+        duration,
+        ease
+      });
+    }).catch(error => {
+      console.error('[StateManager] GSAP import failed:', error);
+    });
+  }
+
+  /**
+   * Execute slide animation
+   */
+  private executeSlideAnimation(element: Element, config: any): void {
+    const { slide_params, duration = 0.5, ease = 'power2.out' } = config;
+    const { direction, distance, opacity_start, opacity_end } = slide_params || {};
+
+    import('gsap').then(({ gsap }) => {
+      // Set initial position based on direction
+      const initialTransform: any = {};
+      const finalTransform: any = {};
+
+      switch (direction) {
+        case 'left':
+          initialTransform.x = `-${distance}`;
+          finalTransform.x = 0;
+          break;
+        case 'right':
+          initialTransform.x = distance;
+          finalTransform.x = 0;
+          break;
+        case 'up':
+          initialTransform.y = `-${distance}`;
+          finalTransform.y = 0;
+          break;
+        case 'down':
+          initialTransform.y = distance;
+          finalTransform.y = 0;
+          break;
+      }
+
+      if (opacity_start !== undefined) {
+        initialTransform.opacity = opacity_start;
+      }
+      if (opacity_end !== undefined) {
+        finalTransform.opacity = opacity_end;
+      }
+
+      gsap.set(element, initialTransform);
+      gsap.to(element, {
+        ...finalTransform,
+        duration,
+        ease
+      });
+    }).catch(error => {
+      console.error('[StateManager] GSAP import failed:', error);
+    });
+  }
+
+  /**
+   * Execute scale animation
+   */
+  private executeScaleAnimation(element: Element, config: any): void {
+    const { scale_params, duration = 0.5, ease = 'power2.out', repeat, yoyo } = config;
+    const { scale_start, scale_end, transform_origin } = scale_params || {};
+
+    import('gsap').then(({ gsap }) => {
+      if (scale_start !== undefined) {
+        gsap.set(element, { 
+          scale: scale_start,
+          transformOrigin: transform_origin || 'center center'
+        });
+        
+        // Update transform tracking
+        this._updateElementTransforms(element, { scale: scale_start }, transform_origin || 'center center');
+      }
+
+      const animationProps: any = {
+        scale: scale_end !== undefined ? scale_end : 1,
+        duration,
+        ease,
+        transformOrigin: transform_origin || 'center center',
+        onUpdate: () => {
+          // Track transform changes during animation
+          const currentScale = gsap.getProperty(element, 'scale') as number;
+          this._updateElementTransforms(element, { scale: currentScale }, transform_origin || 'center center');
+        },
+        onComplete: () => {
+          // Ensure final transform state is tracked
+          const finalScale = scale_end !== undefined ? scale_end : 1;
+          this._updateElementTransforms(element, { scale: finalScale }, transform_origin || 'center center');
+        }
+      };
+
+      if (repeat !== undefined) {
+        animationProps.repeat = repeat;
+      }
+      if (yoyo !== undefined) {
+        animationProps.yoyo = yoyo;
+      }
+
+      gsap.to(element, animationProps);
+    }).catch(error => {
+      console.error('[StateManager] GSAP import failed:', error);
+    });
+  }
+
+  /**
+   * Execute custom GSAP animation
+   */
+  private executeCustomGsapAnimation(element: Element, config: any): void {
+    const { custom_gsap_vars, duration = 0.5 } = config;
+
+    if (!custom_gsap_vars) {
+      console.warn('[StateManager] Custom GSAP animation missing custom_gsap_vars');
+      return;
+    }
+
+    import('gsap').then(({ gsap }) => {
+      const animationProps = { ...custom_gsap_vars, duration };
+      
+      // Add transform tracking for custom animations that affect transforms
+      if (this._hasTransformProperties(custom_gsap_vars)) {
+        animationProps.onUpdate = () => {
+          const transforms: any = {};
+          if ('scale' in custom_gsap_vars) transforms.scale = gsap.getProperty(element, 'scale') as number;
+          if ('scaleX' in custom_gsap_vars) transforms.scaleX = gsap.getProperty(element, 'scaleX') as number;
+          if ('scaleY' in custom_gsap_vars) transforms.scaleY = gsap.getProperty(element, 'scaleY') as number;
+          if ('x' in custom_gsap_vars) transforms.x = gsap.getProperty(element, 'x') as number;
+          if ('y' in custom_gsap_vars) transforms.y = gsap.getProperty(element, 'y') as number;
+          if ('rotation' in custom_gsap_vars) transforms.rotation = gsap.getProperty(element, 'rotation') as number;
+          
+          this._updateElementTransforms(element, transforms, custom_gsap_vars.transformOrigin);
+        };
+        
+        animationProps.onComplete = () => {
+          const finalTransforms: any = {};
+          if ('scale' in custom_gsap_vars) finalTransforms.scale = custom_gsap_vars.scale;
+          if ('scaleX' in custom_gsap_vars) finalTransforms.scaleX = custom_gsap_vars.scaleX;
+          if ('scaleY' in custom_gsap_vars) finalTransforms.scaleY = custom_gsap_vars.scaleY;
+          if ('x' in custom_gsap_vars) finalTransforms.x = custom_gsap_vars.x;
+          if ('y' in custom_gsap_vars) finalTransforms.y = custom_gsap_vars.y;
+          if ('rotation' in custom_gsap_vars) finalTransforms.rotation = custom_gsap_vars.rotation;
+          
+          this._updateElementTransforms(element, finalTransforms, custom_gsap_vars.transformOrigin);
+        };
+      }
+      
+      gsap.to(element, animationProps);
+    }).catch(error => {
+      console.error('[StateManager] GSAP import failed:', error);
+    });
+  }
+
+  /**
+   * Clear all state data
+   */
+  clearAll(): void {
+    this.elementStates.clear();
+    this.stateConfigs.clear();
+    this.animationConfigs.clear();
+    this.stateChangeCallbacks = [];
+  }
+
+  /**
+   * Trigger lifecycle animations (on_load, on_show, on_hide)
+   */
+  triggerLifecycleAnimation(elementId: string, lifecycle: 'on_load' | 'on_show' | 'on_hide'): void {
+    const animationConfig = this.animationConfigs.get(elementId);
+    if (!animationConfig?.[lifecycle] || !this.animationContext) {
+      return;
+    }
+
+    this._executeLifecycleAnimation(elementId, animationConfig[lifecycle], lifecycle);
+  }
+
+  /**
+   * Execute a lifecycle animation configuration
+   */
+  private _executeLifecycleAnimation(elementId: string, animConfig: any, lifecycle: string): void {
+    if (!this.animationContext || !this.elementsMap) {
+      console.warn(`[StateManager] Cannot execute ${lifecycle} animation: missing context or elements map`);
+      return;
+    }
+
+    const targetElement = this.animationContext.getShadowElement?.(elementId);
+    if (!targetElement) {
+      console.warn(`[StateManager] Cannot execute ${lifecycle} animation: DOM element ${elementId} not found`);
+      return;
+    }
+
+    try {
+      // Handle animation sequences (multiple steps)
+      if (animConfig.steps && Array.isArray(animConfig.steps)) {
+        this._executeAnimationSequence(targetElement, animConfig, lifecycle);
+      } else {
+        // Handle single animation
+        this._executeSingleLifecycleAnimation(targetElement, animConfig, lifecycle);
+      }
+    } catch (error) {
+      console.error(`[StateManager] Error executing ${lifecycle} animation for ${elementId}:`, error);
+    }
+  }
+
+  /**
+   * Execute a single lifecycle animation
+   */
+  private _executeSingleLifecycleAnimation(element: Element, config: any, lifecycle: string): void {
+    switch (config.type) {
+      case 'fade':
+        this._executeFadeAnimation(element, config);
+        break;
+      case 'slide':
+        this._executeSlideAnimation(element, config);
+        break;
+      case 'scale':
+        this._executeScaleAnimation(element, config);
+        break;
+      case 'custom_gsap':
+        this._executeCustomGsapAnimation(element, config);
+        break;
+      default:
+        console.warn(`[StateManager] Unknown ${lifecycle} animation type: ${config.type}`);
+    }
+  }
+
+  /**
+   * Execute an animation sequence with multiple steps
+   */
+  private _executeAnimationSequence(element: Element, config: any, lifecycle: string): void {
+    import('gsap').then(({ gsap }) => {
+      const timeline = gsap.timeline();
+      
+      config.steps.forEach((step: any) => {
+        const delay = step.delay || 0;
+        const duration = step.duration || 0.5;
+        
+        switch (step.type) {
+          case 'fade':
+            const fadeProps: any = {
+              duration
+            };
+            if (step.fade_params?.opacity_start !== undefined) {
+              gsap.set(element, { opacity: step.fade_params.opacity_start });
+            }
+            if (step.fade_params?.opacity_end !== undefined) {
+              fadeProps.opacity = step.fade_params.opacity_end;
+            }
+            timeline.to(element, fadeProps, delay);
+            break;
+            
+          case 'slide':
+            const slideProps: any = { duration };
+            const { direction, distance } = step.slide_params || {};
+            
+            if (direction && distance) {
+              switch (direction) {
+                case 'up':
+                  gsap.set(element, { y: distance });
+                  slideProps.y = 0;
+                  break;
+                case 'down':
+                  gsap.set(element, { y: `-${distance}` });
+                  slideProps.y = 0;
+                  break;
+                case 'left':
+                  gsap.set(element, { x: distance });
+                  slideProps.x = 0;
+                  break;
+                case 'right':
+                  gsap.set(element, { x: `-${distance}` });
+                  slideProps.x = 0;
+                  break;
+              }
+            }
+            timeline.to(element, slideProps, delay);
+            break;
+            
+          case 'scale':
+            const scaleProps: any = { 
+              duration,
+              onUpdate: () => {
+                // Track transform changes during animation sequence
+                const currentScale = gsap.getProperty(element, 'scale') as number;
+                this._updateElementTransforms(element, { scale: currentScale }, step.scale_params?.transform_origin || 'center center');
+              },
+              onComplete: () => {
+                // Ensure final transform state is tracked
+                const finalScale = step.scale_params?.scale_end !== undefined ? step.scale_params.scale_end : 1;
+                this._updateElementTransforms(element, { scale: finalScale }, step.scale_params?.transform_origin || 'center center');
+              }
+            };
+            if (step.scale_params?.scale_start !== undefined) {
+              gsap.set(element, { scale: step.scale_params.scale_start });
+              this._updateElementTransforms(element, { scale: step.scale_params.scale_start }, step.scale_params?.transform_origin || 'center center');
+            }
+            if (step.scale_params?.scale_end !== undefined) {
+              scaleProps.scale = step.scale_params.scale_end;
+            }
+            if (step.scale_params?.transform_origin) {
+              scaleProps.transformOrigin = step.scale_params.transform_origin;
+            }
+            if (step.repeat !== undefined) {
+              scaleProps.repeat = step.repeat;
+            }
+            if (step.yoyo !== undefined) {
+              scaleProps.yoyo = step.yoyo;
+            }
+            timeline.to(element, scaleProps, delay);
+            break;
+        }
+      });
+    }).catch(error => {
+      console.error(`[StateManager] GSAP import failed for ${lifecycle} sequence:`, error);
+    });
+  }
+
+  /**
+   * Execute fade animation (refactored for reuse)
+   */
+  private _executeFadeAnimation(element: Element, config: any): void {
+    this.executeFadeAnimation(element, config);
+  }
+
+  /**
+   * Execute slide animation (refactored for reuse)
+   */
+  private _executeSlideAnimation(element: Element, config: any): void {
+    this.executeSlideAnimation(element, config);
+  }
+
+  /**
+   * Execute scale animation (refactored for reuse)
+   */
+  private _executeScaleAnimation(element: Element, config: any): void {
+    this.executeScaleAnimation(element, config);
+  }
+
+  /**
+   * Execute custom GSAP animation (refactored for reuse)
+   */
+  private _executeCustomGsapAnimation(element: Element, config: any): void {
+    this.executeCustomGsapAnimation(element, config);
+  }
+
+  /**
+   * Clear state data for a specific element
+   */
+  clearElement(elementId: string): void {
+    this.elementStates.delete(elementId);
+    this.stateConfigs.delete(elementId);
+    this.animationConfigs.delete(elementId);
+  }
+
+  /**
+   * Update transform tracking for an element
+   */
+  private _updateElementTransforms(
+    domElement: Element, 
+    transforms: { scale?: number; scaleX?: number; scaleY?: number; x?: number; y?: number; rotation?: number }, 
+    transformOrigin?: string
+  ): void {
+    // Find the corresponding LayoutElement by DOM element ID
+    const elementId = domElement.id;
+    console.log(`[StateManager] _updateElementTransforms called for ${elementId}`, transforms);
+    
+    const layoutElement = this.elementsMap?.get(elementId);
+    
+    if (layoutElement && typeof layoutElement.updateActiveTransforms === 'function') {
+      console.log(`[StateManager] Calling updateActiveTransforms on layout element ${elementId}`);
+      layoutElement.updateActiveTransforms(transforms, transformOrigin);
+    } else {
+      console.warn(`[StateManager] Layout element not found or missing updateActiveTransforms method for ${elementId}`, {
+        hasLayoutElement: !!layoutElement,
+        hasMethod: layoutElement && typeof layoutElement.updateActiveTransforms === 'function'
+      });
+    }
+  }
+
+  /**
+   * Check if animation properties include transform properties
+   */
+  private _hasTransformProperties(animationVars: any): boolean {
+    const transformProps = ['scale', 'scaleX', 'scaleY', 'x', 'y', 'rotation', 'rotationX', 'rotationY', 'rotationZ', 'skewX', 'skewY'];
+    return transformProps.some(prop => prop in animationVars);
+  }
+}
+
+// Export singleton instance
+export const stateManager = new StateManager();
 ```
 
 ## File: src/utils/test/animation.spec.ts
@@ -14780,15 +16086,10 @@ export class VisibilityManager {
    * This should be called after registerVisibilityTriggers()
    */
   applyInitialVisibilityStates(): void {
-    console.log('[VisibilityManager] Applying initial visibility states...');
-    console.log('[VisibilityManager] Found', this.visibilityTriggers.length, 'visibility triggers');
-    
     // Groups that have show triggers should start hidden
     this.visibilityTriggers.forEach(trigger => {
-      console.log('[VisibilityManager] Processing trigger:', trigger);
       if (trigger.action === 'show' && trigger.targets) {
         trigger.targets.forEach((target: TargetConfig) => {
-          console.log('[VisibilityManager] Hiding target initially:', target.type, target.id);
           if (target.type === 'group') {
             this.setGroupVisibility(target.id, false, false);
           } else if (target.type === 'element') {
@@ -14797,9 +16098,6 @@ export class VisibilityManager {
         });
       }
     });
-    
-    console.log('[VisibilityManager] Group visibility states:', Array.from(this.groupVisibility.entries()));
-    console.log('[VisibilityManager] Element visibility states:', Array.from(this.elementVisibility.entries()));
   }
 
   /**
@@ -14821,18 +16119,15 @@ export class VisibilityManager {
    * Set up event listeners for trigger sources
    */
   setupEventListeners(getShadowElement: (id: string) => Element | null): void {
-    console.log('[VisibilityManager] Setting up event listeners...');
     this.cleanupEventListeners();
 
     this.visibilityTriggers.forEach((trigger, index) => {
-      console.log(`[VisibilityManager] Setting up trigger ${index}:`, trigger);
       const sourceId = trigger.trigger_source.element_id_ref;
       const event = trigger.trigger_source.event;
       
       // Handle "self" reference - should already be resolved by parser, but keep as-is for safety
       const actualSourceId = sourceId;
       
-      console.log(`[VisibilityManager] Looking for element with ID: ${actualSourceId}`);
       const element = getShadowElement(actualSourceId);
       if (!element) {
         console.warn(`[VisibilityManager] Visibility trigger source element not found: ${actualSourceId}`);
@@ -15025,34 +16320,38 @@ export class VisibilityManager {
    * Set element visibility
    */
   setElementVisibility(elementId: string, visible: boolean, animated: boolean = false): void {
-    console.log(`[VisibilityManager] Setting element ${elementId} visibility to ${visible}`);
+    const previousVisibility = this.elementVisibility.get(elementId)?.visible ?? true;
     this.elementVisibility.set(elementId, { visible, animated });
+    
+    // Trigger lifecycle animations for show/hide
+    if (animated && previousVisibility !== visible) {
+      this._triggerVisibilityAnimation(elementId, visible ? 'on_show' : 'on_hide');
+    }
   }
 
   /**
    * Set group visibility
    */
   setGroupVisibility(groupId: string, visible: boolean, animated: boolean = false): void {
-    console.log(`[VisibilityManager] Setting group ${groupId} visibility to ${visible}`);
+    const previousVisibility = this.groupVisibility.get(groupId)?.visible ?? true;
     this.groupVisibility.set(groupId, { visible, animated });
+    
+    // Note: Group visibility changes don't directly trigger animations
+    // Individual elements within the group handle their own animations
   }
 
   /**
    * Get element visibility
    */
   getElementVisibility(elementId: string): boolean {
-    const visible = this.elementVisibility.get(elementId)?.visible ?? true;
-    console.log(`[VisibilityManager] getElementVisibility(${elementId}): ${visible}`);
-    return visible;
+    return this.elementVisibility.get(elementId)?.visible ?? true;
   }
 
   /**
    * Get group visibility
    */
   getGroupVisibility(groupId: string): boolean {
-    const visible = this.groupVisibility.get(groupId)?.visible ?? true;
-    console.log(`[VisibilityManager] getGroupVisibility(${groupId}): ${visible}`);
-    return visible;
+    return this.groupVisibility.get(groupId)?.visible ?? true;
   }
 
   /**
@@ -15061,9 +16360,7 @@ export class VisibilityManager {
   shouldElementBeVisible(elementId: string, groupId: string): boolean {
     const elementVisible = this.getElementVisibility(elementId);
     const groupVisible = this.getGroupVisibility(groupId);
-    const result = elementVisible && groupVisible;
-    console.log(`[VisibilityManager] shouldElementBeVisible(${elementId}, ${groupId}): element=${elementVisible}, group=${groupVisible}, result=${result}`);
-    return result;
+    return elementVisible && groupVisible;
   }
 
   /**
@@ -15079,6 +16376,18 @@ export class VisibilityManager {
 
     // Remove global click listener
     document.removeEventListener('click', this.handleGlobalClick.bind(this));
+  }
+
+  /**
+   * Trigger visibility-related animations (on_show/on_hide)
+   */
+  private _triggerVisibilityAnimation(elementId: string, lifecycle: 'on_show' | 'on_hide'): void {
+    // Import state manager dynamically to avoid circular dependencies
+    import('./state-manager.js').then(({ stateManager }) => {
+      stateManager.triggerLifecycleAnimation(elementId, lifecycle);
+    }).catch(error => {
+      console.error(`[VisibilityManager] Error importing state manager for ${lifecycle} animation:`, error);
+    });
   }
 
   /**
@@ -15100,30 +16409,6 @@ export class VisibilityManager {
     this.visibilityTriggers = [];
   }
 }
-```
-
-## File: TODO.md
-
-```markdown
-## BUGS
-## TODOs:
-
-### Tests
-- Implement a way to automate testing to ensure updates don't break existing functionality.
-
-### Components
-- implement headerbar as a standalone element
-- implement pill element
-
-### Layout
-- implement text features:
-    - cutout and dominantBaseline not implemented
-    - fontWeight doesn't seem to work with smaller values - that might be inherent to fontWeight
-    - textTransform only seems to work with uppercase and lowercase; integrate css logic or add other transforms
-- determine an appropriate way to handle groups of elements that curve into other groups of elements. visually, these look like they might be the same concept to group into a larger section
-
-### Animation
-- add interpolated fade transition between stateful fill changes
 ```
 
 ## File: tsconfig.json

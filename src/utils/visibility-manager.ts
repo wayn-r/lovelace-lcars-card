@@ -51,15 +51,10 @@ export class VisibilityManager {
    * This should be called after registerVisibilityTriggers()
    */
   applyInitialVisibilityStates(): void {
-    console.log('[VisibilityManager] Applying initial visibility states...');
-    console.log('[VisibilityManager] Found', this.visibilityTriggers.length, 'visibility triggers');
-    
     // Groups that have show triggers should start hidden
     this.visibilityTriggers.forEach(trigger => {
-      console.log('[VisibilityManager] Processing trigger:', trigger);
       if (trigger.action === 'show' && trigger.targets) {
         trigger.targets.forEach((target: TargetConfig) => {
-          console.log('[VisibilityManager] Hiding target initially:', target.type, target.id);
           if (target.type === 'group') {
             this.setGroupVisibility(target.id, false, false);
           } else if (target.type === 'element') {
@@ -68,9 +63,6 @@ export class VisibilityManager {
         });
       }
     });
-    
-    console.log('[VisibilityManager] Group visibility states:', Array.from(this.groupVisibility.entries()));
-    console.log('[VisibilityManager] Element visibility states:', Array.from(this.elementVisibility.entries()));
   }
 
   /**
@@ -92,18 +84,15 @@ export class VisibilityManager {
    * Set up event listeners for trigger sources
    */
   setupEventListeners(getShadowElement: (id: string) => Element | null): void {
-    console.log('[VisibilityManager] Setting up event listeners...');
     this.cleanupEventListeners();
 
     this.visibilityTriggers.forEach((trigger, index) => {
-      console.log(`[VisibilityManager] Setting up trigger ${index}:`, trigger);
       const sourceId = trigger.trigger_source.element_id_ref;
       const event = trigger.trigger_source.event;
       
       // Handle "self" reference - should already be resolved by parser, but keep as-is for safety
       const actualSourceId = sourceId;
       
-      console.log(`[VisibilityManager] Looking for element with ID: ${actualSourceId}`);
       const element = getShadowElement(actualSourceId);
       if (!element) {
         console.warn(`[VisibilityManager] Visibility trigger source element not found: ${actualSourceId}`);
@@ -296,34 +285,38 @@ export class VisibilityManager {
    * Set element visibility
    */
   setElementVisibility(elementId: string, visible: boolean, animated: boolean = false): void {
-    console.log(`[VisibilityManager] Setting element ${elementId} visibility to ${visible}`);
+    const previousVisibility = this.elementVisibility.get(elementId)?.visible ?? true;
     this.elementVisibility.set(elementId, { visible, animated });
+    
+    // Trigger lifecycle animations for show/hide
+    if (animated && previousVisibility !== visible) {
+      this._triggerVisibilityAnimation(elementId, visible ? 'on_show' : 'on_hide');
+    }
   }
 
   /**
    * Set group visibility
    */
   setGroupVisibility(groupId: string, visible: boolean, animated: boolean = false): void {
-    console.log(`[VisibilityManager] Setting group ${groupId} visibility to ${visible}`);
+    const previousVisibility = this.groupVisibility.get(groupId)?.visible ?? true;
     this.groupVisibility.set(groupId, { visible, animated });
+    
+    // Note: Group visibility changes don't directly trigger animations
+    // Individual elements within the group handle their own animations
   }
 
   /**
    * Get element visibility
    */
   getElementVisibility(elementId: string): boolean {
-    const visible = this.elementVisibility.get(elementId)?.visible ?? true;
-    console.log(`[VisibilityManager] getElementVisibility(${elementId}): ${visible}`);
-    return visible;
+    return this.elementVisibility.get(elementId)?.visible ?? true;
   }
 
   /**
    * Get group visibility
    */
   getGroupVisibility(groupId: string): boolean {
-    const visible = this.groupVisibility.get(groupId)?.visible ?? true;
-    console.log(`[VisibilityManager] getGroupVisibility(${groupId}): ${visible}`);
-    return visible;
+    return this.groupVisibility.get(groupId)?.visible ?? true;
   }
 
   /**
@@ -332,9 +325,7 @@ export class VisibilityManager {
   shouldElementBeVisible(elementId: string, groupId: string): boolean {
     const elementVisible = this.getElementVisibility(elementId);
     const groupVisible = this.getGroupVisibility(groupId);
-    const result = elementVisible && groupVisible;
-    console.log(`[VisibilityManager] shouldElementBeVisible(${elementId}, ${groupId}): element=${elementVisible}, group=${groupVisible}, result=${result}`);
-    return result;
+    return elementVisible && groupVisible;
   }
 
   /**
@@ -350,6 +341,18 @@ export class VisibilityManager {
 
     // Remove global click listener
     document.removeEventListener('click', this.handleGlobalClick.bind(this));
+  }
+
+  /**
+   * Trigger visibility-related animations (on_show/on_hide)
+   */
+  private _triggerVisibilityAnimation(elementId: string, lifecycle: 'on_show' | 'on_hide'): void {
+    // Import state manager dynamically to avoid circular dependencies
+    import('./state-manager.js').then(({ stateManager }) => {
+      stateManager.triggerLifecycleAnimation(elementId, lifecycle);
+    }).catch(error => {
+      console.error(`[VisibilityManager] Error importing state manager for ${lifecycle} animation:`, error);
+    });
   }
 
   /**

@@ -166,7 +166,7 @@ export interface HoldActionDefinition extends ActionDefinition {
 }
 
 export interface ActionDefinition {
-  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none';
+  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state' | 'multi_action' | 'animate';
   
   // Service call specific
   service?: string;
@@ -182,9 +182,15 @@ export interface ActionDefinition {
   // Entity specific (toggle, more-info)
   entity?: string;
   
-  // State setting specific
+  // State setting specific (legacy)
   target_id?: string;
   state?: string;
+  
+  // Custom state management actions
+  target_element_ref?: string;
+  states?: string[];
+  actions?: ActionDefinition[];
+  animation?: AnimationDefinition;
   
   // General properties
   confirmation?: boolean | {
@@ -223,6 +229,12 @@ export interface AnimationsConfig {
   on_load?: AnimationDefinition | AnimationSequence;
   on_show?: AnimationDefinition | AnimationSequence;
   on_hide?: AnimationDefinition | AnimationSequence;
+  on_state_change?: StateChangeAnimationConfig[];
+}
+
+export interface StateChangeAnimationConfig extends AnimationDefinition {
+  from_state: string;
+  to_state: string;
 }
 
 export interface AnimationActionConfig {
@@ -352,7 +364,7 @@ export interface LcarsButtonElementConfig {
 }
 
 export interface LcarsButtonActionConfig {
-  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none';
+  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state' | 'multi_action' | 'animate';
   service?: string;
   service_data?: Record<string, any>;
   navigation_path?: string;
@@ -364,6 +376,12 @@ export interface LcarsButtonActionConfig {
       user: string;
     }>;
   };
+  // Custom action properties
+  target_element_ref?: string;
+  state?: string;
+  states?: string[];
+  actions?: ActionDefinition[];
+  animation?: AnimationDefinition;
 }
 
 // ============================================================================

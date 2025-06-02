@@ -280,6 +280,12 @@ export class Button {
                 navigation_path: buttonConfig.action_config?.navigation_path,
                 url: buttonConfig.action_config?.url_path,
                 entity: buttonConfig.action_config?.entity,
+                // Custom action properties
+                target_element_ref: buttonConfig.action_config?.target_element_ref,
+                state: buttonConfig.action_config?.state,
+                states: buttonConfig.action_config?.states,
+                actions: buttonConfig.action_config?.actions,
+                animation: buttonConfig.action_config?.animation,
             },
             confirmation: buttonConfig.action_config?.confirmation,
         };
@@ -304,8 +310,16 @@ export class Button {
     
     private executeAction(actionConfig: any, element?: Element): void {
         const hass = this._hass;
+        const actionType = actionConfig?.tap_action?.action;
+        
+        // Handle custom actions
+        if (this.isCustomAction(actionType)) {
+            this.executeCustomAction(actionConfig);
+            return;
+        }
+        
+        // Handle standard Home Assistant actions
         if (hass) {
-            
             import("custom-card-helpers").then(({ handleAction }) => {
                 // Use the provided element from the event, or try to find it, or create a fallback
                 let targetElement: HTMLElement = element as HTMLElement;
@@ -325,12 +339,10 @@ export class Button {
                     console.warn(`[${this._id}] Could not find DOM element, using fallback`);
                 }
                 
-                
                 try {
                     handleAction(targetElement, hass, actionConfig as any, "tap");
                     
                     // Force immediate update for state-changing actions
-                    const actionType = actionConfig?.tap_action?.action;
                     if (actionType === 'toggle' || actionType === 'call-service') {
                         // Use shorter timeout for immediate responsiveness to action feedback
                         setTimeout(() => {
@@ -351,6 +363,177 @@ export class Button {
         } else {
             console.error(`[${this._id}] No hass object available for action execution`);
         }
+    }
+
+    private isCustomAction(actionType: string): boolean {
+        return ['set_state', 'toggle_state', 'multi_action', 'animate'].includes(actionType);
+    }
+
+    private executeCustomAction(actionConfig: any): void {
+        const actionType = actionConfig?.tap_action?.action;
+        
+        // Import stateManager dynamically to avoid circular dependencies
+        import('../../utils/state-manager.js').then(({ stateManager }) => {
+            try {
+                this._dispatchCustomAction(actionType, actionConfig, stateManager);
+                this._requestUpdateCallback?.();
+            } catch (error) {
+                console.error(`[${this._id}] Custom action execution failed:`, error);
+                this._requestUpdateCallback?.();
+            }
+        }).catch(error => {
+            console.error(`[${this._id}] Failed to import stateManager:`, error);
+        });
+    }
+
+    private _dispatchCustomAction(actionType: string, actionConfig: any, stateManager: any): void {
+        switch (actionType) {
+            case 'set_state':
+                this._executeSetStateAction(actionConfig, stateManager);
+                break;
+            case 'toggle_state':
+                this._executeToggleStateAction(actionConfig, stateManager);
+                break;
+            case 'multi_action':
+                this._executeMultiAction(actionConfig, stateManager);
+                break;
+            case 'animate':
+                this._executeAnimateAction(actionConfig);
+                break;
+            default:
+                console.warn(`[${this._id}] Unknown custom action: ${actionType}`);
+        }
+    }
+
+    private _executeSetStateAction(actionConfig: any, stateManager: any): void {
+        const targetElementRef = actionConfig.tap_action.target_element_ref;
+        const state = actionConfig.tap_action.state;
+        
+        if (!targetElementRef || !state) {
+            console.warn(`[${this._id}] set_state action missing target_element_ref or state`);
+            return;
+        }
+        
+        stateManager.setState(targetElementRef, state);
+    }
+
+    private _executeToggleStateAction(actionConfig: any, stateManager: any): void {
+        const targetElementRef = actionConfig.tap_action.target_element_ref;
+        const states = actionConfig.tap_action.states;
+        
+        if (!targetElementRef || !states || !Array.isArray(states)) {
+            console.warn(`[${this._id}] toggle_state action missing target_element_ref or states array`);
+            return;
+        }
+        
+        stateManager.toggleState(targetElementRef, states);
+    }
+
+    private _executeMultiAction(actionConfig: any, stateManager: any): void {
+        const actions = actionConfig.tap_action.actions;
+        
+        if (!actions || !Array.isArray(actions)) {
+            console.warn(`[${this._id}] multi_action missing actions array`);
+            return;
+        }
+        
+        // Execute each action in sequence
+        actions.forEach((action: any, index: number) => {
+            try {
+                switch (action.action) {
+                    case 'set_state':
+                        if (action.target_element_ref && action.state) {
+                            stateManager.setState(action.target_element_ref, action.state);
+                        }
+                        break;
+                    case 'toggle_state':
+                        if (action.target_element_ref && action.states) {
+                            stateManager.toggleState(action.target_element_ref, action.states);
+                        }
+                        break;
+                    case 'animate':
+                        this._executeAnimateAction({ tap_action: action });
+                        break;
+                    default:
+                        console.warn(`[${this._id}] Unknown action in multi_action[${index}]: ${action.action}`);
+                }
+            } catch (error) {
+                console.error(`[${this._id}] Error executing multi_action[${index}]:`, error);
+            }
+        });
+    }
+
+    private _executeAnimateAction(actionConfig: any): void {
+        const animation = actionConfig.tap_action.animation;
+        
+        if (!animation) {
+            console.warn(`[${this._id}] animate action missing animation config`);
+            return;
+        }
+        
+        // Handle target_self
+        const targetSelf = animation.target_self;
+        const targetElements = animation.target_elements_ref || [];
+        
+        const elementsToAnimate: string[] = [];
+        if (targetSelf) {
+            elementsToAnimate.push(this._id);
+        }
+        elementsToAnimate.push(...targetElements);
+        
+        // Import GSAP and execute animation
+        import('gsap').then(({ gsap }) => {
+            elementsToAnimate.forEach(elementId => {
+                const targetElement = this._getShadowElement?.(elementId);
+                if (!targetElement) {
+                    console.warn(`[${this._id}] Animation target element not found: ${elementId}`);
+                    return;
+                }
+                
+                this.executeAnimationOnElement(targetElement, animation, gsap);
+            });
+        }).catch(error => {
+            console.error(`[${this._id}] GSAP import failed for animation:`, error);
+        });
+    }
+
+    private executeAnimationOnElement(element: Element, animation: any, gsap: any): void {
+        const { type, duration = 1, ease = 'power2.out', repeat, yoyo } = animation;
+        
+        const animationProps: any = {
+            duration,
+            ease
+        };
+        
+        if (repeat !== undefined) animationProps.repeat = repeat;
+        if (yoyo !== undefined) animationProps.yoyo = yoyo;
+        
+        switch (type) {
+            case 'scale':
+                const { scale_params } = animation;
+                if (scale_params) {
+                    if (scale_params.scale_start !== undefined) {
+                        gsap.set(element, { 
+                            scale: scale_params.scale_start,
+                            transformOrigin: scale_params.transform_origin || 'center center'
+                        });
+                    }
+                    animationProps.scale = scale_params.scale_end || 1;
+                    animationProps.transformOrigin = scale_params.transform_origin || 'center center';
+                }
+                break;
+            case 'custom_gsap':
+                const { custom_gsap_vars } = animation;
+                if (custom_gsap_vars) {
+                    Object.assign(animationProps, custom_gsap_vars);
+                }
+                break;
+            default:
+                console.warn(`[${this._id}] Unknown animation type: ${type}`);
+                return;
+        }
+        
+        gsap.to(element, animationProps);
     }
 
     updateHass(hass?: HomeAssistant): void {

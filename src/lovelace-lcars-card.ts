@@ -16,6 +16,7 @@ import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext } from './utils/animation.js';
 import { DynamicColorManager } from './utils/dynamic-color-manager.js';
 import { VisibilityManager } from './utils/visibility-manager.js';
+import { stateManager } from './utils/state-manager.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
 
@@ -341,6 +342,25 @@ export class LcarsCard extends LitElement {
       this._visibilityManager.registerVisibilityTriggers(allVisibilityTriggers);
       this._visibilityManager.applyInitialVisibilityStates();
 
+      // Initialize state manager
+      const animationContext: AnimationContext = {
+        elementId: 'card',
+        getShadowElement: getShadowElement,
+        hass: this.hass,
+        requestUpdateCallback: () => this.requestUpdate()
+      };
+      
+      const elementsMap = new Map<string, LayoutElement>();
+      groups.forEach(group => {
+        group.elements.forEach(element => {
+          elementsMap.set(element.id, element);
+        });
+      });
+      
+      stateManager.setAnimationContext(animationContext, elementsMap);
+      this._initializeElementStates(groups);
+      this._setupStateChangeHandling(elementsMap);
+
       // Clear all entity monitoring and animation state before recalculating layout
       for (const group of this._layoutEngine.layoutGroups) {
         for (const element of group.elements) {
@@ -368,31 +388,7 @@ export class LcarsCard extends LitElement {
       this._calculatedHeight = layoutDimensions.height;
 
       // Render elements with visibility filtering
-      const newTemplates = this._layoutEngine.layoutGroups.flatMap(group => {
-          console.log(`[LcarsCard] Checking group visibility for: ${group.id}`);
-          // Check if group is visible
-          if (!this._visibilityManager.getGroupVisibility(group.id)) {
-            console.log(`[LcarsCard] Group ${group.id} is hidden, skipping elements`);
-            return [];
-          }
-          
-          return group.elements
-              .filter(el => {
-                // Check if element should be visible (both element and group visibility)
-                const shouldBeVisible = this._visibilityManager.shouldElementBeVisible(el.id, group.id);
-                console.log(`[LcarsCard] Element ${el.id} should be visible: ${shouldBeVisible}`);
-                return shouldBeVisible;
-              })
-              .map(el => {
-                try {
-                  return el.render();
-                } catch (error) {
-                  console.error("[_performLayoutCalculation] Error rendering element", el.id, error);
-                  return null;
-                }
-              })
-              .filter((template): template is SVGTemplateResult => template !== null);
-      });
+      const newTemplates = this._renderVisibleElements();
 
       const TOP_MARGIN = 8;  // offset for broken HA UI
       
@@ -407,16 +403,15 @@ export class LcarsCard extends LitElement {
           // Trigger re-render to show the new content
           this.requestUpdate();
           
-          // Set up event listeners for visibility triggers after DOM elements are rendered
-          // Use a longer timeout to ensure DOM is fully ready
+          // Set up event listeners and trigger lifecycle animations after DOM elements are rendered
           setTimeout(() => {
-            console.log('[LcarsCard] Setting up visibility event listeners...');
             this._visibilityManager.setupEventListeners((id: string) => {
-              console.log(`[LcarsCard] Looking for element: #${CSS.escape(id)}`);
               const element = this.shadowRoot?.querySelector(`#${CSS.escape(id)}`);
-              console.log(`[LcarsCard] Found element:`, element);
               return element || null;
             });
+            
+            // Trigger on_load animations for all elements
+            this._triggerOnLoadAnimations(groups);
           }, 100);
       }
       
@@ -601,5 +596,78 @@ export class LcarsCard extends LitElement {
         element.updateHass(this.hass);
       }
     }
+  }
+
+  private _initializeElementStates(groups: Group[]): void {
+    groups.forEach(group => {
+      group.elements.forEach(element => {
+        // Initialize elements that have state management or animations
+        if (element.props.state_management || element.props.animations) {
+          stateManager.initializeElementState(
+            element.id,
+            element.props.state_management,
+            element.props.animations
+          );
+        }
+      });
+    });
+  }
+
+  private _setupStateChangeHandling(elementsMap: Map<string, LayoutElement>): void {
+    stateManager.onStateChange((event) => {
+      this.updateStatusIndicators(elementsMap);
+      this.requestUpdate();
+    });
+  }
+
+  private _renderVisibleElements(): SVGTemplateResult[] {
+    return this._layoutEngine.layoutGroups.flatMap(group => {
+      if (!this._visibilityManager.getGroupVisibility(group.id)) {
+        return [];
+      }
+      
+      return group.elements
+        .filter(el => this._visibilityManager.shouldElementBeVisible(el.id, group.id))
+        .map(el => {
+          try {
+            return el.render();
+          } catch (error) {
+            console.error("[_performLayoutCalculation] Error rendering element", el.id, error);
+            return null;
+          }
+        })
+        .filter((template): template is SVGTemplateResult => template !== null);
+    });
+  }
+
+  private _triggerOnLoadAnimations(groups: Group[]): void {
+    groups.forEach(group => {
+      group.elements.forEach(element => {
+        if (element.props.animations?.on_load) {
+          stateManager.triggerLifecycleAnimation(element.id, 'on_load');
+        }
+      });
+    });
+  }
+
+  private updateStatusIndicators(elementsMap: Map<string, LayoutElement>): void {
+    // Import state manager to get current states
+    import('./utils/state-manager.js').then(({ stateManager: sm }) => {
+      // Update panel status indicator
+      const panelStatus = elementsMap.get('status_indicators.panel_status');
+      if (panelStatus && panelStatus.props) {
+        const panelState = sm.getState('animated_elements.sliding_panel') || 'hidden';
+        panelStatus.props.text = `Panel: ${panelState}`;
+      }
+
+      // Update scale status indicator
+      const scaleStatus = elementsMap.get('status_indicators.scale_status');
+      if (scaleStatus && scaleStatus.props) {
+        const scaleState = sm.getState('animated_elements.scale_target') || 'normal';
+        scaleStatus.props.text = `Scale: ${scaleState}`;
+      }
+    }).catch(error => {
+      console.error('[LcarsCard] Error importing state manager for status update:', error);
+    });
   }
 }
