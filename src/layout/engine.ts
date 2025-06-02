@@ -155,6 +155,9 @@ export class LayoutEngine {
       
       this.containerRect = containerRect;
       
+      // Validate all element references before starting layout calculation
+      this._validateElementReferences();
+      
       // Reset all layout states
       this.elements.forEach(el => el.resetLayout());
       
@@ -169,6 +172,50 @@ export class LayoutEngine {
       return this.getLayoutBounds();
     } catch (error) {
       throw error;
+    }
+  }
+
+  private _validateElementReferences(): void {
+    const allElementIds = Array.from(this.elements.keys());
+    const issues: string[] = [];
+    
+    for (const [elementId, element] of this.elements) {
+      // Check anchor references
+      if (element.layoutConfig.anchor?.anchorTo && 
+          element.layoutConfig.anchor.anchorTo !== 'container') {
+        
+        const anchorTo = element.layoutConfig.anchor.anchorTo;
+        if (!this.elements.has(anchorTo)) {
+          issues.push(`Element '${elementId}' anchor target '${anchorTo}' does not exist`);
+        }
+      }
+      
+      // Check stretch references
+      if (element.layoutConfig.stretch?.stretchTo1 && 
+          element.layoutConfig.stretch.stretchTo1 !== 'canvas' && 
+          element.layoutConfig.stretch.stretchTo1 !== 'container') {
+        
+        const stretchTo1 = element.layoutConfig.stretch.stretchTo1;
+        if (!this.elements.has(stretchTo1)) {
+          issues.push(`Element '${elementId}' stretch target1 '${stretchTo1}' does not exist`);
+        }
+      }
+      
+      if (element.layoutConfig.stretch?.stretchTo2 && 
+          element.layoutConfig.stretch.stretchTo2 !== 'canvas' && 
+          element.layoutConfig.stretch.stretchTo2 !== 'container') {
+        
+        const stretchTo2 = element.layoutConfig.stretch.stretchTo2;
+        if (!this.elements.has(stretchTo2)) {
+          issues.push(`Element '${elementId}' stretch target2 '${stretchTo2}' does not exist`);
+        }
+      }
+    }
+    
+    if (issues.length > 0) {
+      console.error('LayoutEngine: Element reference validation failed:');
+      issues.forEach(issue => console.error(`  - ${issue}`));
+      console.error('Available elements:', allElementIds.join(', '));
     }
   }
 
@@ -196,16 +243,33 @@ export class LayoutEngine {
           el.calculateLayout(this.elements, this.containerRect);
           
           if (!el.layout.calculated) {
-            console.warn(`Element ${el.id} failed to calculate layout despite passing canCalculateLayout`);
+            console.warn(`LayoutEngine: Element ${el.id} failed to calculate layout despite passing canCalculateLayout`);
             allCalculated = false;
           }
         } else {
-          console.warn(`Element ${el.id} cannot calculate layout - missing dependencies: ${dependencies.join(', ')}`);
+          // Check if dependencies exist
+          const missingDeps = dependencies.filter(dep => !this.elements.has(dep));
+          const uncalculatedDeps = dependencies.filter(dep => {
+            const depEl = this.elements.get(dep);
+            return depEl && !depEl.layout.calculated;
+          });
+          
+          if (missingDeps.length > 0) {
+            console.error(`LayoutEngine: Element ${el.id} has missing dependencies: ${missingDeps.join(', ')}`);
+          }
+          if (uncalculatedDeps.length > 0) {
+            console.error(`LayoutEngine: Element ${el.id} has uncalculated dependencies: ${uncalculatedDeps.join(', ')}`);
+            console.error(`This suggests a problem with dependency resolution ordering.`);
+          }
+          
           allCalculated = false;
         }
       }
     }
     
+    if (!allCalculated) {
+      console.warn('LayoutEngine: Some elements could not be calculated in single pass');
+    }
     return allCalculated;
   }
 
@@ -214,17 +278,38 @@ export class LayoutEngine {
     const resolved = new Set<string>();
     const result: LayoutElement[] = [];
     
+    let iterations = 0;
+    const maxIterations = elements.length * 2; // Prevent infinite loops
+    
+    // Build a complete dependency graph first
+    const dependencyGraph = new Map<string, Set<string>>();
+    
+    for (const el of elements) {
+      const dependencies: string[] = [];
+      el.canCalculateLayout(this.elements, dependencies);
+      dependencyGraph.set(el.id, new Set(dependencies));
+    }
+    
+    // Detect any missing dependencies (elements that don't exist)
+    for (const [elementId, deps] of dependencyGraph) {
+      const missingDeps = Array.from(deps).filter(dep => !this.elements.has(dep));
+      if (missingDeps.length > 0) {
+        console.warn(`LayoutEngine: Element '${elementId}' has missing dependencies: ${missingDeps.join(', ')}`);
+        // Remove missing dependencies to prevent infinite loops
+        missingDeps.forEach(dep => deps.delete(dep));
+      }
+    }
+    
     // Simple dependency resolution - elements with no dependencies first
-    while (result.length < elements.length) {
+    while (result.length < elements.length && iterations < maxIterations) {
       const remaining = elements.filter(el => !resolved.has(el.id));
       let progressMade = false;
       
       for (const el of remaining) {
-        const dependencies: string[] = [];
-        el.canCalculateLayout(this.elements, dependencies);
+        const dependencies = dependencyGraph.get(el.id) || new Set();
         
         // Check if all dependencies are resolved
-        const unresolvedDeps = dependencies.filter(dep => !resolved.has(dep));
+        const unresolvedDeps = Array.from(dependencies).filter(dep => !resolved.has(dep));
         
         if (unresolvedDeps.length === 0) {
           resolved.add(el.id);
@@ -235,6 +320,25 @@ export class LayoutEngine {
       
       // Break infinite loop if no progress can be made
       if (!progressMade) {
+        const remainingIds = remaining.map(el => el.id);
+        console.warn(`LayoutEngine: Dependency resolution stuck after ${iterations} iterations.`);
+        console.warn(`Remaining elements: ${remainingIds.join(', ')}`);
+        
+        // Log each remaining element's dependencies for debugging
+        for (const el of remaining) {
+          const deps = dependencyGraph.get(el.id) || new Set();
+          const unresolvedDeps = Array.from(deps).filter(dep => !resolved.has(dep));
+          if (unresolvedDeps.length > 0) {
+            console.warn(`  - ${el.id} depends on: ${unresolvedDeps.join(', ')}`);
+          }
+        }
+        
+        // Check for circular dependencies
+        const circularDeps = this._detectCircularDependencies(remaining, dependencyGraph);
+        if (circularDeps.length > 0) {
+          console.error(`LayoutEngine: Circular dependencies detected: ${circularDeps.join(' -> ')}`);
+        }
+        
         // Add remaining elements anyway to avoid infinite loop
         remaining.forEach(el => {
           if (!resolved.has(el.id)) {
@@ -244,9 +348,58 @@ export class LayoutEngine {
         });
         break;
       }
+      
+      iterations++;
+    }
+    
+    if (iterations >= maxIterations) {
+      console.error('LayoutEngine: Dependency resolution exceeded maximum iterations');
     }
     
     return result;
+  }
+
+  private _detectCircularDependencies(elements: LayoutElement[], dependencyGraph: Map<string, Set<string>>): string[] {
+    const visiting = new Set<string>();
+    const visited = new Set<string>();
+    const cycle: string[] = [];
+    
+    const visit = (elementId: string, path: string[]): boolean => {
+      if (visiting.has(elementId)) {
+        // Found a cycle
+        const cycleStart = path.indexOf(elementId);
+        return cycleStart >= 0;
+      }
+      
+      if (visited.has(elementId)) {
+        return false;
+      }
+      
+      visiting.add(elementId);
+      const newPath = [...path, elementId];
+      
+      const deps = dependencyGraph.get(elementId) || new Set();
+      for (const dep of deps) {
+        if (visit(dep, newPath)) {
+          cycle.push(...newPath.slice(newPath.indexOf(dep)));
+          return true;
+        }
+      }
+      
+      visiting.delete(elementId);
+      visited.add(elementId);
+      return false;
+    };
+    
+    for (const el of elements) {
+      if (!visited.has(el.id)) {
+        if (visit(el.id, [])) {
+          break;
+        }
+      }
+    }
+    
+    return cycle;
   }
 
   private logElementStates(): void {

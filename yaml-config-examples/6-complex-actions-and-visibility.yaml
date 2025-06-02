@@ -1,5 +1,5 @@
 type: custom:lovelace-lcars-card
-card_title: Complex Interactions and Visibility Example
+card_title: Complex Actions and Visibility Example
 groups:
   - group_id: nav_header
     elements:
@@ -8,7 +8,7 @@ groups:
         appearance:
           fill: "#CC6600"
         text:
-          left_content: LCARS Shape Elements Example
+          left_content: Complex Actions and Visibility
           right_content: example
           fill: "#FFFFFF"
           fontSize: 18
@@ -52,7 +52,7 @@ groups:
                 id: details
             hover_options:
               mode: show_on_enter_hide_on_leave
-              hide_delay: 500
+              hide_delay: 0
   - group_id: menu_items
     elements:
       - id: option_1

@@ -1,79 +1,69 @@
 type: custom:lovelace-lcars-card
-card_title: Advanced Layout and Positioning Example
+card_title: Text Styling Example
 groups:
-  - group_id: layout_examples
+  - group_id: "text_examples"
     elements:
-      - id: title_display
-        type: rectangle
-        appearance:
-          fill: "#FF9900"
+      # Basic text element
+      - id: "simple_text"
+        type: "text"
         text:
-          content: Advanced Layout and Positioning Example
-          fill: "#000000"
-          fontSize: 16
-          fontWeight: bold
-          fontFamily: Antonio
+          content: "STARFLEET COMMAND"
+          color: "#FF9900"
+          fontSize: 24
+          fontWeight: "bold"
+          fontFamily: "Antonio, Arial, sans-serif"
         layout:
-          width: 450
-          height: 40
-      - id: percentage_element
-        type: rectangle
+          width: 300
+          height: 30
+      
+      # Text with advanced styling
+      - id: "styled_text"
+        type: "text"
+        text:
+          content: "OPERATIONAL STATUS"
+          color: "#FFFFFF"
+          fontSize: 18
+          letterSpacing: "2px"
+          textTransform: "uppercase"
+          textAnchor: "middle"
+          dominantBaseline: "central"
+        layout:
+          width: 250
+          height: 25
+      
+      # Button with cutout text
+      - id: "cutout_button"
+        type: "rectangle"
         appearance:
           fill: "#CC6600"
         text:
-          content: PERCENTAGE
-          fill: "#FFFFFF"
-          fontFamily: Antonio
+          content: "TACTICAL"
+          color: "#000000"
+          fontSize: 16
+          fontWeight: "bold"
+          cutout: true
         layout:
-          width: 25%
-          height: 10%
-          offsetX: 5%
-          offsetY: 5%
-          anchor:
-            to: layout_examples.stretch_bar
-            element_point: topLeft
-            target_point: bottomLeft
-      - id: container_anchor
-        type: rectangle
+          width: 120
+          height: 45
+        interactions:
+          button:
+            enabled: true
+            appearance_states:
+              hover:
+                text:
+                  color: "#FFFFFF"
+      
+      # Top header with dual content
+      - id: "dual_header"
+        type: "top_header"
         appearance:
-          fill: "#009966"
+          fill: "#0099CC"
         text:
-          content: CONTAINER ANCHOR
-          fill: "#FFFFFF"
-          fontFamily: Antonio
-        layout:
-          width: 150
-          height: 30
-          anchor:
-            to: container
-            element_point: topRight
-            target_point: topRight
-      - id: element_anchor
-        type: text
-        text:
-          content: "STATUS: NOMINAL"
-          fill: "#FFFFFF"
-          fontFamily: Antonio
-        layout:
-          anchor:
-            to: layout_examples.stretch_bar
-            element_point: centerLeft
-            target_point: centerRight
-      - id: stretch_bar
-        type: rectangle
-        appearance:
-          fill: "#CC3300"
-        text:
-          content: STRETCH BAR
-          fill: "#FFFFFF"
-          fontFamily: Antonio
-        layout:
-          height: 20
-          anchor:
-            to: layout_examples.title_display
-            element_point: topLeft
-            target_point: bottomLeft
-          stretch:
-            target1:
-              id: layout_examples.container_anchor
-              edge: left
+          left_content: "BRIDGE"
+          right_content: "12:34:56"
+          fontSize: 20
+          fontWeight: "bold"
+          color: "#FFFFFF"
+        layout:Add commentMore actions
+          width: "100%"
+          height: 60

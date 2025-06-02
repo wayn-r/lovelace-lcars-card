@@ -430,25 +430,27 @@ describe('LayoutEngine', () => {
             expect(el1.layout.height).toBe(200);
         });
 
-        it('should warn when layout calculation fails', async () => {
-            const containerRect = new DOMRect(0, 0, 100, 100);
+        it('should warn when layout calculation fails', () => {
             const el1 = new MockEngineLayoutElement('el1');
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+            
+            // Mock canCalculateLayout to always return false, simulating a dependency issue
+            el1.canCalculateLayout = vi.fn().mockReturnValue(false);
+            el1.calculateLayout = vi.fn(); // Mock the calculateLayout method
+            
+            const group1 = new Group('group1', [el1]);
+            engine.addGroup(group1);
 
-            // Mock element that can't calculate layout due to missing dependencies
-            el1.canCalculateLayout = vi.fn().mockImplementation((elements, deps) => {
-                deps.push('nonexistent');
-                return false;
-            });
-            el1.calculateLayout = vi.fn();
-            el1.calculateIntrinsicSize = vi.fn().mockImplementation(() => {
-                el1.intrinsicSize.calculated = true;
-            });
+            const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-            engine.addGroup(new Group('g1', [el1]));
-            engine.calculateBoundingBoxes(containerRect);
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            const result = engine.calculateBoundingBoxes(containerRect);
 
+            // Should not attempt to calculate layout when canCalculateLayout returns false
             expect(el1.calculateLayout).not.toHaveBeenCalled();
-            expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('cannot calculate layout'));
+            expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Some elements could not be calculated'));
+            
+            consoleWarnSpy.mockRestore();
         });
 
         it('should handle elements without SVG container for intrinsic size', async () => {
@@ -618,6 +620,174 @@ describe('LayoutEngine', () => {
             expect(result.width).toBeGreaterThan(0);
             expect(el1.layout.calculated).toBe(true);
             expect(el2.layout.calculated).toBe(true);
+        });
+    });
+
+    describe('Forward Reference Resolution', () => {
+        beforeEach(() => {
+            engine = new LayoutEngine();
+        });
+
+        it('should handle anchor forward references', () => {
+            // Create elements where el1 anchors to el2, but el2 is added to the engine after el1
+            const el1 = new MockEngineLayoutElement('el1');
+            el1.layoutConfig = {
+                anchor: { anchorTo: 'el2', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const el2 = new MockEngineLayoutElement('el2');
+            el2.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            // Add elements in order where el1 references el2 but is added first
+            const group1 = new Group('group1', [el1, el2]);
+            engine.addGroup(group1);
+
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            const result = engine.calculateBoundingBoxes(containerRect);
+
+            // Both elements should be calculated successfully
+            expect(el1.layout.calculated).toBe(true);
+            expect(el2.layout.calculated).toBe(true);
+            expect(result.width).toBeGreaterThan(0);
+            expect(result.height).toBeGreaterThan(0);
+        });
+
+        it('should handle stretch forward references', () => {
+            // Create elements where el1 stretches to el2, but el2 is added after el1
+            const el1 = new MockEngineLayoutElement('el1');
+            el1.layoutConfig = {
+                stretch: { stretchTo1: 'el2', targetStretchAnchorPoint1: 'right' }
+            };
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const el2 = new MockEngineLayoutElement('el2');
+            el2.intrinsicSize = { width: 200, height: 50, calculated: true };
+
+            // Add elements in order where el1 references el2 but is added first
+            const group1 = new Group('group1', [el1, el2]);
+            engine.addGroup(group1);
+
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            const result = engine.calculateBoundingBoxes(containerRect);
+
+            // Both elements should be calculated successfully
+            expect(el1.layout.calculated).toBe(true);
+            expect(el2.layout.calculated).toBe(true);
+            expect(result.width).toBeGreaterThan(0);
+            expect(result.height).toBeGreaterThan(0);
+        });
+
+        it('should handle complex forward reference chains', () => {
+            // Create a chain: el1 -> el2 -> el3, but add them in order el1, el3, el2
+            const el1 = new MockEngineLayoutElement('el1');
+            el1.layoutConfig = {
+                anchor: { anchorTo: 'el2', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const el2 = new MockEngineLayoutElement('el2');
+            el2.layoutConfig = {
+                anchor: { anchorTo: 'el3', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el2.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const el3 = new MockEngineLayoutElement('el3');
+            el3.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            // Add in an order that requires dependency resolution
+            const group1 = new Group('group1', [el1, el3, el2]);
+            engine.addGroup(group1);
+
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            const result = engine.calculateBoundingBoxes(containerRect);
+
+            // All elements should be calculated successfully
+            expect(el1.layout.calculated).toBe(true);
+            expect(el2.layout.calculated).toBe(true);
+            expect(el3.layout.calculated).toBe(true);
+            expect(result.width).toBeGreaterThan(0);
+            expect(result.height).toBeGreaterThan(0);
+        });
+
+        it('should detect and handle circular dependencies', () => {
+            // Create circular dependency: el1 -> el2 -> el1
+            const el1 = new MockEngineLayoutElement('el1');
+            el1.layoutConfig = {
+                anchor: { anchorTo: 'el2', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const el2 = new MockEngineLayoutElement('el2');
+            el2.layoutConfig = {
+                anchor: { anchorTo: 'el1', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el2.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const group1 = new Group('group1', [el1, el2]);
+            engine.addGroup(group1);
+
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            
+            // Should not throw an error, but should handle the circular dependency gracefully
+            expect(() => {
+                engine.calculateBoundingBoxes(containerRect);
+            }).not.toThrow();
+
+            // At least one element should be positioned (the algorithm falls back to adding remaining elements)
+            const calculatedElements = [el1, el2].filter(el => el.layout.calculated);
+            expect(calculatedElements.length).toBeGreaterThan(0);
+        });
+
+        it('should report missing element references', () => {
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            
+            const el1 = new MockEngineLayoutElement('el1');
+            el1.layoutConfig = {
+                anchor: { anchorTo: 'nonexistent_element', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const group1 = new Group('group1', [el1]);
+            engine.addGroup(group1);
+
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            engine.calculateBoundingBoxes(containerRect);
+
+            // Should log an error about the missing element
+            expect(consoleSpy).toHaveBeenCalledWith(
+                expect.stringContaining('Element reference validation failed')
+            );
+            
+            consoleSpy.mockRestore();
+        });
+
+        it('should handle cross-group forward references', () => {
+            // Test forward references across different groups
+            const el1 = new MockEngineLayoutElement('group1.el1');
+            el1.layoutConfig = {
+                anchor: { anchorTo: 'group2.el1', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const el2 = new MockEngineLayoutElement('group2.el1');
+            el2.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            // Add groups in order where first group references second group
+            const group1 = new Group('group1', [el1]);
+            const group2 = new Group('group2', [el2]);
+            
+            engine.addGroup(group1);
+            engine.addGroup(group2);
+
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            const result = engine.calculateBoundingBoxes(containerRect);
+
+            // Both elements should be calculated successfully
+            expect(el1.layout.calculated).toBe(true);
+            expect(el2.layout.calculated).toBe(true);
+            expect(result.width).toBeGreaterThan(0);
+            expect(result.height).toBeGreaterThan(0);
         });
     });
 });

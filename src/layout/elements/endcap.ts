@@ -20,18 +20,19 @@ export class EndcapElement extends LayoutElement {
       this.intrinsicSize.calculated = true;
     }
   
-    canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
+    canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
       // Check if we have zero height and anchor configuration
       if (this.intrinsicSize.height === 0 && this.layoutConfig.anchor?.anchorTo) {
         const anchorElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
         // If anchor target doesn't exist or is not calculated, return false
-        // and DON'T call super.canCalculateLayout
         if (!anchorElement || !anchorElement.layout.calculated) {
+          // IMPORTANT: Still call super to track dependencies properly
+          super.canCalculateLayout(elementsMap, dependencies);
           return false;
         }
       }
-      // Only call super if we passed the special checks
-      return super.canCalculateLayout(elementsMap); 
+      // Call super with the dependencies array
+      return super.canCalculateLayout(elementsMap, dependencies); 
     }
   
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {

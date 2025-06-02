@@ -1315,12 +1315,16 @@ export class ChiselEndcapElement extends LayoutElement {
       this.intrinsicSize.calculated = true;
     }
   
-    canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
+    canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
       if (this.intrinsicSize.height === 0 && this.layoutConfig.anchorTo) {
         const anchorElement = elementsMap.get(this.layoutConfig.anchorTo);
-        if (!anchorElement || !anchorElement.layout.calculated) return false;
+        if (!anchorElement || !anchorElement.layout.calculated) {
+          // IMPORTANT: Still call super to track dependencies properly
+          super.canCalculateLayout(elementsMap, dependencies);
+          return false;
+        }
       }
-      return super.canCalculateLayout(elementsMap);
+      return super.canCalculateLayout(elementsMap, dependencies);
     }
   
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
@@ -1421,8 +1425,8 @@ export class ElbowElement extends LayoutElement {
       this.intrinsicSize.calculated = true;
     }
   
-    canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
-      return super.canCalculateLayout(elementsMap);
+    canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
+      return super.canCalculateLayout(elementsMap, dependencies);
     }
   
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
@@ -1685,21 +1689,41 @@ export abstract class LayoutElement {
     }
 
     canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-        if (!this._checkAnchorDependencies(elementsMap, dependencies)) return false;
-        if (!this._checkStretchDependencies(elementsMap, dependencies)) return false;
-        if (!this._checkSpecialDependencies(elementsMap, dependencies)) return false;
+        if (!this._checkAnchorDependencies(elementsMap, dependencies)) {
+            return false;
+        }
+        if (!this._checkStretchDependencies(elementsMap, dependencies)) {
+            return false;
+        }
+        if (!this._checkSpecialDependencies(elementsMap, dependencies)) {
+            return false;
+        }
 
         return true;
     }
 
     private _checkAnchorDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
         if (this.layoutConfig.anchor?.anchorTo && this.layoutConfig.anchor.anchorTo !== 'container') {
-            const targetElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
-            if (!targetElement || !targetElement.layout.calculated) {
-                dependencies.push(this.layoutConfig.anchor.anchorTo);
+            const anchorTo = this.layoutConfig.anchor.anchorTo;
+            
+            const targetElement = elementsMap.get(anchorTo);
+            
+            if (!targetElement) {
+                console.warn(`Element '${this.id}' anchor target '${anchorTo}' not found in elements map`);
+                dependencies.push(anchorTo);
                 return false;
             }
+            
+            if (!targetElement.layout.calculated) {
+                // This is the normal case for forward references - target exists but isn't calculated yet
+                dependencies.push(anchorTo);
+                return false;
+            }
+            
+            // Target exists and is calculated
+            return true;
         }
+        
         return true;
     }
 
@@ -1708,22 +1732,46 @@ export abstract class LayoutElement {
             this.layoutConfig.stretch.stretchTo1 !== 'canvas' && 
             this.layoutConfig.stretch.stretchTo1 !== 'container') {
             
-            const targetElement = elementsMap.get(this.layoutConfig.stretch.stretchTo1);
-            if (!targetElement || !targetElement.layout.calculated) {
-                dependencies.push(this.layoutConfig.stretch.stretchTo1);
+            const stretchTo1 = this.layoutConfig.stretch.stretchTo1;
+            
+            const targetElement = elementsMap.get(stretchTo1);
+            
+            if (!targetElement) {
+                console.warn(`Element '${this.id}' stretch target1 '${stretchTo1}' not found in elements map`);
+                dependencies.push(stretchTo1);
                 return false;
             }
+            
+            if (!targetElement.layout.calculated) {
+                // This is the normal case for forward references - target exists but isn't calculated yet
+                dependencies.push(stretchTo1);
+                return false;
+            }
+            
+            // Target exists and is calculated - continue checking
         }
         
         if (this.layoutConfig.stretch?.stretchTo2 && 
             this.layoutConfig.stretch.stretchTo2 !== 'canvas' && 
             this.layoutConfig.stretch.stretchTo2 !== 'container') {
             
-            const targetElement = elementsMap.get(this.layoutConfig.stretch.stretchTo2);
-            if (!targetElement || !targetElement.layout.calculated) {
-                dependencies.push(this.layoutConfig.stretch.stretchTo2);
+            const stretchTo2 = this.layoutConfig.stretch.stretchTo2;
+            
+            const targetElement = elementsMap.get(stretchTo2);
+            
+            if (!targetElement) {
+                console.warn(`Element '${this.id}' stretch target2 '${stretchTo2}' not found in elements map`);
+                dependencies.push(stretchTo2);
                 return false;
             }
+            
+            if (!targetElement.layout.calculated) {
+                // This is the normal case for forward references - target exists but isn't calculated yet
+                dependencies.push(stretchTo2);
+                return false;
+            }
+            
+            // Target exists and is calculated
         }
         
         return true;
@@ -1735,9 +1783,17 @@ export abstract class LayoutElement {
             this.layoutConfig.anchor.anchorTo !== 'container' && 
             !this.props.height) {
             
-            const targetElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
-            if (!targetElement || !targetElement.layout.calculated) {
-                dependencies.push(this.layoutConfig.anchor.anchorTo);
+            const anchorTo = this.layoutConfig.anchor.anchorTo;
+            const targetElement = elementsMap.get(anchorTo);
+            
+            if (!targetElement) {
+                console.warn(`LayoutElement: EndcapElement '${this.id}' anchor target '${anchorTo}' not found in elements map`);
+                dependencies.push(anchorTo);
+                return false;
+            }
+            
+            if (!targetElement.layout.calculated) {
+                dependencies.push(anchorTo);
                 return false;
             }
         }
@@ -2477,18 +2533,19 @@ export class EndcapElement extends LayoutElement {
       this.intrinsicSize.calculated = true;
     }
   
-    canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
+    canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
       // Check if we have zero height and anchor configuration
       if (this.intrinsicSize.height === 0 && this.layoutConfig.anchor?.anchorTo) {
         const anchorElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
         // If anchor target doesn't exist or is not calculated, return false
-        // and DON'T call super.canCalculateLayout
         if (!anchorElement || !anchorElement.layout.calculated) {
+          // IMPORTANT: Still call super to track dependencies properly
+          super.canCalculateLayout(elementsMap, dependencies);
           return false;
         }
       }
-      // Only call super if we passed the special checks
-      return super.canCalculateLayout(elementsMap); 
+      // Call super with the dependencies array
+      return super.canCalculateLayout(elementsMap, dependencies); 
     }
   
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
@@ -6678,6 +6735,9 @@ export class LayoutEngine {
       
       this.containerRect = containerRect;
       
+      // Validate all element references before starting layout calculation
+      this._validateElementReferences();
+      
       // Reset all layout states
       this.elements.forEach(el => el.resetLayout());
       
@@ -6692,6 +6752,50 @@ export class LayoutEngine {
       return this.getLayoutBounds();
     } catch (error) {
       throw error;
+    }
+  }
+
+  private _validateElementReferences(): void {
+    const allElementIds = Array.from(this.elements.keys());
+    const issues: string[] = [];
+    
+    for (const [elementId, element] of this.elements) {
+      // Check anchor references
+      if (element.layoutConfig.anchor?.anchorTo && 
+          element.layoutConfig.anchor.anchorTo !== 'container') {
+        
+        const anchorTo = element.layoutConfig.anchor.anchorTo;
+        if (!this.elements.has(anchorTo)) {
+          issues.push(`Element '${elementId}' anchor target '${anchorTo}' does not exist`);
+        }
+      }
+      
+      // Check stretch references
+      if (element.layoutConfig.stretch?.stretchTo1 && 
+          element.layoutConfig.stretch.stretchTo1 !== 'canvas' && 
+          element.layoutConfig.stretch.stretchTo1 !== 'container') {
+        
+        const stretchTo1 = element.layoutConfig.stretch.stretchTo1;
+        if (!this.elements.has(stretchTo1)) {
+          issues.push(`Element '${elementId}' stretch target1 '${stretchTo1}' does not exist`);
+        }
+      }
+      
+      if (element.layoutConfig.stretch?.stretchTo2 && 
+          element.layoutConfig.stretch.stretchTo2 !== 'canvas' && 
+          element.layoutConfig.stretch.stretchTo2 !== 'container') {
+        
+        const stretchTo2 = element.layoutConfig.stretch.stretchTo2;
+        if (!this.elements.has(stretchTo2)) {
+          issues.push(`Element '${elementId}' stretch target2 '${stretchTo2}' does not exist`);
+        }
+      }
+    }
+    
+    if (issues.length > 0) {
+      console.error('LayoutEngine: Element reference validation failed:');
+      issues.forEach(issue => console.error(`  - ${issue}`));
+      console.error('Available elements:', allElementIds.join(', '));
     }
   }
 
@@ -6719,16 +6823,33 @@ export class LayoutEngine {
           el.calculateLayout(this.elements, this.containerRect);
           
           if (!el.layout.calculated) {
-            console.warn(`Element ${el.id} failed to calculate layout despite passing canCalculateLayout`);
+            console.warn(`LayoutEngine: Element ${el.id} failed to calculate layout despite passing canCalculateLayout`);
             allCalculated = false;
           }
         } else {
-          console.warn(`Element ${el.id} cannot calculate layout - missing dependencies: ${dependencies.join(', ')}`);
+          // Check if dependencies exist
+          const missingDeps = dependencies.filter(dep => !this.elements.has(dep));
+          const uncalculatedDeps = dependencies.filter(dep => {
+            const depEl = this.elements.get(dep);
+            return depEl && !depEl.layout.calculated;
+          });
+          
+          if (missingDeps.length > 0) {
+            console.error(`LayoutEngine: Element ${el.id} has missing dependencies: ${missingDeps.join(', ')}`);
+          }
+          if (uncalculatedDeps.length > 0) {
+            console.error(`LayoutEngine: Element ${el.id} has uncalculated dependencies: ${uncalculatedDeps.join(', ')}`);
+            console.error(`This suggests a problem with dependency resolution ordering.`);
+          }
+          
           allCalculated = false;
         }
       }
     }
     
+    if (!allCalculated) {
+      console.warn('LayoutEngine: Some elements could not be calculated in single pass');
+    }
     return allCalculated;
   }
 
@@ -6737,17 +6858,38 @@ export class LayoutEngine {
     const resolved = new Set<string>();
     const result: LayoutElement[] = [];
     
+    let iterations = 0;
+    const maxIterations = elements.length * 2; // Prevent infinite loops
+    
+    // Build a complete dependency graph first
+    const dependencyGraph = new Map<string, Set<string>>();
+    
+    for (const el of elements) {
+      const dependencies: string[] = [];
+      el.canCalculateLayout(this.elements, dependencies);
+      dependencyGraph.set(el.id, new Set(dependencies));
+    }
+    
+    // Detect any missing dependencies (elements that don't exist)
+    for (const [elementId, deps] of dependencyGraph) {
+      const missingDeps = Array.from(deps).filter(dep => !this.elements.has(dep));
+      if (missingDeps.length > 0) {
+        console.warn(`LayoutEngine: Element '${elementId}' has missing dependencies: ${missingDeps.join(', ')}`);
+        // Remove missing dependencies to prevent infinite loops
+        missingDeps.forEach(dep => deps.delete(dep));
+      }
+    }
+    
     // Simple dependency resolution - elements with no dependencies first
-    while (result.length < elements.length) {
+    while (result.length < elements.length && iterations < maxIterations) {
       const remaining = elements.filter(el => !resolved.has(el.id));
       let progressMade = false;
       
       for (const el of remaining) {
-        const dependencies: string[] = [];
-        el.canCalculateLayout(this.elements, dependencies);
+        const dependencies = dependencyGraph.get(el.id) || new Set();
         
         // Check if all dependencies are resolved
-        const unresolvedDeps = dependencies.filter(dep => !resolved.has(dep));
+        const unresolvedDeps = Array.from(dependencies).filter(dep => !resolved.has(dep));
         
         if (unresolvedDeps.length === 0) {
           resolved.add(el.id);
@@ -6758,6 +6900,25 @@ export class LayoutEngine {
       
       // Break infinite loop if no progress can be made
       if (!progressMade) {
+        const remainingIds = remaining.map(el => el.id);
+        console.warn(`LayoutEngine: Dependency resolution stuck after ${iterations} iterations.`);
+        console.warn(`Remaining elements: ${remainingIds.join(', ')}`);
+        
+        // Log each remaining element's dependencies for debugging
+        for (const el of remaining) {
+          const deps = dependencyGraph.get(el.id) || new Set();
+          const unresolvedDeps = Array.from(deps).filter(dep => !resolved.has(dep));
+          if (unresolvedDeps.length > 0) {
+            console.warn(`  - ${el.id} depends on: ${unresolvedDeps.join(', ')}`);
+          }
+        }
+        
+        // Check for circular dependencies
+        const circularDeps = this._detectCircularDependencies(remaining, dependencyGraph);
+        if (circularDeps.length > 0) {
+          console.error(`LayoutEngine: Circular dependencies detected: ${circularDeps.join(' -> ')}`);
+        }
+        
         // Add remaining elements anyway to avoid infinite loop
         remaining.forEach(el => {
           if (!resolved.has(el.id)) {
@@ -6767,9 +6928,58 @@ export class LayoutEngine {
         });
         break;
       }
+      
+      iterations++;
+    }
+    
+    if (iterations >= maxIterations) {
+      console.error('LayoutEngine: Dependency resolution exceeded maximum iterations');
     }
     
     return result;
+  }
+
+  private _detectCircularDependencies(elements: LayoutElement[], dependencyGraph: Map<string, Set<string>>): string[] {
+    const visiting = new Set<string>();
+    const visited = new Set<string>();
+    const cycle: string[] = [];
+    
+    const visit = (elementId: string, path: string[]): boolean => {
+      if (visiting.has(elementId)) {
+        // Found a cycle
+        const cycleStart = path.indexOf(elementId);
+        return cycleStart >= 0;
+      }
+      
+      if (visited.has(elementId)) {
+        return false;
+      }
+      
+      visiting.add(elementId);
+      const newPath = [...path, elementId];
+      
+      const deps = dependencyGraph.get(elementId) || new Set();
+      for (const dep of deps) {
+        if (visit(dep, newPath)) {
+          cycle.push(...newPath.slice(newPath.indexOf(dep)));
+          return true;
+        }
+      }
+      
+      visiting.delete(elementId);
+      visited.add(elementId);
+      return false;
+    };
+    
+    for (const el of elements) {
+      if (!visited.has(el.id)) {
+        if (visit(el.id, [])) {
+          break;
+        }
+      }
+    }
+    
+    return cycle;
   }
 
   private logElementStates(): void {
@@ -7508,25 +7718,27 @@ describe('LayoutEngine', () => {
             expect(el1.layout.height).toBe(200);
         });
 
-        it('should warn when layout calculation fails', async () => {
-            const containerRect = new DOMRect(0, 0, 100, 100);
+        it('should warn when layout calculation fails', () => {
             const el1 = new MockEngineLayoutElement('el1');
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+            
+            // Mock canCalculateLayout to always return false, simulating a dependency issue
+            el1.canCalculateLayout = vi.fn().mockReturnValue(false);
+            el1.calculateLayout = vi.fn(); // Mock the calculateLayout method
+            
+            const group1 = new Group('group1', [el1]);
+            engine.addGroup(group1);
 
-            // Mock element that can't calculate layout due to missing dependencies
-            el1.canCalculateLayout = vi.fn().mockImplementation((elements, deps) => {
-                deps.push('nonexistent');
-                return false;
-            });
-            el1.calculateLayout = vi.fn();
-            el1.calculateIntrinsicSize = vi.fn().mockImplementation(() => {
-                el1.intrinsicSize.calculated = true;
-            });
+            const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-            engine.addGroup(new Group('g1', [el1]));
-            engine.calculateBoundingBoxes(containerRect);
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            const result = engine.calculateBoundingBoxes(containerRect);
 
+            // Should not attempt to calculate layout when canCalculateLayout returns false
             expect(el1.calculateLayout).not.toHaveBeenCalled();
-            expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('cannot calculate layout'));
+            expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Some elements could not be calculated'));
+            
+            consoleWarnSpy.mockRestore();
         });
 
         it('should handle elements without SVG container for intrinsic size', async () => {
@@ -7696,6 +7908,174 @@ describe('LayoutEngine', () => {
             expect(result.width).toBeGreaterThan(0);
             expect(el1.layout.calculated).toBe(true);
             expect(el2.layout.calculated).toBe(true);
+        });
+    });
+
+    describe('Forward Reference Resolution', () => {
+        beforeEach(() => {
+            engine = new LayoutEngine();
+        });
+
+        it('should handle anchor forward references', () => {
+            // Create elements where el1 anchors to el2, but el2 is added to the engine after el1
+            const el1 = new MockEngineLayoutElement('el1');
+            el1.layoutConfig = {
+                anchor: { anchorTo: 'el2', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const el2 = new MockEngineLayoutElement('el2');
+            el2.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            // Add elements in order where el1 references el2 but is added first
+            const group1 = new Group('group1', [el1, el2]);
+            engine.addGroup(group1);
+
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            const result = engine.calculateBoundingBoxes(containerRect);
+
+            // Both elements should be calculated successfully
+            expect(el1.layout.calculated).toBe(true);
+            expect(el2.layout.calculated).toBe(true);
+            expect(result.width).toBeGreaterThan(0);
+            expect(result.height).toBeGreaterThan(0);
+        });
+
+        it('should handle stretch forward references', () => {
+            // Create elements where el1 stretches to el2, but el2 is added after el1
+            const el1 = new MockEngineLayoutElement('el1');
+            el1.layoutConfig = {
+                stretch: { stretchTo1: 'el2', targetStretchAnchorPoint1: 'right' }
+            };
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const el2 = new MockEngineLayoutElement('el2');
+            el2.intrinsicSize = { width: 200, height: 50, calculated: true };
+
+            // Add elements in order where el1 references el2 but is added first
+            const group1 = new Group('group1', [el1, el2]);
+            engine.addGroup(group1);
+
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            const result = engine.calculateBoundingBoxes(containerRect);
+
+            // Both elements should be calculated successfully
+            expect(el1.layout.calculated).toBe(true);
+            expect(el2.layout.calculated).toBe(true);
+            expect(result.width).toBeGreaterThan(0);
+            expect(result.height).toBeGreaterThan(0);
+        });
+
+        it('should handle complex forward reference chains', () => {
+            // Create a chain: el1 -> el2 -> el3, but add them in order el1, el3, el2
+            const el1 = new MockEngineLayoutElement('el1');
+            el1.layoutConfig = {
+                anchor: { anchorTo: 'el2', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const el2 = new MockEngineLayoutElement('el2');
+            el2.layoutConfig = {
+                anchor: { anchorTo: 'el3', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el2.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const el3 = new MockEngineLayoutElement('el3');
+            el3.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            // Add in an order that requires dependency resolution
+            const group1 = new Group('group1', [el1, el3, el2]);
+            engine.addGroup(group1);
+
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            const result = engine.calculateBoundingBoxes(containerRect);
+
+            // All elements should be calculated successfully
+            expect(el1.layout.calculated).toBe(true);
+            expect(el2.layout.calculated).toBe(true);
+            expect(el3.layout.calculated).toBe(true);
+            expect(result.width).toBeGreaterThan(0);
+            expect(result.height).toBeGreaterThan(0);
+        });
+
+        it('should detect and handle circular dependencies', () => {
+            // Create circular dependency: el1 -> el2 -> el1
+            const el1 = new MockEngineLayoutElement('el1');
+            el1.layoutConfig = {
+                anchor: { anchorTo: 'el2', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const el2 = new MockEngineLayoutElement('el2');
+            el2.layoutConfig = {
+                anchor: { anchorTo: 'el1', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el2.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const group1 = new Group('group1', [el1, el2]);
+            engine.addGroup(group1);
+
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            
+            // Should not throw an error, but should handle the circular dependency gracefully
+            expect(() => {
+                engine.calculateBoundingBoxes(containerRect);
+            }).not.toThrow();
+
+            // At least one element should be positioned (the algorithm falls back to adding remaining elements)
+            const calculatedElements = [el1, el2].filter(el => el.layout.calculated);
+            expect(calculatedElements.length).toBeGreaterThan(0);
+        });
+
+        it('should report missing element references', () => {
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            
+            const el1 = new MockEngineLayoutElement('el1');
+            el1.layoutConfig = {
+                anchor: { anchorTo: 'nonexistent_element', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const group1 = new Group('group1', [el1]);
+            engine.addGroup(group1);
+
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            engine.calculateBoundingBoxes(containerRect);
+
+            // Should log an error about the missing element
+            expect(consoleSpy).toHaveBeenCalledWith(
+                expect.stringContaining('Element reference validation failed')
+            );
+            
+            consoleSpy.mockRestore();
+        });
+
+        it('should handle cross-group forward references', () => {
+            // Test forward references across different groups
+            const el1 = new MockEngineLayoutElement('group1.el1');
+            el1.layoutConfig = {
+                anchor: { anchorTo: 'group2.el1', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+            };
+            el1.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            const el2 = new MockEngineLayoutElement('group2.el1');
+            el2.intrinsicSize = { width: 100, height: 50, calculated: true };
+
+            // Add groups in order where first group references second group
+            const group1 = new Group('group1', [el1]);
+            const group2 = new Group('group2', [el2]);
+            
+            engine.addGroup(group1);
+            engine.addGroup(group2);
+
+            const containerRect = new DOMRect(0, 0, 500, 300);
+            const result = engine.calculateBoundingBoxes(containerRect);
+
+            // Both elements should be calculated successfully
+            expect(el1.layout.calculated).toBe(true);
+            expect(el2.layout.calculated).toBe(true);
+            expect(result.width).toBeGreaterThan(0);
+            expect(result.height).toBeGreaterThan(0);
         });
     });
 });

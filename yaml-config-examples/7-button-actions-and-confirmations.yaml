@@ -1,0 +1,168 @@
+type: custom:lovelace-lcars-card
+card_title: Button Actions and Confirmations Example
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Button Actions and Confirmations
+          right_content: example
+          fill: "#FFFFFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: action_buttons
+    elements:
+      - id: light_toggle
+        type: rectangle
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: LIGHTS
+          fill: "#000000"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: toggle
+              entity: light.kitchen_sink_light
+      - id: climate_control
+        type: endcap
+        appearance:
+          fill: "#0099CC"
+          direction: right
+        text:
+          content: COOL
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          offsetX: 5
+          anchor:
+            to: action_buttons.light_toggle
+            element_point: topLeft
+            target_point: topRight
+          stretch:
+            target1:
+              id: action_buttons.light_toggle
+              edge: bottom
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: call-service
+              service: climate.set_temperature
+              service_data:
+                entity_id: climate.living_room
+                temperature: 22
+              target:
+                area_id: living_room
+      - id: security_button
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: SECURITY
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          cutout: true
+        layout:
+          height: 80
+          offsetY: 5
+          anchor:
+            to: action_buttons.light_toggle
+            element_point: topLeft
+            target_point: bottomLeft
+          stretch:
+            target1:
+              id: action_buttons.light_toggle
+              edge: right
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: call-service
+              service: alarm_control_panel.alarm_arm_away
+              service_data:
+                entity_id: alarm_control_panel.house
+              confirmation:
+                text: Are you sure you want to arm the security system?
+      - id: emergency_button
+        type: endcap
+        appearance:
+          fill: "#FF0000"
+          direction: right
+        text:
+          content: EMERGENCY
+          fill: "#FFFFFF"
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          offsetX: 5
+          anchor:
+            to: action_buttons.mode_switch
+            element_point: topLeft
+            target_point: topRight
+          stretch:
+            target1:
+              id: action_buttons.mode_switch
+              edge: bottom
+            target2:
+              id: action_buttons.climate_control
+              edge: right
+        button:
+          enabled: true
+          actions:
+            hold:
+              duration: 2000
+              action:
+                action: call-service
+                service: script.open_dyson_app
+      - id: mode_switch
+        type: rectangle
+        appearance:
+          fill: "#9966CC"
+        text:
+          content: MODE
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          height: 40
+          offsetY: 5
+          anchor:
+            to: action_buttons.security_button
+            element_point: topLeft
+            target_point: bottomLeft
+          stretch:
+            target1:
+              id: action_buttons.light_toggle
+              edge: right
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: toggle
+              entity: input_boolean.waynes_light_card_hidden
+            double_tap:
+              action:
+                action: call-service
+                service: script.open_dyson_app

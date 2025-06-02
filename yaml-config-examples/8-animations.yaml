@@ -1,180 +1,181 @@
 type: custom:lovelace-lcars-card
-card_title: "Animation Examples Configuration"
+card_title: Animation Examples Configuration
 groups:
-  - group_id: "animated_elements"
+  - group_id: nav_header
     elements:
-      - id: "title_display"
-        type: "rectangle"
+      - id: main_header
+        type: top_header
         appearance:
-          fill: "#FF9900"
+          fill: "#CC6600"
         text:
-          content: "Animation Examples Configuration"
-          fill: "#000000"
-          fontSize: 16
-          fontWeight: "bold"
-          fontFamily: "Antonio"
+          left_content: Animation Configruation
+          right_content: example
+          fill: "#FFFFFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
         layout:
-          width: 400
+          width: 100%
           height: 40
-      # Element with load animation
-      - id: "fade_in_element"
-        type: "rectangle"
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: animated_elements
+    elements:
+      - id: fade_in_element
+        type: rectangle
         appearance:
           fill: "#FF9900"
         text:
-          content: "LOADING..."
+          content: LOADING...
           fill: "#000000"
-          fontFamily: "Antonio"
+          fontFamily: Antonio
         layout:
           width: 150
           height: 40
           anchor:
-            to: "animated_elements.title_display"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
         animations:
           on_load:
-            type: "fade"
+            type: fade
             fade_params:
               opacity_start: 0
               opacity_end: 1
-            duration: 1.0
-            ease: "power2.out"
-      
-      # Element with show/hide animations
-      - id: "sliding_panel"
-        type: "rectangle"
+            duration: 1
+            ease: power2.out
+      - id: sliding_panel
+        type: rectangle
         appearance:
           fill: "#0099CC"
         text:
-          content: "SLIDING PANEL"
+          content: SLIDING PANEL
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          fontFamily: Antonio
         layout:
           width: 200
           height: 100
           anchor:
-            to: "animated_elements.fade_in_element"
-            element_point: "topLeft"
-            target_point: "topRight"
+            to: animated_elements.fade_in_element
+            element_point: topLeft
+            target_point: topRight
         animations:
           on_show:
-            type: "slide"
+            type: slide
             slide_params:
-              direction: "right"
-              distance: "100%"
+              direction: right
+              distance: 100%
               opacity_start: 0
             duration: 0.5
-            ease: "power2.out"
+            ease: power2.out
           on_hide:
-            type: "slide"
+            type: slide
             slide_params:
-              direction: "left"
-              distance: "100%"
+              direction: left
+              distance: 100%
             duration: 0.3
-      
-      # Button with animation action
-      - id: "animation_trigger"
-        type: "rectangle"
+      - id: animation_trigger
+        type: rectangle
         appearance:
           fill: "#CC6600"
         text:
-          content: "ANIMATE"
+          content: ANIMATE
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          fontFamily: Antonio
         layout:
           width: 100
           height: 40
           anchor:
-            to: "animated_elements.fade_in_element"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            to: animated_elements.fade_in_element
+            element_point: topLeft
+            target_point: bottomLeft
         button:
           enabled: true
           actions:
             tap:
-              action: "animate"
+              action: animate
               animation:
-                target_elements_ref: ["animated_elements.sliding_panel"]
-                type: "scale"
+                target_elements_ref:
+                  - animated_elements.sliding_panel
+                type: scale
                 scale_params:
-                  scale_start: 1.0
+                  scale_start: 1
                   scale_end: 1.2
-                  transform_origin: "center center"
+                  transform_origin: center center
                 duration: 0.3
                 repeat: 1
                 yoyo: true
-      
-      # Complex animation sequence
-      - id: "sequence_element"
-        type: "rectangle"
+      - id: sequence_element
+        type: rectangle
         appearance:
           fill: "#CC3300"
         text:
-          content: "SEQUENCE"
+          content: SEQUENCE
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          fontFamily: Antonio
         layout:
           width: 120
           height: 50
           anchor:
-            to: "animated_elements.animation_trigger"
-            element_point: "topLeft"
-            target_point: "topRight"
+            to: animated_elements.animation_trigger
+            element_point: topLeft
+            target_point: topRight
         animations:
           on_load:
             target_self: true
-            target_elements_ref: ["animated_elements.fade_in_element"]
+            target_elements_ref:
+              - animated_elements.fade_in_element
             steps:
               - index: 0
-                type: "fade"
+                type: fade
                 fade_params:
                   opacity_start: 0
                   opacity_end: 1
                 duration: 0.5
               - index: 0
                 target_self: false
-                target_elements_ref: ["animated_elements.fade_in_element"]
-                type: "slide"
+                target_elements_ref:
+                  - animated_elements.fade_in_element
+                type: slide
                 slide_params:
-                  direction: "up"
-                  distance: "20px"
+                  direction: up
+                  distance: 20px
                 duration: 0.5
               - index: 1
-                type: "scale"
+                type: scale
                 scale_params:
-                  scale_start: 1.0
+                  scale_start: 1
                   scale_end: 1.1
                 duration: 0.2
                 repeat: 2
                 yoyo: true
-      
-      # Custom GSAP animation
-      - id: "custom_animation"
-        type: "rectangle"
+      - id: custom_animation
+        type: rectangle
         appearance:
           fill: "#9966CC"
         text:
-          content: "CUSTOM GSAP"
+          content: CUSTOM GSAP
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          fontFamily: Antonio
         layout:
           width: 100
           height: 40
           anchor:
-            to: "animated_elements.animation_trigger"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            to: animated_elements.animation_trigger
+            element_point: topLeft
+            target_point: bottomLeft
         button:
           enabled: true
           actions:
             tap:
-              action: "animate"
+              action: animate
               animation:
                 target_self: true
-                type: "custom_gsap"
+                type: custom_gsap
                 custom_gsap_vars:
                   rotation: 360
-                  transformOrigin: "center center"
-                  ease: "bounce.out"
-                duration: 1.0
+                  transformOrigin: center center
+                  ease: bounce.out
+                duration: 1

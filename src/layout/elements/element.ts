@@ -52,21 +52,41 @@ export abstract class LayoutElement {
     }
 
     canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-        if (!this._checkAnchorDependencies(elementsMap, dependencies)) return false;
-        if (!this._checkStretchDependencies(elementsMap, dependencies)) return false;
-        if (!this._checkSpecialDependencies(elementsMap, dependencies)) return false;
+        if (!this._checkAnchorDependencies(elementsMap, dependencies)) {
+            return false;
+        }
+        if (!this._checkStretchDependencies(elementsMap, dependencies)) {
+            return false;
+        }
+        if (!this._checkSpecialDependencies(elementsMap, dependencies)) {
+            return false;
+        }
 
         return true;
     }
 
     private _checkAnchorDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
         if (this.layoutConfig.anchor?.anchorTo && this.layoutConfig.anchor.anchorTo !== 'container') {
-            const targetElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
-            if (!targetElement || !targetElement.layout.calculated) {
-                dependencies.push(this.layoutConfig.anchor.anchorTo);
+            const anchorTo = this.layoutConfig.anchor.anchorTo;
+            
+            const targetElement = elementsMap.get(anchorTo);
+            
+            if (!targetElement) {
+                console.warn(`Element '${this.id}' anchor target '${anchorTo}' not found in elements map`);
+                dependencies.push(anchorTo);
                 return false;
             }
+            
+            if (!targetElement.layout.calculated) {
+                // This is the normal case for forward references - target exists but isn't calculated yet
+                dependencies.push(anchorTo);
+                return false;
+            }
+            
+            // Target exists and is calculated
+            return true;
         }
+        
         return true;
     }
 
@@ -75,22 +95,46 @@ export abstract class LayoutElement {
             this.layoutConfig.stretch.stretchTo1 !== 'canvas' && 
             this.layoutConfig.stretch.stretchTo1 !== 'container') {
             
-            const targetElement = elementsMap.get(this.layoutConfig.stretch.stretchTo1);
-            if (!targetElement || !targetElement.layout.calculated) {
-                dependencies.push(this.layoutConfig.stretch.stretchTo1);
+            const stretchTo1 = this.layoutConfig.stretch.stretchTo1;
+            
+            const targetElement = elementsMap.get(stretchTo1);
+            
+            if (!targetElement) {
+                console.warn(`Element '${this.id}' stretch target1 '${stretchTo1}' not found in elements map`);
+                dependencies.push(stretchTo1);
                 return false;
             }
+            
+            if (!targetElement.layout.calculated) {
+                // This is the normal case for forward references - target exists but isn't calculated yet
+                dependencies.push(stretchTo1);
+                return false;
+            }
+            
+            // Target exists and is calculated - continue checking
         }
         
         if (this.layoutConfig.stretch?.stretchTo2 && 
             this.layoutConfig.stretch.stretchTo2 !== 'canvas' && 
             this.layoutConfig.stretch.stretchTo2 !== 'container') {
             
-            const targetElement = elementsMap.get(this.layoutConfig.stretch.stretchTo2);
-            if (!targetElement || !targetElement.layout.calculated) {
-                dependencies.push(this.layoutConfig.stretch.stretchTo2);
+            const stretchTo2 = this.layoutConfig.stretch.stretchTo2;
+            
+            const targetElement = elementsMap.get(stretchTo2);
+            
+            if (!targetElement) {
+                console.warn(`Element '${this.id}' stretch target2 '${stretchTo2}' not found in elements map`);
+                dependencies.push(stretchTo2);
                 return false;
             }
+            
+            if (!targetElement.layout.calculated) {
+                // This is the normal case for forward references - target exists but isn't calculated yet
+                dependencies.push(stretchTo2);
+                return false;
+            }
+            
+            // Target exists and is calculated
         }
         
         return true;
@@ -102,9 +146,17 @@ export abstract class LayoutElement {
             this.layoutConfig.anchor.anchorTo !== 'container' && 
             !this.props.height) {
             
-            const targetElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
-            if (!targetElement || !targetElement.layout.calculated) {
-                dependencies.push(this.layoutConfig.anchor.anchorTo);
+            const anchorTo = this.layoutConfig.anchor.anchorTo;
+            const targetElement = elementsMap.get(anchorTo);
+            
+            if (!targetElement) {
+                console.warn(`LayoutElement: EndcapElement '${this.id}' anchor target '${anchorTo}' not found in elements map`);
+                dependencies.push(anchorTo);
+                return false;
+            }
+            
+            if (!targetElement.layout.calculated) {
+                dependencies.push(anchorTo);
                 return false;
             }
         }

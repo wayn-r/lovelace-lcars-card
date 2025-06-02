@@ -21,12 +21,16 @@ export class ChiselEndcapElement extends LayoutElement {
       this.intrinsicSize.calculated = true;
     }
   
-    canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
+    canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
       if (this.intrinsicSize.height === 0 && this.layoutConfig.anchorTo) {
         const anchorElement = elementsMap.get(this.layoutConfig.anchorTo);
-        if (!anchorElement || !anchorElement.layout.calculated) return false;
+        if (!anchorElement || !anchorElement.layout.calculated) {
+          // IMPORTANT: Still call super to track dependencies properly
+          super.canCalculateLayout(elementsMap, dependencies);
+          return false;
+        }
       }
-      return super.canCalculateLayout(elementsMap);
+      return super.canCalculateLayout(elementsMap, dependencies);
     }
   
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {

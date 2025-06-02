@@ -21,8 +21,8 @@ export class ElbowElement extends LayoutElement {
       this.intrinsicSize.calculated = true;
     }
   
-    canCalculateLayout(elementsMap: Map<string, LayoutElement>): boolean {
-      return super.canCalculateLayout(elementsMap);
+    canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
+      return super.canCalculateLayout(elementsMap, dependencies);
     }
   
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
