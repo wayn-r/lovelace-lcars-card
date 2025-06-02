@@ -171,6 +171,11 @@ export class LayoutEngine {
       
       return this.getLayoutBounds();
     } catch (error) {
+      if (error instanceof Error) {
+        console.error(`LayoutEngine: ${error.message}`);
+        // Return fallback dimensions rather than crashing the application
+        return { width: containerRect.width, height: containerRect.height };
+      }
       throw error;
     }
   }
@@ -275,85 +280,67 @@ export class LayoutEngine {
 
   private _sortElementsByDependencies(): LayoutElement[] {
     const elements = Array.from(this.elements.values());
-    const resolved = new Set<string>();
-    const result: LayoutElement[] = [];
     
-    let iterations = 0;
-    const maxIterations = elements.length * 2; // Prevent infinite loops
+    // Build dependency graph and validate all references
+    const dependencyGraph = this._buildDependencyGraph(elements);
     
-    // Build a complete dependency graph first
+    // Detect circular dependencies before attempting resolution
+    const circularDeps = this._detectCircularDependencies(elements, dependencyGraph);
+    if (circularDeps.length > 0) {
+      throw new Error(`LayoutEngine: Circular dependencies detected: ${circularDeps.join(' -> ')}`);
+    }
+    
+    // Perform topological sort
+    return this._topologicalSort(elements, dependencyGraph);
+  }
+
+  private _buildDependencyGraph(elements: LayoutElement[]): Map<string, Set<string>> {
     const dependencyGraph = new Map<string, Set<string>>();
     
     for (const el of elements) {
       const dependencies: string[] = [];
       el.canCalculateLayout(this.elements, dependencies);
-      dependencyGraph.set(el.id, new Set(dependencies));
-    }
-    
-    // Detect any missing dependencies (elements that don't exist)
-    for (const [elementId, deps] of dependencyGraph) {
-      const missingDeps = Array.from(deps).filter(dep => !this.elements.has(dep));
-      if (missingDeps.length > 0) {
-        console.warn(`LayoutEngine: Element '${elementId}' has missing dependencies: ${missingDeps.join(', ')}`);
-        // Remove missing dependencies to prevent infinite loops
-        missingDeps.forEach(dep => deps.delete(dep));
-      }
-    }
-    
-    // Simple dependency resolution - elements with no dependencies first
-    while (result.length < elements.length && iterations < maxIterations) {
-      const remaining = elements.filter(el => !resolved.has(el.id));
-      let progressMade = false;
       
-      for (const el of remaining) {
+      // Validate all dependencies exist
+      const validDependencies = dependencies.filter(dep => {
+        if (this.elements.has(dep)) {
+          return true;
+        }
+        console.warn(`LayoutEngine: Element '${el.id}' references non-existent element '${dep}'`);
+        return false;
+      });
+      
+      dependencyGraph.set(el.id, new Set(validDependencies));
+    }
+    
+    return dependencyGraph;
+  }
+
+  private _topologicalSort(elements: LayoutElement[], dependencyGraph: Map<string, Set<string>>): LayoutElement[] {
+    const resolved = new Set<string>();
+    const result: LayoutElement[] = [];
+    
+    // Kahn's algorithm for topological sorting
+    while (result.length < elements.length) {
+      const readyElements = elements.filter(el => {
+        if (resolved.has(el.id)) return false;
+        
         const dependencies = dependencyGraph.get(el.id) || new Set();
-        
-        // Check if all dependencies are resolved
-        const unresolvedDeps = Array.from(dependencies).filter(dep => !resolved.has(dep));
-        
-        if (unresolvedDeps.length === 0) {
-          resolved.add(el.id);
-          result.push(el);
-          progressMade = true;
-        }
-      }
+        return Array.from(dependencies).every(dep => resolved.has(dep));
+      });
       
-      // Break infinite loop if no progress can be made
-      if (!progressMade) {
+      if (readyElements.length === 0) {
+        // This should not happen if circular dependencies were properly detected
+        const remaining = elements.filter(el => !resolved.has(el.id));
         const remainingIds = remaining.map(el => el.id);
-        console.warn(`LayoutEngine: Dependency resolution stuck after ${iterations} iterations.`);
-        console.warn(`Remaining elements: ${remainingIds.join(', ')}`);
-        
-        // Log each remaining element's dependencies for debugging
-        for (const el of remaining) {
-          const deps = dependencyGraph.get(el.id) || new Set();
-          const unresolvedDeps = Array.from(deps).filter(dep => !resolved.has(dep));
-          if (unresolvedDeps.length > 0) {
-            console.warn(`  - ${el.id} depends on: ${unresolvedDeps.join(', ')}`);
-          }
-        }
-        
-        // Check for circular dependencies
-        const circularDeps = this._detectCircularDependencies(remaining, dependencyGraph);
-        if (circularDeps.length > 0) {
-          console.error(`LayoutEngine: Circular dependencies detected: ${circularDeps.join(' -> ')}`);
-        }
-        
-        // Add remaining elements anyway to avoid infinite loop
-        remaining.forEach(el => {
-          if (!resolved.has(el.id)) {
-            result.push(el);
-            resolved.add(el.id);
-          }
-        });
-        break;
+        throw new Error(`LayoutEngine: Unable to resolve dependencies for elements: ${remainingIds.join(', ')}`);
       }
       
-      iterations++;
-    }
-    
-    if (iterations >= maxIterations) {
-      console.error('LayoutEngine: Dependency resolution exceeded maximum iterations');
+      // Add all ready elements to result
+      readyElements.forEach(el => {
+        resolved.add(el.id);
+        result.push(el);
+      });
     }
     
     return result;

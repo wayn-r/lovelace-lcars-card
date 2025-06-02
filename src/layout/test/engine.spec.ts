@@ -58,13 +58,18 @@ class MockEngineLayoutElement extends LayoutElement {
 
     canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
         this.canCalculateLayoutInvoked = true;
-        this.mockDependencies.forEach(depId => {
+        let hasUnmetDependency = false;
+        for (const depId of this.mockDependencies) {
             const targetElement = elementsMap.get(depId);
             if (!targetElement || !targetElement.layout.calculated) {
                 dependencies.push(depId); // Report actual unmet dependency
-                return false; // Short-circuit if a mock dependency isn't met
+                hasUnmetDependency = true;
             }
-        });
+        }
+        // If there are unmet dependencies, return false regardless of mockCanCalculateLayout
+        if (hasUnmetDependency) {
+            return false;
+        }
         // If all mock dependencies are met, return the pre-set result
         return this.mockCanCalculateLayout;
     }
@@ -510,7 +515,7 @@ describe('LayoutEngine', () => {
 
             engine.calculateBoundingBoxes(containerRect);
 
-            expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Some elements could not be calculated'));
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Circular dependencies detected'));
         });
 
         it('should proceed without tempSvgContainer for intrinsic size if not available', () => {

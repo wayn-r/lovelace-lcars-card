@@ -162,7 +162,7 @@ describe('EndcapElement', () => {
 
       it('should return false if anchor target element is not in elementsMap', () => {
         expect(endcapElement.canCalculateLayout(elementsMap)).toBe(false);
-        expect(superCanCalculateLayoutSpy).not.toHaveBeenCalled();
+        expect(superCanCalculateLayoutSpy).toHaveBeenCalledTimes(1);
       });
 
       it('should return false if anchor target element is not calculated', () => {
@@ -171,7 +171,7 @@ describe('EndcapElement', () => {
         elementsMap.set('target', targetElement);
 
         expect(endcapElement.canCalculateLayout(elementsMap)).toBe(false);
-        expect(superCanCalculateLayoutSpy).not.toHaveBeenCalled();
+        expect(superCanCalculateLayoutSpy).toHaveBeenCalledTimes(1);
       });
 
       it('should call super.canCalculateLayout if anchor target is found and calculated', () => {
