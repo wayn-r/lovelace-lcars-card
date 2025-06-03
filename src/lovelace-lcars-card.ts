@@ -17,6 +17,7 @@ import { animationManager, AnimationContext } from './utils/animation.js';
 import { DynamicColorManager } from './utils/dynamic-color-manager.js';
 import { VisibilityManager } from './utils/visibility-manager.js';
 import { stateManager } from './utils/state-manager.js';
+import { transformPropagator } from './utils/transform-propagator.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
 
@@ -360,6 +361,9 @@ export class LcarsCard extends LitElement {
       stateManager.setAnimationContext(animationContext, elementsMap);
       this._initializeElementStates(groups);
       this._setupStateChangeHandling(elementsMap);
+      
+      // Initialize transform propagator with current layout state
+      transformPropagator.initialize(elementsMap, animationContext.getShadowElement);
 
       // Clear all entity monitoring and animation state before recalculating layout
       for (const group of this._layoutEngine.layoutGroups) {
@@ -669,5 +673,12 @@ export class LcarsCard extends LitElement {
     }).catch(error => {
       console.error('[LcarsCard] Error importing state manager for status update:', error);
     });
+  }
+
+  /**
+   * Get shadow DOM element by ID for transform propagation
+   */
+  private _getShadowElement(id: string): Element | null {
+    return this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
   }
 }

@@ -31,47 +31,90 @@ describe('RectangleElement', () => {
   });
 
   // Helper for extracting path attributes
-  const getPathAttributesFromResult = (result: SVGTemplateResult | null): Record<string, any> | null => {
-    if (!result || !result.values) {
-        if (result && result.strings && result.strings.some(s => s.includes('data-testid="mock-button"'))) {
-            const pathDataMatch = result.strings.join('').match(/data-path="([^"]*)"/);
-            const optionsMatch = result.strings.join('').match(/data-options="([^"]*)"/);
-            return {
-                d: pathDataMatch ? pathDataMatch[1] : 'mock-path-not-found',
-                mockOptions: optionsMatch ? JSON.parse(optionsMatch[1].replace(/"/g, '"')) : {}
-            };
-        }
-        return null;
+  const getPathAttributesFromResult = (inputResult: SVGTemplateResult | null): Record<string, any> | null => {
+    if (!inputResult) return null;
+
+    let actualPathResult: SVGTemplateResult | null = null;
+  console.log('getPathAttributesFromResult - inputResult:', JSON.stringify(inputResult, null, 2));
+
+    /*
+      Check if inputResult is the direct path template or a group containing it.
+      A direct path template from RectangleElement.renderShape (non-button) looks like:
+      strings: [
+        "\n          <path\n            id=\"", 
+        "__shape\" // Derived ID for the path itself, not the main element ID\n            d=", 
+        "\n            fill=", 
+        "\n            stroke=", 
+        "\n            stroke-width=", 
+        "\n          />\n        "
+      ]
+      values: [id, pathData, fill, stroke, strokeWidth]
+      So, strings[1] (after id attribute) would contain "d=" if it's the direct path's static part.
+
+      A group template from LayoutElement.render might look like:
+      strings: ["<g id=\"", "\">", "</g>"]
+      values: [id, shapeOrButtonTemplate] or if text: [id, shapeOrButtonTemplate, textTemplate]
+    */
+
+    if (inputResult.strings && inputResult.strings.length > 2 && inputResult.strings[1].includes('__shape') && inputResult.strings[1].includes('d=')) {
+      // Heuristic: If strings[1] contains '__shape' (our specific id pattern for direct path) AND 'd=', assume it's the direct path template.
+      actualPathResult = inputResult;
+    console.log('getPathAttributesFromResult - identified as direct path, actualPathResult set from inputResult');
+  } else if (inputResult.values && inputResult.values.length > 0 && inputResult.values[0] && typeof inputResult.values[0] === 'object' && '_$litType$' in inputResult.values[0]) {
+      // Assume it's a group, and the first value is the shape/path template
+      actualPathResult = inputResult.values[0] as SVGTemplateResult;
+    console.log('getPathAttributesFromResult - identified as group, actualPathResult set from inputResult.values[0]');
+  } else if (inputResult.strings && inputResult.strings.some(s => s.includes('data-testid="mock-button"'))) {
+        // Handle specific mock button case (this seems to be for button elements themselves, not generic paths)
+        const pathDataMatch = inputResult.strings.join('').match(/data-path="([^\"]*)"/);
+        const optionsMatch = inputResult.strings.join('').match(/data-options="([^\"]*)"/);
+        return {
+            d: pathDataMatch ? pathDataMatch[1] : 'mock-path-not-found',
+            mockOptions: optionsMatch ? JSON.parse(optionsMatch[1].replace(/"/g, '"')) : {}
+        };
     }
+    // If none of the above, actualPathResult might still be null if inputResult didn't match any known structures.
+
+    if (!actualPathResult || !actualPathResult.values) {
+        // This case might occur if inputResult was not a recognized group or direct path, 
+        // or if the mock-button logic from the original code needs to be re-evaluated here.
+        // For now, if actualPathResult couldn't be determined, return null.
+        // The specific mock-button logic was moved up to be checked against inputResult directly.
+        console.log('getPathAttributesFromResult - actualPathResult is null or has no values before attribute extraction.');
+      return null;
+  }
 
     // Extract path data and attributes from the SVG template
     const attributes: Record<string, any> = {};
     
     // Check if dealing with zero dimensions special case
-    if (result.strings.some(s => s.includes('d="M'))) {
+    if (actualPathResult.strings.some(s => s.includes('d="M')) && actualPathResult.values.length >= 9) { // id + 4 pairs of coords
       // Zero dimension case - path data is embedded in the template
       return {
-        d: `M ${result.values[1]},${result.values[2]} L ${result.values[3]},${result.values[4]} L ${result.values[5]},${result.values[6]} L ${result.values[7]},${result.values[8]} Z`,
+        d: `M ${actualPathResult.values[1]},${actualPathResult.values[2]} L ${actualPathResult.values[3]},${actualPathResult.values[4]} L ${actualPathResult.values[5]},${actualPathResult.values[6]} L ${actualPathResult.values[7]},${actualPathResult.values[8]} Z`,
         fill: 'none',
         stroke: 'none',
-        strokeWidth: '0'
+        'stroke-width': '0'
       };
     } else {
-      // Normal case - path data is in values[1]
-      attributes.d = result.values[1] as string;
-    
-      // Extract other attributes
-      const staticParts = result.strings.join('');
-      const fillMatch = staticParts.match(/fill=([^>]*)(?=>|\s)/);
-      if (fillMatch) attributes.fill = result.values[2] as string;
-      
-      const strokeMatch = staticParts.match(/stroke=([^>]*)(?=>|\s)/);
-      if (strokeMatch) attributes.stroke = result.values[3] as string;
-      
-      const strokeWidthMatch = staticParts.match(/stroke-width=([^>]*)(?=>|\s)/);
-      if (strokeWidthMatch) attributes.strokeWidth = result.values[4] as string;
-      
-      return attributes;
+      // Normal non-button case from RectangleElement.renderShape():
+      // template: <path id="${VAL0_ID}__shape" d=${VAL1_PATH} fill=${VAL2_FILL} stroke=${VAL3_STROKE} stroke-width=${VAL4_STROKEWIDTH} />
+      // actualPathResult.values should be [idForPath, pathData, fillColor, strokeColor, strokeWidthVal]
+      // So, pathData is at actualPathResult.values[1]
+      if (actualPathResult.values.length > 1) {
+        attributes.d = actualPathResult.values[1] as string;
+      }
+      if (actualPathResult.values.length > 2) {
+        attributes.fill = actualPathResult.values[2] as string;
+      }
+      if (actualPathResult.values.length > 3) {
+        attributes.stroke = actualPathResult.values[3] as string;
+      }
+      if (actualPathResult.values.length > 4) {
+        attributes['stroke-width'] = actualPathResult.values[4] as string;
+      }
+
+      return Object.keys(attributes).length > 0 ? attributes : null;
     }
   };
 
@@ -144,7 +187,7 @@ describe('RectangleElement', () => {
         expect(attrs?.d).toBe(generateRectanglePath(1, 2, 30, 40, 7));
         expect(attrs?.fill).toBe('rgba(255,0,0,0.5)');
         expect(attrs?.stroke).toBe('#00FF00');
-        expect(attrs?.strokeWidth).toBe('3.5');
+        expect(attrs?.['stroke-width']).toBe('3.5');
       });
 
       it('should handle cornerRadius prop as an alias for rx', () => {
@@ -390,17 +433,18 @@ describe('RectangleElement', () => {
       
       // The template should be a group containing both button and text elements
       const templateStr = result!.strings.join('');
-      expect(templateStr).toContain('<g>'); // Wrapper group for button+text from base class
+      expect(templateStr).toMatch(/<g/); // Wrapper group for button+text from base class
     });
 
     it('should not render text for button elements when no text is configured', () => {
       const props = {
         button: {
           enabled: true
-        }
+        },
+        text: undefined, // Ensure no text is configured for this button
+        text_element: undefined // Ensure no text_element is configured
         // No text property
       };
-      
       // Create a proper mock button that returns a valid SVG result
       const mockButton = {
         createButton: vi.fn().mockReturnValue(svg`<g class="lcars-button-group"><path d="M0,0 L100,0 L100,30 L0,30 Z"/></g>`)
@@ -418,7 +462,7 @@ describe('RectangleElement', () => {
       
       // Should be button template without additional text wrapping from base class
       const templateStr = result!.strings.join('');
-      expect(templateStr).toContain('lcars-button-group'); // Button group should be present
+      expect(templateStr).toMatch(/lcars-button-group/); // Button group should be present
     });
   });
 });

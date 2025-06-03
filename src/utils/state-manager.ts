@@ -2,6 +2,8 @@ import { AnimationDefinition, AnimationSequence, ElementStateManagementConfig } 
 import { animationManager, AnimationContext } from './animation.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElement } from '../layout/elements/element.js';
+import { transformPropagator, AnimationSyncData } from './transform-propagator.js';
+import gsap from 'gsap';
 
 export interface ElementState {
   currentState: string;
@@ -59,6 +61,11 @@ export class StateManager {
   setAnimationContext(context: AnimationContext, elementsMap?: Map<string, LayoutElement>): void {
     this.animationContext = context;
     this.elementsMap = elementsMap;
+    
+    // Initialize transform propagator with current layout state
+    if (elementsMap && context.getShadowElement) {
+      transformPropagator.initialize(elementsMap, context.getShadowElement);
+    }
   }
 
   /**
@@ -240,162 +247,13 @@ export class StateManager {
       return;
     }
 
-    // Get target element for animation
-    const targetElement = this.animationContext.getShadowElement?.(elementId);
-    if (!targetElement) {
-      console.warn(`[StateManager] Cannot execute animation: DOM element ${elementId} not found`);
-      return;
-    }
-
-    try {
-      // Execute animation based on type
-      switch (animConfig.type) {
-        case 'fade':
-          this.executeFadeAnimation(targetElement, animConfig);
-          break;
-        case 'slide':
-          this.executeSlideAnimation(targetElement, animConfig);
-          break;
-        case 'scale':
-          this.executeScaleAnimation(targetElement, animConfig);
-          break;
-        case 'custom_gsap':
-          this.executeCustomGsapAnimation(targetElement, animConfig);
-          break;
-        default:
-          console.warn(`[StateManager] Unknown animation type: ${animConfig.type}`);
-      }
-    } catch (error) {
-      console.error(`[StateManager] Error executing animation for ${elementId}:`, error);
-    }
-  }
-
-  /**
-   * Execute fade animation
-   */
-  private executeFadeAnimation(element: Element, config: any): void {
-    const { fade_params, duration = 0.5, ease = 'power2.out' } = config;
-    const { opacity_start, opacity_end } = fade_params || {};
-
-    // Import GSAP dynamically to ensure it's available
-    import('gsap').then(({ gsap }) => {
-      if (opacity_start !== undefined) {
-        gsap.set(element, { opacity: opacity_start });
-      }
-      
-      gsap.to(element, {
-        opacity: opacity_end !== undefined ? opacity_end : 1,
-        duration,
-        ease
-      });
-    }).catch(error => {
-      console.error('[StateManager] GSAP import failed:', error);
-    });
-  }
-
-  /**
-   * Execute slide animation
-   */
-  private executeSlideAnimation(element: Element, config: any): void {
-    const { slide_params, duration = 0.5, ease = 'power2.out' } = config;
-    const { direction, distance, opacity_start, opacity_end } = slide_params || {};
-
-    import('gsap').then(({ gsap }) => {
-      // Set initial position based on direction
-      const initialTransform: any = {};
-      const finalTransform: any = {};
-
-      switch (direction) {
-        case 'left':
-          initialTransform.x = `-${distance}`;
-          finalTransform.x = 0;
-          break;
-        case 'right':
-          initialTransform.x = distance;
-          finalTransform.x = 0;
-          break;
-        case 'up':
-          initialTransform.y = `-${distance}`;
-          finalTransform.y = 0;
-          break;
-        case 'down':
-          initialTransform.y = distance;
-          finalTransform.y = 0;
-          break;
-      }
-
-      if (opacity_start !== undefined) {
-        initialTransform.opacity = opacity_start;
-      }
-      if (opacity_end !== undefined) {
-        finalTransform.opacity = opacity_end;
-      }
-
-      gsap.set(element, initialTransform);
-      gsap.to(element, {
-        ...finalTransform,
-        duration,
-        ease
-      });
-    }).catch(error => {
-      console.error('[StateManager] GSAP import failed:', error);
-    });
-  }
-
-  /**
-   * Execute scale animation
-   */
-  private executeScaleAnimation(element: Element, config: any): void {
-    const { scale_params, duration = 0.5, ease = 'power2.out', repeat, yoyo } = config;
-    const { scale_start, scale_end, transform_origin } = scale_params || {};
-
-    import('gsap').then(({ gsap }) => {
-      if (scale_start !== undefined) {
-        gsap.set(element, { 
-          scale: scale_start,
-          transformOrigin: transform_origin || 'center center'
-        });
-      }
-
-      const animationProps: any = {
-        scale: scale_end !== undefined ? scale_end : 1,
-        duration,
-        ease,
-        transformOrigin: transform_origin || 'center center'
-      };
-
-      if (repeat !== undefined) {
-        animationProps.repeat = repeat;
-      }
-      if (yoyo !== undefined) {
-        animationProps.yoyo = yoyo;
-      }
-
-      gsap.to(element, animationProps);
-    }).catch(error => {
-      console.error('[StateManager] GSAP import failed:', error);
-    });
-  }
-
-  /**
-   * Execute custom GSAP animation
-   */
-  private executeCustomGsapAnimation(element: Element, config: any): void {
-    const { custom_gsap_vars, duration = 0.5 } = config;
-
-    if (!custom_gsap_vars) {
-      console.warn('[StateManager] Custom GSAP animation missing custom_gsap_vars');
-      return;
-    }
-
-    import('gsap').then(({ gsap }) => {
-      gsap.to(element, {
-        ...custom_gsap_vars,
-        duration
-      });
-    }).catch(error => {
-      console.error('[StateManager] GSAP import failed:', error);
-    });
+    // Delegate to AnimationManager for execution
+    animationManager.executeTransformableAnimation(
+      elementId,
+      animConfig,
+      gsap,
+      this.animationContext.getShadowElement
+    );
   }
 
   /**
@@ -424,156 +282,50 @@ export class StateManager {
    * Execute a lifecycle animation configuration
    */
   private _executeLifecycleAnimation(elementId: string, animConfig: any, lifecycle: string): void {
-    if (!this.animationContext || !this.elementsMap) {
-      console.warn(`[StateManager] Cannot execute ${lifecycle} animation: missing context or elements map`);
-      return;
-    }
+    const element = this.elementsMap?.get(elementId);
+    if (!element || !this.animationContext?.getShadowElement) return;
 
-    const targetElement = this.animationContext.getShadowElement?.(elementId);
-    if (!targetElement) {
-      console.warn(`[StateManager] Cannot execute ${lifecycle} animation: DOM element ${elementId} not found`);
-      return;
-    }
-
-    try {
-      // Handle animation sequences (multiple steps)
-      if (animConfig.steps && Array.isArray(animConfig.steps)) {
-        this._executeAnimationSequence(targetElement, animConfig, lifecycle);
-      } else {
-        // Handle single animation
-        this._executeSingleLifecycleAnimation(targetElement, animConfig, lifecycle);
-      }
-    } catch (error) {
-      console.error(`[StateManager] Error executing ${lifecycle} animation for ${elementId}:`, error);
+    if (animConfig.steps && Array.isArray(animConfig.steps)) {
+      // This is an animation sequence
+      this._executeAnimationSequence(element, animConfig, lifecycle);
+    } else {
+      // This is a single animation
+      this._executeSingleLifecycleAnimation(element, animConfig, lifecycle);
     }
   }
 
   /**
    * Execute a single lifecycle animation
    */
-  private _executeSingleLifecycleAnimation(element: Element, config: any, lifecycle: string): void {
-    switch (config.type) {
-      case 'fade':
-        this._executeFadeAnimation(element, config);
-        break;
-      case 'slide':
-        this._executeSlideAnimation(element, config);
-        break;
-      case 'scale':
-        this._executeScaleAnimation(element, config);
-        break;
-      case 'custom_gsap':
-        this._executeCustomGsapAnimation(element, config);
-        break;
-      default:
-        console.warn(`[StateManager] Unknown ${lifecycle} animation type: ${config.type}`);
-    }
+  private _executeSingleLifecycleAnimation(element: LayoutElement, config: any, lifecycle: string): void {
+    if (!this.animationContext?.getShadowElement) return;
+    
+    // Delegate to AnimationManager
+    animationManager.executeTransformableAnimation(
+      element.id,
+      config, 
+      gsap,
+      this.animationContext?.getShadowElement
+    );
   }
 
   /**
    * Execute an animation sequence with multiple steps
    */
-  private _executeAnimationSequence(element: Element, config: any, lifecycle: string): void {
-    import('gsap').then(({ gsap }) => {
-      const timeline = gsap.timeline();
-      
-      config.steps.forEach((step: any) => {
-        const delay = step.delay || 0;
-        const duration = step.duration || 0.5;
-        
-        switch (step.type) {
-          case 'fade':
-            const fadeProps: any = {
-              duration
-            };
-            if (step.fade_params?.opacity_start !== undefined) {
-              gsap.set(element, { opacity: step.fade_params.opacity_start });
-            }
-            if (step.fade_params?.opacity_end !== undefined) {
-              fadeProps.opacity = step.fade_params.opacity_end;
-            }
-            timeline.to(element, fadeProps, delay);
-            break;
-            
-          case 'slide':
-            const slideProps: any = { duration };
-            const { direction, distance } = step.slide_params || {};
-            
-            if (direction && distance) {
-              switch (direction) {
-                case 'up':
-                  gsap.set(element, { y: distance });
-                  slideProps.y = 0;
-                  break;
-                case 'down':
-                  gsap.set(element, { y: `-${distance}` });
-                  slideProps.y = 0;
-                  break;
-                case 'left':
-                  gsap.set(element, { x: distance });
-                  slideProps.x = 0;
-                  break;
-                case 'right':
-                  gsap.set(element, { x: `-${distance}` });
-                  slideProps.x = 0;
-                  break;
-              }
-            }
-            timeline.to(element, slideProps, delay);
-            break;
-            
-          case 'scale':
-            const scaleProps: any = { duration };
-            if (step.scale_params?.scale_start !== undefined) {
-              gsap.set(element, { scale: step.scale_params.scale_start });
-            }
-            if (step.scale_params?.scale_end !== undefined) {
-              scaleProps.scale = step.scale_params.scale_end;
-            }
-            if (step.scale_params?.transform_origin) {
-              scaleProps.transformOrigin = step.scale_params.transform_origin;
-            }
-            if (step.repeat !== undefined) {
-              scaleProps.repeat = step.repeat;
-            }
-            if (step.yoyo !== undefined) {
-              scaleProps.yoyo = step.yoyo;
-            }
-            timeline.to(element, scaleProps, delay);
-            break;
-        }
-      });
-    }).catch(error => {
-      console.error(`[StateManager] GSAP import failed for ${lifecycle} sequence:`, error);
+  private _executeAnimationSequence(element: LayoutElement, config: any, lifecycle: string): void {
+    if (!this.animationContext?.getShadowElement || !config.steps || !Array.isArray(config.steps)) {
+      return;
+    }
+
+    // Execute each step using AnimationManager. The delay in each step config will handle sequencing.
+    config.steps.forEach((stepConfig: any) => {
+      animationManager.executeTransformableAnimation(
+        element.id,
+        stepConfig,
+        gsap,
+        this.animationContext?.getShadowElement
+      );
     });
-  }
-
-  /**
-   * Execute fade animation (refactored for reuse)
-   */
-  private _executeFadeAnimation(element: Element, config: any): void {
-    this.executeFadeAnimation(element, config);
-  }
-
-  /**
-   * Execute slide animation (refactored for reuse)
-   */
-  private _executeSlideAnimation(element: Element, config: any): void {
-    this.executeSlideAnimation(element, config);
-  }
-
-  /**
-   * Execute scale animation (refactored for reuse)
-   */
-  private _executeScaleAnimation(element: Element, config: any): void {
-    this.executeScaleAnimation(element, config);
-  }
-
-  /**
-   * Execute custom GSAP animation (refactored for reuse)
-   */
-  private _executeCustomGsapAnimation(element: Element, config: any): void {
-    this.executeCustomGsapAnimation(element, config);
   }
 
   /**

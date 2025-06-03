@@ -74,7 +74,6 @@ export class EndcapElement extends LayoutElement {
       
       if (isButton && this.button) {
         // Let the button handle its own color resolution with current state
-        
         return this.button.createButton(
           pathData,
           x,
@@ -86,13 +85,13 @@ export class EndcapElement extends LayoutElement {
           }
         );
       } else {
-        // Use centralized color resolution for non-button elements
+        // Non-button rendering: return just the path. 
+        // LayoutElement.render() will wrap this path and any text in a <g id="${this.id}">.
         const colors = this._resolveElementColors();
         
-        // Create and return just the path element - text handled by base class
         return svg`
           <path
-            id=${this.id}
+            id="${this.id}__shape"
             d=${pathData}
             fill=${colors.fillColor}
             stroke=${colors.strokeColor}

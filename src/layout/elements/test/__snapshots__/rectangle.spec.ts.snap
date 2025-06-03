@@ -5,26 +5,44 @@ exports[`RectangleElement > render > Non-Button Rendering > should handle corner
   "_$litType$": 2,
   "strings": [
     "
-        <path
-          id=",
+          <g id="",
+    "">
+            ",
     "
-          d=",
+            ",
     "
-          fill=",
-    "
-          stroke=",
-    "
-          stroke-width=",
-    "
-        />
-      ",
+          </g>
+        ",
   ],
   "values": [
     "rect-cornerRadius",
-    "M 0.000,4.000 A 4.000,4.000 0 0,1 4.000,0.000 L 16.000,0.000 A 4.000,4.000 0 0,1 20.000,4.000 L 20.000,16.000 A 4.000,4.000 0 0,1 16.000,20.000 L 4.000,20.000 A 4.000,4.000 0 0,1 0.000,16.000 Z",
-    "yellow",
-    "none",
-    "0",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+        <path
+          id="",
+        "__shape" // Derived ID for the path itself, not the main element ID
+          d=",
+        "
+          fill=",
+        "
+          stroke=",
+        "
+          stroke-width=",
+        "
+        />
+      ",
+      ],
+      "values": [
+        "rect-cornerRadius",
+        "M 0.000,4.000 A 4.000,4.000 0 0,1 4.000,0.000 L 16.000,0.000 A 4.000,4.000 0 0,1 20.000,4.000 L 20.000,16.000 A 4.000,4.000 0 0,1 16.000,20.000 L 4.000,20.000 A 4.000,4.000 0 0,1 0.000,16.000 Z",
+        "yellow",
+        "none",
+        "0",
+      ],
+    },
+    null,
   ],
 }
 `;
@@ -34,34 +52,52 @@ exports[`RectangleElement > render > Non-Button Rendering > should handle zero d
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+          <g id="",
+    "">
+            ",
     "
+            ",
+    "
+          </g>
+        ",
+  ],
+  "values": [
+    "rect-zero-w",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+          <path
+            id="",
+        "__shape_placeholder"
             d="M ",
-    ",",
-    " L ",
-    ",",
-    " L ",
-    ",",
-    " L ",
-    ",",
-    " Z"
+        ",",
+        " L ",
+        ",",
+        " L ",
+        ",",
+        " L ",
+        ",",
+        " Z"
             fill="none"
             stroke="none"
             stroke-width="0"
           />
         ",
-  ],
-  "values": [
-    "rect-zero-w",
-    "10.000",
-    "10.000",
-    "10.000",
-    "10.000",
-    "10.000",
-    "10.000",
-    "10.000",
-    "10.000",
+      ],
+      "values": [
+        "rect-zero-w",
+        "10.000",
+        "10.000",
+        "10.000",
+        "10.000",
+        "10.000",
+        "10.000",
+        "10.000",
+        "10.000",
+      ],
+    },
+    null,
   ],
 }
 `;
@@ -71,34 +107,52 @@ exports[`RectangleElement > render > Non-Button Rendering > should handle zero d
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+          <g id="",
+    "">
+            ",
     "
+            ",
+    "
+          </g>
+        ",
+  ],
+  "values": [
+    "rect-zero-h",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+          <path
+            id="",
+        "__shape_placeholder"
             d="M ",
-    ",",
-    " L ",
-    ",",
-    " L ",
-    ",",
-    " L ",
-    ",",
-    " Z"
+        ",",
+        " L ",
+        ",",
+        " L ",
+        ",",
+        " L ",
+        ",",
+        " Z"
             fill="none"
             stroke="none"
             stroke-width="0"
           />
         ",
-  ],
-  "values": [
-    "rect-zero-h",
-    "10.000",
-    "10.000",
-    "10.000",
-    "10.000",
-    "10.000",
-    "10.000",
-    "10.000",
-    "10.000",
+      ],
+      "values": [
+        "rect-zero-h",
+        "10.000",
+        "10.000",
+        "10.000",
+        "10.000",
+        "10.000",
+        "10.000",
+        "10.000",
+        "10.000",
+      ],
+    },
+    null,
   ],
 }
 `;
@@ -108,26 +162,44 @@ exports[`RectangleElement > render > Non-Button Rendering > should prioritize rx
   "_$litType$": 2,
   "strings": [
     "
-        <path
-          id=",
+          <g id="",
+    "">
+            ",
     "
-          d=",
+            ",
     "
-          fill=",
-    "
-          stroke=",
-    "
-          stroke-width=",
-    "
-        />
-      ",
+          </g>
+        ",
   ],
   "values": [
     "rect-rx-priority",
-    "M 0.000,6.000 A 6.000,6.000 0 0,1 6.000,0.000 L 19.000,0.000 A 6.000,6.000 0 0,1 25.000,6.000 L 25.000,19.000 A 6.000,6.000 0 0,1 19.000,25.000 L 6.000,25.000 A 6.000,6.000 0 0,1 0.000,19.000 Z",
-    "cyan",
-    "none",
-    "0",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+        <path
+          id="",
+        "__shape" // Derived ID for the path itself, not the main element ID
+          d=",
+        "
+          fill=",
+        "
+          stroke=",
+        "
+          stroke-width=",
+        "
+        />
+      ",
+      ],
+      "values": [
+        "rect-rx-priority",
+        "M 0.000,6.000 A 6.000,6.000 0 0,1 6.000,0.000 L 19.000,0.000 A 6.000,6.000 0 0,1 25.000,6.000 L 25.000,19.000 A 6.000,6.000 0 0,1 19.000,25.000 L 6.000,25.000 A 6.000,6.000 0 0,1 0.000,19.000 Z",
+        "cyan",
+        "none",
+        "0",
+      ],
+    },
+    null,
   ],
 }
 `;
@@ -137,26 +209,44 @@ exports[`RectangleElement > render > Non-Button Rendering > should render a basi
   "_$litType$": 2,
   "strings": [
     "
-        <path
-          id=",
+          <g id="",
+    "">
+            ",
     "
-          d=",
+            ",
     "
-          fill=",
-    "
-          stroke=",
-    "
-          stroke-width=",
-    "
-        />
-      ",
+          </g>
+        ",
   ],
   "values": [
     "rect-default-props",
-    "M 0.000,0.000 L 10.000,0.000 L 10.000,10.000 L 0.000,10.000 Z",
-    "none",
-    "none",
-    "0",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+        <path
+          id="",
+        "__shape" // Derived ID for the path itself, not the main element ID
+          d=",
+        "
+          fill=",
+        "
+          stroke=",
+        "
+          stroke-width=",
+        "
+        />
+      ",
+      ],
+      "values": [
+        "rect-default-props",
+        "M 0.000,0.000 L 10.000,0.000 L 10.000,10.000 L 0.000,10.000 Z",
+        "none",
+        "none",
+        "0",
+      ],
+    },
+    null,
   ],
 }
 `;
@@ -166,26 +256,44 @@ exports[`RectangleElement > render > Non-Button Rendering > should render with s
   "_$litType$": 2,
   "strings": [
     "
-        <path
-          id=",
+          <g id="",
+    "">
+            ",
     "
-          d=",
+            ",
     "
-          fill=",
-    "
-          stroke=",
-    "
-          stroke-width=",
-    "
-        />
-      ",
+          </g>
+        ",
   ],
   "values": [
     "rect-styled",
-    "M 1.000,9.000 A 7.000,7.000 0 0,1 8.000,2.000 L 24.000,2.000 A 7.000,7.000 0 0,1 31.000,9.000 L 31.000,35.000 A 7.000,7.000 0 0,1 24.000,42.000 L 8.000,42.000 A 7.000,7.000 0 0,1 1.000,35.000 Z",
-    "rgba(255,0,0,0.5)",
-    "#00FF00",
-    "3.5",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+        <path
+          id="",
+        "__shape" // Derived ID for the path itself, not the main element ID
+          d=",
+        "
+          fill=",
+        "
+          stroke=",
+        "
+          stroke-width=",
+        "
+        />
+      ",
+      ],
+      "values": [
+        "rect-styled",
+        "M 1.000,9.000 A 7.000,7.000 0 0,1 8.000,2.000 L 24.000,2.000 A 7.000,7.000 0 0,1 31.000,9.000 L 31.000,35.000 A 7.000,7.000 0 0,1 24.000,42.000 L 8.000,42.000 A 7.000,7.000 0 0,1 1.000,35.000 Z",
+        "rgba(255,0,0,0.5)",
+        "#00FF00",
+        "3.5",
+      ],
+    },
+    null,
   ],
 }
 `;

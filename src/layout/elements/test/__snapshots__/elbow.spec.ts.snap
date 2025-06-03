@@ -5,26 +5,44 @@ exports[`ElbowElement > render > Non-Button Rendering > should render a basic el
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+          <g id="",
+    "">
+            ",
     "
-            d=",
+            ",
     "
-            fill=",
-    "
-            stroke=",
-    "
-            stroke-width=",
-    "
-          />
+          </g>
         ",
   ],
   "values": [
     "el-render",
-    "MOCK_PATH_elbow_top-left_100x80_body30_arm30_at_5,10_r30",
-    "none",
-    "none",
-    "0",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+          <path
+            id="",
+        "__shape"
+            d=",
+        "
+            fill=",
+        "
+            stroke=",
+        "
+            stroke-width=",
+        "
+          />
+        ",
+      ],
+      "values": [
+        "el-render",
+        "MOCK_PATH_elbow_top-left_100x80_body30_arm30_at_5,10_r30",
+        "none",
+        "none",
+        "0",
+      ],
+    },
+    null,
   ],
 }
 `;
@@ -34,26 +52,44 @@ exports[`ElbowElement > render > Non-Button Rendering > should render correctly 
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+          <g id="",
+    "">
+            ",
     "
-            d=",
+            ",
     "
-            fill=",
-    "
-            stroke=",
-    "
-            stroke-width=",
-    "
-          />
+          </g>
         ",
   ],
   "values": [
     "el-render",
-    "MOCK_PATH_elbow_bottom-left_100x100_body30_arm30_at_10,20_r30",
-    "none",
-    "none",
-    "0",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+          <path
+            id="",
+        "__shape"
+            d=",
+        "
+            fill=",
+        "
+            stroke=",
+        "
+            stroke-width=",
+        "
+          />
+        ",
+      ],
+      "values": [
+        "el-render",
+        "MOCK_PATH_elbow_bottom-left_100x100_body30_arm30_at_10,20_r30",
+        "none",
+        "none",
+        "0",
+      ],
+    },
+    null,
   ],
 }
 `;
@@ -63,26 +99,44 @@ exports[`ElbowElement > render > Non-Button Rendering > should render correctly 
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+          <g id="",
+    "">
+            ",
     "
-            d=",
+            ",
     "
-            fill=",
-    "
-            stroke=",
-    "
-            stroke-width=",
-    "
-          />
+          </g>
         ",
   ],
   "values": [
     "el-render",
-    "MOCK_PATH_elbow_bottom-right_100x100_body30_arm30_at_10,20_r30",
-    "none",
-    "none",
-    "0",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+          <path
+            id="",
+        "__shape"
+            d=",
+        "
+            fill=",
+        "
+            stroke=",
+        "
+            stroke-width=",
+        "
+          />
+        ",
+      ],
+      "values": [
+        "el-render",
+        "MOCK_PATH_elbow_bottom-right_100x100_body30_arm30_at_10,20_r30",
+        "none",
+        "none",
+        "0",
+      ],
+    },
+    null,
   ],
 }
 `;
@@ -92,26 +146,44 @@ exports[`ElbowElement > render > Non-Button Rendering > should render correctly 
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+          <g id="",
+    "">
+            ",
     "
-            d=",
+            ",
     "
-            fill=",
-    "
-            stroke=",
-    "
-            stroke-width=",
-    "
-          />
+          </g>
         ",
   ],
   "values": [
     "el-render",
-    "MOCK_PATH_elbow_top-left_100x100_body30_arm30_at_10,20_r30",
-    "none",
-    "none",
-    "0",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+          <path
+            id="",
+        "__shape"
+            d=",
+        "
+            fill=",
+        "
+            stroke=",
+        "
+            stroke-width=",
+        "
+          />
+        ",
+      ],
+      "values": [
+        "el-render",
+        "MOCK_PATH_elbow_top-left_100x100_body30_arm30_at_10,20_r30",
+        "none",
+        "none",
+        "0",
+      ],
+    },
+    null,
   ],
 }
 `;
@@ -121,26 +193,44 @@ exports[`ElbowElement > render > Non-Button Rendering > should render correctly 
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+          <g id="",
+    "">
+            ",
     "
-            d=",
+            ",
     "
-            fill=",
-    "
-            stroke=",
-    "
-            stroke-width=",
-    "
-          />
+          </g>
         ",
   ],
   "values": [
     "el-render",
-    "MOCK_PATH_elbow_top-right_100x100_body30_arm30_at_10,20_r30",
-    "none",
-    "none",
-    "0",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+          <path
+            id="",
+        "__shape"
+            d=",
+        "
+            fill=",
+        "
+            stroke=",
+        "
+            stroke-width=",
+        "
+          />
+        ",
+      ],
+      "values": [
+        "el-render",
+        "MOCK_PATH_elbow_top-right_100x100_body30_arm30_at_10,20_r30",
+        "none",
+        "none",
+        "0",
+      ],
+    },
+    null,
   ],
 }
 `;
@@ -150,26 +240,44 @@ exports[`ElbowElement > render > Non-Button Rendering > should render with speci
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+          <g id="",
+    "">
+            ",
     "
-            d=",
+            ",
     "
-            fill=",
-    "
-            stroke=",
-    "
-            stroke-width=",
-    "
-          />
+          </g>
         ",
   ],
   "values": [
     "el-render",
-    "MOCK_PATH_elbow_bottom-right_120x90_body40_arm20_at_0,0_r20",
-    "red",
-    "blue",
-    "2",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+          <path
+            id="",
+        "__shape"
+            d=",
+        "
+            fill=",
+        "
+            stroke=",
+        "
+            stroke-width=",
+        "
+          />
+        ",
+      ],
+      "values": [
+        "el-render",
+        "MOCK_PATH_elbow_bottom-right_120x90_body40_arm20_at_0,0_r20",
+        "red",
+        "blue",
+        "2",
+      ],
+    },
+    null,
   ],
 }
 `;

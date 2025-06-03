@@ -2,8 +2,9 @@ import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { HomeAssistant } from "custom-card-helpers";
 import { colorResolver } from "../../utils/color-resolver.js";
-import { AnimationContext } from "../../utils/animation.js";
+import { AnimationContext, animationManager } from "../../utils/animation.js";
 import { Color, ColorStateContext } from "../../utils/color.js";
+import { transformPropagator, AnimationSyncData } from "../../utils/transform-propagator.js";
 
 export type ButtonPropertyName = 'fill' | 'stroke' | 'strokeWidth';
 
@@ -395,7 +396,7 @@ export class Button {
                 this._executeToggleStateAction(actionConfig, stateManager);
                 break;
             case 'multi_action':
-                this._executeMultiAction(actionConfig, stateManager);
+                this._executeMultiAction(actionConfig.tap_action.actions);
                 break;
             case 'animate':
                 this._executeAnimateAction(actionConfig);
@@ -429,38 +430,8 @@ export class Button {
         stateManager.toggleState(targetElementRef, states);
     }
 
-    private _executeMultiAction(actionConfig: any, stateManager: any): void {
-        const actions = actionConfig.tap_action.actions;
-        
-        if (!actions || !Array.isArray(actions)) {
-            console.warn(`[${this._id}] multi_action missing actions array`);
-            return;
-        }
-        
-        // Execute each action in sequence
-        actions.forEach((action: any, index: number) => {
-            try {
-                switch (action.action) {
-                    case 'set_state':
-                        if (action.target_element_ref && action.state) {
-                            stateManager.setState(action.target_element_ref, action.state);
-                        }
-                        break;
-                    case 'toggle_state':
-                        if (action.target_element_ref && action.states) {
-                            stateManager.toggleState(action.target_element_ref, action.states);
-                        }
-                        break;
-                    case 'animate':
-                        this._executeAnimateAction({ tap_action: action });
-                        break;
-                    default:
-                        console.warn(`[${this._id}] Unknown action in multi_action[${index}]: ${action.action}`);
-                }
-            } catch (error) {
-                console.error(`[${this._id}] Error executing multi_action[${index}]:`, error);
-            }
-        });
+    private _executeMultiAction(actions: any[]): void {
+        actions.forEach(action => this.executeAction(action));
     }
 
     private _executeAnimateAction(actionConfig: any): void {
@@ -481,59 +452,27 @@ export class Button {
         }
         elementsToAnimate.push(...targetElements);
         
-        // Import GSAP and execute animation
-        import('gsap').then(({ gsap }) => {
-            elementsToAnimate.forEach(elementId => {
-                const targetElement = this._getShadowElement?.(elementId);
-                if (!targetElement) {
-                    console.warn(`[${this._id}] Animation target element not found: ${elementId}`);
-                    return;
-                }
-                
-                this.executeAnimationOnElement(targetElement, animation, gsap);
-            });
-        }).catch(error => {
-            console.error(`[${this._id}] GSAP import failed for animation:`, error);
+        // Process each animation with transform propagation if needed
+        elementsToAnimate.forEach(elementId => {
+            this._executeAnimationWithPropagation(elementId, animation);
         });
     }
 
-    private executeAnimationOnElement(element: Element, animation: any, gsap: any): void {
-        const { type, duration = 1, ease = 'power2.out', repeat, yoyo } = animation;
-        
-        const animationProps: any = {
-            duration,
-            ease
-        };
-        
-        if (repeat !== undefined) animationProps.repeat = repeat;
-        if (yoyo !== undefined) animationProps.yoyo = yoyo;
-        
-        switch (type) {
-            case 'scale':
-                const { scale_params } = animation;
-                if (scale_params) {
-                    if (scale_params.scale_start !== undefined) {
-                        gsap.set(element, { 
-                            scale: scale_params.scale_start,
-                            transformOrigin: scale_params.transform_origin || 'center center'
-                        });
-                    }
-                    animationProps.scale = scale_params.scale_end || 1;
-                    animationProps.transformOrigin = scale_params.transform_origin || 'center center';
-                }
-                break;
-            case 'custom_gsap':
-                const { custom_gsap_vars } = animation;
-                if (custom_gsap_vars) {
-                    Object.assign(animationProps, custom_gsap_vars);
-                }
-                break;
-            default:
-                console.warn(`[${this._id}] Unknown animation type: ${type}`);
-                return;
-        }
-        
-        gsap.to(element, animationProps);
+    /**
+     * Execute animation with transform propagation support
+     */
+    private _executeAnimationWithPropagation(elementId: string, animation: any): void {
+        // Ensure GSAP is loaded, then delegate to AnimationManager
+        import('gsap').then(({ gsap }) => {
+            animationManager.executeTransformableAnimation(
+                elementId,
+                animation,
+                gsap, // Pass the loaded GSAP instance
+                this._getShadowElement
+            );
+        }).catch(error => {
+            console.error(`[${this._id}] GSAP import failed for animation:`, error);
+        });
     }
 
     updateHass(hass?: HomeAssistant): void {

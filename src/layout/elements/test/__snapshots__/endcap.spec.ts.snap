@@ -5,26 +5,44 @@ exports[`EndcapElement > render > Non-Button Rendering > should render a basic e
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+          <g id="",
+    "">
+            ",
     "
-            d=",
+            ",
     "
-            fill=",
-    "
-            stroke=",
-    "
-            stroke-width=",
-    "
-          />
+          </g>
         ",
   ],
   "values": [
     "ec-render",
-    "M 5.000,20.000 A 10.000,10.000 0 0,1 15.000,10.000 L 45.000,10.000 L 45.000,30.000 L 15.000,30.000 A 10.000,10.000 0 0,1 5.000,20.000 Z",
-    "none",
-    "none",
-    "0",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+          <path
+            id="",
+        "__shape"
+            d=",
+        "
+            fill=",
+        "
+            stroke=",
+        "
+            stroke-width=",
+        "
+          />
+        ",
+      ],
+      "values": [
+        "ec-render",
+        "M 5.000,20.000 A 10.000,10.000 0 0,1 15.000,10.000 L 45.000,10.000 L 45.000,30.000 L 15.000,30.000 A 10.000,10.000 0 0,1 5.000,20.000 Z",
+        "none",
+        "none",
+        "0",
+      ],
+    },
+    null,
   ],
 }
 `;
@@ -34,26 +52,44 @@ exports[`EndcapElement > render > Non-Button Rendering > should render with dire
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+          <g id="",
+    "">
+            ",
     "
-            d=",
+            ",
     "
-            fill=",
-    "
-            stroke=",
-    "
-            stroke-width=",
-    "
-          />
+          </g>
         ",
   ],
   "values": [
     "ec-render",
-    "M 5.000,10.000 L 35.000,10.000 A 10.000,10.000 0 0,1 45.000,20.000 L 45.000,20.000 A 10.000,10.000 0 0,1 35.000,30.000 L 5.000,30.000 Z",
-    "none",
-    "none",
-    "0",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+          <path
+            id="",
+        "__shape"
+            d=",
+        "
+            fill=",
+        "
+            stroke=",
+        "
+            stroke-width=",
+        "
+          />
+        ",
+      ],
+      "values": [
+        "ec-render",
+        "M 5.000,10.000 L 35.000,10.000 A 10.000,10.000 0 0,1 45.000,20.000 L 45.000,20.000 A 10.000,10.000 0 0,1 35.000,30.000 L 5.000,30.000 Z",
+        "none",
+        "none",
+        "0",
+      ],
+    },
+    null,
   ],
 }
 `;
@@ -63,26 +99,44 @@ exports[`EndcapElement > render > Non-Button Rendering > should render with spec
   "_$litType$": 2,
   "strings": [
     "
-          <path
-            id=",
+          <g id="",
+    "">
+            ",
     "
-            d=",
+            ",
     "
-            fill=",
-    "
-            stroke=",
-    "
-            stroke-width=",
-    "
-          />
+          </g>
         ",
   ],
   "values": [
     "ec-render",
-    "M 0.000,7.500 A 7.500,7.500 0 0,1 7.500,0.000 L 30.000,0.000 L 30.000,15.000 L 7.500,15.000 A 7.500,7.500 0 0,1 0.000,7.500 Z",
-    "red",
-    "blue",
-    "2",
+    {
+      "_$litType$": 2,
+      "strings": [
+        "
+          <path
+            id="",
+        "__shape"
+            d=",
+        "
+            fill=",
+        "
+            stroke=",
+        "
+            stroke-width=",
+        "
+          />
+        ",
+      ],
+      "values": [
+        "ec-render",
+        "M 0.000,7.500 A 7.500,7.500 0 0,1 7.500,0.000 L 30.000,0.000 L 30.000,15.000 L 7.500,15.000 A 7.500,7.500 0 0,1 0.000,7.500 Z",
+        "red",
+        "blue",
+        "2",
+      ],
+    },
+    null,
   ],
 }
 `;

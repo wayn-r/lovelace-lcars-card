@@ -655,18 +655,40 @@ export abstract class LayoutElement {
      * Elements should not override this - they should implement renderShape() instead
      */
     render(): SVGTemplateResult | null {
-        const shapeElement = this.renderShape();
-        if (!shapeElement) return null;
+        if (!this.layout.calculated) return null;
 
-        // Handle text rendering through centralized system
-        if (this._hasText()) {
-            const colors = this._resolveElementColors();
-            const textPosition = this._getTextPosition();
-            const textElement = this._renderText(textPosition.x, textPosition.y, colors);
-            return this._renderWithOptionalText(shapeElement, textElement);
+        const shapeOrButtonSvg = this.renderShape(); // This returns <path> OR <g id="this.id"> for buttons
+
+        if (!shapeOrButtonSvg) return null;
+
+        // If shapeOrButtonSvg is already a button group (which has the ID and handles its own text), return it directly.
+        // Check if the returned SVG is a group and already has the correct ID.
+        const isButtonRender = this.button && 
+                               this.props.button?.enabled &&
+                               shapeOrButtonSvg.strings.some(s => s.includes(`<g id="${this.id}"`) || s.includes(` id="${this.id}" class="lcars-button-group"`));
+
+
+        if (isButtonRender) {
+          return shapeOrButtonSvg;
         }
 
-        return shapeElement;
+        // It's a non-button shape, so shapeOrButtonSvg is just the <path> (or similar primitive).
+        // We need to wrap it and potentially add text.
+        let textSvg: SVGTemplateResult | null = null;
+        if (this._hasText()) { // _hasText() checks for non-button text as per its implementation
+          const colors = this._resolveElementColors();
+          const { x: textX, y: textY } = this._getTextPosition();
+          textSvg = this._renderText(textX, textY, colors); // _renderText should not have ID on the <text>
+        }
+
+        // Wrap the shape (and text if any) in a group with the ID.
+        // This ensures that transforms target the group, moving both shape and text.
+        return svg`
+          <g id="${this.id}">
+            ${shapeOrButtonSvg}
+            ${textSvg}
+          </g>
+        `;
     }
 
     animate(property: string, value: any, duration: number = 0.5): void {
@@ -786,25 +808,6 @@ export abstract class LayoutElement {
             ${this.props.text}
           </text>
         `;
-    }
-
-    /**
-     * Renders the element with optional text wrapping
-     * @param pathElement - The main path/shape element
-     * @param textElement - Optional text element (null if no text)
-     * @returns SVG template result with proper grouping
-     */
-    protected _renderWithOptionalText(pathElement: SVGTemplateResult, textElement: SVGTemplateResult | null): SVGTemplateResult {
-        if (textElement) {
-            return svg`
-              <g>
-                ${pathElement}
-                ${textElement}
-              </g>
-            `;
-        } else {
-            return pathElement;
-        }
     }
 
     /**

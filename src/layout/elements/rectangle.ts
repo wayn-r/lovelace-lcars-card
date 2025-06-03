@@ -25,9 +25,10 @@ export class RectangleElement extends LayoutElement {
     
     // Check for zero dimensions and return a minimal path
     if (width <= 0 || height <= 0) {
+      // This path won't be seen, ID is not critical, but avoid using this.id
       return svg`
           <path
-            id=${this.id}
+            id="${this.id}__shape_placeholder"
             d="M ${x.toFixed(3)},${y.toFixed(3)} L ${x.toFixed(3)},${y.toFixed(3)} L ${x.toFixed(3)},${y.toFixed(3)} L ${x.toFixed(3)},${y.toFixed(3)} Z"
             fill="none"
             stroke="none"
@@ -40,7 +41,8 @@ export class RectangleElement extends LayoutElement {
     const isButton = Boolean(buttonConfig?.enabled);
     
     if (isButton && this.button) {
-      // Let the button handle its own color resolution
+      // Button rendering: this.button.createButton returns the <g id="${this.id}">...</g>
+      // This is the final SVG for a button element, handled by LayoutElement.render() correctly.
       const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
       const pathData = generateRectanglePath(x, y, width, height, rx);
       
@@ -55,15 +57,16 @@ export class RectangleElement extends LayoutElement {
         }
       );
     } else {
-      // Use centralized color resolution for non-button elements
+      // Non-button rendering: return just the path. 
+      // LayoutElement.render() will wrap this path and any text in a <g id="${this.id}">.
+      // The <path> itself should NOT have id="${this.id}".
       const colors = this._resolveElementColors();
       const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
       const pathData = generateRectanglePath(x, y, width, height, rx);
       
-      // Create and return just the path element - text handled by base class
       return svg`
         <path
-          id=${this.id}
+          id="${this.id}__shape" // Derived ID for the path itself, not the main element ID
           d=${pathData}
           fill=${colors.fillColor}
           stroke=${colors.strokeColor}

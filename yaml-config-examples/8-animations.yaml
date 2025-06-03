@@ -40,10 +40,6 @@ groups:
             to: nav_header.main_header
             element_point: topLeft
             target_point: bottomLeft
-        # uncommenting the following lines will allow this to work, but they shouldn't be required for the animation to work.
-        #  note "idle" could be anything; it's just an arbitrary state name I tested it with.
-        # state_management:
-        #   default_state: idle
         animations:
           on_load:
             type: fade

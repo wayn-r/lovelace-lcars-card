@@ -2,6 +2,7 @@ import { HomeAssistant } from 'custom-card-helpers';
 import { gsap } from 'gsap';
 import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../types';
 import { Color } from './color.js';
+import { transformPropagator, AnimationSyncData } from './transform-propagator.js';
 
 /**
  * Animation state tracking for managing ongoing color transitions
@@ -47,6 +48,25 @@ export class AnimationManager {
   private elementAnimationStates = new Map<string, ColorAnimationState>();
   private entityStateMonitoring = new Map<string, EntityStateMonitoringData>();
   private dynamicColorCache = new Map<string, { fillColor?: string; strokeColor?: string }>();
+
+  /**
+   * Check if animation affects element positioning and requires propagation
+   */
+  private _animationAffectsPositioning(animation: any): boolean {
+    switch (animation.type) {
+      case 'scale':
+      case 'slide': // Slide animations also affect positioning
+        return true;
+      case 'custom_gsap':
+        const customVars = animation.custom_gsap_vars || {};
+        return customVars.scale !== undefined || 
+               customVars.x !== undefined || 
+               customVars.y !== undefined ||
+               customVars.rotation !== undefined;
+      default:
+        return false;
+    }
+  }
 
   /**
    * Initialize animation state tracking for a new element
@@ -987,6 +1007,118 @@ export class AnimationManager {
       ...animationProperties,
       ease: "power2.out"
     });
+  }
+
+  /**
+   * Execute a generic GSAP animation that may affect transforms and require propagation.
+   * This handles scale, slide, and custom_gsap animations.
+   */
+  executeTransformableAnimation(
+    elementId: string,
+    animationConfig: any, 
+    gsapInstance: any, // Pass GSAP explicitly
+    getShadowElement?: (id: string) => Element | null
+  ): void {
+    const targetElement = getShadowElement?.(elementId);
+    if (!targetElement) {
+      console.warn(`[AnimationManager] Animation target element not found for transformable animation: ${elementId}`);
+      return;
+    }
+
+    const { type, duration = 0.5, ease = 'power2.out', delay, repeat, yoyo } = animationConfig;
+    
+    const syncData: AnimationSyncData = {
+      duration,
+      ease,
+      delay,
+      repeat,
+      yoyo
+    };
+
+    // Process transform propagation if needed BEFORE the primary animation starts
+    if (this._animationAffectsPositioning(animationConfig)) {
+      transformPropagator.processAnimationWithPropagation(
+        elementId,
+        animationConfig, // Pass the full animation config
+        syncData
+      );
+    }
+    
+    // Prepare GSAP animation properties based on type
+    const animationProps: any = {
+      duration,
+      ease,
+      delay: delay || 0, // Ensure delay is explicitly 0 if undefined for GSAP
+    };
+    
+    if (repeat !== undefined) animationProps.repeat = repeat;
+    if (yoyo !== undefined) animationProps.yoyo = yoyo;
+
+    switch (type) {
+      case 'scale':
+        const { scale_params } = animationConfig;
+        if (scale_params) {
+          if (scale_params.scale_start !== undefined) {
+            // Set initial state without animation for scale_start
+            gsapInstance.set(targetElement, { 
+              scale: scale_params.scale_start,
+              transformOrigin: scale_params.transform_origin || 'center center'
+            });
+          }
+          animationProps.scale = scale_params.scale_end !== undefined ? scale_params.scale_end : 1;
+          animationProps.transformOrigin = scale_params.transform_origin || 'center center';
+        }
+        break;
+      case 'slide':
+        const { slide_params } = animationConfig;
+        if (slide_params) {
+          let x = 0, y = 0;
+          const distance = parseFloat(slide_params.distance) || 0;
+          switch (slide_params.direction) {
+            case 'left': x = -distance; break;
+            case 'right': x = distance; break;
+            case 'up': y = -distance; break;
+            case 'down': y = distance; break;
+          }
+          // GSAP's x and y are relative by default if starting with += or -=, absolute otherwise.
+          // For slide, we typically want to move *from* an offset or *to* a final position.
+          // Assuming slide implies moving *to* the new position from current.
+          // If opacity_start is 0, we might want to set initial x/y and fade in.
+          if (slide_params.opacity_start !== undefined && slide_params.opacity_start === 0) {
+            gsapInstance.set(targetElement, { x: x, y: y, opacity: 0 });
+            animationProps.opacity = 1;
+            animationProps.x = 0; // Animate to original position x=0
+            animationProps.y = 0; // Animate to original position y=0
+          } else {
+            animationProps.x = x;
+            animationProps.y = y;
+          }
+          if (slide_params.opacity_start !== undefined) {
+            animationProps.opacity = slide_params.opacity_end !== undefined ? slide_params.opacity_end : 1;
+          }
+        }
+        break;
+      case 'fade': // Added basic fade support
+        const { fade_params } = animationConfig;
+        if (fade_params) {
+          if (fade_params.opacity_start !== undefined) {
+            gsapInstance.set(targetElement, { opacity: fade_params.opacity_start });
+          }
+          animationProps.opacity = fade_params.opacity_end !== undefined ? fade_params.opacity_end : 1;
+        }
+        break;
+      case 'custom_gsap':
+        const { custom_gsap_vars } = animationConfig;
+        if (custom_gsap_vars) {
+          Object.assign(animationProps, custom_gsap_vars);
+        }
+        break;
+      default:
+        console.warn(`[AnimationManager] Unknown transformable animation type: ${type} for element ${elementId}`);
+        return; // Do not proceed if type is unknown
+    }
+    
+    gsapInstance.to(targetElement, animationProps);
   }
 }
 

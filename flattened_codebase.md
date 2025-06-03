@@ -8,9 +8,11 @@ lovelace-lcars-card/
 ├── CHANGELOG.md
 ├── DYNAMIC_COLORS_EXAMPLE.md
 ├── TODO.md
+├── TRANSFORM_PROPAGATION.md
 ├── dist/
 ├── flatten-codebase.js
 ├── git-history-diff.js
+├── notepads/
 ├── package.json
 ├── src/
 │   ├── constants.ts
@@ -50,7 +52,6 @@ lovelace-lcars-card/
 │       ├── color.ts
 │       ├── dynamic-color-manager.ts
 │       ├── fontmetrics.d.ts
-│       ├── layout-coordinator.ts
 │       ├── shapes.ts
 │       ├── state-manager.ts
 │       ├── test/
@@ -58,7 +59,9 @@ lovelace-lcars-card/
 │       │   ├── color-resolver.spec.ts
 │       │   ├── color.spec.ts
 │       │   ├── dynamic-color-manager.spec.ts
-│       │   └── shapes.spec.ts
+│       │   ├── shapes.spec.ts
+│       │   └── transform-propagator.spec.ts
+│       ├── transform-propagator.ts
 │       └── visibility-manager.ts
 ├── tsconfig.json
 ├── vite.config.ts
@@ -289,6 +292,300 @@ The dynamic color system uses GSAP (GreenSock Animation Platform) for smooth, hi
 
 ### Animation
 - add interpolated fade transition between stateful fill changes
+```
+
+## File: TRANSFORM_PROPAGATION.md
+
+```markdown
+# Transform Propagation System
+
+## Overview
+
+The Transform Propagation System ensures that anchor and stretch relationships between elements are maintained during animations that change an element's visual size or position. Without this system, animations like scaling would break the visual alignment of dependent elements.
+
+## Problem Statement
+
+When an element undergoes a transformation (such as scaling), several issues arise:
+
+1. **Anchor Point Displacement**: The element's anchor points move to new positions
+2. **Dependent Element Misalignment**: Elements anchored to the transformed element no longer align correctly
+3. **Chain Reaction**: Elements anchored to the dependent elements are also affected
+
+### Example Scenario
+
+Consider this configuration from example 8:
+
+```yaml
+- id: scale_target
+  type: rectangle
+  layout:
+    anchor:
+      to: scale_trigger_button
+      element_point: topLeft
+      target_point: topRight
+  animations:
+    on_state_change:
+      - from_state: normal
+        to_state: scaled
+        type: scale
+        scale_params:
+          scale_end: 1.2
+          transform_origin: center center
+
+- id: scale_target_description  
+  type: text
+  layout:
+    anchor:
+      to: scale_target
+      element_point: centerLeft
+      target_point: centerRight
+```
+
+When `scale_target` scales from 1.0 to 1.2:
+
+1. The element grows 20% in all directions from its center
+2. The `centerRight` anchor point moves outward by approximately 10px (assuming 100px width)
+3. `scale_target_description` should follow this movement to maintain its relative position
+
+## Solution Architecture
+
+### Core Components
+
+#### 1. TransformPropagator (`transform-propagator.ts`)
+
+**Purpose**: Manages the propagation of transforms to maintain anchor relationships
+
+**Key Methods**:
+- `processAnimationWithPropagation()`: Main entry point for processing animations
+- `_analyzeTransformEffects()`: Calculates visual effects of transformations
+- `_findDependentElements()`: Identifies elements that depend on a transformed element
+- `_calculateCompensatingTransform()`: Computes required compensating transforms
+
+#### 2. Dependency Graph Building
+
+The system automatically builds a dependency graph from layout configurations:
+
+```typescript
+// Anchor dependency example
+{
+  dependentElementId: 'scale_target_description',
+  targetElementId: 'scale_target', 
+  anchorPoint: 'centerLeft',
+  targetAnchorPoint: 'centerRight',
+  dependencyType: 'anchor'
+}
+```
+
+#### 3. Transform Analysis
+
+For each animation, the system analyzes what visual changes will occur:
+
+```typescript
+// Scale effect analysis
+{
+  type: 'scale',
+  scaleX: 1.2,
+  scaleY: 1.2, 
+  transformOrigin: { x: 50, y: 20 } // center of element
+}
+```
+
+#### 4. Displacement Calculation
+
+The system calculates how much each anchor point moves:
+
+For scaling with center origin:
+1. Calculate transform origin in absolute coordinates
+2. Find distance from origin to anchor point
+3. Apply scale factor to that distance
+4. Calculate final displacement
+
+### Integration Points
+
+#### State Manager Integration
+
+The State Manager (`state-manager.ts`) has been enhanced to:
+- Initialize the transform propagator when animation context is set
+- Check if animations affect positioning before execution
+- Call transform propagation for qualifying animations
+
+#### Button Integration
+
+The Button class (`button.ts`) has been enhanced to:
+- Use transform propagation for button-triggered animations
+- Maintain synchronization with dependent elements
+
+#### Main Card Integration
+
+The main LcarsCard component (`lovelace-lcars-card.ts`) has been enhanced to:
+- Initialize the transform propagator with current layout state
+- Provide shadow DOM element access for transform application
+
+## Animation Synchronization
+
+All compensating transforms use the same animation properties as the primary animation:
+
+```typescript
+interface AnimationSyncData {
+  duration: number;
+  ease: string;
+  delay?: number;
+  repeat?: number;
+  yoyo?: boolean;
+}
+```
+
+This ensures that:
+- Primary and compensating animations start simultaneously
+- They have the same duration and easing
+- Visual relationships remain consistent throughout the animation
+
+## Supported Transform Types
+
+### Scale Animations
+- **Detection**: Any animation with `type: 'scale'`
+- **Effect**: Changes element size, displacing anchor points
+- **Compensation**: Calculates anchor displacement and applies compensating translation
+
+### Slide Animations  
+- **Detection**: Slide animations with non-zero distance
+- **Effect**: Permanently moves element position
+- **Compensation**: Applies equivalent translation to dependent elements
+
+### Custom GSAP Animations
+- **Detection**: Custom animations with `scale`, `x`, `y`, or `rotation` properties
+- **Effect**: Various transform combinations
+- **Compensation**: Analyzes each transform component individually
+
+## Usage Examples
+
+### Basic Scale Animation
+
+```yaml
+animations:
+  on_state_change:
+    - from_state: normal
+      to_state: scaled
+      type: scale
+      scale_params:
+        scale_end: 1.2
+        transform_origin: center center
+      duration: 0.3
+      ease: bounce.out
+```
+
+The system automatically:
+1. Detects this is a scale animation
+2. Builds dependency graph to find dependent elements
+3. Calculates anchor point displacements
+4. Applies compensating transforms with same timing
+
+### Multi-Element Chain
+
+```yaml
+# Element A anchored to container
+- id: element_a
+  layout:
+    anchor:
+      to: container
+      element_point: center
+      target_point: center
+
+# Element B anchored to Element A  
+- id: element_b
+  layout:
+    anchor:
+      to: element_a
+      element_point: centerLeft
+      target_point: centerRight
+
+# Element C anchored to Element B
+- id: element_c
+  layout:
+    anchor:
+      to: element_b
+      element_point: centerLeft 
+      target_point: centerRight
+```
+
+When Element A scales, the system:
+1. Calculates displacement for Element A's anchor points
+2. Applies compensating transform to Element B
+3. Calculates how Element B's movement affects Element C
+4. Applies compensating transform to Element C
+5. Continues the chain as needed
+
+## Performance Considerations
+
+### Optimization Strategies
+
+1. **Significance Threshold**: Transforms below 0.001 units are ignored
+2. **Dependency Caching**: Dependency graph is built once and cached
+3. **Effect Filtering**: Only positioning-affecting animations trigger propagation
+4. **Lazy DOM Access**: Shadow DOM elements are accessed only when needed
+
+### Computational Complexity
+
+- **Dependency Graph**: O(n) where n = number of elements
+- **Propagation**: O(d) where d = number of dependent elements
+- **Chain Length**: Typically 1-3 levels deep in LCARS designs
+
+## Testing Strategy
+
+The system includes comprehensive tests covering:
+
+- **Scale Displacement Calculation**: Verifies mathematical accuracy
+- **Dependency Detection**: Ensures correct graph building
+- **Transform Origin Parsing**: Tests various origin formats
+- **Animation Detection**: Validates significance thresholds
+- **Integration Scenarios**: Tests real-world animation chains
+
+## Debugging and Monitoring
+
+### Console Logging
+
+The system provides detailed logging for debugging:
+
+```
+[TransformPropagator] Not initialized, cannot process animation
+[TransformPropagator] GSAP import failed for compensating transform
+```
+
+### Animation State Inspection
+
+Use browser DevTools to inspect:
+- Element transform properties during animation
+- GSAP timeline properties
+- Computed style values
+
+### Testing in Development
+
+Use the example 8 configuration to test:
+1. Click the "SCALE" button
+2. Observe that the description text moves with the scaled element
+3. Verify smooth synchronized animation
+4. Check that relationships are maintained after animation completes
+
+## Future Enhancements
+
+### Planned Features
+
+1. **Rotation Support**: Full rotation compensation for dependent elements
+2. **Complex Transform Chains**: Support for multiple simultaneous transforms
+3. **Performance Monitoring**: Built-in timing and performance metrics
+4. **Visual Debug Mode**: Overlay showing dependency relationships
+
+### Extensibility
+
+The system is designed for easy extension:
+- New transform types can be added to `_analyzeTransformEffects()`
+- Additional dependency types beyond anchor/stretch
+- Custom displacement calculation algorithms
+- Integration with other animation libraries
+
+## Conclusion
+
+The Transform Propagation System ensures that LCARS card layouts maintain their visual integrity during animations. By automatically calculating and applying compensating transforms, complex animation sequences can be achieved while preserving the precise geometric relationships that define the LCARS aesthetic.
 ```
 
 ## File: flatten-codebase.js
@@ -920,8 +1217,9 @@ import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { HomeAssistant } from "custom-card-helpers";
 import { colorResolver } from "../../utils/color-resolver.js";
-import { AnimationContext } from "../../utils/animation.js";
+import { AnimationContext, animationManager } from "../../utils/animation.js";
 import { Color, ColorStateContext } from "../../utils/color.js";
+import { transformPropagator, AnimationSyncData } from "../../utils/transform-propagator.js";
 
 export type ButtonPropertyName = 'fill' | 'stroke' | 'strokeWidth';
 
@@ -1313,7 +1611,7 @@ export class Button {
                 this._executeToggleStateAction(actionConfig, stateManager);
                 break;
             case 'multi_action':
-                this._executeMultiAction(actionConfig, stateManager);
+                this._executeMultiAction(actionConfig.tap_action.actions);
                 break;
             case 'animate':
                 this._executeAnimateAction(actionConfig);
@@ -1347,38 +1645,8 @@ export class Button {
         stateManager.toggleState(targetElementRef, states);
     }
 
-    private _executeMultiAction(actionConfig: any, stateManager: any): void {
-        const actions = actionConfig.tap_action.actions;
-        
-        if (!actions || !Array.isArray(actions)) {
-            console.warn(`[${this._id}] multi_action missing actions array`);
-            return;
-        }
-        
-        // Execute each action in sequence
-        actions.forEach((action: any, index: number) => {
-            try {
-                switch (action.action) {
-                    case 'set_state':
-                        if (action.target_element_ref && action.state) {
-                            stateManager.setState(action.target_element_ref, action.state);
-                        }
-                        break;
-                    case 'toggle_state':
-                        if (action.target_element_ref && action.states) {
-                            stateManager.toggleState(action.target_element_ref, action.states);
-                        }
-                        break;
-                    case 'animate':
-                        this._executeAnimateAction({ tap_action: action });
-                        break;
-                    default:
-                        console.warn(`[${this._id}] Unknown action in multi_action[${index}]: ${action.action}`);
-                }
-            } catch (error) {
-                console.error(`[${this._id}] Error executing multi_action[${index}]:`, error);
-            }
-        });
+    private _executeMultiAction(actions: any[]): void {
+        actions.forEach(action => this.executeAction(action));
     }
 
     private _executeAnimateAction(actionConfig: any): void {
@@ -1399,59 +1667,27 @@ export class Button {
         }
         elementsToAnimate.push(...targetElements);
         
-        // Import GSAP and execute animation
-        import('gsap').then(({ gsap }) => {
-            elementsToAnimate.forEach(elementId => {
-                const targetElement = this._getShadowElement?.(elementId);
-                if (!targetElement) {
-                    console.warn(`[${this._id}] Animation target element not found: ${elementId}`);
-                    return;
-                }
-                
-                this.executeAnimationOnElement(targetElement, animation, gsap);
-            });
-        }).catch(error => {
-            console.error(`[${this._id}] GSAP import failed for animation:`, error);
+        // Process each animation with transform propagation if needed
+        elementsToAnimate.forEach(elementId => {
+            this._executeAnimationWithPropagation(elementId, animation);
         });
     }
 
-    private executeAnimationOnElement(element: Element, animation: any, gsap: any): void {
-        const { type, duration = 1, ease = 'power2.out', repeat, yoyo } = animation;
-        
-        const animationProps: any = {
-            duration,
-            ease
-        };
-        
-        if (repeat !== undefined) animationProps.repeat = repeat;
-        if (yoyo !== undefined) animationProps.yoyo = yoyo;
-        
-        switch (type) {
-            case 'scale':
-                const { scale_params } = animation;
-                if (scale_params) {
-                    if (scale_params.scale_start !== undefined) {
-                        gsap.set(element, { 
-                            scale: scale_params.scale_start,
-                            transformOrigin: scale_params.transform_origin || 'center center'
-                        });
-                    }
-                    animationProps.scale = scale_params.scale_end || 1;
-                    animationProps.transformOrigin = scale_params.transform_origin || 'center center';
-                }
-                break;
-            case 'custom_gsap':
-                const { custom_gsap_vars } = animation;
-                if (custom_gsap_vars) {
-                    Object.assign(animationProps, custom_gsap_vars);
-                }
-                break;
-            default:
-                console.warn(`[${this._id}] Unknown animation type: ${type}`);
-                return;
-        }
-        
-        gsap.to(element, animationProps);
+    /**
+     * Execute animation with transform propagation support
+     */
+    private _executeAnimationWithPropagation(elementId: string, animation: any): void {
+        // Ensure GSAP is loaded, then delegate to AnimationManager
+        import('gsap').then(({ gsap }) => {
+            animationManager.executeTransformableAnimation(
+                elementId,
+                animation,
+                gsap, // Pass the loaded GSAP instance
+                this._getShadowElement
+            );
+        }).catch(error => {
+            console.error(`[${this._id}] GSAP import failed for animation:`, error);
+        });
     }
 
     updateHass(hass?: HomeAssistant): void {
@@ -1594,7 +1830,6 @@ export class ChiselEndcapElement extends LayoutElement {
       
       if (isButton && this.button) {
         // Let the button handle its own color resolution with current state
-        
         return this.button.createButton(
           pathData,
           x,
@@ -1606,13 +1841,13 @@ export class ChiselEndcapElement extends LayoutElement {
           }
         );
       } else {
-        // Use centralized color resolution for non-button elements
+        // Non-button rendering: return just the path. 
+        // LayoutElement.render() will wrap this path and any text in a <g id="${this.id}">.
         const colors = this._resolveElementColors();
         
-        // Create and return just the path element - text handled by base class
         return svg`
           <path
-            id=${this.id}
+            id="${this.id}__shape"
             d=${pathData}
             fill=${colors.fillColor}
             stroke=${colors.strokeColor}
@@ -1839,13 +2074,13 @@ export class ElbowElement extends LayoutElement {
           }
         );
       } else {
-        // Use centralized color resolution for non-button elements
+        // Non-button rendering: return just the path. 
+        // LayoutElement.render() will wrap this path and any text in a <g id="${this.id}">.
         const colors = this._resolveElementColors();
         
-        // Create and return just the path element - text handled by base class
         return svg`
           <path
-            id=${this.id}
+            id="${this.id}__shape"
             d=${pathData}
             fill=${colors.fillColor}
             stroke=${colors.strokeColor}
@@ -1882,18 +2117,6 @@ export abstract class LayoutElement {
     public requestUpdateCallback?: () => void;
     public button?: Button;
     public getShadowElement?: (id: string) => Element | null;
-
-    // Transform tracking for anchor calculations
-    private _activeTransforms: {
-        scale?: number;
-        scaleX?: number;
-        scaleY?: number;
-        x?: number;
-        y?: number;
-        rotation?: number;
-    } = {};
-    private _transformOrigin: string = 'center center';
-    private _dependentElements: Set<string> = new Set();
 
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this.id = id;
@@ -2164,17 +2387,11 @@ export abstract class LayoutElement {
             return null;
         }
 
-        // Register this element as dependent on the target's transforms
-        targetElement.addDependentElement(this.id);
-
         const elementAnchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
         const targetElementPos = targetElement._getRelativeAnchorPosition(targetAnchorPoint);
-        
-        // Use transform-aware bounds for the target element position
-        const targetBounds = targetElement.getTransformAwareBounds();
 
-        const x = targetBounds.x + targetElementPos.x - elementAnchorPos.x;
-        const y = targetBounds.y + targetElementPos.y - elementAnchorPos.y;
+        const x = targetElement.layout.x + targetElementPos.x - elementAnchorPos.x;
+        const y = targetElement.layout.y + targetElementPos.y - elementAnchorPos.y;
 
         return { x, y };
     }
@@ -2314,18 +2531,12 @@ export abstract class LayoutElement {
             return null; 
         }
         
-        // Register this element as dependent on the target's transforms
-        targetElement.addDependentElement(this.id);
-        
         const anchorPointToUse = this._mapSimpleDirectionToAnchorPoint(targetAnchorPoint, isHorizontal);
         const targetRelativePos = targetElement._getRelativeAnchorPosition(anchorPointToUse);
         
-        // Use transform-aware bounds for the target element position
-        const targetBounds = targetElement.getTransformAwareBounds();
-        
         return isHorizontal
-            ? targetBounds.x + targetRelativePos.x
-            : targetBounds.y + targetRelativePos.y;
+            ? targetElement.layout.x + targetRelativePos.x
+            : targetElement.layout.y + targetRelativePos.y;
     }
 
     private _mapSimpleDirectionToAnchorPoint(direction: string, isHorizontal: boolean): string {
@@ -2440,6 +2651,8 @@ export abstract class LayoutElement {
         }
     }
 
+
+
     private _getAnchorAwareStretchEdge(
         initialPosition: number, 
         initialSize: number, 
@@ -2509,45 +2722,22 @@ export abstract class LayoutElement {
     }
 
     _getRelativeAnchorPosition(anchorPoint: string, width?: number, height?: number): { x: number; y: number } {
-        // Use transform-aware dimensions if available
-        if (width === undefined || height === undefined) {
-            const transformAwareBounds = this.getTransformAwareBounds();
-            const w = width !== undefined ? width : transformAwareBounds.width;
-            const h = height !== undefined ? height : transformAwareBounds.height;
-            
-            switch (anchorPoint) {
-                case 'topLeft': return { x: 0, y: 0 };
-                case 'topCenter': return { x: w / 2, y: 0 };
-                case 'topRight': return { x: w, y: 0 };
-                case 'centerLeft': return { x: 0, y: h / 2 };
-                case 'center': return { x: w / 2, y: h / 2 };
-                case 'centerRight': return { x: w, y: h / 2 };
-                case 'bottomLeft': return { x: 0, y: h };
-                case 'bottomCenter': return { x: w / 2, y: h };
-                case 'bottomRight': return { x: w, y: h };
-                default: 
-                    console.warn(`Unknown anchor point: ${anchorPoint}. Defaulting to topLeft.`);
-                    return { x: 0, y: 0 };
-            }
-        } else {
-            // Use explicit dimensions when provided (original behavior)
-            const w = width;
-            const h = height;
-            
-            switch (anchorPoint) {
-                case 'topLeft': return { x: 0, y: 0 };
-                case 'topCenter': return { x: w / 2, y: 0 };
-                case 'topRight': return { x: w, y: 0 };
-                case 'centerLeft': return { x: 0, y: h / 2 };
-                case 'center': return { x: w / 2, y: h / 2 };
-                case 'centerRight': return { x: w, y: h / 2 };
-                case 'bottomLeft': return { x: 0, y: h };
-                case 'bottomCenter': return { x: w / 2, y: h };
-                case 'bottomRight': return { x: w, y: h };
-                default: 
-                    console.warn(`Unknown anchor point: ${anchorPoint}. Defaulting to topLeft.`);
-                    return { x: 0, y: 0 };
-            }
+        const w = width !== undefined ? width : this.layout.width;
+        const h = height !== undefined ? height : this.layout.height;
+        
+        switch (anchorPoint) {
+            case 'topLeft': return { x: 0, y: 0 };
+            case 'topCenter': return { x: w / 2, y: 0 };
+            case 'topRight': return { x: w, y: 0 };
+            case 'centerLeft': return { x: 0, y: h / 2 };
+            case 'center': return { x: w / 2, y: h / 2 };
+            case 'centerRight': return { x: w, y: h / 2 };
+            case 'bottomLeft': return { x: 0, y: h };
+            case 'bottomCenter': return { x: w / 2, y: h };
+            case 'bottomRight': return { x: w, y: h };
+            default: 
+                console.warn(`Unknown anchor point: ${anchorPoint}. Defaulting to topLeft.`);
+                return { x: 0, y: 0 };
         }
     }
 
@@ -2562,18 +2752,40 @@ export abstract class LayoutElement {
      * Elements should not override this - they should implement renderShape() instead
      */
     render(): SVGTemplateResult | null {
-        const shapeElement = this.renderShape();
-        if (!shapeElement) return null;
+        if (!this.layout.calculated) return null;
 
-        // Handle text rendering through centralized system
-        if (this._hasText()) {
-            const colors = this._resolveElementColors();
-            const textPosition = this._getTextPosition();
-            const textElement = this._renderText(textPosition.x, textPosition.y, colors);
-            return this._renderWithOptionalText(shapeElement, textElement);
+        const shapeOrButtonSvg = this.renderShape(); // This returns <path> OR <g id="this.id"> for buttons
+
+        if (!shapeOrButtonSvg) return null;
+
+        // If shapeOrButtonSvg is already a button group (which has the ID and handles its own text), return it directly.
+        // Check if the returned SVG is a group and already has the correct ID.
+        const isButtonRender = this.button && 
+                               this.props.button?.enabled &&
+                               shapeOrButtonSvg.strings.some(s => s.includes(`<g id="${this.id}"`) || s.includes(` id="${this.id}" class="lcars-button-group"`));
+
+
+        if (isButtonRender) {
+          return shapeOrButtonSvg;
         }
 
-        return shapeElement;
+        // It's a non-button shape, so shapeOrButtonSvg is just the <path> (or similar primitive).
+        // We need to wrap it and potentially add text.
+        let textSvg: SVGTemplateResult | null = null;
+        if (this._hasText()) { // _hasText() checks for non-button text as per its implementation
+          const colors = this._resolveElementColors();
+          const { x: textX, y: textY } = this._getTextPosition();
+          textSvg = this._renderText(textX, textY, colors); // _renderText should not have ID on the <text>
+        }
+
+        // Wrap the shape (and text if any) in a group with the ID.
+        // This ensures that transforms target the group, moving both shape and text.
+        return svg`
+          <g id="${this.id}">
+            ${shapeOrButtonSvg}
+            ${textSvg}
+          </g>
+        `;
     }
 
     animate(property: string, value: any, duration: number = 0.5): void {
@@ -2661,135 +2873,6 @@ export abstract class LayoutElement {
     }
 
     /**
-     * Track active CSS transforms for anchor calculations
-     */
-    public updateActiveTransforms(transforms: {
-        scale?: number;
-        scaleX?: number;
-        scaleY?: number;
-        x?: number;
-        y?: number;
-        rotation?: number;
-    }, transformOrigin?: string): void {
-        this._activeTransforms = { ...transforms };
-        if (transformOrigin) {
-            this._transformOrigin = transformOrigin;
-        }
-        
-        // Notify dependent elements to recalculate their positions
-        this._notifyDependentElements();
-    }
-
-    /**
-     * Get current transform-aware bounds for anchor calculations
-     */
-    public getTransformAwareBounds(): { x: number, y: number, width: number, height: number } {
-        const originalBounds = {
-            x: this.layout.x,
-            y: this.layout.y,
-            width: this.layout.width,
-            height: this.layout.height
-        };
-
-        // If no active transforms, return original bounds
-        if (Object.keys(this._activeTransforms).length === 0) {
-            return originalBounds;
-        }
-
-        // Calculate transform-aware dimensions
-        const scaleX = this._activeTransforms.scaleX ?? this._activeTransforms.scale ?? 1;
-        const scaleY = this._activeTransforms.scaleY ?? this._activeTransforms.scale ?? 1;
-        
-        const transformedWidth = originalBounds.width * scaleX;
-        const transformedHeight = originalBounds.height * scaleY;
-        
-        // Calculate position offset due to scaling from transform origin
-        const { offsetX, offsetY } = this._calculateTransformOffset(
-            originalBounds.width,
-            originalBounds.height,
-            scaleX,
-            scaleY,
-            this._transformOrigin
-        );
-
-        return {
-            x: originalBounds.x + offsetX + (this._activeTransforms.x ?? 0),
-            y: originalBounds.y + offsetY + (this._activeTransforms.y ?? 0),
-            width: transformedWidth,
-            height: transformedHeight
-        };
-    }
-
-    /**
-     * Register an element as dependent on this element's transforms
-     */
-    public addDependentElement(elementId: string): void {
-        this._dependentElements.add(elementId);
-    }
-
-    /**
-     * Remove an element from the dependent elements list
-     */
-    public removeDependentElement(elementId: string): void {
-        this._dependentElements.delete(elementId);
-    }
-
-    /**
-     * Calculate position offset due to transform origin and scaling
-     */
-    private _calculateTransformOffset(
-        originalWidth: number,
-        originalHeight: number,
-        scaleX: number,
-        scaleY: number,
-        transformOrigin: string
-    ): { offsetX: number, offsetY: number } {
-        // Parse transform origin (e.g., "center center", "top left", "50% 25%")
-        const originParts = transformOrigin.split(' ');
-        let originX = 0.5; // Default to center
-        let originY = 0.5; // Default to center
-
-        if (originParts.length >= 1) {
-            const xPart = originParts[0];
-            if (xPart === 'left') originX = 0;
-            else if (xPart === 'right') originX = 1;
-            else if (xPart === 'center') originX = 0.5;
-            else if (xPart.includes('%')) originX = parseFloat(xPart) / 100;
-        }
-
-        if (originParts.length >= 2) {
-            const yPart = originParts[1];
-            if (yPart === 'top') originY = 0;
-            else if (yPart === 'bottom') originY = 1;
-            else if (yPart === 'center') originY = 0.5;
-            else if (yPart.includes('%')) originY = parseFloat(yPart) / 100;
-        }
-
-        // Calculate offset needed to maintain transform origin position
-        const deltaWidth = originalWidth * (scaleX - 1);
-        const deltaHeight = originalHeight * (scaleY - 1);
-        
-        const offsetX = -deltaWidth * originX;
-        const offsetY = -deltaHeight * originY;
-
-        return { offsetX, offsetY };
-    }
-
-    /**
-     * Notify dependent elements that this element's transform has changed
-     */
-    private _notifyDependentElements(): void {
-        // Import layout coordinator dynamically to avoid circular dependencies
-        import('../../utils/layout-coordinator.js').then(({ layoutCoordinator }) => {
-            layoutCoordinator.updateDependentElements(this.id);
-        }).catch(error => {
-            console.error('[LayoutElement] Error importing layout coordinator:', error);
-            // Fallback to simple re-render request
-            this.requestUpdateCallback?.();
-        });
-    }
-
-    /**
      * Checks if the element has text to render
      */
     protected _hasNonButtonText(): boolean {
@@ -2822,25 +2905,6 @@ export abstract class LayoutElement {
             ${this.props.text}
           </text>
         `;
-    }
-
-    /**
-     * Renders the element with optional text wrapping
-     * @param pathElement - The main path/shape element
-     * @param textElement - Optional text element (null if no text)
-     * @returns SVG template result with proper grouping
-     */
-    protected _renderWithOptionalText(pathElement: SVGTemplateResult, textElement: SVGTemplateResult | null): SVGTemplateResult {
-        if (textElement) {
-            return svg`
-              <g>
-                ${pathElement}
-                ${textElement}
-              </g>
-            `;
-        } else {
-            return pathElement;
-        }
     }
 
     /**
@@ -2986,7 +3050,6 @@ export class EndcapElement extends LayoutElement {
       
       if (isButton && this.button) {
         // Let the button handle its own color resolution with current state
-        
         return this.button.createButton(
           pathData,
           x,
@@ -2998,13 +3061,13 @@ export class EndcapElement extends LayoutElement {
           }
         );
       } else {
-        // Use centralized color resolution for non-button elements
+        // Non-button rendering: return just the path. 
+        // LayoutElement.render() will wrap this path and any text in a <g id="${this.id}">.
         const colors = this._resolveElementColors();
         
-        // Create and return just the path element - text handled by base class
         return svg`
           <path
-            id=${this.id}
+            id="${this.id}__shape"
             d=${pathData}
             fill=${colors.fillColor}
             stroke=${colors.strokeColor}
@@ -3046,9 +3109,10 @@ export class RectangleElement extends LayoutElement {
     
     // Check for zero dimensions and return a minimal path
     if (width <= 0 || height <= 0) {
+      // This path won't be seen, ID is not critical, but avoid using this.id
       return svg`
           <path
-            id=${this.id}
+            id="${this.id}__shape_placeholder"
             d="M ${x.toFixed(3)},${y.toFixed(3)} L ${x.toFixed(3)},${y.toFixed(3)} L ${x.toFixed(3)},${y.toFixed(3)} L ${x.toFixed(3)},${y.toFixed(3)} Z"
             fill="none"
             stroke="none"
@@ -3061,7 +3125,8 @@ export class RectangleElement extends LayoutElement {
     const isButton = Boolean(buttonConfig?.enabled);
     
     if (isButton && this.button) {
-      // Let the button handle its own color resolution
+      // Button rendering: this.button.createButton returns the <g id="${this.id}">...</g>
+      // This is the final SVG for a button element, handled by LayoutElement.render() correctly.
       const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
       const pathData = generateRectanglePath(x, y, width, height, rx);
       
@@ -3076,15 +3141,16 @@ export class RectangleElement extends LayoutElement {
         }
       );
     } else {
-      // Use centralized color resolution for non-button elements
+      // Non-button rendering: return just the path. 
+      // LayoutElement.render() will wrap this path and any text in a <g id="${this.id}">.
+      // The <path> itself should NOT have id="${this.id}".
       const colors = this._resolveElementColors();
       const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
       const pathData = generateRectanglePath(x, y, width, height, rx);
       
-      // Create and return just the path element - text handled by base class
       return svg`
         <path
-          id=${this.id}
+          id="${this.id}__shape" // Derived ID for the path itself, not the main element ID
           d=${pathData}
           fill=${colors.fillColor}
           stroke=${colors.strokeColor}
@@ -5146,47 +5212,90 @@ describe('RectangleElement', () => {
   });
 
   // Helper for extracting path attributes
-  const getPathAttributesFromResult = (result: SVGTemplateResult | null): Record<string, any> | null => {
-    if (!result || !result.values) {
-        if (result && result.strings && result.strings.some(s => s.includes('data-testid="mock-button"'))) {
-            const pathDataMatch = result.strings.join('').match(/data-path="([^"]*)"/);
-            const optionsMatch = result.strings.join('').match(/data-options="([^"]*)"/);
-            return {
-                d: pathDataMatch ? pathDataMatch[1] : 'mock-path-not-found',
-                mockOptions: optionsMatch ? JSON.parse(optionsMatch[1].replace(/"/g, '"')) : {}
-            };
-        }
-        return null;
+  const getPathAttributesFromResult = (inputResult: SVGTemplateResult | null): Record<string, any> | null => {
+    if (!inputResult) return null;
+
+    let actualPathResult: SVGTemplateResult | null = null;
+  console.log('getPathAttributesFromResult - inputResult:', JSON.stringify(inputResult, null, 2));
+
+    /*
+      Check if inputResult is the direct path template or a group containing it.
+      A direct path template from RectangleElement.renderShape (non-button) looks like:
+      strings: [
+        "\n          <path\n            id=\"", 
+        "__shape\" // Derived ID for the path itself, not the main element ID\n            d=", 
+        "\n            fill=", 
+        "\n            stroke=", 
+        "\n            stroke-width=", 
+        "\n          />\n        "
+      ]
+      values: [id, pathData, fill, stroke, strokeWidth]
+      So, strings[1] (after id attribute) would contain "d=" if it's the direct path's static part.
+
+      A group template from LayoutElement.render might look like:
+      strings: ["<g id=\"", "\">", "</g>"]
+      values: [id, shapeOrButtonTemplate] or if text: [id, shapeOrButtonTemplate, textTemplate]
+    */
+
+    if (inputResult.strings && inputResult.strings.length > 2 && inputResult.strings[1].includes('__shape') && inputResult.strings[1].includes('d=')) {
+      // Heuristic: If strings[1] contains '__shape' (our specific id pattern for direct path) AND 'd=', assume it's the direct path template.
+      actualPathResult = inputResult;
+    console.log('getPathAttributesFromResult - identified as direct path, actualPathResult set from inputResult');
+  } else if (inputResult.values && inputResult.values.length > 0 && inputResult.values[0] && typeof inputResult.values[0] === 'object' && '_$litType$' in inputResult.values[0]) {
+      // Assume it's a group, and the first value is the shape/path template
+      actualPathResult = inputResult.values[0] as SVGTemplateResult;
+    console.log('getPathAttributesFromResult - identified as group, actualPathResult set from inputResult.values[0]');
+  } else if (inputResult.strings && inputResult.strings.some(s => s.includes('data-testid="mock-button"'))) {
+        // Handle specific mock button case (this seems to be for button elements themselves, not generic paths)
+        const pathDataMatch = inputResult.strings.join('').match(/data-path="([^\"]*)"/);
+        const optionsMatch = inputResult.strings.join('').match(/data-options="([^\"]*)"/);
+        return {
+            d: pathDataMatch ? pathDataMatch[1] : 'mock-path-not-found',
+            mockOptions: optionsMatch ? JSON.parse(optionsMatch[1].replace(/"/g, '"')) : {}
+        };
     }
+    // If none of the above, actualPathResult might still be null if inputResult didn't match any known structures.
+
+    if (!actualPathResult || !actualPathResult.values) {
+        // This case might occur if inputResult was not a recognized group or direct path, 
+        // or if the mock-button logic from the original code needs to be re-evaluated here.
+        // For now, if actualPathResult couldn't be determined, return null.
+        // The specific mock-button logic was moved up to be checked against inputResult directly.
+        console.log('getPathAttributesFromResult - actualPathResult is null or has no values before attribute extraction.');
+      return null;
+  }
 
     // Extract path data and attributes from the SVG template
     const attributes: Record<string, any> = {};
     
     // Check if dealing with zero dimensions special case
-    if (result.strings.some(s => s.includes('d="M'))) {
+    if (actualPathResult.strings.some(s => s.includes('d="M')) && actualPathResult.values.length >= 9) { // id + 4 pairs of coords
       // Zero dimension case - path data is embedded in the template
       return {
-        d: `M ${result.values[1]},${result.values[2]} L ${result.values[3]},${result.values[4]} L ${result.values[5]},${result.values[6]} L ${result.values[7]},${result.values[8]} Z`,
+        d: `M ${actualPathResult.values[1]},${actualPathResult.values[2]} L ${actualPathResult.values[3]},${actualPathResult.values[4]} L ${actualPathResult.values[5]},${actualPathResult.values[6]} L ${actualPathResult.values[7]},${actualPathResult.values[8]} Z`,
         fill: 'none',
         stroke: 'none',
-        strokeWidth: '0'
+        'stroke-width': '0'
       };
     } else {
-      // Normal case - path data is in values[1]
-      attributes.d = result.values[1] as string;
-    
-      // Extract other attributes
-      const staticParts = result.strings.join('');
-      const fillMatch = staticParts.match(/fill=([^>]*)(?=>|\s)/);
-      if (fillMatch) attributes.fill = result.values[2] as string;
-      
-      const strokeMatch = staticParts.match(/stroke=([^>]*)(?=>|\s)/);
-      if (strokeMatch) attributes.stroke = result.values[3] as string;
-      
-      const strokeWidthMatch = staticParts.match(/stroke-width=([^>]*)(?=>|\s)/);
-      if (strokeWidthMatch) attributes.strokeWidth = result.values[4] as string;
-      
-      return attributes;
+      // Normal non-button case from RectangleElement.renderShape():
+      // template: <path id="${VAL0_ID}__shape" d=${VAL1_PATH} fill=${VAL2_FILL} stroke=${VAL3_STROKE} stroke-width=${VAL4_STROKEWIDTH} />
+      // actualPathResult.values should be [idForPath, pathData, fillColor, strokeColor, strokeWidthVal]
+      // So, pathData is at actualPathResult.values[1]
+      if (actualPathResult.values.length > 1) {
+        attributes.d = actualPathResult.values[1] as string;
+      }
+      if (actualPathResult.values.length > 2) {
+        attributes.fill = actualPathResult.values[2] as string;
+      }
+      if (actualPathResult.values.length > 3) {
+        attributes.stroke = actualPathResult.values[3] as string;
+      }
+      if (actualPathResult.values.length > 4) {
+        attributes['stroke-width'] = actualPathResult.values[4] as string;
+      }
+
+      return Object.keys(attributes).length > 0 ? attributes : null;
     }
   };
 
@@ -5259,7 +5368,7 @@ describe('RectangleElement', () => {
         expect(attrs?.d).toBe(generateRectanglePath(1, 2, 30, 40, 7));
         expect(attrs?.fill).toBe('rgba(255,0,0,0.5)');
         expect(attrs?.stroke).toBe('#00FF00');
-        expect(attrs?.strokeWidth).toBe('3.5');
+        expect(attrs?.['stroke-width']).toBe('3.5');
       });
 
       it('should handle cornerRadius prop as an alias for rx', () => {
@@ -5505,17 +5614,18 @@ describe('RectangleElement', () => {
       
       // The template should be a group containing both button and text elements
       const templateStr = result!.strings.join('');
-      expect(templateStr).toContain('<g>'); // Wrapper group for button+text from base class
+      expect(templateStr).toMatch(/<g/); // Wrapper group for button+text from base class
     });
 
     it('should not render text for button elements when no text is configured', () => {
       const props = {
         button: {
           enabled: true
-        }
+        },
+        text: undefined, // Ensure no text is configured for this button
+        text_element: undefined // Ensure no text_element is configured
         // No text property
       };
-      
       // Create a proper mock button that returns a valid SVG result
       const mockButton = {
         createButton: vi.fn().mockReturnValue(svg`<g class="lcars-button-group"><path d="M0,0 L100,0 L100,30 L0,30 Z"/></g>`)
@@ -5533,7 +5643,7 @@ describe('RectangleElement', () => {
       
       // Should be button template without additional text wrapping from base class
       const templateStr = result!.strings.join('');
-      expect(templateStr).toContain('lcars-button-group'); // Button group should be present
+      expect(templateStr).toMatch(/lcars-button-group/); // Button group should be present
     });
   });
 });
@@ -9016,7 +9126,7 @@ import { animationManager, AnimationContext } from './utils/animation.js';
 import { DynamicColorManager } from './utils/dynamic-color-manager.js';
 import { VisibilityManager } from './utils/visibility-manager.js';
 import { stateManager } from './utils/state-manager.js';
-import { layoutCoordinator } from './utils/layout-coordinator.js';
+import { transformPropagator } from './utils/transform-propagator.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
 
@@ -9360,6 +9470,9 @@ export class LcarsCard extends LitElement {
       stateManager.setAnimationContext(animationContext, elementsMap);
       this._initializeElementStates(groups);
       this._setupStateChangeHandling(elementsMap);
+      
+      // Initialize transform propagator with current layout state
+      transformPropagator.initialize(elementsMap, animationContext.getShadowElement);
 
       // Clear all entity monitoring and animation state before recalculating layout
       for (const group of this._layoutEngine.layoutGroups) {
@@ -9382,10 +9495,6 @@ export class LcarsCard extends LitElement {
       
       // Use the required height for layout calculation to ensure proper anchoring
       const finalContainerRect = new DOMRect(rect.x, rect.y, rect.width, requiredHeight);
-      
-      // Set layout coordinator context after finalContainerRect is available
-      layoutCoordinator.setLayoutContext(elementsMap, finalContainerRect);
-      
       const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(finalContainerRect, { dynamicHeight: true });
       
       // Store the calculated height for rendering
@@ -9673,6 +9782,13 @@ export class LcarsCard extends LitElement {
     }).catch(error => {
       console.error('[LcarsCard] Error importing state manager for status update:', error);
     });
+  }
+
+  /**
+   * Get shadow DOM element by ID for transform propagation
+   */
+  private _getShadowElement(id: string): Element | null {
+    return this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
   }
 }
 ```
@@ -10608,6 +10724,7 @@ import { HomeAssistant } from 'custom-card-helpers';
 import { gsap } from 'gsap';
 import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../types';
 import { Color } from './color.js';
+import { transformPropagator, AnimationSyncData } from './transform-propagator.js';
 
 /**
  * Animation state tracking for managing ongoing color transitions
@@ -10653,6 +10770,25 @@ export class AnimationManager {
   private elementAnimationStates = new Map<string, ColorAnimationState>();
   private entityStateMonitoring = new Map<string, EntityStateMonitoringData>();
   private dynamicColorCache = new Map<string, { fillColor?: string; strokeColor?: string }>();
+
+  /**
+   * Check if animation affects element positioning and requires propagation
+   */
+  private _animationAffectsPositioning(animation: any): boolean {
+    switch (animation.type) {
+      case 'scale':
+      case 'slide': // Slide animations also affect positioning
+        return true;
+      case 'custom_gsap':
+        const customVars = animation.custom_gsap_vars || {};
+        return customVars.scale !== undefined || 
+               customVars.x !== undefined || 
+               customVars.y !== undefined ||
+               customVars.rotation !== undefined;
+      default:
+        return false;
+    }
+  }
 
   /**
    * Initialize animation state tracking for a new element
@@ -11594,6 +11730,118 @@ export class AnimationManager {
       ease: "power2.out"
     });
   }
+
+  /**
+   * Execute a generic GSAP animation that may affect transforms and require propagation.
+   * This handles scale, slide, and custom_gsap animations.
+   */
+  executeTransformableAnimation(
+    elementId: string,
+    animationConfig: any, 
+    gsapInstance: any, // Pass GSAP explicitly
+    getShadowElement?: (id: string) => Element | null
+  ): void {
+    const targetElement = getShadowElement?.(elementId);
+    if (!targetElement) {
+      console.warn(`[AnimationManager] Animation target element not found for transformable animation: ${elementId}`);
+      return;
+    }
+
+    const { type, duration = 0.5, ease = 'power2.out', delay, repeat, yoyo } = animationConfig;
+    
+    const syncData: AnimationSyncData = {
+      duration,
+      ease,
+      delay,
+      repeat,
+      yoyo
+    };
+
+    // Process transform propagation if needed BEFORE the primary animation starts
+    if (this._animationAffectsPositioning(animationConfig)) {
+      transformPropagator.processAnimationWithPropagation(
+        elementId,
+        animationConfig, // Pass the full animation config
+        syncData
+      );
+    }
+    
+    // Prepare GSAP animation properties based on type
+    const animationProps: any = {
+      duration,
+      ease,
+      delay: delay || 0, // Ensure delay is explicitly 0 if undefined for GSAP
+    };
+    
+    if (repeat !== undefined) animationProps.repeat = repeat;
+    if (yoyo !== undefined) animationProps.yoyo = yoyo;
+
+    switch (type) {
+      case 'scale':
+        const { scale_params } = animationConfig;
+        if (scale_params) {
+          if (scale_params.scale_start !== undefined) {
+            // Set initial state without animation for scale_start
+            gsapInstance.set(targetElement, { 
+              scale: scale_params.scale_start,
+              transformOrigin: scale_params.transform_origin || 'center center'
+            });
+          }
+          animationProps.scale = scale_params.scale_end !== undefined ? scale_params.scale_end : 1;
+          animationProps.transformOrigin = scale_params.transform_origin || 'center center';
+        }
+        break;
+      case 'slide':
+        const { slide_params } = animationConfig;
+        if (slide_params) {
+          let x = 0, y = 0;
+          const distance = parseFloat(slide_params.distance) || 0;
+          switch (slide_params.direction) {
+            case 'left': x = -distance; break;
+            case 'right': x = distance; break;
+            case 'up': y = -distance; break;
+            case 'down': y = distance; break;
+          }
+          // GSAP's x and y are relative by default if starting with += or -=, absolute otherwise.
+          // For slide, we typically want to move *from* an offset or *to* a final position.
+          // Assuming slide implies moving *to* the new position from current.
+          // If opacity_start is 0, we might want to set initial x/y and fade in.
+          if (slide_params.opacity_start !== undefined && slide_params.opacity_start === 0) {
+            gsapInstance.set(targetElement, { x: x, y: y, opacity: 0 });
+            animationProps.opacity = 1;
+            animationProps.x = 0; // Animate to original position x=0
+            animationProps.y = 0; // Animate to original position y=0
+          } else {
+            animationProps.x = x;
+            animationProps.y = y;
+          }
+          if (slide_params.opacity_start !== undefined) {
+            animationProps.opacity = slide_params.opacity_end !== undefined ? slide_params.opacity_end : 1;
+          }
+        }
+        break;
+      case 'fade': // Added basic fade support
+        const { fade_params } = animationConfig;
+        if (fade_params) {
+          if (fade_params.opacity_start !== undefined) {
+            gsapInstance.set(targetElement, { opacity: fade_params.opacity_start });
+          }
+          animationProps.opacity = fade_params.opacity_end !== undefined ? fade_params.opacity_end : 1;
+        }
+        break;
+      case 'custom_gsap':
+        const { custom_gsap_vars } = animationConfig;
+        if (custom_gsap_vars) {
+          Object.assign(animationProps, custom_gsap_vars);
+        }
+        break;
+      default:
+        console.warn(`[AnimationManager] Unknown transformable animation type: ${type} for element ${elementId}`);
+        return; // Do not proceed if type is unknown
+    }
+    
+    gsapInstance.to(targetElement, animationProps);
+  }
 }
 
 // Global animation manager instance for convenient access across the application
@@ -12332,156 +12580,6 @@ declare module 'fontmetrics' {
 }
 ```
 
-## File: src/utils/layout-coordinator.ts
-
-```typescript
-import { LayoutElement } from '../layout/elements/element.js';
-
-/**
- * Coordinates layout updates when elements with transforms change
- * Manages dependencies between elements for anchor/stretch relationships
- */
-export class LayoutCoordinator {
-  private static instance: LayoutCoordinator;
-  private elementsMap?: Map<string, LayoutElement>;
-  private containerRect?: DOMRect;
-  private updateInProgress = false;
-
-  private constructor() {}
-
-  public static getInstance(): LayoutCoordinator {
-    if (!LayoutCoordinator.instance) {
-      LayoutCoordinator.instance = new LayoutCoordinator();
-    }
-    return LayoutCoordinator.instance;
-  }
-
-  /**
-   * Set the current elements map and container rect for dependency resolution
-   */
-  public setLayoutContext(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
-    this.elementsMap = elementsMap;
-    this.containerRect = containerRect;
-  }
-
-  /**
-   * Update dependent elements when a transform changes
-   */
-  public updateDependentElements(changedElementId: string): void {
-    if (!this.elementsMap || !this.containerRect || this.updateInProgress) {
-      return;
-    }
-
-    this.updateInProgress = true;
-
-    try {
-      // Find all elements that depend on the changed element
-      const dependentElements = this._findDependentElements(changedElementId);
-      
-      // Recalculate layout for dependent elements
-      for (const dependentElement of dependentElements) {
-        this._recalculateElementLayout(dependentElement);
-      }
-    } catch (error) {
-      console.error('[LayoutCoordinator] Error updating dependent elements:', error);
-    } finally {
-      this.updateInProgress = false;
-    }
-  }
-
-  /**
-   * Find all elements that depend on the given element
-   */
-  private _findDependentElements(targetElementId: string): LayoutElement[] {
-    if (!this.elementsMap) return [];
-
-    const dependentElements: LayoutElement[] = [];
-
-    for (const [elementId, element] of this.elementsMap) {
-      if (elementId === targetElementId) continue;
-
-      // Check if this element anchors to the target
-      if (this._elementAnchoredTo(element, targetElementId)) {
-        dependentElements.push(element);
-      }
-
-      // Check if this element stretches to the target
-      if (this._elementStretchesTo(element, targetElementId)) {
-        dependentElements.push(element);
-      }
-    }
-
-    return dependentElements;
-  }
-
-  /**
-   * Check if an element is anchored to a target element
-   */
-  private _elementAnchoredTo(element: LayoutElement, targetElementId: string): boolean {
-    const anchorTo = element.layoutConfig.anchor?.anchorTo;
-    return anchorTo === targetElementId;
-  }
-
-  /**
-   * Check if an element stretches to a target element
-   */
-  private _elementStretchesTo(element: LayoutElement, targetElementId: string): boolean {
-    const stretch = element.layoutConfig.stretch;
-    return stretch?.stretchTo1 === targetElementId || stretch?.stretchTo2 === targetElementId;
-  }
-
-  /**
-   * Recalculate layout for a specific element
-   */
-  private _recalculateElementLayout(element: LayoutElement): void {
-    if (!this.elementsMap || !this.containerRect) return;
-
-    try {
-      // Store the old layout for comparison
-      const oldLayout = { ...element.layout };
-      
-      // Reset the element's layout state
-      element.resetLayout();
-      
-      // Recalculate layout with current dependencies
-      element.calculateLayout(this.elementsMap, this.containerRect);
-      
-      // Check if the layout actually changed
-      const layoutChanged = 
-        oldLayout.x !== element.layout.x ||
-        oldLayout.y !== element.layout.y ||
-        oldLayout.width !== element.layout.width ||
-        oldLayout.height !== element.layout.height;
-      
-      if (layoutChanged) {
-        console.log(`[LayoutCoordinator] Layout changed for ${element.id}:`, {
-          old: oldLayout,
-          new: element.layout
-        });
-        
-        // Force a complete re-render by triggering the parent card's update
-        if (element.requestUpdateCallback) {
-          element.requestUpdateCallback();
-        }
-      }
-    } catch (error) {
-      console.error(`[LayoutCoordinator] Error recalculating layout for ${element.id}:`, error);
-    }
-  }
-
-  /**
-   * Clear the layout context
-   */
-  public clearContext(): void {
-    this.elementsMap = undefined;
-    this.containerRect = undefined;
-  }
-}
-
-// Export singleton instance
-export const layoutCoordinator = LayoutCoordinator.getInstance();
-```
-
 ## File: src/utils/shapes.ts
 
 ```typescript
@@ -13044,6 +13142,8 @@ import { AnimationDefinition, AnimationSequence, ElementStateManagementConfig } 
 import { animationManager, AnimationContext } from './animation.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElement } from '../layout/elements/element.js';
+import { transformPropagator, AnimationSyncData } from './transform-propagator.js';
+import gsap from 'gsap';
 
 export interface ElementState {
   currentState: string;
@@ -13101,6 +13201,11 @@ export class StateManager {
   setAnimationContext(context: AnimationContext, elementsMap?: Map<string, LayoutElement>): void {
     this.animationContext = context;
     this.elementsMap = elementsMap;
+    
+    // Initialize transform propagator with current layout state
+    if (elementsMap && context.getShadowElement) {
+      transformPropagator.initialize(elementsMap, context.getShadowElement);
+    }
   }
 
   /**
@@ -13282,201 +13387,13 @@ export class StateManager {
       return;
     }
 
-    // Get target element for animation
-    const targetElement = this.animationContext.getShadowElement?.(elementId);
-    if (!targetElement) {
-      console.warn(`[StateManager] Cannot execute animation: DOM element ${elementId} not found`);
-      return;
-    }
-
-    try {
-      // Execute animation based on type
-      switch (animConfig.type) {
-        case 'fade':
-          this.executeFadeAnimation(targetElement, animConfig);
-          break;
-        case 'slide':
-          this.executeSlideAnimation(targetElement, animConfig);
-          break;
-        case 'scale':
-          this.executeScaleAnimation(targetElement, animConfig);
-          break;
-        case 'custom_gsap':
-          this.executeCustomGsapAnimation(targetElement, animConfig);
-          break;
-        default:
-          console.warn(`[StateManager] Unknown animation type: ${animConfig.type}`);
-      }
-    } catch (error) {
-      console.error(`[StateManager] Error executing animation for ${elementId}:`, error);
-    }
-  }
-
-  /**
-   * Execute fade animation
-   */
-  private executeFadeAnimation(element: Element, config: any): void {
-    const { fade_params, duration = 0.5, ease = 'power2.out' } = config;
-    const { opacity_start, opacity_end } = fade_params || {};
-
-    // Import GSAP dynamically to ensure it's available
-    import('gsap').then(({ gsap }) => {
-      if (opacity_start !== undefined) {
-        gsap.set(element, { opacity: opacity_start });
-      }
-      
-      gsap.to(element, {
-        opacity: opacity_end !== undefined ? opacity_end : 1,
-        duration,
-        ease
-      });
-    }).catch(error => {
-      console.error('[StateManager] GSAP import failed:', error);
-    });
-  }
-
-  /**
-   * Execute slide animation
-   */
-  private executeSlideAnimation(element: Element, config: any): void {
-    const { slide_params, duration = 0.5, ease = 'power2.out' } = config;
-    const { direction, distance, opacity_start, opacity_end } = slide_params || {};
-
-    import('gsap').then(({ gsap }) => {
-      // Set initial position based on direction
-      const initialTransform: any = {};
-      const finalTransform: any = {};
-
-      switch (direction) {
-        case 'left':
-          initialTransform.x = `-${distance}`;
-          finalTransform.x = 0;
-          break;
-        case 'right':
-          initialTransform.x = distance;
-          finalTransform.x = 0;
-          break;
-        case 'up':
-          initialTransform.y = `-${distance}`;
-          finalTransform.y = 0;
-          break;
-        case 'down':
-          initialTransform.y = distance;
-          finalTransform.y = 0;
-          break;
-      }
-
-      if (opacity_start !== undefined) {
-        initialTransform.opacity = opacity_start;
-      }
-      if (opacity_end !== undefined) {
-        finalTransform.opacity = opacity_end;
-      }
-
-      gsap.set(element, initialTransform);
-      gsap.to(element, {
-        ...finalTransform,
-        duration,
-        ease
-      });
-    }).catch(error => {
-      console.error('[StateManager] GSAP import failed:', error);
-    });
-  }
-
-  /**
-   * Execute scale animation
-   */
-  private executeScaleAnimation(element: Element, config: any): void {
-    const { scale_params, duration = 0.5, ease = 'power2.out', repeat, yoyo } = config;
-    const { scale_start, scale_end, transform_origin } = scale_params || {};
-
-    import('gsap').then(({ gsap }) => {
-      if (scale_start !== undefined) {
-        gsap.set(element, { 
-          scale: scale_start,
-          transformOrigin: transform_origin || 'center center'
-        });
-        
-        // Update transform tracking
-        this._updateElementTransforms(element, { scale: scale_start }, transform_origin || 'center center');
-      }
-
-      const animationProps: any = {
-        scale: scale_end !== undefined ? scale_end : 1,
-        duration,
-        ease,
-        transformOrigin: transform_origin || 'center center',
-        onUpdate: () => {
-          // Track transform changes during animation
-          const currentScale = gsap.getProperty(element, 'scale') as number;
-          this._updateElementTransforms(element, { scale: currentScale }, transform_origin || 'center center');
-        },
-        onComplete: () => {
-          // Ensure final transform state is tracked
-          const finalScale = scale_end !== undefined ? scale_end : 1;
-          this._updateElementTransforms(element, { scale: finalScale }, transform_origin || 'center center');
-        }
-      };
-
-      if (repeat !== undefined) {
-        animationProps.repeat = repeat;
-      }
-      if (yoyo !== undefined) {
-        animationProps.yoyo = yoyo;
-      }
-
-      gsap.to(element, animationProps);
-    }).catch(error => {
-      console.error('[StateManager] GSAP import failed:', error);
-    });
-  }
-
-  /**
-   * Execute custom GSAP animation
-   */
-  private executeCustomGsapAnimation(element: Element, config: any): void {
-    const { custom_gsap_vars, duration = 0.5 } = config;
-
-    if (!custom_gsap_vars) {
-      console.warn('[StateManager] Custom GSAP animation missing custom_gsap_vars');
-      return;
-    }
-
-    import('gsap').then(({ gsap }) => {
-      const animationProps = { ...custom_gsap_vars, duration };
-      
-      // Add transform tracking for custom animations that affect transforms
-      if (this._hasTransformProperties(custom_gsap_vars)) {
-        animationProps.onUpdate = () => {
-          const transforms: any = {};
-          if ('scale' in custom_gsap_vars) transforms.scale = gsap.getProperty(element, 'scale') as number;
-          if ('scaleX' in custom_gsap_vars) transforms.scaleX = gsap.getProperty(element, 'scaleX') as number;
-          if ('scaleY' in custom_gsap_vars) transforms.scaleY = gsap.getProperty(element, 'scaleY') as number;
-          if ('x' in custom_gsap_vars) transforms.x = gsap.getProperty(element, 'x') as number;
-          if ('y' in custom_gsap_vars) transforms.y = gsap.getProperty(element, 'y') as number;
-          if ('rotation' in custom_gsap_vars) transforms.rotation = gsap.getProperty(element, 'rotation') as number;
-          
-          this._updateElementTransforms(element, transforms, custom_gsap_vars.transformOrigin);
-        };
-        
-        animationProps.onComplete = () => {
-          const finalTransforms: any = {};
-          if ('scale' in custom_gsap_vars) finalTransforms.scale = custom_gsap_vars.scale;
-          if ('scaleX' in custom_gsap_vars) finalTransforms.scaleX = custom_gsap_vars.scaleX;
-          if ('scaleY' in custom_gsap_vars) finalTransforms.scaleY = custom_gsap_vars.scaleY;
-          if ('x' in custom_gsap_vars) finalTransforms.x = custom_gsap_vars.x;
-          if ('y' in custom_gsap_vars) finalTransforms.y = custom_gsap_vars.y;
-          if ('rotation' in custom_gsap_vars) finalTransforms.rotation = custom_gsap_vars.rotation;
-          
-          this._updateElementTransforms(element, finalTransforms, custom_gsap_vars.transformOrigin);
-        };
-      }
-      
-      gsap.to(element, animationProps);
-    }).catch(error => {
-      console.error('[StateManager] GSAP import failed:', error);
-    });
+    // Delegate to AnimationManager for execution
+    animationManager.executeTransformableAnimation(
+      elementId,
+      animConfig,
+      gsap,
+      this.animationContext.getShadowElement
+    );
   }
 
   /**
@@ -13505,169 +13422,50 @@ export class StateManager {
    * Execute a lifecycle animation configuration
    */
   private _executeLifecycleAnimation(elementId: string, animConfig: any, lifecycle: string): void {
-    if (!this.animationContext || !this.elementsMap) {
-      console.warn(`[StateManager] Cannot execute ${lifecycle} animation: missing context or elements map`);
-      return;
-    }
+    const element = this.elementsMap?.get(elementId);
+    if (!element || !this.animationContext?.getShadowElement) return;
 
-    const targetElement = this.animationContext.getShadowElement?.(elementId);
-    if (!targetElement) {
-      console.warn(`[StateManager] Cannot execute ${lifecycle} animation: DOM element ${elementId} not found`);
-      return;
-    }
-
-    try {
-      // Handle animation sequences (multiple steps)
-      if (animConfig.steps && Array.isArray(animConfig.steps)) {
-        this._executeAnimationSequence(targetElement, animConfig, lifecycle);
-      } else {
-        // Handle single animation
-        this._executeSingleLifecycleAnimation(targetElement, animConfig, lifecycle);
-      }
-    } catch (error) {
-      console.error(`[StateManager] Error executing ${lifecycle} animation for ${elementId}:`, error);
+    if (animConfig.steps && Array.isArray(animConfig.steps)) {
+      // This is an animation sequence
+      this._executeAnimationSequence(element, animConfig, lifecycle);
+    } else {
+      // This is a single animation
+      this._executeSingleLifecycleAnimation(element, animConfig, lifecycle);
     }
   }
 
   /**
    * Execute a single lifecycle animation
    */
-  private _executeSingleLifecycleAnimation(element: Element, config: any, lifecycle: string): void {
-    switch (config.type) {
-      case 'fade':
-        this._executeFadeAnimation(element, config);
-        break;
-      case 'slide':
-        this._executeSlideAnimation(element, config);
-        break;
-      case 'scale':
-        this._executeScaleAnimation(element, config);
-        break;
-      case 'custom_gsap':
-        this._executeCustomGsapAnimation(element, config);
-        break;
-      default:
-        console.warn(`[StateManager] Unknown ${lifecycle} animation type: ${config.type}`);
-    }
+  private _executeSingleLifecycleAnimation(element: LayoutElement, config: any, lifecycle: string): void {
+    if (!this.animationContext?.getShadowElement) return;
+    
+    // Delegate to AnimationManager
+    animationManager.executeTransformableAnimation(
+      element.id,
+      config, 
+      gsap,
+      this.animationContext?.getShadowElement
+    );
   }
 
   /**
    * Execute an animation sequence with multiple steps
    */
-  private _executeAnimationSequence(element: Element, config: any, lifecycle: string): void {
-    import('gsap').then(({ gsap }) => {
-      const timeline = gsap.timeline();
-      
-      config.steps.forEach((step: any) => {
-        const delay = step.delay || 0;
-        const duration = step.duration || 0.5;
-        
-        switch (step.type) {
-          case 'fade':
-            const fadeProps: any = {
-              duration
-            };
-            if (step.fade_params?.opacity_start !== undefined) {
-              gsap.set(element, { opacity: step.fade_params.opacity_start });
-            }
-            if (step.fade_params?.opacity_end !== undefined) {
-              fadeProps.opacity = step.fade_params.opacity_end;
-            }
-            timeline.to(element, fadeProps, delay);
-            break;
-            
-          case 'slide':
-            const slideProps: any = { duration };
-            const { direction, distance } = step.slide_params || {};
-            
-            if (direction && distance) {
-              switch (direction) {
-                case 'up':
-                  gsap.set(element, { y: distance });
-                  slideProps.y = 0;
-                  break;
-                case 'down':
-                  gsap.set(element, { y: `-${distance}` });
-                  slideProps.y = 0;
-                  break;
-                case 'left':
-                  gsap.set(element, { x: distance });
-                  slideProps.x = 0;
-                  break;
-                case 'right':
-                  gsap.set(element, { x: `-${distance}` });
-                  slideProps.x = 0;
-                  break;
-              }
-            }
-            timeline.to(element, slideProps, delay);
-            break;
-            
-          case 'scale':
-            const scaleProps: any = { 
-              duration,
-              onUpdate: () => {
-                // Track transform changes during animation sequence
-                const currentScale = gsap.getProperty(element, 'scale') as number;
-                this._updateElementTransforms(element, { scale: currentScale }, step.scale_params?.transform_origin || 'center center');
-              },
-              onComplete: () => {
-                // Ensure final transform state is tracked
-                const finalScale = step.scale_params?.scale_end !== undefined ? step.scale_params.scale_end : 1;
-                this._updateElementTransforms(element, { scale: finalScale }, step.scale_params?.transform_origin || 'center center');
-              }
-            };
-            if (step.scale_params?.scale_start !== undefined) {
-              gsap.set(element, { scale: step.scale_params.scale_start });
-              this._updateElementTransforms(element, { scale: step.scale_params.scale_start }, step.scale_params?.transform_origin || 'center center');
-            }
-            if (step.scale_params?.scale_end !== undefined) {
-              scaleProps.scale = step.scale_params.scale_end;
-            }
-            if (step.scale_params?.transform_origin) {
-              scaleProps.transformOrigin = step.scale_params.transform_origin;
-            }
-            if (step.repeat !== undefined) {
-              scaleProps.repeat = step.repeat;
-            }
-            if (step.yoyo !== undefined) {
-              scaleProps.yoyo = step.yoyo;
-            }
-            timeline.to(element, scaleProps, delay);
-            break;
-        }
-      });
-    }).catch(error => {
-      console.error(`[StateManager] GSAP import failed for ${lifecycle} sequence:`, error);
+  private _executeAnimationSequence(element: LayoutElement, config: any, lifecycle: string): void {
+    if (!this.animationContext?.getShadowElement || !config.steps || !Array.isArray(config.steps)) {
+      return;
+    }
+
+    // Execute each step using AnimationManager. The delay in each step config will handle sequencing.
+    config.steps.forEach((stepConfig: any) => {
+      animationManager.executeTransformableAnimation(
+        element.id,
+        stepConfig,
+        gsap,
+        this.animationContext?.getShadowElement
+      );
     });
-  }
-
-  /**
-   * Execute fade animation (refactored for reuse)
-   */
-  private _executeFadeAnimation(element: Element, config: any): void {
-    this.executeFadeAnimation(element, config);
-  }
-
-  /**
-   * Execute slide animation (refactored for reuse)
-   */
-  private _executeSlideAnimation(element: Element, config: any): void {
-    this.executeSlideAnimation(element, config);
-  }
-
-  /**
-   * Execute scale animation (refactored for reuse)
-   */
-  private _executeScaleAnimation(element: Element, config: any): void {
-    this.executeScaleAnimation(element, config);
-  }
-
-  /**
-   * Execute custom GSAP animation (refactored for reuse)
-   */
-  private _executeCustomGsapAnimation(element: Element, config: any): void {
-    this.executeCustomGsapAnimation(element, config);
   }
 
   /**
@@ -13677,39 +13475,6 @@ export class StateManager {
     this.elementStates.delete(elementId);
     this.stateConfigs.delete(elementId);
     this.animationConfigs.delete(elementId);
-  }
-
-  /**
-   * Update transform tracking for an element
-   */
-  private _updateElementTransforms(
-    domElement: Element, 
-    transforms: { scale?: number; scaleX?: number; scaleY?: number; x?: number; y?: number; rotation?: number }, 
-    transformOrigin?: string
-  ): void {
-    // Find the corresponding LayoutElement by DOM element ID
-    const elementId = domElement.id;
-    console.log(`[StateManager] _updateElementTransforms called for ${elementId}`, transforms);
-    
-    const layoutElement = this.elementsMap?.get(elementId);
-    
-    if (layoutElement && typeof layoutElement.updateActiveTransforms === 'function') {
-      console.log(`[StateManager] Calling updateActiveTransforms on layout element ${elementId}`);
-      layoutElement.updateActiveTransforms(transforms, transformOrigin);
-    } else {
-      console.warn(`[StateManager] Layout element not found or missing updateActiveTransforms method for ${elementId}`, {
-        hasLayoutElement: !!layoutElement,
-        hasMethod: layoutElement && typeof layoutElement.updateActiveTransforms === 'function'
-      });
-    }
-  }
-
-  /**
-   * Check if animation properties include transform properties
-   */
-  private _hasTransformProperties(animationVars: any): boolean {
-    const transformProps = ['scale', 'scaleX', 'scaleY', 'x', 'y', 'rotation', 'rotationX', 'rotationY', 'rotationZ', 'skewX', 'skewY'];
-    return transformProps.some(prop => prop in animationVars);
   }
 }
 
@@ -16028,6 +15793,1373 @@ describe('shapes.ts utility functions', () => {
     });
   });
 });
+```
+
+## File: src/utils/test/transform-propagator.spec.ts
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TransformPropagator, TransformEffect, ElementDependency } from '../transform-propagator.js';
+import { LayoutElement } from '../../layout/elements/element.js';
+
+// Mock layout element for testing
+class MockLayoutElement extends LayoutElement {
+  constructor(id: string, layout = { x: 0, y: 0, width: 100, height: 40, calculated: true }) {
+    super(id, {}, {});
+    this.layout = layout;
+  }
+
+  calculateIntrinsicSize(): void {}
+  renderShape(): any { return null; }
+}
+
+describe('TransformPropagator', () => {
+  let propagator: TransformPropagator;
+  let elementsMap: Map<string, LayoutElement>;
+  let getShadowElement: (id: string) => Element | null;
+
+  beforeEach(() => {
+    propagator = new TransformPropagator();
+    elementsMap = new Map();
+    getShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+  });
+
+  describe('Scale Transform Propagation', () => {
+    it('should calculate correct displacement for scale target scenario', () => {
+      // Set up elements similar to the YAML example
+      const scaleTarget = new MockLayoutElement('scale_target_group.scale_target', {
+        x: 105, y: 50, width: 100, height: 40, calculated: true
+      });
+      
+      // Set up anchor configuration for scale target (anchored to trigger button's topRight)
+      scaleTarget.layoutConfig = {
+        anchor: {
+          anchorTo: 'scale_target_group.scale_trigger_button',
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topRight'
+        }
+      };
+
+      const triggerButton = new MockLayoutElement('scale_target_group.scale_trigger_button', {
+        x: 0, y: 50, width: 100, height: 40, calculated: true
+      });
+
+      // Add a description element anchored to the scale target
+      const description = new MockLayoutElement('scale_target_group.scale_target_description', {
+        x: 210, y: 70, width: 200, height: 20, calculated: true
+      });
+      
+      description.layoutConfig = {
+        anchor: {
+          anchorTo: 'scale_target_group.scale_target',
+          anchorPoint: 'centerLeft',
+          targetAnchorPoint: 'centerRight'
+        }
+      };
+
+      elementsMap.set('scale_target_group.scale_target', scaleTarget);
+      elementsMap.set('scale_target_group.scale_trigger_button', triggerButton);
+      elementsMap.set('scale_target_group.scale_target_description', description);
+
+      // Initialize propagator
+      propagator.initialize(elementsMap, getShadowElement);
+
+      // Create scale animation config (scale from 1 to 1.2 with center origin)
+      const scaleAnimation = {
+        type: 'scale' as const,
+        scale_params: {
+          scale_start: 1,
+          scale_end: 1.2,
+          transform_origin: 'center center'
+        },
+        duration: 0.3,
+        ease: 'bounce.out'
+      };
+
+      const syncData = {
+        duration: 0.3,
+        ease: 'bounce.out'
+      };
+
+      // Process the animation
+      propagator.processAnimationWithPropagation(
+        'scale_target_group.scale_target',
+        scaleAnimation,
+        syncData
+      );
+
+      // Verify getShadowElement was called for dependent elements
+      expect(getShadowElement).toHaveBeenCalled();
+    });
+
+    it('should correctly identify dependent elements', () => {
+      const scaleTarget = new MockLayoutElement('scale_target');
+      scaleTarget.layoutConfig = {};
+
+      const dependentElement = new MockLayoutElement('dependent');
+      dependentElement.layoutConfig = {
+        anchor: {
+          anchorTo: 'scale_target',
+          anchorPoint: 'centerLeft',
+          targetAnchorPoint: 'centerRight'
+        }
+      };
+
+      elementsMap.set('scale_target', scaleTarget);
+      elementsMap.set('dependent', dependentElement);
+
+      propagator.initialize(elementsMap, getShadowElement);
+
+      // Access private method for testing (TypeScript workaround)
+      const findDependentElements = (propagator as any)._findDependentElements;
+      const dependents = findDependentElements.call(propagator, 'scale_target');
+
+      expect(dependents).toHaveLength(1);
+      expect(dependents[0].dependentElementId).toBe('dependent');
+      expect(dependents[0].targetElementId).toBe('scale_target');
+    });
+
+    it('should calculate scale displacement correctly for center transform origin', () => {
+      const element = new MockLayoutElement('test', {
+        x: 100, y: 100, width: 100, height: 40, calculated: true
+      });
+
+      const scaleEffect: TransformEffect = {
+        type: 'scale',
+        scaleStartX: 1.0,
+        scaleTargetX: 1.2,
+        scaleTargetY: 1.2,
+        transformOrigin: { x: 50, y: 20 } // center of 100x40 element
+      };
+
+      // Test anchor point at centerRight (x: 200, y: 120)
+      const anchorPosition = { x: 200, y: 120 };
+
+      // Access private method for testing
+      const calculateScaleDisplacement = (propagator as any)._calculateScaleDisplacement;
+      const displacement = calculateScaleDisplacement.call(
+        propagator,
+        anchorPosition,
+        scaleEffect,
+        element
+      );
+
+      // Transform origin is at (150, 120) in absolute coordinates
+      // Distance from origin to anchor: (200-150, 120-120) = (50, 0)
+      // After scaling by 1.2: new position = (150 + 50*1.2, 120 + 0*1.2) = (210, 120)
+      // Displacement = (210-200, 120-120) = (10, 0)
+      expect(displacement.x).toBeCloseTo(10, 2);
+      expect(displacement.y).toBeCloseTo(0, 2);
+    });
+
+    it('should parse transform origin correctly', () => {
+      const element = new MockLayoutElement('test', {
+        x: 0, y: 0, width: 100, height: 40, calculated: true
+      });
+
+      // Access private method for testing
+      const parseTransformOrigin = (propagator as any)._parseTransformOrigin;
+
+      const centerCenter = parseTransformOrigin.call(propagator, 'center center', element);
+      expect(centerCenter.x).toBe(50);
+      expect(centerCenter.y).toBe(20);
+
+      const topLeft = parseTransformOrigin.call(propagator, 'left top', element);
+      expect(topLeft.x).toBe(0);
+      expect(topLeft.y).toBe(0);
+
+      const bottomRight = parseTransformOrigin.call(propagator, 'right bottom', element);
+      expect(bottomRight.x).toBe(100);
+      expect(bottomRight.y).toBe(40);
+    });
+  });
+
+  describe('Self-Compensation', () => {
+    it('should apply self-compensation for anchored scaled elements', () => {
+      // Create a target element to anchor to
+      const targetElement = new MockLayoutElement('target', { x: 50, y: 50, width: 20, height: 20, calculated: true });
+      
+      // Create a square element anchored to the target's topRight with its topLeft
+      // Important: Place it so that scaling will cause significant displacement of its anchor point
+      const squareElement = new MockLayoutElement('square', { x: 70, y: 50, width: 40, height: 40, calculated: true });
+      squareElement.layoutConfig = {
+        anchor: {
+          anchorTo: 'target',
+          anchorPoint: 'topLeft',  // This is the point that should stay fixed
+          targetAnchorPoint: 'topRight'
+        }
+      };
+
+      elementsMap.set('target', targetElement);
+      elementsMap.set('square', squareElement);
+
+      // Initialize propagator
+      propagator.initialize(elementsMap, getShadowElement);
+
+      // Define scale animation with center origin to ensure displacement
+      const animationConfig = {
+        type: 'scale' as const,
+        scale_params: {
+          scale_end: 2,
+          transform_origin: 'center center'  // This will cause the anchor point to move
+        },
+        duration: 0.3,
+        ease: 'power2.inOut'
+      };
+
+      const syncData = {
+        duration: 0.3,
+        ease: 'power2.inOut'
+      };
+
+      // Process the animation
+      propagator.processAnimationWithPropagation('square', animationConfig, syncData);
+
+      // Verify that the square element received self-compensation 
+      expect(getShadowElement).toHaveBeenCalledWith('square');
+    });
+
+    it('should use anchor point as transform origin when not specified', () => {
+      const element = new MockLayoutElement('test', { x: 100, y: 100, width: 10, height: 10, calculated: true });
+      element.layoutConfig = {
+        anchor: {
+          anchorTo: 'other',
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topRight'
+        }
+      };
+
+      elementsMap.set('test', element);
+      propagator.initialize(elementsMap, getShadowElement);
+
+      // Access private method for testing
+      const analyzeScaleEffect = (propagator as any)._analyzeScaleEffect;
+      
+             const scaleAnimation = {
+         type: 'scale' as const,
+         scale_params: {
+           scale_end: 1.5
+           // No transform_origin specified
+         },
+         duration: 0.3,
+         ease: 'power2.inOut'
+       };
+
+      const effect = analyzeScaleEffect.call(propagator, element, scaleAnimation);
+      
+      // Should use left top (corresponding to topLeft anchor point)
+      expect(effect.transformOrigin.x).toBe(0); // left edge of element
+      expect(effect.transformOrigin.y).toBe(0); // top edge of element
+    });
+
+    it('should not apply self-compensation for non-anchored elements', () => {
+      const element = new MockLayoutElement('test');
+      element.layoutConfig = {}; // No anchor config
+
+      elementsMap.set('test', element);
+      propagator.initialize(elementsMap, getShadowElement);
+
+      // Access private method for testing
+      const applySelfCompensation = (propagator as any)._applySelfCompensation;
+      
+      const transformEffects = [{
+        type: 'scale' as const,
+        scaleStartX: 1.0,
+        scaleTargetX: 2,
+        scaleTargetY: 2,
+        transformOrigin: { x: 50, y: 20 }
+      }];
+
+      const syncData = { duration: 0.3, ease: 'power2.inOut' };
+
+      // Should not apply compensation
+      applySelfCompensation.call(propagator, 'test', transformEffects, syncData);
+      
+      // getShadowElement should not be called since no compensation is needed
+      expect(getShadowElement).not.toHaveBeenCalledWith('test');
+    });
+  });
+
+  describe('Animation Detection', () => {
+    it('should detect positioning-affecting animations', () => {
+      // Access private method for testing
+      const analyzeTransformEffects = (propagator as any)._analyzeTransformEffects;
+      
+      const element = new MockLayoutElement('test');
+      elementsMap.set('test', element);
+      propagator.initialize(elementsMap, getShadowElement);
+
+      const scaleAnimation = {
+        type: 'scale' as const,
+        scale_params: { scale_end: 1.2 },
+        duration: 0.3,
+        ease: 'power2.inOut'
+      };
+
+      const effects = analyzeTransformEffects.call(propagator, 'test', scaleAnimation);
+      expect(effects).toHaveLength(1);
+      expect(effects[0].type).toBe('scale');
+      expect(effects[0].scaleTargetX).toBe(1.2);
+    });
+
+    it('should ignore insignificant transforms', () => {
+      const isEffectSignificant = (propagator as any)._isEffectSignificant;
+
+      const insignificantScale: TransformEffect = {
+        type: 'scale',
+        scaleStartX: 1.0,
+        scaleTargetX: 1.0001,
+        scaleTargetY: 1.0001,
+        transformOrigin: { x: 0, y: 0 }
+      };
+
+      const significantScale: TransformEffect = {
+        type: 'scale',
+        scaleStartX: 1.0,
+        scaleTargetX: 1.2,
+        scaleTargetY: 1.2,
+        transformOrigin: { x: 0, y: 0 }
+      };
+
+      expect(isEffectSignificant.call(propagator, insignificantScale, 'test')).toBe(false);
+      expect(isEffectSignificant.call(propagator, significantScale, 'test')).toBe(true);
+    });
+
+    it('should handle reverse animations with proper sync data', () => {
+      const scaleTarget = new MockLayoutElement('scale_target');
+      const dependentElement = new MockLayoutElement('dependent');
+      dependentElement.layoutConfig = {
+        anchor: {
+          anchorTo: 'scale_target',
+          anchorPoint: 'centerLeft',
+          targetAnchorPoint: 'centerRight'
+        }
+      };
+
+      elementsMap.set('scale_target', scaleTarget);
+      elementsMap.set('dependent', dependentElement);
+
+      propagator.initialize(elementsMap, getShadowElement);
+
+             const scaleAnimation = {
+         type: 'scale' as const,
+         scale_params: { scale_end: 1.5 },
+         duration: 0.3,
+         ease: 'power2.inOut'
+       };
+
+      const syncData = {
+        duration: 0.3,
+        ease: 'power2.inOut',
+        yoyo: true,
+        repeat: 1
+      };
+
+      // Process animation with reverse properties
+      propagator.processAnimationWithPropagation('scale_target', scaleAnimation, syncData);
+
+      // Should call getShadowElement for dependent element
+      expect(getShadowElement).toHaveBeenCalledWith('dependent');
+    });
+
+    it('should properly handle reverse state transitions (scaled → normal)', () => {
+      const scaleTarget = new MockLayoutElement('scale_target', {
+        x: 100, y: 100, width: 100, height: 40, calculated: true
+      });
+      
+      const dependentElement = new MockLayoutElement('dependent', {
+        x: 210, y: 120, width: 50, height: 20, calculated: true
+      });
+      
+      dependentElement.layoutConfig = {
+        anchor: {
+          anchorTo: 'scale_target',
+          anchorPoint: 'centerLeft',
+          targetAnchorPoint: 'centerRight'
+        }
+      };
+
+      elementsMap.set('scale_target', scaleTarget);
+      elementsMap.set('dependent', dependentElement);
+
+      propagator.initialize(elementsMap, getShadowElement);
+
+      // First animation: normal → scaled (scale to 1.2)
+      const forwardAnimation = {
+        type: 'scale' as const,
+        scale_params: {
+          scale_start: 1,
+          scale_end: 1.2,
+          transform_origin: 'center center'
+        },
+        duration: 0.3,
+        ease: 'bounce.out'
+      };
+
+      const forwardSyncData = {
+        duration: 0.3,
+        ease: 'bounce.out'
+      };
+
+      // Process the forward animation
+      propagator.processAnimationWithPropagation('scale_target', forwardAnimation, forwardSyncData);
+
+      // Verify forward animation worked
+      expect(getShadowElement).toHaveBeenCalledWith('dependent');
+      
+      // Reset the mock to track only the reverse animation calls
+      vi.clearAllMocks();
+
+      // Second animation: scaled → normal (scale from 1.2 to 1)
+      const reverseAnimation = {
+        type: 'scale' as const,
+        scale_params: {
+          scale_start: 1.2,
+          scale_end: 1,
+          transform_origin: 'center center'
+        },
+        duration: 0.3,
+        ease: 'power2.inOut'
+      };
+
+      const reverseSyncData = {
+        duration: 0.3,
+        ease: 'power2.inOut'
+      };
+
+      // Process the reverse animation
+      propagator.processAnimationWithPropagation('scale_target', reverseAnimation, reverseSyncData);
+
+      // The key test is that the dependent element gets compensated in the reverse direction
+      // This verifies that the transform state tracking is working correctly
+      expect(getShadowElement).toHaveBeenCalledWith('dependent');
+    });
+  });
+
+  describe('Sequenced Animations', () => {
+    it('should calculate correct displacement for sequenced animations (slide then scale)', () => {
+      const anchorTarget = new MockLayoutElement('anchor_target', { x: 0, y: 0, width: 10, height: 10, calculated: true });
+      const primaryElement = new MockLayoutElement('primary', { x: 10, y: 0, width: 100, height: 40, calculated: true });
+      primaryElement.layoutConfig = {
+        anchor: { anchorTo: 'anchor_target', anchorPoint: 'topLeft', targetAnchorPoint: 'topRight' }
+      };
+      const dependentElement = new MockLayoutElement('dependent', { x: 115, y: 20, width: 50, height: 20, calculated: true });
+      dependentElement.layoutConfig = {
+        anchor: { anchorTo: 'primary', anchorPoint: 'centerLeft', targetAnchorPoint: 'centerRight' }
+      };
+
+      elementsMap.set('anchor_target', anchorTarget);
+      elementsMap.set('primary', primaryElement);
+      elementsMap.set('dependent', dependentElement);
+
+      propagator.initialize(elementsMap, getShadowElement);
+      const applyTransformSpy = vi.spyOn(propagator as any, '_applyTransform');
+
+      // --- Step 1: Slide animation for primaryElement ---
+      const slideAnimation = {
+        type: 'slide' as const,
+        slide_params: { direction: 'up' as 'left' | 'right' | 'up' | 'down', distance: '20px' }, // Slide up by 20px
+        duration: 0.1,
+        ease: 'none'
+      };
+      const slideSyncData = { duration: 0.1, ease: 'none' };
+      
+      propagator.processAnimationWithPropagation('primary', slideAnimation, slideSyncData);
+
+      // Check self-compensation for primary during slide (should be none if slide doesn't move its own anchor point)
+      // The primary's own 'topLeft' anchor point (10,0) does not move relative to its geometry due to a slide.
+      // So self-compensation for slide should be {translateX:0, translateY:0} or null.
+      // The spy will capture all calls. We need to identify the one for self-compensation if it occurs.
+
+      // Check compensation for dependent during slide
+      // Primary's centerRight (110, 20) slides up by 20px to (110, 0).
+      // Dependent's centerLeft (115, 20) is anchored to it.
+      // Expected displacement for dependent: (0, -20)
+      expect(applyTransformSpy).toHaveBeenCalledWith(
+        'dependent',
+        expect.objectContaining({ type: 'translate', translateY: -20 }),
+        slideSyncData
+      );
+      
+      // Clear mock calls for the next step, but retain spy
+      applyTransformSpy.mockClear();
+
+      // --- Step 2: Scale animation for primaryElement ---
+      // Primary is now effectively at y = -20 relative to its original layout y=0 due to slide.
+      // Its elementTransformStates should reflect translateX:0, translateY:-20, scaleX:1, scaleY:1
+
+      const scaleAnimation = {
+        type: 'scale' as const,
+        scale_params: { scale_start: 1, scale_end: 1.2, transform_origin: 'center center' },
+        duration: 0.1,
+        ease: 'none'
+      };
+      const scaleSyncData = { duration: 0.1, ease: 'none' };
+
+      propagator.processAnimationWithPropagation('primary', scaleAnimation, scaleSyncData);
+
+      // Primary's original layout: x:10, y:0, w:100, h:40. Origin for scale: center center (60, 20 relative to layout)
+      // After slide, its effective y is -20. So visual center is (60, 0).
+      // Primary's own anchorPoint 'topLeft' is (10, 0) in layout. After slide: (10, -20).
+      // Relative to scale origin (60,0): (-50, -20).
+      // Scaled: (-50*1.2, -20*1.2) = (-60, -24).
+      // New topLeft: (60-60, 0-24) = (0, -24) relative to original layout, or (0, -4) relative to slid position.
+      // Displacement of primary's topLeft: (0 - 10, -24 - (-20)) = (-10, -4). This is simplified.
+      // Let's re-evaluate self-compensation for primary due to scale:
+      // Initial state for scale: translateY=-20, scaleX=1, scaleY=1.
+      // Primary's anchor 'topLeft' is at (10, -20) absolute.
+      // Scale origin (center center of 100x40 element) is (layout.x + 50*scaleX + translateX, layout.y + 20*scaleY + translateY)
+      // = (10 + 50*1 + 0, 0 + 20*1 - 20) = (60, 0) absolute.
+      // Vector from origin (60,0) to anchor (10,-20) is (-50, -20).
+      // Scaled vector: (-50*1.2, -20*1.2) = (-60, -24).
+      // New anchor pos: (60-60, 0-24) = (0, -24).
+      // Displacement of primary's own anchor: (0-10, -24-(-20)) = (-10, -4).
+      // Self-compensation for primary: {translateX: 10, translateY: 4}. This is T_self_scale.
+      
+      // Now for the dependent:
+      // Primary's targetAnchorPoint 'centerRight' (layout.x+100, layout.y+20) is (110,20) original.
+      // After slide: (110, 0) absolute. This is initialAbsoluteAnchorPosition for the scale step.
+      // Scale origin is (60,0) absolute.
+      // Vector from origin (60,0) to primary's centerRight (110,0) is (50,0).
+      // Scaled vector: (50*1.2, 0*1.2) = (60,0).
+      // New pos of primary's centerRight: (60+60, 0+0) = (120,0).
+      // Displacement of primary's centerRight due to scale (D_scale): (120-110, 0-0) = (10,0).
+
+      // Total displacement for dependent: D_scale + T_self_scale = (10,0) + (10,4) = (20,4).
+      // Dependent compensation: {translateX: 20, translateY: 4}.
+      // (Note: previous error in manual calculation, this is net translation)
+      // The _applyTransform will apply a NEGATIVE of this sum for the dependent to compensate.
+      // So, dependent receives translate(-20, -4) if primarySelfComp is positive.
+      // No, the dependent's compensation is `totalDisplacementOfAnchorOnPrimary + primaryTotalSelfCompTranslation`.
+      // And the actual transform applied to dependent is that sum.
+
+      // Let's re-check _applyCompensatingTransforms:
+      // compTranslateX = displacementOfAnchorOnPrimary.x + (primarySelfCompensation?.translateX || 0);
+      // compTranslateY = displacementOfAnchorOnPrimary.y + (primarySelfCompensation?.translateY || 0);
+      // _applyTransform(dependentElementId, { type: 'translate', translateX: compTranslateX, translateY: compTranslateY, ... })
+
+      // So, for dependent: compTranslateX = 10 + 10 = 20. compTranslateY = 0 + 4 = 4.
+      // Dependent gets {translateX: 20, translateY: 4} applied.
+      
+      // This means if primary's anchor point moves right by 10 and primary also self-compensates by moving right by 10,
+      // the dependent should move right by 20.
+
+      // Find the call to _applyTransform for the dependent element during the scale step.
+      const dependentScaleCompensationCall = applyTransformSpy.mock.calls.find(
+        call => call[0] === 'dependent'
+      );
+      expect(dependentScaleCompensationCall).toBeDefined();
+      if (dependentScaleCompensationCall) {
+        expect(dependentScaleCompensationCall[1]).toMatchObject({ // The TransformEffect
+          type: 'translate',
+          translateX: 20, // 10 from D_scale.x + 10 from T_self_scale.x
+          translateY: 4   // 0 from D_scale.y + 4 from T_self_scale.y
+        });
+        expect(dependentScaleCompensationCall[2]).toEqual(scaleSyncData); // The SyncData
+      }
+    });
+  });
+});
+```
+
+## File: src/utils/transform-propagator.ts
+
+```typescript
+import { LayoutElement } from '../layout/elements/element.js';
+import { AnimationDefinition } from '../types.js';
+import { HomeAssistant } from 'custom-card-helpers';
+
+/**
+ * Represents a visual transformation that will occur during an animation
+ */
+export interface TransformEffect {
+  type: 'scale' | 'translate' | 'rotate';
+  scaleStartX?: number;
+  scaleStartY?: number;
+  scaleTargetX?: number;
+  scaleTargetY?: number;
+  translateX?: number;
+  translateY?: number;
+  rotation?: number;
+  transformOrigin: { x: number; y: number };
+}
+
+/**
+ * Represents a dependency between elements for positioning
+ */
+export interface ElementDependency {
+  dependentElementId: string;
+  targetElementId: string;
+  anchorPoint: string;
+  targetAnchorPoint: string;
+  dependencyType: 'anchor' | 'stretch';
+}
+
+/**
+ * Animation properties to synchronize dependent animations
+ */
+export interface AnimationSyncData {
+  duration: number;
+  ease: string;
+  delay?: number;
+  repeat?: number;
+  yoyo?: boolean;
+}
+
+/**
+ * Represents the current transformation state of an element
+ */
+export interface ElementTransformState {
+  scaleX: number;
+  scaleY: number;
+  translateX: number;
+  translateY: number;
+  rotation: number;
+}
+
+/**
+ * Manages transform propagation to maintain anchor relationships during animations
+ */
+export class TransformPropagator {
+  private elementDependencies = new Map<string, ElementDependency[]>();
+  private elementsMap?: Map<string, LayoutElement>;
+  private getShadowElement?: (id: string) => Element | null;
+  // Track current transformation state of elements
+  private elementTransformStates = new Map<string, ElementTransformState>();
+
+  /**
+   * Initialize the propagator with current layout state
+   */
+  initialize(
+    elementsMap: Map<string, LayoutElement>,
+    getShadowElement?: (id: string) => Element | null
+  ): void {
+    this.elementsMap = elementsMap;
+    this.getShadowElement = getShadowElement;
+    this._buildDependencyGraph();
+    this._initializeTransformStates();
+  }
+
+  /**
+   * Initialize transform states for all elements to their default values
+   */
+  private _initializeTransformStates(): void {
+    if (!this.elementsMap) return;
+    
+    for (const elementId of this.elementsMap.keys()) {
+      this.elementTransformStates.set(elementId, {
+        scaleX: 1,
+        scaleY: 1,
+        translateX: 0,
+        translateY: 0,
+        rotation: 0
+      });
+    }
+  }
+
+  /**
+   * Update the transform state of an element after an animation
+   */
+  private _updateElementTransformState(elementId: string, transformEffect: TransformEffect): void {
+    const currentState = this.elementTransformStates.get(elementId) || {
+      scaleX: 1, scaleY: 1, translateX: 0, translateY: 0, rotation: 0
+    };
+
+    const newState = { ...currentState };
+
+    switch (transformEffect.type) {
+      case 'scale':
+        newState.scaleX = transformEffect.scaleTargetX || 1;
+        newState.scaleY = transformEffect.scaleTargetY || 1;
+        break;
+      case 'translate':
+        newState.translateX += transformEffect.translateX || 0;
+        newState.translateY += transformEffect.translateY || 0;
+        break;
+      case 'rotate':
+        newState.rotation = transformEffect.rotation || 0;
+        break;
+    }
+
+    this.elementTransformStates.set(elementId, newState);
+  }
+
+  /**
+   * Get the current effective dimensions of an element accounting for its current scale
+   */
+  private _getCurrentElementDimensions(elementId: string): { x: number; y: number; width: number; height: number } {
+    const element = this.elementsMap?.get(elementId);
+    if (!element) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
+
+    const currentState = this.elementTransformStates.get(elementId);
+    if (!currentState) {
+      return element.layout;
+    }
+
+    // Apply current scale to the layout dimensions
+    const scaledWidth = element.layout.width * currentState.scaleX;
+    const scaledHeight = element.layout.height * currentState.scaleY;
+
+    return {
+      x: element.layout.x,
+      y: element.layout.y,
+      width: scaledWidth,
+      height: scaledHeight
+    };
+  }
+
+  /**
+   * Process an animation and apply compensating transforms to maintain anchoring
+   */
+  processAnimationWithPropagation(
+    primaryElementId: string,
+    animationConfig: AnimationDefinition,
+    syncData: AnimationSyncData
+  ): void {
+    if (!this.elementsMap || !this.getShadowElement) {
+      console.warn('[TransformPropagator] Not initialized, cannot process animation');
+      return;
+    }
+
+    // Calculate the transform effects of the primary animation
+    const transformEffects = this._analyzeTransformEffects(primaryElementId, animationConfig);
+    
+    if (transformEffects.length === 0) {
+      return; // No transforms that affect positioning
+    }
+
+    // Apply self-compensation to maintain the element's own anchor relationships
+    // and get the self-compensation transform that was applied.
+    const selfCompensationEffect = this._applySelfCompensation(primaryElementId, transformEffects, syncData);
+
+    // Update the element's transform state to reflect the new animation
+    for (const effect of transformEffects) {
+      this._updateElementTransformState(primaryElementId, effect);
+    }
+
+    // Find all elements that depend on this element
+    const affectedElements = this._findDependentElements(primaryElementId);
+    
+    if (affectedElements.length > 0) {
+      // Calculate and apply compensating transforms to dependent elements
+      this._applyCompensatingTransforms(
+        primaryElementId,
+        transformEffects, // These are the effects from the primary's animation config
+        selfCompensationEffect, // This is the translation applied for self-compensation
+        affectedElements,
+        syncData
+      );
+    }
+  }
+
+  /**
+   * Build the dependency graph from current layout configuration
+   */
+  private _buildDependencyGraph(): void {
+    if (!this.elementsMap) return;
+
+    this.elementDependencies.clear();
+
+    for (const [elementId, element] of this.elementsMap) {
+      const dependencies = this._extractElementDependencies(elementId, element);
+      if (dependencies.length > 0) {
+        this.elementDependencies.set(elementId, dependencies);
+      }
+    }
+  }
+
+  /**
+   * Extract dependencies for a single element
+   */
+  private _extractElementDependencies(
+    elementId: string,
+    element: LayoutElement
+  ): ElementDependency[] {
+    const dependencies: ElementDependency[] = [];
+
+    // Check anchor dependencies
+    const anchorConfig = element.layoutConfig.anchor;
+    if (anchorConfig?.anchorTo && anchorConfig.anchorTo !== 'container') {
+      dependencies.push({
+        dependentElementId: elementId,
+        targetElementId: anchorConfig.anchorTo,
+        anchorPoint: anchorConfig.anchorPoint || 'topLeft',
+        targetAnchorPoint: anchorConfig.targetAnchorPoint || 'topLeft',
+        dependencyType: 'anchor'
+      });
+    }
+
+    // Check stretch dependencies
+    const stretchConfig = element.layoutConfig.stretch;
+    if (stretchConfig?.stretchTo1 && 
+        stretchConfig.stretchTo1 !== 'container' && 
+        stretchConfig.stretchTo1 !== 'canvas') {
+      dependencies.push({
+        dependentElementId: elementId,
+        targetElementId: stretchConfig.stretchTo1,
+        anchorPoint: 'unknown', // Stretch doesn't use anchor points
+        targetAnchorPoint: stretchConfig.targetStretchAnchorPoint1 || 'topLeft',
+        dependencyType: 'stretch'
+      });
+    }
+
+    if (stretchConfig?.stretchTo2 && 
+        stretchConfig.stretchTo2 !== 'container' && 
+        stretchConfig.stretchTo2 !== 'canvas') {
+      dependencies.push({
+        dependentElementId: elementId,
+        targetElementId: stretchConfig.stretchTo2,
+        anchorPoint: 'unknown',
+        targetAnchorPoint: stretchConfig.targetStretchAnchorPoint2 || 'topLeft',
+        dependencyType: 'stretch'
+      });
+    }
+
+    return dependencies;
+  }
+
+  /**
+   * Analyze the visual effects of an animation
+   */
+  private _analyzeTransformEffects(
+    elementId: string,
+    animationConfig: AnimationDefinition
+  ): TransformEffect[] {
+    const effects: TransformEffect[] = [];
+    const element = this.elementsMap?.get(elementId);
+    
+    if (!element) return effects;
+
+    switch (animationConfig.type) {
+      case 'scale':
+        effects.push(this._analyzeScaleEffect(element, animationConfig));
+        break;
+      case 'slide':
+        effects.push(this._analyzeSlideEffect(element, animationConfig));
+        break;
+      case 'custom_gsap':
+        effects.push(...this._analyzeCustomGsapEffects(element, animationConfig));
+        break;
+    }
+
+    return effects.filter(effect => this._isEffectSignificant(effect, elementId));
+  }
+
+  /**
+   * Analyze scale animation effects
+   */
+  private _analyzeScaleEffect(
+    element: LayoutElement,
+    animationConfig: AnimationDefinition
+  ): TransformEffect {
+    const scaleParams = animationConfig.scale_params;
+    const scaleStart = scaleParams?.scale_start;
+    const scaleEnd = scaleParams?.scale_end || 1;
+    
+    // For anchored elements, prefer using the anchor point as transform origin to minimize displacement
+    let transformOriginString = scaleParams?.transform_origin;
+    
+    if (!transformOriginString && element.layoutConfig.anchor?.anchorTo && element.layoutConfig.anchor.anchorTo !== 'container') {
+      // Use the element's anchor point as transform origin to minimize displacement
+      const anchorPoint = element.layoutConfig.anchor.anchorPoint || 'topLeft';
+      transformOriginString = this._anchorPointToTransformOriginString(anchorPoint);
+    }
+    
+    // Fall back to center center if no better origin is available
+    const transformOrigin = this._parseTransformOrigin(
+      transformOriginString || 'center center',
+      element
+    );
+
+    return {
+      type: 'scale',
+      scaleStartX: scaleStart,
+      scaleStartY: scaleStart,
+      scaleTargetX: scaleEnd,
+      scaleTargetY: scaleEnd,
+      transformOrigin
+    };
+  }
+
+  /**
+   * Analyze slide animation effects
+   */
+  private _analyzeSlideEffect(
+    element: LayoutElement,
+    animationConfig: AnimationDefinition
+  ): TransformEffect {
+    const slideParams = animationConfig.slide_params;
+    const direction = slideParams?.direction;
+    const distance = this._parseDistance(slideParams?.distance || '0px');
+
+    let translateX = 0;
+    let translateY = 0;
+
+    switch (direction) {
+      case 'left':
+        translateX = -distance;
+        break;
+      case 'right':
+        translateX = distance;
+        break;
+      case 'up':
+        translateY = -distance;
+        break;
+      case 'down':
+        translateY = distance;
+        break;
+    }
+
+    return {
+      type: 'translate',
+      translateX,
+      translateY,
+      transformOrigin: { x: 0, y: 0 }
+    };
+  }
+
+  /**
+   * Analyze custom GSAP animation effects
+   */
+  private _analyzeCustomGsapEffects(
+    element: LayoutElement,
+    animationConfig: AnimationDefinition
+  ): TransformEffect[] {
+    const effects: TransformEffect[] = [];
+    const customVars = animationConfig.custom_gsap_vars || {};
+
+    if (customVars.scale !== undefined) {
+      effects.push({
+        type: 'scale',
+        scaleTargetX: customVars.scale,
+        scaleTargetY: customVars.scale,
+        transformOrigin: this._parseTransformOrigin(
+          customVars.transformOrigin || 'center center',
+          element
+        )
+      });
+    }
+
+    if (customVars.x !== undefined || customVars.y !== undefined) {
+      effects.push({
+        type: 'translate',
+        translateX: customVars.x || 0,
+        translateY: customVars.y || 0,
+        transformOrigin: { x: 0, y: 0 }
+      });
+    }
+
+    if (customVars.rotation !== undefined) {
+      effects.push({
+        type: 'rotate',
+        rotation: customVars.rotation,
+        transformOrigin: this._parseTransformOrigin(
+          customVars.transformOrigin || 'center center',
+          element
+        )
+      });
+    }
+
+    return effects;
+  }
+
+  /**
+   * Apply self-compensation transforms to maintain the element's own anchor relationships
+   */
+  private _applySelfCompensation(
+    elementId: string,
+    transformEffects: TransformEffect[],
+    syncData: AnimationSyncData
+  ): TransformEffect | null {
+    const element = this.elementsMap?.get(elementId);
+    if (!element) return null;
+
+    // Check if this element is anchored to another element
+    const anchorConfig = element.layoutConfig.anchor;
+    if (!anchorConfig?.anchorTo || anchorConfig.anchorTo === 'container') {
+      return null; // No anchor compensation needed
+    }
+
+    // Calculate how much the element's anchor point will move due to its own transformation
+    const ownAnchorPoint = anchorConfig.anchorPoint || 'topLeft';
+    const anchorDisplacement = this._calculateAnchorDisplacement(
+      element,
+      ownAnchorPoint,
+      transformEffects
+    );
+
+    if (anchorDisplacement.x === 0 && anchorDisplacement.y === 0) {
+      return null; // No displacement to compensate
+    }
+
+    // Create a compensating translation that moves the element in the opposite direction
+    // to keep its anchor point in the same relative position
+    const compensatingTransform: TransformEffect = {
+      type: 'translate',
+      translateX: -anchorDisplacement.x, // Negative to counteract the displacement
+      translateY: -anchorDisplacement.y,
+      transformOrigin: { x: 0, y: 0 } // Transform origin is not relevant for pure translation
+    };
+
+    // Apply the compensating transform
+    this._applyTransform(elementId, compensatingTransform, syncData);
+    return compensatingTransform; // Return the applied self-compensation
+  }
+
+  /**
+   * Find all elements that depend on the given element
+   */
+  private _findDependentElements(targetElementId: string): ElementDependency[] {
+    const dependents: ElementDependency[] = [];
+
+    // Search through all dependencies to find ones that target this element
+    for (const [elementId, dependencies] of this.elementDependencies) {
+      for (const dependency of dependencies) {
+        if (dependency.targetElementId === targetElementId) {
+          dependents.push(dependency);
+        }
+      }
+    }
+
+    return dependents;
+  }
+
+  /**
+   * Apply compensating transforms to maintain anchor relationships
+   */
+  private _applyCompensatingTransforms(
+    primaryElementId: string,
+    transformEffects: TransformEffect[],
+    primarySelfCompensation: TransformEffect | null, // Added: self-compensation of primary
+    affectedDependencies: ElementDependency[],
+    syncData: AnimationSyncData
+  ): void {
+    const primaryElement = this.elementsMap?.get(primaryElementId);
+    if (!primaryElement) return;
+
+    for (const dependency of affectedDependencies) {
+      const dependentElement = this.elementsMap?.get(dependency.dependentElementId);
+      if (!dependentElement) continue;
+
+      // Calculate displacement of the anchor point on the primary element due to its direct animation effects
+      const displacementFromEffects = this._calculateAnchorDisplacement(
+        primaryElement,
+        dependency.targetAnchorPoint,
+        transformEffects // Use the original transform effects of the primary animation
+      );
+
+      let netDisplacementX = displacementFromEffects.x;
+      let netDisplacementY = displacementFromEffects.y;
+
+      // Add the primary element's self-compensation translation, if any
+      if (primarySelfCompensation && primarySelfCompensation.type === 'translate') {
+        netDisplacementX += primarySelfCompensation.translateX || 0;
+        netDisplacementY += primarySelfCompensation.translateY || 0;
+      }
+      
+      if (netDisplacementX === 0 && netDisplacementY === 0) {
+        // No net displacement, no compensation needed for this dependent
+        continue; 
+      }
+
+      const compensatingTransformForDependent: TransformEffect = {
+        type: 'translate',
+        translateX: netDisplacementX,
+        translateY: netDisplacementY,
+        transformOrigin: { x: 0, y: 0 } // Not relevant for pure translation
+      };
+      
+      this._applyTransform(
+        dependency.dependentElementId,
+        compensatingTransformForDependent,
+        syncData
+      );
+    }
+  }
+
+  /**
+   * Calculate how much an anchor point moves due to transformations
+   */
+  private _calculateAnchorDisplacement(
+    element: LayoutElement,
+    anchorPointName: string,
+    transformEffects: TransformEffect[]
+  ): { x: number; y: number } {
+    // Get the initial absolute position of the anchor point on 'element'
+    // This accounts for all transforms applied to 'element' *before* the current 'transformEffects'
+    let currentAbsoluteAnchorPosition = this._getAnchorPointPosition(element, anchorPointName);
+
+    let totalDisplacementX = 0;
+    let totalDisplacementY = 0;
+
+    // transformEffects usually contains a single primary effect from the animation config for the current step
+    for (const effect of transformEffects) {
+      let stepDisplacement = { x: 0, y: 0 };
+      if (effect.type === 'scale') {
+        // Calculate how 'currentAbsoluteAnchorPosition' moves due to this 'effect'
+        // _calculateScaleDisplacement needs the position of the point *before* this specific scale effect
+        stepDisplacement = this._calculateScaleDisplacement(
+          currentAbsoluteAnchorPosition, // Its current absolute position
+          effect,                        // The scale effect to apply
+          element                        // The element being scaled
+        );
+      } else if (effect.type === 'translate') {
+        // For a pure translation, the displacement of any point on the element is the translation itself
+        stepDisplacement = {
+          x: effect.translateX || 0,
+          y: effect.translateY || 0,
+        };
+      } else if (effect.type === 'rotate') {
+        // Placeholder for rotation displacement calculation
+        // This would be more complex, similar to scale, involving rotation around effect.transformOrigin
+        // For now, assume rotation doesn't cause simple anchor displacement that we propagate as translation
+        // Or, if it does, it needs a _calculateRotationDisplacement method
+        console.warn('[TransformPropagator] Rotation effect displacement not fully implemented for anchor propagation.');
+      }
+
+      totalDisplacementX += stepDisplacement.x;
+      totalDisplacementY += stepDisplacement.y;
+      
+      // Update the anchor position for the next potential effect in this step's sequence
+      currentAbsoluteAnchorPosition.x += stepDisplacement.x;
+      currentAbsoluteAnchorPosition.y += stepDisplacement.y;
+    }
+
+    return {
+      x: totalDisplacementX,
+      y: totalDisplacementY,
+    };
+  }
+
+  /**
+   * Calculate displacement caused by scaling
+   */
+  private _calculateScaleDisplacement(
+    anchorPosition: { x: number; y: number },
+    scaleEffect: TransformEffect,
+    element: LayoutElement
+  ): { x: number; y: number } {
+    const s_current_X = scaleEffect.scaleStartX !== undefined 
+      ? scaleEffect.scaleStartX 
+      : (this.elementTransformStates.get(element.id)?.scaleX || 1);
+    const s_current_Y = scaleEffect.scaleStartY !== undefined
+      ? scaleEffect.scaleStartY
+      : (this.elementTransformStates.get(element.id)?.scaleY || 1);
+    
+    const s_target_X = scaleEffect.scaleTargetX || 1;
+    const s_target_Y = scaleEffect.scaleTargetY || 1;
+    
+    const origin = scaleEffect.transformOrigin;
+    
+    const originAbsoluteX = element.layout.x + origin.x;
+    const originAbsoluteY = element.layout.y + origin.y;
+
+    const p_orig_relative_to_origin_X = anchorPosition.x - originAbsoluteX;
+    const p_orig_relative_to_origin_Y = anchorPosition.y - originAbsoluteY;
+
+    const displacementX = p_orig_relative_to_origin_X * (s_target_X - s_current_X);
+    const displacementY = p_orig_relative_to_origin_Y * (s_target_Y - s_current_Y);
+    
+    return { x: displacementX, y: displacementY };
+  }
+
+  /**
+   * Apply a transform to an element
+   */
+  private _applyTransform(
+    elementId: string,
+    transform: TransformEffect,
+    syncData: AnimationSyncData
+  ): void {
+    if (!this.getShadowElement) return;
+
+    const domElement = this.getShadowElement(elementId);
+    if (!domElement) return;
+
+    // Import GSAP and apply the transform
+    import('gsap').then(({ gsap }) => {
+      const animationProps: any = {
+        duration: syncData.duration,
+        ease: syncData.ease,
+        overwrite: false // Allow tweens to overlap for smooth sequenced compensation
+      };
+
+      // Ensure all timeline properties are synchronized
+      if (syncData.delay !== undefined) animationProps.delay = syncData.delay;
+      if (syncData.repeat !== undefined) animationProps.repeat = syncData.repeat;
+      if (syncData.yoyo !== undefined) animationProps.yoyo = syncData.yoyo;
+
+      switch (transform.type) {
+        case 'scale':
+          animationProps.scaleX = transform.scaleTargetX;
+          animationProps.scaleY = transform.scaleTargetY;
+          animationProps.transformOrigin = `${transform.transformOrigin.x}px ${transform.transformOrigin.y}px`;
+          break;
+        case 'translate':
+          animationProps.x = `+=${transform.translateX}`;
+          animationProps.y = `+=${transform.translateY}`;
+          break;
+        case 'rotate':
+          animationProps.rotation = transform.rotation;
+          animationProps.transformOrigin = `${transform.transformOrigin.x}px ${transform.transformOrigin.y}px`;
+          break;
+      }
+
+      // Create the animation and ensure it respects all timeline properties
+      const tween = gsap.to(domElement, animationProps);
+      
+      // Debug log for troubleshooting
+      console.log(`[TransformPropagator] Applied ${transform.type} transform to ${elementId}:`, {
+        transform,
+        syncData,
+        animationProps
+      });
+      
+    }).catch(error => {
+      console.error(`[TransformPropagator] GSAP import failed for compensating transform:`, error);
+    });
+  }
+
+  /**
+   * Get the absolute position of an anchor point on an element
+   */
+  private _getAnchorPointPosition(
+    element: LayoutElement,
+    anchorPoint: string
+  ): { x: number; y: number } {
+    const { x, y, width, height } = element.layout;
+
+    switch (anchorPoint) {
+      case 'topLeft': return { x, y };
+      case 'topCenter': return { x: x + width / 2, y };
+      case 'topRight': return { x: x + width, y };
+      case 'centerLeft': return { x, y: y + height / 2 };
+      case 'center': return { x: x + width / 2, y: y + height / 2 };
+      case 'centerRight': return { x: x + width, y: y + height / 2 };
+      case 'bottomLeft': return { x, y: y + height };
+      case 'bottomCenter': return { x: x + width / 2, y: y + height };
+      case 'bottomRight': return { x: x + width, y: y + height };
+      default: return { x, y }; // Default to topLeft
+    }
+  }
+
+  /**
+   * Convert anchor point to transform origin string
+   */
+  private _anchorPointToTransformOriginString(anchorPoint: string): string {
+    switch (anchorPoint) {
+      case 'topLeft': return 'left top';
+      case 'topCenter': return 'center top';
+      case 'topRight': return 'right top';
+      case 'centerLeft': return 'left center';
+      case 'center': return 'center center';
+      case 'centerRight': return 'right center';
+      case 'bottomLeft': return 'left bottom';
+      case 'bottomCenter': return 'center bottom';
+      case 'bottomRight': return 'right bottom';
+      default: return 'center center';
+    }
+  }
+
+  /**
+   * Parse transform origin string to absolute coordinates
+   */
+  private _parseTransformOrigin(
+    transformOrigin: string,
+    element: LayoutElement
+  ): { x: number; y: number } {
+    const parts = transformOrigin.split(' ');
+    const xPart = parts[0] || 'center';
+    const yPart = parts[1] || 'center';
+
+    const x = this._parseOriginComponent(xPart, element.layout.width);
+    const y = this._parseOriginComponent(yPart, element.layout.height);
+
+    return { x, y };
+  }
+
+  /**
+   * Parse a single component of transform origin
+   */
+  private _parseOriginComponent(component: string, dimension: number): number {
+    switch (component) {
+      case 'left':
+      case 'top':
+        return 0;
+      case 'center':
+        return dimension / 2;
+      case 'right':
+      case 'bottom':
+        return dimension;
+      default:
+        // Parse percentage or pixel values
+        if (component.endsWith('%')) {
+          const percentage = parseFloat(component);
+          return (percentage / 100) * dimension;
+        } else if (component.endsWith('px')) {
+          return parseFloat(component);
+        }
+        return dimension / 2; // Default to center
+    }
+  }
+
+  /**
+   * Parse distance string to pixels
+   */
+  private _parseDistance(distance: string): number {
+    if (distance.endsWith('px')) {
+      return parseFloat(distance);
+    } else if (distance.endsWith('%')) {
+      // For percentage, we'd need container context - assuming 100px for now
+      const percentage = parseFloat(distance);
+      return percentage; // Simplified
+    }
+    return parseFloat(distance) || 0;
+  }
+
+  /**
+   * Check if a transform effect is significant enough to propagate
+   */
+  private _isEffectSignificant(effect: TransformEffect, elementId?: string): boolean {
+    const threshold = 0.001;
+
+    switch (effect.type) {
+      case 'scale':
+        const currentScaleX = effect.scaleStartX !== undefined
+          ? effect.scaleStartX
+          : (elementId ? this.elementTransformStates.get(elementId)?.scaleX : 1) || 1;
+        const currentScaleY = effect.scaleStartY !== undefined
+          ? effect.scaleStartY
+          : (elementId ? this.elementTransformStates.get(elementId)?.scaleY : 1) || 1;
+
+        const newScaleX = effect.scaleTargetX || 1;
+        const newScaleY = effect.scaleTargetY || 1;
+            
+        return Math.abs(newScaleX - currentScaleX) > threshold ||
+               Math.abs(newScaleY - currentScaleY) > threshold;
+      case 'translate':
+        return Math.abs(effect.translateX || 0) > threshold ||
+               Math.abs(effect.translateY || 0) > threshold;
+      case 'rotate':
+        return Math.abs(effect.rotation || 0) > threshold;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Clear all cached dependencies and transform states
+   */
+  clearDependencies(): void {
+    this.elementDependencies.clear();
+    this.elementTransformStates.clear();
+  }
+}
+
+// Export singleton instance
+export const transformPropagator = new TransformPropagator();
 ```
 
 ## File: src/utils/visibility-manager.ts
