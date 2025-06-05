@@ -198,7 +198,7 @@ action_definition:                   # Action configuration object.
 # === Animation Definition ===
 animation_definition:                # Animation definition for elements and groups.
   - type: <string>                   # Required: Animation type.
-                                     #   Options: "fade", "slide", "scale", "custom_gsap".
+                                     #   Options: "fade", "slide", "scale".
   
     # --- Type-specific parameters ---
     fade_params:                       # Optional: Parameters for fade animations (if type: "fade").
@@ -217,9 +217,7 @@ animation_definition:                # Animation definition for elements and gro
       scale_start: <number>            # Optional: Starting scale factor.
       scale_end: <number>              # Optional: Ending scale factor.
       transform_origin: <string>       # Optional: Transform origin point.
-    
-    custom_gsap_vars: <object>         # Optional: Custom GSAP animation variables (if type: "custom_gsap").
-    
+        
     # --- Common Animation Properties ---
     duration: <number>                 # Required: Duration in milliseconds.
     delay: <number>                    # Optional: Delay before animation starts in milliseconds. Default: 0.
