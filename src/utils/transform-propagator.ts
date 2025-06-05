@@ -6,6 +6,10 @@ import { HomeAssistant } from 'custom-card-helpers';
  * Represents a visual transformation that will occur during an animation
  */
 export interface TransformEffect {
+  // Starting offset from the element's final layout position for 'in' type movements
+  initialOffsetX?: number;
+  initialOffsetY?: number;
+
   type: 'scale' | 'translate' | 'rotate';
   scaleStartX?: number;
   scaleStartY?: number;
@@ -172,19 +176,13 @@ export class TransformPropagator {
       this._updateElementTransformState(primaryElementId, effect);
     }
 
-    // Find all elements that depend on this element
-    const affectedElements = this._findDependentElements(primaryElementId);
-    
-    if (affectedElements.length > 0) {
-      // Calculate and apply compensating transforms to dependent elements
-      this._applyCompensatingTransforms(
-        primaryElementId,
-        transformEffects, // These are the effects from the primary's animation config
-        selfCompensationEffect, // This is the translation applied for self-compensation
-        affectedElements,
-        syncData
-      );
-    }
+    // Directly call _applyCompensatingTransforms which will find dependents and initiate recursion
+    this._applyCompensatingTransforms(
+      primaryElementId,
+      transformEffects, // These are the effects from the primary's animation config
+      selfCompensationEffect, // This is the translation applied for self-compensation
+      syncData
+    );
   }
 
   /**
@@ -245,7 +243,6 @@ export class TransformPropagator {
           primaryElementId,
           stepTransformEffects,
           stepSelfCompensation,
-          affectedElements,
           stepSyncData
         );
 
@@ -432,14 +429,20 @@ export class TransformPropagator {
         break;
     }
 
+    let initialOffsetX = 0;
+    let initialOffsetY = 0;
+
     if (movement === 'in') {
-      // If movement is 'in', the element animates TO its layout position.
-      // So, its net displacement FROM its layout position for this step is 0.
-      translateX = 0;
-      translateY = 0;
+      // For 'in' movements, the element starts offset and moves TO its layout position.
+      // The initialOffset is the negative of the travel vector.
+      initialOffsetX = -baseTranslateX;
+      initialOffsetY = -baseTranslateY;
+      // translateX/Y still represent the travel vector towards the layout position.
+      translateX = baseTranslateX;
+      translateY = baseTranslateY;
     } else {
-      // If movement is 'out' or undefined, it animates AWAY from (or directly from)
-      // its layout position by 'distance'.
+      // For 'out' or direct movements, it starts at its layout position and moves AWAY.
+      // No initial offset from the layout position.
       translateX = baseTranslateX;
       translateY = baseTranslateY;
     }
@@ -448,6 +451,8 @@ export class TransformPropagator {
       type: 'translate',
       translateX,
       translateY,
+      initialOffsetX: initialOffsetX !== 0 ? initialOffsetX : undefined,
+      initialOffsetY: initialOffsetY !== 0 ? initialOffsetY : undefined,
       transformOrigin: { x: 0, y: 0 }
     };
   }
@@ -567,57 +572,166 @@ export class TransformPropagator {
   }
 
   /**
-   * Apply compensating transforms to maintain anchor relationships
+   * Apply compensating transforms to maintain anchor relationships.
+   * This is the initiator for direct dependents of the primary animated element.
    */
   private _applyCompensatingTransforms(
     primaryElementId: string,
-    transformEffects: TransformEffect[],
-    primarySelfCompensation: TransformEffect | null, // Added: self-compensation of primary
-    affectedDependencies: ElementDependency[],
+    primaryTransformEffects: TransformEffect[], 
+    primarySelfCompensation: TransformEffect | null,
     syncData: AnimationSyncData
   ): void {
     const primaryElement = this.elementsMap?.get(primaryElementId);
     if (!primaryElement) return;
 
-    for (const dependency of affectedDependencies) {
+    // These are the elements directly depending on the primary animated element
+    const directDependentsOfPrimary = this._findDependentElements(primaryElementId);
+
+    for (const dependency of directDependentsOfPrimary) {
       const dependentElement = this.elementsMap?.get(dependency.dependentElementId);
       if (!dependentElement) continue;
 
-      // Calculate displacement of the anchor point on the primary element due to its direct animation effects
-      const displacementFromEffects = this._calculateAnchorDisplacement(
+      const displacementFromPrimaryEffects = this._calculateAnchorDisplacement(
         primaryElement,
         dependency.targetAnchorPoint,
-        transformEffects // Use the original transform effects of the primary animation
+        primaryTransformEffects 
       );
 
-      // The dependent element should move to follow the net position of the primary's anchor point
-      // This includes both the direct animation displacement AND any self-compensation the primary applies
-      let compensationX = displacementFromEffects.x;
-      let compensationY = displacementFromEffects.y;
+      let totalCompensationX = displacementFromPrimaryEffects.x;
+      let totalCompensationY = displacementFromPrimaryEffects.y;
 
-      // Add the primary element's self-compensation translation
-      // The dependent should follow the primary's net movement, including its self-compensation
       if (primarySelfCompensation && primarySelfCompensation.type === 'translate') {
-        compensationX += primarySelfCompensation.translateX || 0;
-        compensationY += primarySelfCompensation.translateY || 0;
+        totalCompensationX += primarySelfCompensation.translateX || 0;
+        totalCompensationY += primarySelfCompensation.translateY || 0;
       }
       
-      if (compensationX === 0 && compensationY === 0) {
-        // No net displacement, no compensation needed for this dependent
+      const firstPrimaryEffect = primaryTransformEffects[0]; // Used to get original initialOffset
+      
+      if (totalCompensationX === 0 && totalCompensationY === 0) {
+        if (firstPrimaryEffect?.initialOffsetX !== undefined || firstPrimaryEffect?.initialOffsetY !== undefined) {
+          const zeroMoveEffectWithInitialOffset: TransformEffect = {
+            type: 'translate',
+            translateX: 0,
+            translateY: 0,
+            initialOffsetX: firstPrimaryEffect.initialOffsetX,
+            initialOffsetY: firstPrimaryEffect.initialOffsetY,
+            transformOrigin: { x: 0, y: 0 }
+          };
+          this._applyTransform(
+            dependency.dependentElementId,
+            zeroMoveEffectWithInitialOffset,
+            syncData
+          );
+          this._propagateTransformsRecursively(
+            dependency.dependentElementId,
+            zeroMoveEffectWithInitialOffset,
+            syncData,
+            new Set([primaryElementId]) 
+          );
+        }
         continue; 
       }
 
-      const compensatingTransformForDependent: TransformEffect = {
+      const compensatingTransformForDirectDependent: TransformEffect = {
         type: 'translate',
-        translateX: Math.round(compensationX * 1000) / 1000, // Round to 3 decimal places
-        translateY: Math.round(compensationY * 1000) / 1000,
-        transformOrigin: { x: 0, y: 0 } // Not relevant for pure translation
+        translateX: Math.round(totalCompensationX * 1000) / 1000,
+        translateY: Math.round(totalCompensationY * 1000) / 1000,
+        initialOffsetX: firstPrimaryEffect?.initialOffsetX,
+        initialOffsetY: firstPrimaryEffect?.initialOffsetY,
+        transformOrigin: { x: 0, y: 0 } 
       };
       
       this._applyTransform(
         dependency.dependentElementId,
+        compensatingTransformForDirectDependent,
+        syncData
+      );
+
+      this._propagateTransformsRecursively(
+        dependency.dependentElementId,
+        compensatingTransformForDirectDependent, 
+        syncData,
+        new Set([primaryElementId])
+      );
+    }
+  }
+
+  /**
+   * Recursively propagate transforms to all dependent elements in the chain.
+   */
+  private _propagateTransformsRecursively(
+    currentParentId: string, 
+    parentTransformEffect: TransformEffect, 
+    syncData: AnimationSyncData,
+    processedElements: Set<string> 
+  ): void {
+    if (processedElements.has(currentParentId)) {
+      return; 
+    }
+    // Add current parent to its own processed set copy for this branch of recursion
+    const currentProcessedElements = new Set(processedElements);
+    currentProcessedElements.add(currentParentId);
+
+    const parentElement = this.elementsMap?.get(currentParentId);
+    if (!parentElement) return;
+
+    const dependentsOfCurrentParent = this._findDependentElements(currentParentId); 
+
+    for (const dependency of dependentsOfCurrentParent) {
+      const dependentElement = this.elementsMap?.get(dependency.dependentElementId);
+      if (!dependentElement) continue;
+
+      const displacementFromParentEffect = this._calculateAnchorDisplacement(
+        parentElement, 
+        dependency.targetAnchorPoint, 
+        [parentTransformEffect] 
+      );
+      
+      if (displacementFromParentEffect.x === 0 && displacementFromParentEffect.y === 0) {
+        if (parentTransformEffect.initialOffsetX !== undefined || parentTransformEffect.initialOffsetY !== undefined) {
+          const zeroMoveEffectWithInitialOffset: TransformEffect = {
+            type: 'translate',
+            translateX: 0,
+            translateY: 0,
+            initialOffsetX: parentTransformEffect.initialOffsetX,
+            initialOffsetY: parentTransformEffect.initialOffsetY,
+            transformOrigin: { x: 0, y: 0 }
+          };
+          this._applyTransform(
+            dependency.dependentElementId,
+            zeroMoveEffectWithInitialOffset,
+            syncData
+          );
+          this._propagateTransformsRecursively(
+            dependency.dependentElementId,
+            zeroMoveEffectWithInitialOffset,
+            syncData,
+            currentProcessedElements 
+          );
+        }
+        continue; 
+      }
+      
+      const compensatingTransformForDependent: TransformEffect = {
+        type: 'translate',
+        translateX: Math.round(displacementFromParentEffect.x * 1000) / 1000,
+        translateY: Math.round(displacementFromParentEffect.y * 1000) / 1000,
+        initialOffsetX: parentTransformEffect.initialOffsetX, 
+        initialOffsetY: parentTransformEffect.initialOffsetY,
+        transformOrigin: { x: 0, y: 0 } 
+      };
+
+      this._applyTransform(
+        dependency.dependentElementId,
         compensatingTransformForDependent,
         syncData
+      );
+
+      this._propagateTransformsRecursively(
+        dependency.dependentElementId,
+        compensatingTransformForDependent, 
+        syncData,
+        currentProcessedElements 
       );
     }
   }
@@ -743,20 +857,38 @@ export class TransformPropagator {
 
       // Apply transform based on type
       if (transform.type === 'translate') {
-        // Use relative positioning to ensure transforms are additive
-        animationProps.x = `+=${transform.translateX || 0}`;
-        animationProps.y = `+=${transform.translateY || 0}`;
+        const hasInitialOffset = transform.initialOffsetX !== undefined || transform.initialOffsetY !== undefined;
+        if (hasInitialOffset) {
+          const fromVars = {
+            x: transform.initialOffsetX || 0,
+            y: transform.initialOffsetY || 0,
+          };
+          // toVars should be the final position after the translation
+          // This is the initial offset plus the translation distance
+          animationProps.x = (transform.initialOffsetX || 0) + (transform.translateX || 0);
+          animationProps.y = (transform.initialOffsetY || 0) + (transform.translateY || 0);
+          gsap.fromTo(targetElement, fromVars, animationProps);
+        } else {
+          // Standard translation from current position
+          animationProps.x = `+=${transform.translateX || 0}`;
+          animationProps.y = `+=${transform.translateY || 0}`;
+          gsap.to(targetElement, animationProps);
+        }
       } else if (transform.type === 'scale') {
-        animationProps.scale = transform.scaleTargetX || 1;
+        animationProps.scaleX = transform.scaleTargetX !== undefined ? transform.scaleTargetX : (transform.scaleTargetY !== undefined ? undefined : 1); // GSAP prefers scaleX/scaleY
+        animationProps.scaleY = transform.scaleTargetY !== undefined ? transform.scaleTargetY : (transform.scaleTargetX !== undefined ? undefined : 1);
         if (transform.transformOrigin) {
           animationProps.transformOrigin = `${transform.transformOrigin.x}px ${transform.transformOrigin.y}px`;
         }
+        gsap.to(targetElement, animationProps);
+      } else if (transform.type === 'rotate') {
+        animationProps.rotation = transform.rotation || 0;
+        if (transform.transformOrigin) {
+          animationProps.transformOrigin = `${transform.transformOrigin.x}px ${transform.transformOrigin.y}px`;
+        }
+        gsap.to(targetElement, animationProps);
       }
-
-      animationProps.delay = syncData.delay || 0; // Ensure delay is explicitly 0 if undefined for GSAP
-
-      // Execute the animation
-      gsap.to(targetElement, animationProps);
+      // Note: The explicit `animationProps.delay = syncData.delay || 0;` was removed as it's part of animationProps build up.
     }).catch(error => {
       console.error(`[TransformPropagator] Error importing GSAP for element ${elementId}:`, error);
     });
