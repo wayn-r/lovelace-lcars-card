@@ -253,12 +253,20 @@ groups:
                   distance: 20px
                   movement: in
                 duration: 0.5
+              - index: 0
+                type: fade
+                fade_params:
+                  opacity_start: 0
+                  opacity_end: 1
+                duration: 2
+                ease: power3.out
+                delay: 0.25
               - index: 1
                 type: slide
                 slide_params:
                   direction: right
                   distance: 20px
-                  movement: out
+                  movement: in
                 duration: 0.5
                 repeat: 2
                 yoyo: true
