@@ -204,19 +204,23 @@ export class TransformPropagator {
       return;
     }
 
-    const sortedSteps = [...animationSequence.steps].sort((a, b) => (a.index || 0) - (b.index || 0));
+    const sortedStepGroups = [...animationSequence.steps].sort((a, b) => (a.index || 0) - (b.index || 0));
     const affectedElements = this._findDependentElements(primaryElementId);
 
     // 1. Pre-calculate overall initial offset for the entire sequence from "in" movements
     let sequenceOverallInitialX = 0;
     let sequenceOverallInitialY = 0;
-    for (const step of sortedSteps) {
-      const tempStepEffects = this._analyzeTransformEffects(primaryElementId, step);
-      for (const effect of tempStepEffects) {
-        if (effect.type === 'translate' && (effect.initialOffsetX !== undefined || effect.initialOffsetY !== undefined)) {
-          // This effect is an "in" movement, its initialOffset is the negative travel vector as per _analyzeSlideEffect
-          sequenceOverallInitialX += effect.initialOffsetX || 0;
-          sequenceOverallInitialY += effect.initialOffsetY || 0;
+    for (const stepGroup of sortedStepGroups) {
+      if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
+        for (const animation of stepGroup.animations) {
+          const tempStepEffects = this._analyzeTransformEffects(primaryElementId, animation);
+          for (const effect of tempStepEffects) {
+            if (effect.type === 'translate' && (effect.initialOffsetX !== undefined || effect.initialOffsetY !== undefined)) {
+              // This effect is an "in" movement, its initialOffset is the negative travel vector as per _analyzeSlideEffect
+              sequenceOverallInitialX += effect.initialOffsetX || 0;
+              sequenceOverallInitialY += effect.initialOffsetY || 0;
+            }
+          }
         }
       }
     }
@@ -227,73 +231,90 @@ export class TransformPropagator {
 
     let cumulativeDelay = baseSyncData.delay || 0; // Start with base delay if any
 
-    for (const step of sortedSteps) {
-      // Create sync data for this step, incorporating the current step's own delay
-      const stepSyncData: AnimationSyncData = {
-        duration: step.duration,
-        ease: step.ease || baseSyncData.ease,
-        delay: cumulativeDelay + (step.delay || 0),
-        repeat: step.repeat,
-        yoyo: step.yoyo
-      };
+    for (const stepGroup of sortedStepGroups) {
+      if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
+        // Process all animations in this step group
+        // For positioning effects, we need to track the cumulative effect across all animations in the group
+        let groupInitialX = currentVisualX;
+        let groupInitialY = currentVisualY;
+        let maxGroupDuration = 0;
 
-      const stepBaseEffects = this._analyzeTransformEffects(primaryElementId, step);
-      
-      if (stepBaseEffects.length > 0) {
-        const effectsForAnimationAndPropagation: TransformEffect[] = [];
+        // Calculate the longest duration in this group to know when to start the next index
+        for (const animation of stepGroup.animations) {
+          const animationDuration = (animation.duration || 0) + (animation.delay || 0);
+          maxGroupDuration = Math.max(maxGroupDuration, animationDuration);
+        }
 
-        for (const baseEffect of stepBaseEffects) {
-          const actualStepEffect = { ...baseEffect }; // Copy base effect
+        for (const animation of stepGroup.animations) {
+          // Create sync data for this animation, incorporating the current animation's own delay
+          const animationSyncData: AnimationSyncData = {
+            duration: animation.duration,
+            ease: animation.ease || baseSyncData.ease,
+            delay: cumulativeDelay + (animation.delay || 0),
+            repeat: animation.repeat,
+            yoyo: animation.yoyo
+          };
 
-          if (actualStepEffect.type === 'translate') {
-            // Set the 'from' part of fromTo to the current visual position
-            actualStepEffect.initialOffsetX = currentVisualX;
-            actualStepEffect.initialOffsetY = currentVisualY;
-            
-            // translateX/Y from baseEffect are the travel for *this* step.
-            // _applyTransform will calculate 'to' as initialOffset + travel.
+          const animationBaseEffects = this._analyzeTransformEffects(primaryElementId, animation);
+          
+          if (animationBaseEffects.length > 0) {
+            const effectsForAnimationAndPropagation: TransformEffect[] = [];
 
-            // Update currentVisualX/Y for the *next* step's start
-            currentVisualX += baseEffect.translateX || 0;
-            currentVisualY += baseEffect.translateY || 0;
-          } else {
-            // For non-translate effects, or if they need different sequence handling:
-            // If scale/rotate also need to start from a sequence-aware accumulated state,
-            // similar logic for initialScaleX/Y etc. might be needed here.
-            // For now, pass them through, assuming their initial state is handled by gsap.to or is absolute.
+            for (const baseEffect of animationBaseEffects) {
+              const actualAnimationEffect = { ...baseEffect }; // Copy base effect
+
+              if (actualAnimationEffect.type === 'translate') {
+                // Set the 'from' part of fromTo to the current visual position
+                actualAnimationEffect.initialOffsetX = groupInitialX;
+                actualAnimationEffect.initialOffsetY = groupInitialY;
+                
+                // translateX/Y from baseEffect are the travel for *this* animation.
+                // _applyTransform will calculate 'to' as initialOffset + travel.
+
+                // Update currentVisualX/Y for positioning effects (these affect the final position)
+                currentVisualX += baseEffect.translateX || 0;
+                currentVisualY += baseEffect.translateY || 0;
+              } else {
+                // For non-translate effects, or if they need different sequence handling:
+                // If scale/rotate also need to start from a sequence-aware accumulated state,
+                // similar logic for initialScaleX/Y etc. might be needed here.
+                // For now, pass them through, assuming their initial state is handled by gsap.to or is absolute.
+              }
+              effectsForAnimationAndPropagation.push(actualAnimationEffect);
+            }
+
+            // Directly apply the calculated animation effects to the primary element for this animation
+            for (const effectToApply of effectsForAnimationAndPropagation) {
+              this._applyTransform(primaryElementId, effectToApply, animationSyncData);
+            }
+
+            // Apply self-compensation using the modified effects for fluid animation
+            const animationSelfCompensation = this._applySelfCompensation(primaryElementId, effectsForAnimationAndPropagation, animationSyncData);
+
+            // Apply compensating transforms to dependent elements using modified effects
+            if (affectedElements.length > 0) {
+              this._applyCompensatingTransforms(
+                primaryElementId,
+                effectsForAnimationAndPropagation, 
+                animationSelfCompensation,
+                animationSyncData
+              );
+            }
+
+            // Update the element's logical transform state using the original base effects
+            for (const baseEffect of animationBaseEffects) {
+              this._updateElementTransformState(primaryElementId, baseEffect);
+            }
           }
-          effectsForAnimationAndPropagation.push(actualStepEffect);
         }
 
-        // Directly apply the calculated animation effects to the primary element for this step
-        for (const effectToApply of effectsForAnimationAndPropagation) {
-          this._applyTransform(primaryElementId, effectToApply, stepSyncData);
-        }
-
-        // Apply self-compensation using the modified effects for fluid animation
-        const stepSelfCompensation = this._applySelfCompensation(primaryElementId, effectsForAnimationAndPropagation, stepSyncData);
-
-        // Apply compensating transforms to dependent elements using modified effects
-        if (affectedElements.length > 0) {
-          this._applyCompensatingTransforms(
-            primaryElementId,
-            effectsForAnimationAndPropagation, 
-            stepSelfCompensation,
-            stepSyncData
-          );
-        }
-
-        // Update the element's logical transform state using the original base effects
-        for (const baseEffect of stepBaseEffects) {
-          this._updateElementTransformState(primaryElementId, baseEffect);
-        }
+        // Update cumulative delay for the next step group's base delay point
+        // Use the maximum duration from this group to ensure next index waits for all animations
+        cumulativeDelay += maxGroupDuration;
       }
-
-      // Update cumulative delay for the next step's base delay point
-      cumulativeDelay += (step.delay || 0) + step.duration;
     }
 
-    console.log(`[TransformPropagator] Processed animation sequence for ${primaryElementId} with ${sortedSteps.length} steps. Initial offset: (${sequenceOverallInitialX}, ${sequenceOverallInitialY}). Final visual endpoint: (${currentVisualX}, ${currentVisualY}). Affected dependents: ${affectedElements.length}`);
+    console.log(`[TransformPropagator] Processed animation sequence for ${primaryElementId} with ${sortedStepGroups.length} step groups. Initial offset: (${sequenceOverallInitialX}, ${sequenceOverallInitialY}). Final visual endpoint: (${currentVisualX}, ${currentVisualY}). Affected dependents: ${affectedElements.length}`);
   }
 
   /**

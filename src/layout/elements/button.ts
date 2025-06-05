@@ -497,21 +497,21 @@ export class Button {
             const tl = gsap.timeline();
             let lastIndexProcessed = -1;
 
-            // Sort steps by index primarily, then by original order if index is the same (for stable behavior)
-            const sortedSteps = [...animationSequence.steps].sort((a, b) => {
-                if (a.index !== b.index) {
-                    return a.index - b.index;
-                }
-                // If indexes are the same, maintain original relative order (or add other criteria)
-                return 0; // Assuming original order is preserved by spread or no secondary sort needed yet
-            });
+            // Sort step groups by index
+            const sortedStepGroups = [...animationSequence.steps].sort((a, b) => a.index - b.index);
 
             // Handle transform propagation for the entire sequence (if applicable)
-            // This is called once before the timeline construction begins.
-            if (animationSequence.steps.some((step: any) => this._stepAffectsPositioning(step))) {
+            // Check all animations in all step groups to see if any affect positioning
+            const hasPositioningAnimations = sortedStepGroups.some((stepGroup: any) => 
+                stepGroup.animations?.some((animation: any) => this._stepAffectsPositioning(animation))
+            );
+
+            if (hasPositioningAnimations) {
+                // Use the first animation from the first step group for sync data
+                const firstAnimation = sortedStepGroups[0]?.animations?.[0];
                 const baseSyncDataForPropagator = { 
-                    duration: sortedSteps[0]?.duration || 0.5, 
-                    ease: sortedSteps[0]?.ease || 'power2.out' 
+                    duration: firstAnimation?.duration || 0.5, 
+                    ease: firstAnimation?.ease || 'power2.out' 
                 };
                 import('../../utils/transform-propagator.js').then(({ transformPropagator }) => {
                     transformPropagator.processAnimationSequenceWithPropagation(
@@ -524,32 +524,55 @@ export class Button {
                 });
             }
 
-            sortedSteps.forEach((stepConfig: any) => {
-                let positionInTimeline: string;
+            // Track cumulative timeline position for proper sequencing
+            let cumulativeTimelinePosition = 0;
 
-                if (stepConfig.index > lastIndexProcessed) {
-                    // This step starts a new sequential group
-                    positionInTimeline = '>'; // Appends to the end of the timeline
-                } else if (stepConfig.index === lastIndexProcessed) {
-                    // This step is concurrent with the previous step(s) in the same index group
-                    positionInTimeline = '<'; // Starts at the same time as the previously added animation
+            // Process each step group
+            sortedStepGroups.forEach((stepGroup: any) => {
+                const currentIndex = stepGroup.index;
+                let positionInTimeline: string | number;
+
+                if (currentIndex > lastIndexProcessed) {
+                    // This step group starts after the previous index group is complete
+                    // Use the cumulative position to ensure proper timing
+                    positionInTimeline = cumulativeTimelinePosition;
                 } else {
-                    // Fallback for unsorted or unexpectedly ordered steps (should ideally not happen)
-                    console.warn(`[${this._id}] Animation step index ${stepConfig.index} is less than lastProcessedIndex ${lastIndexProcessed}. Appending to end.`);
-                    positionInTimeline = '>';
+                    // Fallback for unsorted or unexpectedly ordered steps
+                    console.warn(`[${this._id}] Animation step group index ${currentIndex} is not greater than lastProcessedIndex ${lastIndexProcessed}. Using cumulative position.`);
+                    positionInTimeline = cumulativeTimelinePosition;
                 }
 
-                lastIndexProcessed = stepConfig.index; // Update for the next iteration
+                // Calculate the maximum duration for this group (including delays)
+                let maxGroupDuration = 0;
+                if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
+                    stepGroup.animations.forEach((animation: any) => {
+                        const animationDuration = (animation.duration || 0) + (animation.delay || 0);
+                        maxGroupDuration = Math.max(maxGroupDuration, animationDuration);
+                    });
+                }
 
-                // animationManager will use stepConfig.delay as a delay from 'positionInTimeline'
-                animationManager.executeTransformableAnimation(
-                    elementId,
-                    stepConfig, 
-                    gsap,      
-                    this._getShadowElement,
-                    tl,        
-                    positionInTimeline 
-                );
+                // Process all animations in this step group simultaneously
+                if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
+                    stepGroup.animations.forEach((animationConfig: any, animationIndex: number) => {
+                        // ALL animations in the same group use the same absolute timeline position
+                        // This ensures they start simultaneously without GSAP positioning conflicts
+                        const timelinePosition = positionInTimeline;
+
+                        // Execute each animation in the group
+                        animationManager.executeTransformableAnimation(
+                            elementId,
+                            animationConfig, 
+                            gsap,      
+                            this._getShadowElement,
+                            tl,        
+                            timelinePosition 
+                        );
+                    });
+                }
+
+                // Update cumulative position for the next step group
+                cumulativeTimelinePosition += maxGroupDuration;
+                lastIndexProcessed = currentIndex;
             });
 
             // The timeline will play automatically based on its construction.

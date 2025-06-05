@@ -323,9 +323,9 @@ export class StateManager {
       ease: 'power2.out' // Default ease, will be overridden by individual steps
     };
 
-    // Check if any step in the sequence affects positioning and requires transform propagation
-    const hasPositioningEffects = config.steps.some((step: any) => 
-      this._stepAffectsPositioning(step)
+    // Check if any animation in any step group affects positioning and requires transform propagation
+    const hasPositioningEffects = config.steps.some((stepGroup: any) => 
+      stepGroup.animations?.some((animation: any) => this._stepAffectsPositioning(animation))
     );
 
     if (hasPositioningEffects) {
@@ -343,22 +343,58 @@ export class StateManager {
 
     // Create a GSAP timeline for the primary element's animation sequence
     const tl = gsap.timeline();
-    // Sort steps by index, just in case they are not ordered in YAML
-    const sortedSteps = [...config.steps].sort((a, b) => (a.index || 0) - (b.index || 0));
+    // Sort step groups by index, just in case they are not ordered in YAML
+    const sortedStepGroups = [...config.steps].sort((a, b) => (a.index || 0) - (b.index || 0));
+    let lastIndexProcessed = -1;
 
-    sortedSteps.forEach((stepConfig: any) => {
-      // Position in timeline: '>' means at the end of the timeline.
-      // Add stepConfig.delay to insert it after the previous step plus its specific delay.
-      const positionInTimeline = `>${stepConfig.delay || 0}`;
-      
-      animationManager.executeTransformableAnimation(
-        element.id,
-        stepConfig,
-        gsap, // gsapInstance
-        this.animationContext?.getShadowElement,
-        tl, // Pass the timeline instance
-        positionInTimeline // Pass the calculated position for the timeline
-      );
+    // Track cumulative timeline position for proper sequencing
+    let cumulativeTimelinePosition = 0;
+
+    sortedStepGroups.forEach((stepGroup: any) => {
+      const currentIndex = stepGroup.index || 0;
+      let positionInTimeline: string | number;
+
+      if (currentIndex > lastIndexProcessed) {
+        // This step group starts after the previous index group is complete
+        // Use the cumulative position to ensure proper timing
+        positionInTimeline = cumulativeTimelinePosition;
+      } else {
+        // Fallback for unsorted or unexpectedly ordered steps
+        console.warn(`[StateManager] Animation step group index ${currentIndex} is not greater than lastProcessedIndex ${lastIndexProcessed}. Using cumulative position.`);
+        positionInTimeline = cumulativeTimelinePosition;
+      }
+
+      // Calculate the maximum duration for this group (including delays)
+      let maxGroupDuration = 0;
+      if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
+        stepGroup.animations.forEach((animation: any) => {
+          const animationDuration = (animation.duration || 0) + (animation.delay || 0);
+          maxGroupDuration = Math.max(maxGroupDuration, animationDuration);
+        });
+      }
+
+      // Process all animations in this step group simultaneously
+      if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
+        stepGroup.animations.forEach((animationConfig: any, animationIndex: number) => {
+          // ALL animations in the same group use the same absolute timeline position
+          // This ensures they start simultaneously without GSAP positioning conflicts
+          const timelinePosition = positionInTimeline;
+
+          // Execute each animation in the group
+          animationManager.executeTransformableAnimation(
+            element.id,
+            animationConfig,
+            gsap, // gsapInstance
+            this.animationContext?.getShadowElement,
+            tl, // Pass the timeline instance
+            timelinePosition // Pass the calculated position for the timeline
+          );
+        });
+      }
+
+      // Update cumulative position for the next step group
+      cumulativeTimelinePosition += maxGroupDuration;
+      lastIndexProcessed = currentIndex;
     });
   }
 

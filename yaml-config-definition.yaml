@@ -97,6 +97,7 @@ groups: <array>                  # Required: Defines groups of elements. Element
 
         animations:                # Optional: Defines animations for this element.
           on_load: <animation_definition>    # Optional: Animation when element is first rendered.
+                                             #   Can be a single animation OR an animation_sequence with steps.
           on_show: <animation_definition>    # Optional: Animation when element becomes visible.
           on_hide: <animation_definition>    # Optional: Animation when element is hidden.
           custom_states: <array>     # Optional: State-based animations.
@@ -196,42 +197,42 @@ action_definition:                   # Action configuration object.
 
 # === Animation Definition ===
 animation_definition:                # Animation definition for elements and groups.
-  type: <string>                     # Required: Animation type.
+  - type: <string>                   # Required: Animation type.
                                      #   Options: "fade", "slide", "scale", "custom_gsap".
   
-  # --- Type-specific parameters ---
-  fade_params:                       # Optional: Parameters for fade animations (if type: "fade").
-    opacity_start: <number>          # Optional: Starting opacity (0-1).
-    opacity_end: <number>            # Optional: Ending opacity (0-1).
-  
-  slide_params:                      # Optional: Parameters for slide animations (if type: "slide").
-    direction: <string>              # Required: Slide direction - "up", "down", "left", "right".
-    distance: <string>               # Required: Distance as string (e.g., "100px").
-    opacity_start: <number>          # Optional: Starting opacity (0-1).
-    opacity_end: <number>            # Optional: Ending opacity (0-1).
-    movement: <string>               # Optional: Movement type - "in" (toward anchor) or "out" (away from anchor).
-                                     #   When specified, changes how direction is interpreted relative to the element's anchor position.
-  
-  scale_params:                      # Optional: Parameters for scale animations (if type: "scale").
-    scale_start: <number>            # Optional: Starting scale factor.
-    scale_end: <number>              # Optional: Ending scale factor.
-    transform_origin: <string>       # Optional: Transform origin point.
-  
-  custom_gsap_vars: <object>         # Optional: Custom GSAP animation variables (if type: "custom_gsap").
-  
-  # --- Common Animation Properties ---
-  duration: <number>                 # Required: Duration in milliseconds.
-  delay: <number>                    # Optional: Delay before animation starts in milliseconds. Default: 0.
-  ease: <string>                     # Optional: GSAP easing function. Default: "power2.out".
-  repeat: <number>                   # Optional: Number of times to repeat (-1 for infinite). Default: 0.
-  yoyo: <boolean>                    # Optional: Reverse animation on repeat. Default: false.
-  
-  # --- Targeting ---
-  target_self: <boolean>             # Optional: Target this element itself. Default: false.
-  target_elements_ref: <array>       # Optional: Array of element IDs to target.
-    - <string>                       # Element ID reference.
-  target_groups_ref: <array>         # Optional: Array of group IDs to target.
-    - <string>                       # Group ID reference.
+    # --- Type-specific parameters ---
+    fade_params:                       # Optional: Parameters for fade animations (if type: "fade").
+      opacity_start: <number>          # Optional: Starting opacity (0-1).
+      opacity_end: <number>            # Optional: Ending opacity (0-1).
+    
+    slide_params:                      # Optional: Parameters for slide animations (if type: "slide").
+      direction: <string>              # Required: Slide direction - "up", "down", "left", "right".
+      distance: <string>               # Required: Distance as string (e.g., "100px").
+      opacity_start: <number>          # Optional: Starting opacity (0-1).
+      opacity_end: <number>            # Optional: Ending opacity (0-1).
+      movement: <string>               # Optional: Movement type - "in" (toward anchor) or "out" (away from anchor).
+                                      #   When specified, changes how direction is interpreted relative to the element's anchor position.
+    
+    scale_params:                      # Optional: Parameters for scale animations (if type: "scale").
+      scale_start: <number>            # Optional: Starting scale factor.
+      scale_end: <number>              # Optional: Ending scale factor.
+      transform_origin: <string>       # Optional: Transform origin point.
+    
+    custom_gsap_vars: <object>         # Optional: Custom GSAP animation variables (if type: "custom_gsap").
+    
+    # --- Common Animation Properties ---
+    duration: <number>                 # Required: Duration in milliseconds.
+    delay: <number>                    # Optional: Delay before animation starts in milliseconds. Default: 0.
+    ease: <string>                     # Optional: GSAP easing function. Default: "power2.out".
+    repeat: <number>                   # Optional: Number of times to repeat (-1 for infinite). Default: 0.
+    yoyo: <boolean>                    # Optional: Reverse animation on repeat. Default: false.
+    
+    # --- Targeting ---
+    target_self: <boolean>             # Optional: Target this element itself. Default: false.
+    target_elements_ref: <array>       # Optional: Array of element IDs to target.
+      - <string>                       # Element ID reference.
+    target_groups_ref: <array>         # Optional: Array of group IDs to target.
+      - <string>                       # Group ID reference.
 
 
 # === Animation Sequence Definition (for complex multi-step animations) ===
@@ -242,21 +243,7 @@ animation_sequence:                  # Alternative: Animation sequence with mult
   target_groups_ref: <array>         # Optional: Array of group IDs to target.
     - <string>                       # Group ID reference.
   
-  steps: <array>                     # Required: Array of animation steps.
-    # --- Animation Step Configuration (Each item in the 'steps' array) ---
-    - index: <number>                # Required: Execution order. Same index = concurrent execution.
-      target_self: <boolean>         # Optional: Target this element for this step.
-      target_elements_ref: <array>   # Optional: Element IDs to target for this step.
-      target_groups_ref: <array>     # Optional: Group IDs to target for this step.
-      
-      type: <string>                 # Required: Animation type - "fade", "slide", "scale", "custom_gsap".
-      fade_params: <fade_params>     # Optional: Fade parameters (if type: "fade").
-      slide_params: <slide_params>   # Optional: Slide parameters (if type: "slide").
-      scale_params: <scale_params>   # Optional: Scale parameters (if type: "scale").
-      custom_gsap_vars: <object>     # Optional: Custom GSAP vars (if type: "custom_gsap").
-      
-      duration: <number>             # Required: Duration for this step.
-      delay: <number>                # Optional: Delay for this step.
-      ease: <string>                 # Optional: Easing for this step.
-      repeat: <number>               # Optional: Repeat count for this step.
-      yoyo: <boolean>                # Optional: Yoyo setting for this step.
+  steps: <array>                     # Required: Array of animation step groups.
+    # --- Animation Step Group Configuration (Each item in the 'steps' array) ---
+    - index: <number>                # Required: Execution order. Groups with same index execute concurrently.
+      animations: <animation_definition>            # Required: Array of animations to execute simultaneously in this group.

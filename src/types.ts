@@ -268,11 +268,15 @@ export interface AnimationSequence {
   target_self?: boolean;
   target_elements_ref?: string[];
   target_groups_ref?: string[];
-  steps: AnimationStepConfig[];
+  steps: AnimationStepGroupConfig[];
+}
+
+export interface AnimationStepGroupConfig {
+  index: number;
+  animations: AnimationStepConfig[];
 }
 
 export interface AnimationStepConfig {
-  index: number;
   target_self?: boolean;
   target_elements_ref?: string[];
   target_groups_ref?: string[];
