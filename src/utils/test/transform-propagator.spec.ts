@@ -326,8 +326,12 @@ describe('TransformPropagator', () => {
     });
 
     it('should handle reverse animations with proper sync data', () => {
-      const scaleTarget = new MockLayoutElement('scale_target');
-      const dependentElement = new MockLayoutElement('dependent');
+      const scaleTarget = new MockLayoutElement('scale_target', {
+        x: 100, y: 100, width: 100, height: 40, calculated: true
+      });
+      const dependentElement = new MockLayoutElement('dependent', {
+        x: 210, y: 120, width: 50, height: 20, calculated: true
+      });
       dependentElement.layoutConfig = {
         anchor: {
           anchorTo: 'scale_target',
@@ -343,7 +347,11 @@ describe('TransformPropagator', () => {
 
              const scaleAnimation = {
          type: 'scale' as const,
-         scale_params: { scale_end: 1.5 },
+        scale_params: { 
+          scale_start: 1,
+          scale_end: 1.5,
+          transform_origin: 'center center'
+        },
          duration: 0.3,
          ease: 'power2.inOut'
        };

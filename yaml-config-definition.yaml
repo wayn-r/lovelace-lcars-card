@@ -208,6 +208,9 @@ animation_definition:                # Animation definition for elements and gro
     direction: <string>              # Required: Slide direction - "up", "down", "left", "right".
     distance: <string>               # Required: Distance as string (e.g., "100px").
     opacity_start: <number>          # Optional: Starting opacity (0-1).
+    opacity_end: <number>            # Optional: Ending opacity (0-1).
+    movement: <string>               # Optional: Movement type - "in" (toward anchor) or "out" (away from anchor).
+                                     #   When specified, changes how direction is interpreted relative to the element's anchor position.
   
   scale_params:                      # Optional: Parameters for scale animations (if type: "scale").
     scale_start: <number>            # Optional: Starting scale factor.

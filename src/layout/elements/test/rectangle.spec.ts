@@ -35,7 +35,7 @@ describe('RectangleElement', () => {
     if (!inputResult) return null;
 
     let actualPathResult: SVGTemplateResult | null = null;
-  console.log('getPathAttributesFromResult - inputResult:', JSON.stringify(inputResult, null, 2));
+  
 
     /*
       Check if inputResult is the direct path template or a group containing it.
@@ -59,11 +59,11 @@ describe('RectangleElement', () => {
     if (inputResult.strings && inputResult.strings.length > 2 && inputResult.strings[1].includes('__shape') && inputResult.strings[1].includes('d=')) {
       // Heuristic: If strings[1] contains '__shape' (our specific id pattern for direct path) AND 'd=', assume it's the direct path template.
       actualPathResult = inputResult;
-    console.log('getPathAttributesFromResult - identified as direct path, actualPathResult set from inputResult');
-  } else if (inputResult.values && inputResult.values.length > 0 && inputResult.values[0] && typeof inputResult.values[0] === 'object' && '_$litType$' in inputResult.values[0]) {
-      // Assume it's a group, and the first value is the shape/path template
-      actualPathResult = inputResult.values[0] as SVGTemplateResult;
-    console.log('getPathAttributesFromResult - identified as group, actualPathResult set from inputResult.values[0]');
+
+  } else if (inputResult.values && inputResult.values.length > 1 && inputResult.values[1] && typeof inputResult.values[1] === 'object' && '_$litType$' in inputResult.values[1]) {
+      // Assume it's a group, and the second value is the shape/path template (first value is element ID)
+      actualPathResult = inputResult.values[1] as SVGTemplateResult;
+
   } else if (inputResult.strings && inputResult.strings.some(s => s.includes('data-testid="mock-button"'))) {
         // Handle specific mock button case (this seems to be for button elements themselves, not generic paths)
         const pathDataMatch = inputResult.strings.join('').match(/data-path="([^\"]*)"/);
@@ -80,7 +80,7 @@ describe('RectangleElement', () => {
         // or if the mock-button logic from the original code needs to be re-evaluated here.
         // For now, if actualPathResult couldn't be determined, return null.
         // The specific mock-button logic was moved up to be checked against inputResult directly.
-        console.log('getPathAttributesFromResult - actualPathResult is null or has no values before attribute extraction.');
+
       return null;
   }
 
@@ -171,7 +171,7 @@ describe('RectangleElement', () => {
         expect(attrs?.d).toBe(generateRectanglePath(0, 0, 10, 10, 0));
         expect(attrs?.fill).toBe('none');
         expect(attrs?.stroke).toBe('none');
-        expect(attrs?.strokeWidth).toBe('0');
+        expect(attrs?.['stroke-width']).toBe('0');
       });
 
       it('should render with specified fill, stroke, strokeWidth, and rx', () => {
@@ -445,9 +445,9 @@ describe('RectangleElement', () => {
         text_element: undefined // Ensure no text_element is configured
         // No text property
       };
-      // Create a proper mock button that returns a valid SVG result
+      // Create a proper mock button that returns a valid SVG result matching the expected format
       const mockButton = {
-        createButton: vi.fn().mockReturnValue(svg`<g class="lcars-button-group"><path d="M0,0 L100,0 L100,30 L0,30 Z"/></g>`)
+        createButton: vi.fn().mockReturnValue(svg`<g id="rect-button-no-text" class="lcars-button-group"><path d="M0,0 L100,0 L100,30 L0,30 Z"/></g>`)
       };
       
       rectangleElement = new RectangleElement('rect-button-no-text', props, {}, mockHass, mockRequestUpdate);

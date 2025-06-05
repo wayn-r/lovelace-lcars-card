@@ -462,6 +462,20 @@ export class Button {
      * Execute animation with transform propagation support
      */
     private _executeAnimationWithPropagation(elementId: string, animation: any): void {
+        // Check if this is an animation sequence or single animation
+        if (animation.steps && Array.isArray(animation.steps)) {
+            // Handle animation sequence with sequence-aware transform propagation
+            this._executeAnimationSequenceWithPropagation(elementId, animation);
+        } else {
+            // Handle single animation
+            this._executeSingleAnimationWithPropagation(elementId, animation);
+        }
+    }
+
+    /**
+     * Execute a single animation with transform propagation support
+     */
+    private _executeSingleAnimationWithPropagation(elementId: string, animation: any): void {
         // Ensure GSAP is loaded, then delegate to AnimationManager
         import('gsap').then(({ gsap }) => {
             animationManager.executeTransformableAnimation(
@@ -473,6 +487,95 @@ export class Button {
         }).catch(error => {
             console.error(`[${this._id}] GSAP import failed for animation:`, error);
         });
+    }
+
+    /**
+     * Execute an animation sequence with sequence-aware transform propagation
+     */
+    private _executeAnimationSequenceWithPropagation(elementId: string, animationSequence: any): void {
+        import('gsap').then(({ gsap }) => {
+            const tl = gsap.timeline();
+            let lastIndexProcessed = -1;
+
+            // Sort steps by index primarily, then by original order if index is the same (for stable behavior)
+            const sortedSteps = [...animationSequence.steps].sort((a, b) => {
+                if (a.index !== b.index) {
+                    return a.index - b.index;
+                }
+                // If indexes are the same, maintain original relative order (or add other criteria)
+                return 0; // Assuming original order is preserved by spread or no secondary sort needed yet
+            });
+
+            // Handle transform propagation for the entire sequence (if applicable)
+            // This is called once before the timeline construction begins.
+            if (animationSequence.steps.some((step: any) => this._stepAffectsPositioning(step))) {
+                const baseSyncDataForPropagator = { 
+                    duration: sortedSteps[0]?.duration || 0.5, 
+                    ease: sortedSteps[0]?.ease || 'power2.out' 
+                };
+                import('../../utils/transform-propagator.js').then(({ transformPropagator }) => {
+                    transformPropagator.processAnimationSequenceWithPropagation(
+                        elementId,
+                        animationSequence, 
+                        baseSyncDataForPropagator
+                    );
+                }).catch(error => {
+                    console.error(`[${this._id}] Error importing transform propagator for sequence:`, error);
+                });
+            }
+
+            sortedSteps.forEach((stepConfig: any) => {
+                let positionInTimeline: string;
+
+                if (stepConfig.index > lastIndexProcessed) {
+                    // This step starts a new sequential group
+                    positionInTimeline = '>'; // Appends to the end of the timeline
+                } else if (stepConfig.index === lastIndexProcessed) {
+                    // This step is concurrent with the previous step(s) in the same index group
+                    positionInTimeline = '<'; // Starts at the same time as the previously added animation
+                } else {
+                    // Fallback for unsorted or unexpectedly ordered steps (should ideally not happen)
+                    console.warn(`[${this._id}] Animation step index ${stepConfig.index} is less than lastProcessedIndex ${lastIndexProcessed}. Appending to end.`);
+                    positionInTimeline = '>';
+                }
+
+                lastIndexProcessed = stepConfig.index; // Update for the next iteration
+
+                // animationManager will use stepConfig.delay as a delay from 'positionInTimeline'
+                animationManager.executeTransformableAnimation(
+                    elementId,
+                    stepConfig, 
+                    gsap,      
+                    this._getShadowElement,
+                    tl,        
+                    positionInTimeline 
+                );
+            });
+
+            // The timeline will play automatically based on its construction.
+            // tl.play(); // Explicit play if needed, but usually not if autoPlay is default true
+        }).catch(error => {
+            console.error(`[${this._id}] GSAP import failed for animation sequence:`, error);
+        });
+    }
+
+    /**
+     * Check if an animation step affects positioning
+     */
+    private _stepAffectsPositioning(step: any): boolean {
+        switch (step.type) {
+            case 'scale':
+            case 'slide':
+                return true;
+            case 'custom_gsap':
+                const customVars = step.custom_gsap_vars || {};
+                return customVars.scale !== undefined || 
+                       customVars.x !== undefined || 
+                       customVars.y !== undefined ||
+                       customVars.rotation !== undefined;
+            default:
+                return false;
+        }
     }
 
     updateHass(hass?: HomeAssistant): void {

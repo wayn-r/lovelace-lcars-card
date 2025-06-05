@@ -188,6 +188,82 @@ export class TransformPropagator {
   }
 
   /**
+   * Process an animation sequence and apply compensating transforms to maintain anchoring
+   * This method handles sequences where multiple animation steps need to be coordinated
+   */
+  processAnimationSequenceWithPropagation(
+    primaryElementId: string,
+    animationSequence: any, // AnimationSequence type
+    baseSyncData: AnimationSyncData
+  ): void {
+    if (!this.elementsMap || !this.getShadowElement) {
+      console.warn('[TransformPropagator] Not initialized, cannot process animation sequence');
+      return;
+    }
+
+    if (!animationSequence.steps || !Array.isArray(animationSequence.steps)) {
+      console.warn('[TransformPropagator] Invalid animation sequence: missing steps array');
+      return;
+    }
+
+    // Sort steps by index to ensure proper execution order
+    const sortedSteps = [...animationSequence.steps].sort((a, b) => (a.index || 0) - (b.index || 0));
+    
+    // Find all elements that depend on this element once
+    const affectedElements = this._findDependentElements(primaryElementId);
+    
+    if (affectedElements.length === 0) {
+      return; // No dependent elements, no compensation needed
+    }
+
+    // Process each step and accumulate the transform effects
+    const cumulativeTransformEffects: TransformEffect[] = [];
+    let cumulativeDelay = 0;
+
+    for (const step of sortedSteps) {
+      // Create sync data for this step
+      const stepSyncData: AnimationSyncData = {
+        duration: step.duration,
+        ease: step.ease || baseSyncData.ease,
+        delay: cumulativeDelay + (step.delay || 0),
+        repeat: step.repeat,
+        yoyo: step.yoyo
+      };
+
+      // Analyze the transform effects of this step
+      const stepTransformEffects = this._analyzeTransformEffects(primaryElementId, step);
+      
+      if (stepTransformEffects.length > 0) {
+        // Update cumulative effects
+        cumulativeTransformEffects.push(...stepTransformEffects);
+
+        // Apply self-compensation for this step
+        const stepSelfCompensation = this._applySelfCompensation(primaryElementId, stepTransformEffects, stepSyncData);
+
+        // Calculate and apply compensating transforms to dependent elements for this step
+        this._applyCompensatingTransforms(
+          primaryElementId,
+          stepTransformEffects,
+          stepSelfCompensation,
+          affectedElements,
+          stepSyncData
+        );
+
+        // Update the element's transform state
+        for (const effect of stepTransformEffects) {
+          this._updateElementTransformState(primaryElementId, effect);
+        }
+      }
+
+      // Update cumulative delay for next step
+      // Next step should start after this step's delay + duration
+      cumulativeDelay += (step.delay || 0) + step.duration;
+    }
+
+    console.log(`[TransformPropagator] Processed animation sequence for ${primaryElementId} with ${sortedSteps.length} steps affecting ${affectedElements.length} dependent elements`);
+  }
+
+  /**
    * Build the dependency graph from current layout configuration
    */
   private _buildDependencyGraph(): void {
@@ -326,23 +402,46 @@ export class TransformPropagator {
     const slideParams = animationConfig.slide_params;
     const direction = slideParams?.direction;
     const distance = this._parseDistance(slideParams?.distance || '0px');
+    const movement = slideParams?.movement;
 
     let translateX = 0;
     let translateY = 0;
 
+    // The TransformEffect should represent the net displacement of this animation step
+    // from the element's original layout position.
+    // The 'movement' parameter ('in'/'out') is critical here:
+    // - 'in': The element animates *to* its layout position. Net displacement from layout = 0.
+    // - 'out': The element animates *away from* its layout position by 'distance'.
+    // - undefined: Assumed to be a direct translation, similar to 'out'.
+
+    let baseTranslateX = 0;
+    let baseTranslateY = 0;
+
     switch (direction) {
       case 'left':
-        translateX = -distance;
+        baseTranslateX = -distance;
         break;
       case 'right':
-        translateX = distance;
+        baseTranslateX = distance;
         break;
       case 'up':
-        translateY = -distance;
+        baseTranslateY = -distance;
         break;
       case 'down':
-        translateY = distance;
+        baseTranslateY = distance;
         break;
+    }
+
+    if (movement === 'in') {
+      // If movement is 'in', the element animates TO its layout position.
+      // So, its net displacement FROM its layout position for this step is 0.
+      translateX = 0;
+      translateY = 0;
+    } else {
+      // If movement is 'out' or undefined, it animates AWAY from (or directly from)
+      // its layout position by 'distance'.
+      translateX = baseTranslateX;
+      translateY = baseTranslateY;
     }
 
     return {
@@ -415,12 +514,20 @@ export class TransformPropagator {
       return null; // No anchor compensation needed
     }
 
-    // Calculate how much the element's anchor point will move due to its own transformation
+    // Filter out translation effects - slides are intended to move the element
+    // and should not be compensated. Only geometric changes (scale, rotation) need compensation.
+    const geometricEffects = transformEffects.filter(effect => effect.type !== 'translate');
+    
+    if (geometricEffects.length === 0) {
+      return null; // No geometric effects to compensate
+    }
+
+    // Calculate how much the element's anchor point will move due to its geometric transformations
     const ownAnchorPoint = anchorConfig.anchorPoint || 'topLeft';
     const anchorDisplacement = this._calculateAnchorDisplacement(
       element,
       ownAnchorPoint,
-      transformEffects
+      geometricEffects // Only geometric effects, not translations
     );
 
     if (anchorDisplacement.x === 0 && anchorDisplacement.y === 0) {
@@ -431,8 +538,8 @@ export class TransformPropagator {
     // to keep its anchor point in the same relative position
     const compensatingTransform: TransformEffect = {
       type: 'translate',
-      translateX: -anchorDisplacement.x, // Negative to counteract the displacement
-      translateY: -anchorDisplacement.y,
+      translateX: Math.round(-anchorDisplacement.x * 1000) / 1000, // Round to avoid precision issues
+      translateY: Math.round(-anchorDisplacement.y * 1000) / 1000,
       transformOrigin: { x: 0, y: 0 } // Transform origin is not relevant for pure translation
     };
 
@@ -483,24 +590,27 @@ export class TransformPropagator {
         transformEffects // Use the original transform effects of the primary animation
       );
 
-      let netDisplacementX = displacementFromEffects.x;
-      let netDisplacementY = displacementFromEffects.y;
+      // The dependent element should move to follow the net position of the primary's anchor point
+      // This includes both the direct animation displacement AND any self-compensation the primary applies
+      let compensationX = displacementFromEffects.x;
+      let compensationY = displacementFromEffects.y;
 
-      // Add the primary element's self-compensation translation, if any
+      // Add the primary element's self-compensation translation
+      // The dependent should follow the primary's net movement, including its self-compensation
       if (primarySelfCompensation && primarySelfCompensation.type === 'translate') {
-        netDisplacementX += primarySelfCompensation.translateX || 0;
-        netDisplacementY += primarySelfCompensation.translateY || 0;
+        compensationX += primarySelfCompensation.translateX || 0;
+        compensationY += primarySelfCompensation.translateY || 0;
       }
       
-      if (netDisplacementX === 0 && netDisplacementY === 0) {
+      if (compensationX === 0 && compensationY === 0) {
         // No net displacement, no compensation needed for this dependent
         continue; 
       }
 
       const compensatingTransformForDependent: TransformEffect = {
         type: 'translate',
-        translateX: netDisplacementX,
-        translateY: netDisplacementY,
+        translateX: Math.round(compensationX * 1000) / 1000, // Round to 3 decimal places
+        translateY: Math.round(compensationY * 1000) / 1000,
         transformOrigin: { x: 0, y: 0 } // Not relevant for pure translation
       };
       
@@ -608,50 +718,47 @@ export class TransformPropagator {
   ): void {
     if (!this.getShadowElement) return;
 
-    const domElement = this.getShadowElement(elementId);
-    if (!domElement) return;
+    const targetElement = this.getShadowElement(elementId);
+    if (!targetElement) return;
 
-    // Import GSAP and apply the transform
+    // Import GSAP dynamically to avoid bundling issues
     import('gsap').then(({ gsap }) => {
+      // Build animation properties for GSAP
       const animationProps: any = {
-        duration: syncData.duration,
-        ease: syncData.ease,
-        overwrite: false // Allow tweens to overlap for smooth sequenced compensation
+        duration: syncData.duration || 0.5,
+        ease: syncData.ease || 'power2.out',
+        overwrite: false, // Don't automatically overwrite existing animations
       };
 
-      // Ensure all timeline properties are synchronized
-      if (syncData.delay !== undefined) animationProps.delay = syncData.delay;
-      if (syncData.repeat !== undefined) animationProps.repeat = syncData.repeat;
-      if (syncData.yoyo !== undefined) animationProps.yoyo = syncData.yoyo;
-
-      switch (transform.type) {
-        case 'scale':
-          animationProps.scaleX = transform.scaleTargetX;
-          animationProps.scaleY = transform.scaleTargetY;
-          animationProps.transformOrigin = `${transform.transformOrigin.x}px ${transform.transformOrigin.y}px`;
-          break;
-        case 'translate':
-          animationProps.x = `+=${transform.translateX}`;
-          animationProps.y = `+=${transform.translateY}`;
-          break;
-        case 'rotate':
-          animationProps.rotation = transform.rotation;
-          animationProps.transformOrigin = `${transform.transformOrigin.x}px ${transform.transformOrigin.y}px`;
-          break;
+      // Handle optional animation properties
+      if (syncData.delay !== undefined) {
+        animationProps.delay = syncData.delay;
+      }
+      if (syncData.repeat !== undefined) {
+        animationProps.repeat = syncData.repeat;
+      }
+      if (syncData.yoyo !== undefined) {
+        animationProps.yoyo = syncData.yoyo;
       }
 
-      // Create the animation and ensure it respects all timeline properties
-      const tween = gsap.to(domElement, animationProps);
-      
-      // Debug log for troubleshooting
-      console.log(`[TransformPropagator] Applied ${transform.type} transform to ${elementId}:`, {
-        transform,
-        syncData,
-        animationProps
-      });
-      
+      // Apply transform based on type
+      if (transform.type === 'translate') {
+        // Use relative positioning to ensure transforms are additive
+        animationProps.x = `+=${transform.translateX || 0}`;
+        animationProps.y = `+=${transform.translateY || 0}`;
+      } else if (transform.type === 'scale') {
+        animationProps.scale = transform.scaleTargetX || 1;
+        if (transform.transformOrigin) {
+          animationProps.transformOrigin = `${transform.transformOrigin.x}px ${transform.transformOrigin.y}px`;
+        }
+      }
+
+      animationProps.delay = syncData.delay || 0; // Ensure delay is explicitly 0 if undefined for GSAP
+
+      // Execute the animation
+      gsap.to(targetElement, animationProps);
     }).catch(error => {
-      console.error(`[TransformPropagator] GSAP import failed for compensating transform:`, error);
+      console.error(`[TransformPropagator] Error importing GSAP for element ${elementId}:`, error);
     });
   }
 

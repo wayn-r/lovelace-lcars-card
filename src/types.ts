@@ -298,6 +298,8 @@ export interface SlideParams {
   direction: 'up' | 'down' | 'left' | 'right';
   distance: string;
   opacity_start?: number;
+  opacity_end?: number;
+  movement?: 'in' | 'out'; // Optional: move toward ("in") or away from ("out") anchor position
 }
 
 export interface ScaleParams {

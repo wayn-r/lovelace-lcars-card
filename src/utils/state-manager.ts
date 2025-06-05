@@ -317,15 +317,68 @@ export class StateManager {
       return;
     }
 
-    // Execute each step using AnimationManager. The delay in each step config will handle sequencing.
-    config.steps.forEach((stepConfig: any) => {
+    // Create base sync data from the sequence configuration
+    const baseSyncData = {
+      duration: 0.5, // Default duration, will be overridden by individual steps
+      ease: 'power2.out' // Default ease, will be overridden by individual steps
+    };
+
+    // Check if any step in the sequence affects positioning and requires transform propagation
+    const hasPositioningEffects = config.steps.some((step: any) => 
+      this._stepAffectsPositioning(step)
+    );
+
+    if (hasPositioningEffects) {
+      // Use sequence-aware transform propagation
+      import('./transform-propagator.js').then(({ transformPropagator }) => {
+        transformPropagator.processAnimationSequenceWithPropagation(
+          element.id,
+          config,
+          baseSyncData
+        );
+      }).catch(error => {
+        console.error('[StateManager] Error importing transform propagator for sequence:', error);
+      });
+    }
+
+    // Create a GSAP timeline for the primary element's animation sequence
+    const tl = gsap.timeline();
+    // Sort steps by index, just in case they are not ordered in YAML
+    const sortedSteps = [...config.steps].sort((a, b) => (a.index || 0) - (b.index || 0));
+
+    sortedSteps.forEach((stepConfig: any) => {
+      // Position in timeline: '>' means at the end of the timeline.
+      // Add stepConfig.delay to insert it after the previous step plus its specific delay.
+      const positionInTimeline = `>${stepConfig.delay || 0}`;
+      
       animationManager.executeTransformableAnimation(
         element.id,
         stepConfig,
-        gsap,
-        this.animationContext?.getShadowElement
+        gsap, // gsapInstance
+        this.animationContext?.getShadowElement,
+        tl, // Pass the timeline instance
+        positionInTimeline // Pass the calculated position for the timeline
       );
     });
+  }
+
+  /**
+   * Check if an animation step affects positioning (similar to AnimationManager._animationAffectsPositioning)
+   */
+  private _stepAffectsPositioning(step: any): boolean {
+    switch (step.type) {
+      case 'scale':
+      case 'slide':
+        return true;
+      case 'custom_gsap':
+        const customVars = step.custom_gsap_vars || {};
+        return customVars.scale !== undefined || 
+               customVars.x !== undefined || 
+               customVars.y !== undefined ||
+               customVars.rotation !== undefined;
+      default:
+        return false;
+    }
   }
 
   /**

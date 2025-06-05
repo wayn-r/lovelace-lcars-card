@@ -63,7 +63,25 @@ describe('ElbowElement', () => {
 
   // Helper to get attributes from the SVGTemplateResult for non-button rendering
   const getPathAttributes = (result: SVGTemplateResult | null): Record<string, any> | null => {
-    if (!result || !result.values || result.values.length < 5) return null;
+    if (!result) return null;
+
+    // Check if it's a group template with a path inside
+    if (result.values && result.values.length > 1 && result.values[1] && typeof result.values[1] === 'object' && '_$litType$' in result.values[1]) {
+      // Extract the path template from the group
+      const pathTemplate = result.values[1] as SVGTemplateResult;
+      if (pathTemplate.values && pathTemplate.values.length >= 4) {
+        return {
+          id: pathTemplate.values[0],
+          d: pathTemplate.values[1],
+          fill: pathTemplate.values[2],
+          stroke: pathTemplate.values[3],
+          'stroke-width': pathTemplate.values[4],
+        };
+      }
+    }
+    
+    // Fallback for direct path template (shouldn't happen with current structure but keeping for safety)
+    if (result.values && result.values.length >= 5) {
     return {
       id: result.values[0],
       d: result.values[1],
@@ -71,6 +89,9 @@ describe('ElbowElement', () => {
       stroke: result.values[3],
       'stroke-width': result.values[4],
     };
+    }
+    
+    return null;
   };
 
   describe('Constructor and Initialization', () => {

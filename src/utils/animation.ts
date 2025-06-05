@@ -1017,7 +1017,9 @@ export class AnimationManager {
     elementId: string,
     animationConfig: any, 
     gsapInstance: any, // Pass GSAP explicitly
-    getShadowElement?: (id: string) => Element | null
+    getShadowElement?: (id: string) => Element | null,
+    timeline?: gsap.core.Timeline, // Optional: GSAP timeline instance
+    timelinePosition?: string | number // Optional: Position in the timeline (e.g., '>', '+=1')
   ): void {
     const targetElement = getShadowElement?.(elementId);
     if (!targetElement) {
@@ -1036,7 +1038,13 @@ export class AnimationManager {
     };
 
     // Process transform propagation if needed BEFORE the primary animation starts
-    if (this._animationAffectsPositioning(animationConfig)) {
+    // For timelines, propagation should ideally be handled *before* the timeline starts,
+    // or carefully synchronized if it needs to happen per step.
+    // Current propagation is element-wide, not per-step within a timeline yet.
+    if (!timeline && this._animationAffectsPositioning(animationConfig)) {
+      // Only run propagator if not part of a timeline, 
+      // as propagator itself might run its own GSAP animations immediately.
+      // For timeline usage, propagator should be called by the sequence orchestrator.
       transformPropagator.processAnimationWithPropagation(
         elementId,
         animationConfig, // Pass the full animation config
@@ -1044,12 +1052,15 @@ export class AnimationManager {
       );
     }
     
-    // Prepare GSAP animation properties based on type
     const animationProps: any = {
       duration,
       ease,
-      delay: delay || 0, // Ensure delay is explicitly 0 if undefined for GSAP
     };
+
+    // Only add delay to props if not part of a timeline (timeline handles sequencing via position)
+    if (!timeline && delay) {
+      animationProps.delay = delay;
+    }
     
     if (repeat !== undefined) animationProps.repeat = repeat;
     if (yoyo !== undefined) animationProps.yoyo = yoyo;
@@ -1059,11 +1070,15 @@ export class AnimationManager {
         const { scale_params } = animationConfig;
         if (scale_params) {
           if (scale_params.scale_start !== undefined) {
-            // Set initial state without animation for scale_start
-            gsapInstance.set(targetElement, { 
+            const initialScaleProps = {
               scale: scale_params.scale_start,
               transformOrigin: scale_params.transform_origin || 'center center'
-            });
+            };
+            if (timeline) {
+              timeline.set(targetElement, initialScaleProps, timelinePosition);
+            } else {
+              gsapInstance.set(targetElement, initialScaleProps);
+            }
           }
           animationProps.scale = scale_params.scale_end !== undefined ? scale_params.scale_end : 1;
           animationProps.transformOrigin = scale_params.transform_origin || 'center center';
@@ -1072,37 +1087,78 @@ export class AnimationManager {
       case 'slide':
         const { slide_params } = animationConfig;
         if (slide_params) {
-          let x = 0, y = 0;
           const distance = parseFloat(slide_params.distance) || 0;
+          const movement = slide_params.movement; // 'in', 'out', or undefined
+
+          let calculatedX = 0;
+          let calculatedY = 0;
+
           switch (slide_params.direction) {
-            case 'left': x = -distance; break;
-            case 'right': x = distance; break;
-            case 'up': y = -distance; break;
-            case 'down': y = distance; break;
+            case 'left': calculatedX = -distance; break;
+            case 'right': calculatedX = distance; break;
+            case 'up': calculatedY = -distance; break;
+            case 'down': calculatedY = distance; break;
           }
-          // GSAP's x and y are relative by default if starting with += or -=, absolute otherwise.
-          // For slide, we typically want to move *from* an offset or *to* a final position.
-          // Assuming slide implies moving *to* the new position from current.
-          // If opacity_start is 0, we might want to set initial x/y and fade in.
-          if (slide_params.opacity_start !== undefined && slide_params.opacity_start === 0) {
-            gsapInstance.set(targetElement, { x: x, y: y, opacity: 0 });
-            animationProps.opacity = 1;
-            animationProps.x = 0; // Animate to original position x=0
-            animationProps.y = 0; // Animate to original position y=0
+
+          const initialSetProps: any = {};
+          let needsInitialSet = false;
+
+          if (movement === 'in') {
+            // Element animates FROM an offset TO its natural position (0,0 for the animated properties).
+            // Initial position is the negation of the 'out' direction's target offset.
+            if (slide_params.direction === 'left' || slide_params.direction === 'right') {
+              initialSetProps.x = (slide_params.direction === 'left') ? distance : -distance;
+              animationProps.x = 0;
+            }
+            if (slide_params.direction === 'up' || slide_params.direction === 'down') {
+              initialSetProps.y = (slide_params.direction === 'up') ? distance : -distance;
+              animationProps.y = 0;
+            }
+            needsInitialSet = true;
+          } else if (movement === 'out') {
+            // Element animates FROM its natural position TO an offset.
+            if (calculatedX !== 0) animationProps.x = calculatedX;
+            if (calculatedY !== 0) animationProps.y = calculatedY;
           } else {
-            animationProps.x = x;
-            animationProps.y = y;
+            // No movement parameter: standard slide relative to current position.
+            // GSAP handles this as a relative animation if x/y are not already set (e.g. by a previous step in a timeline).
+            if (calculatedX !== 0) animationProps.x = calculatedX;
+            if (calculatedY !== 0) animationProps.y = calculatedY;
           }
+
+          // Handle opacity settings
           if (slide_params.opacity_start !== undefined) {
-            animationProps.opacity = slide_params.opacity_end !== undefined ? slide_params.opacity_end : 1;
+            initialSetProps.opacity = slide_params.opacity_start;
+            needsInitialSet = true;
           }
+
+          if (needsInitialSet && Object.keys(initialSetProps).length > 0) {
+            if (timeline) {
+              timeline.set(targetElement, initialSetProps, timelinePosition);
+            } else {
+              gsapInstance.set(targetElement, initialSetProps);
+            }
+          }
+          
+          if (slide_params.opacity_end !== undefined) {
+            animationProps.opacity = slide_params.opacity_end;
+          } else if (slide_params.opacity_start !== undefined) {
+            // If opacity_start was set, and opacity_end is not, default .to() opacity to 1
+            animationProps.opacity = 1;
+          }
+          // If neither opacity_start nor opacity_end are defined, opacity is not included in this step's .to() tween.
         }
         break;
-      case 'fade': // Added basic fade support
+      case 'fade':
         const { fade_params } = animationConfig;
         if (fade_params) {
           if (fade_params.opacity_start !== undefined) {
-            gsapInstance.set(targetElement, { opacity: fade_params.opacity_start });
+            const initialFadeProps = { opacity: fade_params.opacity_start };
+            if (timeline) {
+              timeline.set(targetElement, initialFadeProps, timelinePosition);
+            } else {
+              gsapInstance.set(targetElement, initialFadeProps);
+            }
           }
           animationProps.opacity = fade_params.opacity_end !== undefined ? fade_params.opacity_end : 1;
         }
@@ -1113,14 +1169,16 @@ export class AnimationManager {
           Object.assign(animationProps, custom_gsap_vars);
         }
         break;
-      default:
-        console.warn(`[AnimationManager] Unknown transformable animation type: ${type} for element ${elementId}`);
-        return; // Do not proceed if type is unknown
     }
-    
-    gsapInstance.to(targetElement, animationProps);
+
+    // The main animation call
+    if (timeline) {
+      timeline.to(targetElement, animationProps, timelinePosition);
+    } else {
+      gsapInstance.to(targetElement, animationProps);
+    }
   }
 }
 
 // Global animation manager instance for convenient access across the application
-export const animationManager = new AnimationManager(); 
+export const animationManager = new AnimationManager();
