@@ -166,7 +166,7 @@ export interface HoldActionDefinition extends ActionDefinition {
 }
 
 export interface ActionDefinition {
-  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state' | 'multi_action' | 'animate';
+  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state' | 'multi_action';
   
   // Service call specific
   service?: string;
@@ -190,7 +190,6 @@ export interface ActionDefinition {
   target_element_ref?: string;
   states?: string[];
   actions?: ActionDefinition[];
-  animation?: AnimationDefinition;
   
   // General properties
   confirmation?: boolean | {
@@ -235,11 +234,6 @@ export interface AnimationsConfig {
 export interface StateChangeAnimationConfig extends AnimationDefinition {
   from_state: string;
   to_state: string;
-}
-
-export interface AnimationActionConfig {
-  action: 'animate';
-  animation: AnimationDefinition | AnimationSequence;
 }
 
 export interface AnimationDefinition {
@@ -370,7 +364,7 @@ export interface LcarsButtonElementConfig {
 }
 
 export interface LcarsButtonActionConfig {
-  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state' | 'multi_action' | 'animate';
+  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state' | 'multi_action';
   service?: string;
   service_data?: Record<string, any>;
   navigation_path?: string;
@@ -387,7 +381,6 @@ export interface LcarsButtonActionConfig {
   state?: string;
   states?: string[];
   actions?: ActionDefinition[];
-  animation?: AnimationDefinition;
 }
 
 // ============================================================================

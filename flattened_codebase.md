@@ -5,6 +5,8 @@ lovelace-lcars-card/
 ├── .cursor/
 │   └── rules/
 ├── .gitignore
+├── .opencode/
+│   └── commands/
 ├── CHANGELOG.md
 ├── DYNAMIC_COLORS_EXAMPLE.md
 ├── TODO.md
@@ -1217,9 +1219,8 @@ import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { HomeAssistant } from "custom-card-helpers";
 import { colorResolver } from "../../utils/color-resolver.js";
-import { AnimationContext, animationManager } from "../../utils/animation.js";
+import { AnimationContext } from "../../utils/animation.js";
 import { Color, ColorStateContext } from "../../utils/color.js";
-import { transformPropagator, AnimationSyncData } from "../../utils/transform-propagator.js";
 
 export type ButtonPropertyName = 'fill' | 'stroke' | 'strokeWidth';
 
@@ -1582,7 +1583,7 @@ export class Button {
     }
 
     private isCustomAction(actionType: string): boolean {
-        return ['set_state', 'toggle_state', 'multi_action', 'animate'].includes(actionType);
+        return ['set_state', 'toggle_state', 'multi_action'].includes(actionType);
     }
 
     private executeCustomAction(actionConfig: any): void {
@@ -1612,9 +1613,6 @@ export class Button {
                 break;
             case 'multi_action':
                 this._executeMultiAction(actionConfig.tap_action.actions);
-                break;
-            case 'animate':
-                this._executeAnimateAction(actionConfig);
                 break;
             default:
                 console.warn(`[${this._id}] Unknown custom action: ${actionType}`);
@@ -1647,173 +1645,6 @@ export class Button {
 
     private _executeMultiAction(actions: any[]): void {
         actions.forEach(action => this.executeAction(action));
-    }
-
-    private _executeAnimateAction(actionConfig: any): void {
-        const animation = actionConfig.tap_action.animation;
-        
-        if (!animation) {
-            console.warn(`[${this._id}] animate action missing animation config`);
-            return;
-        }
-        
-        // Handle target_self
-        const targetSelf = animation.target_self;
-        const targetElements = animation.target_elements_ref || [];
-        
-        const elementsToAnimate: string[] = [];
-        if (targetSelf) {
-            elementsToAnimate.push(this._id);
-        }
-        elementsToAnimate.push(...targetElements);
-        
-        // Process each animation with transform propagation if needed
-        elementsToAnimate.forEach(elementId => {
-            this._executeAnimationWithPropagation(elementId, animation);
-        });
-    }
-
-    /**
-     * Execute animation with transform propagation support
-     */
-    private _executeAnimationWithPropagation(elementId: string, animation: any): void {
-        // Check if this is an animation sequence or single animation
-        if (animation.steps && Array.isArray(animation.steps)) {
-            // Handle animation sequence with sequence-aware transform propagation
-            this._executeAnimationSequenceWithPropagation(elementId, animation);
-        } else {
-            // Handle single animation
-            this._executeSingleAnimationWithPropagation(elementId, animation);
-        }
-    }
-
-    /**
-     * Execute a single animation with transform propagation support
-     */
-    private _executeSingleAnimationWithPropagation(elementId: string, animation: any): void {
-        // Ensure GSAP is loaded, then delegate to AnimationManager
-        import('gsap').then(({ gsap }) => {
-            animationManager.executeTransformableAnimation(
-                elementId,
-                animation,
-                gsap, // Pass the loaded GSAP instance
-                this._getShadowElement
-            );
-        }).catch(error => {
-            console.error(`[${this._id}] GSAP import failed for animation:`, error);
-        });
-    }
-
-    /**
-     * Execute an animation sequence with sequence-aware transform propagation
-     */
-    private _executeAnimationSequenceWithPropagation(elementId: string, animationSequence: any): void {
-        import('gsap').then(({ gsap }) => {
-            const tl = gsap.timeline();
-            let lastIndexProcessed = -1;
-
-            // Sort step groups by index
-            const sortedStepGroups = [...animationSequence.steps].sort((a, b) => a.index - b.index);
-
-            // Handle transform propagation for the entire sequence (if applicable)
-            // Check all animations in all step groups to see if any affect positioning
-            const hasPositioningAnimations = sortedStepGroups.some((stepGroup: any) => 
-                stepGroup.animations?.some((animation: any) => this._stepAffectsPositioning(animation))
-            );
-
-            if (hasPositioningAnimations) {
-                // Use the first animation from the first step group for sync data
-                const firstAnimation = sortedStepGroups[0]?.animations?.[0];
-                const baseSyncDataForPropagator = { 
-                    duration: firstAnimation?.duration || 0.5, 
-                    ease: firstAnimation?.ease || 'power2.out' 
-                };
-                import('../../utils/transform-propagator.js').then(({ transformPropagator }) => {
-                    transformPropagator.processAnimationSequenceWithPropagation(
-                        elementId,
-                        animationSequence, 
-                        baseSyncDataForPropagator
-                    );
-                }).catch(error => {
-                    console.error(`[${this._id}] Error importing transform propagator for sequence:`, error);
-                });
-            }
-
-            // Track cumulative timeline position for proper sequencing
-            let cumulativeTimelinePosition = 0;
-
-            // Process each step group
-            sortedStepGroups.forEach((stepGroup: any) => {
-                const currentIndex = stepGroup.index;
-                let positionInTimeline: string | number;
-
-                if (currentIndex > lastIndexProcessed) {
-                    // This step group starts after the previous index group is complete
-                    // Use the cumulative position to ensure proper timing
-                    positionInTimeline = cumulativeTimelinePosition;
-                } else {
-                    // Fallback for unsorted or unexpectedly ordered steps
-                    console.warn(`[${this._id}] Animation step group index ${currentIndex} is not greater than lastProcessedIndex ${lastIndexProcessed}. Using cumulative position.`);
-                    positionInTimeline = cumulativeTimelinePosition;
-                }
-
-                // Calculate the maximum duration for this group (including delays)
-                let maxGroupDuration = 0;
-                if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
-                    stepGroup.animations.forEach((animation: any) => {
-                        const animationDuration = (animation.duration || 0) + (animation.delay || 0);
-                        maxGroupDuration = Math.max(maxGroupDuration, animationDuration);
-                    });
-                }
-
-                // Process all animations in this step group simultaneously
-                if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
-                    stepGroup.animations.forEach((animationConfig: any, animationIndex: number) => {
-                        // ALL animations in the same group use the same absolute timeline position
-                        // This ensures they start simultaneously without GSAP positioning conflicts
-                        const timelinePosition = positionInTimeline;
-
-                        // Execute each animation in the group
-                        animationManager.executeTransformableAnimation(
-                            elementId,
-                            animationConfig, 
-                            gsap,      
-                            this._getShadowElement,
-                            tl,        
-                            timelinePosition 
-                        );
-                    });
-                }
-
-                // Update cumulative position for the next step group
-                cumulativeTimelinePosition += maxGroupDuration;
-                lastIndexProcessed = currentIndex;
-            });
-
-            // The timeline will play automatically based on its construction.
-            // tl.play(); // Explicit play if needed, but usually not if autoPlay is default true
-        }).catch(error => {
-            console.error(`[${this._id}] GSAP import failed for animation sequence:`, error);
-        });
-    }
-
-    /**
-     * Check if an animation step affects positioning
-     */
-    private _stepAffectsPositioning(step: any): boolean {
-        switch (step.type) {
-            case 'scale':
-            case 'slide':
-                return true;
-            case 'custom_gsap':
-                const customVars = step.custom_gsap_vars || {};
-                return customVars.scale !== undefined || 
-                       customVars.x !== undefined || 
-                       customVars.y !== undefined ||
-                       customVars.rotation !== undefined;
-            default:
-                return false;
-        }
     }
 
     updateHass(hass?: HomeAssistant): void {
@@ -10628,7 +10459,7 @@ export interface HoldActionDefinition extends ActionDefinition {
 }
 
 export interface ActionDefinition {
-  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state' | 'multi_action' | 'animate';
+  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state' | 'multi_action';
   
   // Service call specific
   service?: string;
@@ -10652,7 +10483,6 @@ export interface ActionDefinition {
   target_element_ref?: string;
   states?: string[];
   actions?: ActionDefinition[];
-  animation?: AnimationDefinition;
   
   // General properties
   confirmation?: boolean | {
@@ -10697,11 +10527,6 @@ export interface AnimationsConfig {
 export interface StateChangeAnimationConfig extends AnimationDefinition {
   from_state: string;
   to_state: string;
-}
-
-export interface AnimationActionConfig {
-  action: 'animate';
-  animation: AnimationDefinition | AnimationSequence;
 }
 
 export interface AnimationDefinition {
@@ -10832,7 +10657,7 @@ export interface LcarsButtonElementConfig {
 }
 
 export interface LcarsButtonActionConfig {
-  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state' | 'multi_action' | 'animate';
+  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state' | 'multi_action';
   service?: string;
   service_data?: Record<string, any>;
   navigation_path?: string;
@@ -10849,7 +10674,6 @@ export interface LcarsButtonActionConfig {
   state?: string;
   states?: string[];
   actions?: ActionDefinition[];
-  animation?: AnimationDefinition;
 }
 
 // ============================================================================
