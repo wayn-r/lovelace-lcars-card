@@ -93,11 +93,7 @@ describe('Button Functionality', () => {
   });
 
   describe('hover and active state handling', () => {
-    it('should update appearance directly without triggering global re-render for hover states', () => {
-      const mockElement = document.createElement('path');
-      mockElement.id = 'test-button';
-      
-      const mockGetShadowElement = vi.fn().mockReturnValue(mockElement);
+    it('should trigger global update when hover state changes', () => {
       const mockRequestUpdate = vi.fn();
       
       const button = new Button('test-button', {
@@ -106,7 +102,7 @@ describe('Button Functionality', () => {
           enabled: true,
           hover_fill: '#00FF00'
         }
-      }, undefined, mockRequestUpdate, mockGetShadowElement);
+      }, undefined, mockRequestUpdate);
       
       // Initially not hovering
       expect(button.isHovering).toBe(false);
@@ -117,11 +113,8 @@ describe('Button Functionality', () => {
       // Wait for the debounced update
       return new Promise<void>((resolve) => {
         setTimeout(() => {
-          // Should not have triggered global re-render immediately
-          expect(mockRequestUpdate).not.toHaveBeenCalled();
-          
-          // Should have tried to update the element directly
-          expect(mockGetShadowElement).toHaveBeenCalledWith('test-button');
+          // Should have triggered global re-render to update colors
+          expect(mockRequestUpdate).toHaveBeenCalled();
           
           resolve();
         }, 15); // Wait longer than the 10ms debounce
@@ -175,47 +168,7 @@ describe('Button Functionality', () => {
     });
   });
 
-  describe('button properties', () => {
-    it('should resolve button properties correctly', () => {
-      const props = {
-        fill: '#FF0000',
-        button: {
-          enabled: true,
-          hover_fill: '#00FF00',
-          active_fill: '#0000FF'
-        }
-      };
-      
-      const button = new Button('test-button', props);
-      
-      // Should return default fill when not hovering/active
-      expect(button.getButtonProperty('fill')).toBe('#FF0000');
-      
-      // Should return hover fill when hovering
-      button.isHovering = true;
-      expect(button.getButtonProperty('fill')).toBe('#00FF00');
-      
-      // Should return active fill when active (takes precedence over hover)
-      button.isActive = true;
-      expect(button.getButtonProperty('fill')).toBe('#0000FF');
-    });
-
-    it('should fall back to props when button config is not enabled', () => {
-      const props = {
-        fill: '#FF0000',
-        stroke: '#00FF00',
-        button: {
-          enabled: false // Not enabled
-        }
-      };
-      
-      const button = new Button('test-button', props);
-      
-      // Should use props values when button is not enabled
-      expect(button.getButtonProperty('fill')).toBe('#FF0000');
-      expect(button.getButtonProperty('stroke')).toBe('#00FF00');
-    });
-  });
+  // Legacy button property tests removed - now using unified color system
 
   describe('cleanup', () => {
     it('should clean up timeouts properly', () => {

@@ -1,7 +1,7 @@
 import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { HomeAssistant } from "custom-card-helpers";
-import { colorResolver } from "../../utils/color.js";
+import { colorResolver } from "../../utils/color-resolver.js";
 import { AnimationContext } from "../../utils/animation.js";
 import { Color, ColorStateContext } from "../../utils/color.js";
 
@@ -118,54 +118,7 @@ export class Button {
         );
     }
 
-    getButtonProperty<T>(propName: ButtonPropertyName, defaultValue?: T): T | string | undefined {
-        const buttonConfig = this._props.button as LcarsButtonElementConfig | undefined;
-        
-        if (!buttonConfig?.enabled) {
-            return this._props[propName] ?? defaultValue;
-        }
-        
-        return this.resolveStateBasedProperty(buttonConfig, propName, defaultValue);
-    }
-    
-    private resolveStateBasedProperty<T>(
-        buttonConfig: LcarsButtonElementConfig, 
-        propName: ButtonPropertyName, 
-        defaultValue?: T
-    ): T | string | undefined {
-        if (this._isActive) {
-            const activeProp = `active_${propName}` as keyof LcarsButtonElementConfig;
-            const activeValue = buttonConfig[activeProp];
-            if (activeValue !== undefined) {
-                return this.formatValueForProperty(propName, activeValue);
-            }
-        }
-        
-        if (this._isHovering) {
-            const hoverProp = `hover_${propName}` as keyof LcarsButtonElementConfig;
-            const hoverValue = buttonConfig[hoverProp];
-            if (hoverValue !== undefined) {
-                return this.formatValueForProperty(propName, hoverValue);
-            }
-        }
-        
-        const directProp = propName as keyof LcarsButtonElementConfig;
-        if (buttonConfig[directProp] !== undefined) {
-            return this.formatValueForProperty(propName, buttonConfig[directProp]);
-        }
-        
-        return this.formatValueForProperty(propName, this._props[propName] ?? defaultValue);
-    }
-    
-    private formatValueForProperty<T>(propName: ButtonPropertyName, value: any): T | string | undefined {
-        if ((propName === 'fill' || propName === 'stroke') && value !== undefined) {
-            // Use the new Color class for color formatting
-            const color = Color.fromValue(value, 'transparent');
-            return color.toStaticString();
-        }
-        
-        return value;
-    }
+    // Legacy methods removed - now using unified color system via getResolvedColors()
 
     createButton(
         pathData: string,
@@ -446,44 +399,8 @@ export class Button {
     }
 
     private _updateButtonAppearanceDirectly(): void {
-        // Try to update the button's appearance directly in the DOM to avoid global re-renders
-        if (!this._getShadowElement) {
-            // Fallback to global update if we can't target the specific element
-            this._requestUpdateCallback?.();
-            return;
-        }
-        
-        // Find the button's DOM element
-        const buttonElement = this._getShadowElement(this._id);
-        if (!buttonElement) {
-            // Element not found in DOM yet, fall back to global update
-            this._requestUpdateCallback?.();
-            return;
-        }
-        
-        try {
-            // Get the resolved colors with current interactive state
-            const resolvedColors = this.getResolvedColors();
-            
-            // Update the fill color directly if it exists
-            if (resolvedColors.fillColor) {
-                buttonElement.setAttribute('fill', resolvedColors.fillColor);
-            }
-            
-            // Update stroke color if it exists
-            if (resolvedColors.strokeColor && resolvedColors.strokeColor !== 'none') {
-                buttonElement.setAttribute('stroke', resolvedColors.strokeColor);
-            }
-            
-            // Update stroke width if it exists
-            if (resolvedColors.strokeWidth) {
-                buttonElement.setAttribute('stroke-width', resolvedColors.strokeWidth);
-            }
-            
-        } catch (error) {
-            console.warn(`[${this._id}] Direct appearance update failed, falling back to global update:`, error);
-            // Fall back to global update if direct update fails
-            this._requestUpdateCallback?.();
-        }
+        // Always fall back to global update to ensure proper re-rendering with state changes
+        // This ensures that the entire element gets re-rendered with the current hover/active state
+        this._requestUpdateCallback?.();
     }
 } 
