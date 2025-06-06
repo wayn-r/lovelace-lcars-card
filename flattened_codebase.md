@@ -9481,14 +9481,9 @@ export class LcarsCard extends LitElement {
   updated(changedProperties: Map<string | number | symbol, unknown>): void {
     super.updated(changedProperties);
 
-    // After the DOM has been updated, setup interactive listeners for all elements.
-    // This is crucial for hover/click effects.
-    if (this._layoutEngine.layoutGroups.length > 0) {
-      this._setupAllElementListeners();
-    }
-
     const hasHassChanged = changedProperties.has('hass');
     const hasConfigChanged = changedProperties.has('_config');
+    const hasTemplatesChanged = changedProperties.has('_layoutElementTemplates');
 
     if (hasConfigChanged || hasHassChanged) {
       this._updateLayoutEngineWithHass();
@@ -9525,6 +9520,16 @@ export class LcarsCard extends LitElement {
     // Store current hass states for next comparison
     if (this.hass) {
       this._lastHassStates = { ...this.hass.states };
+    }
+
+    // Ensure interactive listeners are set up after any template changes or view switches
+    if (hasTemplatesChanged || hasConfigChanged) {
+      // Use timeout to ensure DOM elements are fully rendered
+      setTimeout(() => {
+        if (this._layoutEngine.layoutGroups.length > 0) {
+          this._setupAllElementListeners();
+        }
+      }, 50);
     }
   }
 
@@ -9853,22 +9858,25 @@ export class LcarsCard extends LitElement {
     this.requestUpdate();
 
     // Schedule interactive listener setup and animation restoration to occur after the next render cycle
-    Promise.resolve().then(() => {
-        // Set up interactive listeners after DOM elements are updated
-        this._setupAllElementListeners();
-        
-        // Schedule animation restoration to occur after listener setup
-        if (animationStates.size > 0) {
-            const context: AnimationContext = {
-                elementId: '', // Not used in restoration context for multiple elements
-                getShadowElement: (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null,
-                hass: this.hass,
-                requestUpdateCallback: this.requestUpdate.bind(this)
-            };
-            animationManager.restoreAnimationStates(animationStates, context, () => {
-                 // Optional callback after all animations are restored
-            });
-        }
+    // Use multiple frame delays to ensure DOM is fully updated after view switches
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            // Set up interactive listeners after DOM elements are updated
+            this._setupAllElementListeners();
+            
+            // Schedule animation restoration to occur after listener setup
+            if (animationStates.size > 0) {
+                const context: AnimationContext = {
+                    elementId: '', // Not used in restoration context for multiple elements
+                    getShadowElement: (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null,
+                    hass: this.hass,
+                    requestUpdateCallback: this.requestUpdate.bind(this)
+                };
+                animationManager.restoreAnimationStates(animationStates, context, () => {
+                     // Optional callback after all animations are restored
+                });
+            }
+        });
     });
   }
 
