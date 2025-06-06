@@ -1,38 +1,30 @@
 type: custom:lovelace-lcars-card
-card_title: "Simple State Group Navigation Example"
-
-# LCARS-specific configuration with proper hierarchy
-lcars_config:
-  state_management:
-    # Define mutually exclusive navigation groups
-    state_groups:
-      - group_name: "main_navigation"
-        exclusive: true
-        members:
-          - type: "group"
-            id: "group_a"
-          - type: "group"
-            id: "group_b"
-        default_visible: "group_a"
-
-
+card_title: Simple State Group Navigation Example
 
 groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Simple State Group Navigation
+          right_content: example
+          fill: "#FFFFFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+
   - group_id: "nav"
     elements:
-      - id: "title_display"
-        type: "rectangle"
-        appearance:
-          fill: "#FF9900"
-        text:
-          content: "Simple State Group Navigation Example"
-          fill: "#000000"
-          fontSize: 16
-          fontWeight: "bold"
-          fontFamily: "Antonio"
-        layout:
-          width: 450
-          height: 40
       - id: "button_a"
         type: "rectangle"
         appearance:
@@ -45,7 +37,7 @@ groups:
           width: 100
           height: 40
           anchor:
-            to: "nav.title_display"
+            to: nav_header.main_header
             element_point: "topLeft"
             target_point: "bottomLeft"
         button:

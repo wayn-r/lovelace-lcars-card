@@ -1,27 +1,30 @@
 type: custom:lovelace-lcars-card
-card_title: "Toggle with Dependencies Example"
-
-# LCARS-specific configuration
-lcars_config:
-  state_management:
-
+card_title: Toggle with Dependencies Example
 
 groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Toggle with Dependencies
+          right_content: example
+          fill: "#FFFFFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+
   - group_id: "nav"
     elements:
-      - id: "title_display"
-        type: "rectangle"
-        appearance:
-          fill: "#FF9900"
-        text:
-          content: "Toggle with Dependencies Example"
-          fill: "#000000"
-          fontSize: 16
-          fontWeight: "bold"
-          fontFamily: "Antonio"
-        layout:
-          width: 400
-          height: 40
       - id: "button_a"
         type: "rectangle"
         appearance:
@@ -34,7 +37,7 @@ groups:
           width: 100
           height: 40
           anchor:
-            to: "nav.title_display"
+            to: nav_header.main_header
             element_point: "topLeft"
             target_point: "bottomLeft"
         button:

@@ -1,39 +1,26 @@
 type: custom:lovelace-lcars-card
 card_title: "USS Enterprise Main Bridge Dashboard"
 groups:
-  - group_id: "header"
+  - group_id: nav_header
     elements:
-      - id: "title_display"
-        type: "rectangle"
-        appearance:
-          fill: "#FF9900"
-        text:
-          content: "USS Enterprise Main Bridge Dashboard"
-          fill: "#000000"
-          fontSize: 16
-          fontWeight: "bold"
-          fontFamily: "Antonio"
-        layout:
-          width: 450
-          height: 40
-      - id: "main_header"
-        type: "top_header"
+      - id: main_header
+        type: top_header
         appearance:
           fill: "#CC6600"
         text:
-          left_content: "BRIDGE OPERATIONS"
-          right_content: "STARDATE 2024.147"
-          fontSize: 18
-          fontWeight: "bold"
-          fontFamily: "Antonio"
+          left_content: Bridge Operations
+          right_content: Dashboard
           fill: "#FFFFFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
         layout:
-          width: "100%"
-          height: 50
+          width: 100%
+          height: 40
           anchor:
-            to: "header.title_display"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            to: container
+            element_point: topLeft
+            target_point: topLeft
 
   - group_id: "navigation"
     elements:
@@ -46,7 +33,7 @@ groups:
           width: "90%"
           height: 50
           anchor:
-            to: "header.main_header"
+            to: nav_header.main_header
             element_point: "topCenter"
             target_point: "bottomCenter"
       

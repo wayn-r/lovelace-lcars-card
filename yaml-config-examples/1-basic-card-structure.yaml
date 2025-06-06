@@ -1,21 +1,28 @@
 type: custom:lovelace-lcars-card
 card_title: "Basic Card Structure Example"
 groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Basic Card Structure
+          right_content: example
+          fill: "#FFFFFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
   - group_id: "main_display"
     elements:
-      - id: "title_display"
-        type: "rectangle"
-        appearance:
-          fill: "#FF9900"
-        text:
-          content: "Basic Card Structure Example"
-          fill: "#000000"
-          fontSize: 16
-          fontWeight: "bold"
-          fontFamily: "Antonio"
-        layout:
-          width: 300
-          height: 40
       - id: "status_bar"
         type: "rectangle"
         appearance:
@@ -28,6 +35,6 @@ groups:
           width: 200
           height: 30
           anchor:
-            to: "main_display.title_display"
+            to: nav_header.main_header
             element_point: "topLeft"
             target_point: "bottomLeft"

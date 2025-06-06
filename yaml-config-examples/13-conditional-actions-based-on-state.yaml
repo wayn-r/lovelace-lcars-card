@@ -1,33 +1,30 @@
 type: custom:lovelace-lcars-card
-card_title: "Context-Aware Dynamic Button Example"
-
-# LCARS-specific configuration
-lcars_config:
-  state_management:
-    state_groups:
-      - group_name: "main_navigation"
-        exclusive: true
-        members:
-          - type: "group"
-            id: "group_a"
-        default_visible: "group_a"
+card_title: Context-Aware Dynamic Button Example
 
 groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Context-Aware Dynamic Button
+          right_content: example
+          fill: "#FFFFFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+
   - group_id: "controls"
     elements:
-      - id: "title_display"
-        type: "rectangle"
-        appearance:
-          fill: "#FF9900"
-        text:
-          content: "Context-Aware Dynamic Button Example"
-          fill: "#000000"
-          fontSize: 16
-          fontWeight: "bold"
-          fontFamily: "Antonio"
-        layout:
-          width: 500
-          height: 40
       - id: "dynamic_button"
         type: "rectangle"
         appearance:
@@ -40,7 +37,7 @@ groups:
           width: 120
           height: 45
           anchor:
-            to: "controls.title_display"
+            to: nav_header.main_header
             element_point: "topLeft"
             target_point: "bottomLeft"
         button:

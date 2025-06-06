@@ -1,73 +1,905 @@
 type: custom:lovelace-lcars-card
-card_title: "Navigation Control Panel Example"
+card_title: Navigation Control Panel Example
 groups:
-  - group_id: "nav_header"
+  - group_id: nav_header
     elements:
-      - id: "main_header"
-        type: "top_header"
+      - id: main_header
+        type: top_header
         appearance:
           fill: "#CC6600"
         text:
-          left_content: "Navigation Control panel"
-          right_content: "example"
+          left_content: Navigation Control panel
+          right_content: example
           fill: "#FFFFFF"
           fontSize: 18
-          fontWeight: "bold"
-          fontFamily: "Antonio"
+          fontWeight: bold
+          fontFamily: Antonio
         layout:
-          width: "100%"
+          width: 100%
           height: 40
           anchor:
-            to: "container"
-            element_point: "topLeft"
-            target_point: "topLeft"
-
-  - group_id: "nav_controls"
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: nav_controls
     elements:
-      - id: "home_button"
-        type: "rectangle"
+      - id: basic_card_structure_button
+        type: rectangle
         appearance:
           fill: "#0099CC"
-          cornerRadius: 20
         text:
-          content: "navigate to /lovelace/0"
+          content: Basic Card Structure
           fill: "#FFFFFF"
           fontSize: 16
-          fontFamily: "Antonio"
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5px
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/basic-card-structure
+      - id: basic_card_structure_endcap
+        type: endcap
+        appearance:
+          fill: "#0099CC"
+          direction: right
+        text:
+          content: "1"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
           cutout: false
         layout:
-          width: 160
+          width: 40
           height: 40
+          offsetX: 5
           anchor:
-            to: "nav_header.main_header"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
-        button:
-          enabled: true
-          actions:
-            tap:
-              action: "navigate"
-              navigation_path: "/lovelace/0"
-
-      - id: "lights_button"
-        type: "endcap"
+            to: nav_controls.basic_card_structure_button
+            element_point: topLeft
+            target_point: topRight
+      - id: dynamic_color_button
+        type: rectangle
         appearance:
           fill: "#CC3300"
-          direction: "right"
         text:
-          content: "navigate to /lovelace/lights"
+          content: Dynamic Color
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
         layout:
-          width: 190
+          width: 250
           height: 40
+          offsetY: 5
           anchor:
-            to: "nav_controls.home_button"
-            element_point: "topLeft"
-            target_point: "topRight"
+            to: nav_controls.basic_card_structure_button
+            element_point: topLeft
+            target_point: bottomLeft
         button:
           enabled: true
           actions:
             tap:
-              action: "navigate"
-              navigation_path: "/lovelace/lights"
+              action: navigate
+              navigation_path: /lcars-new/dynamic-color
+      - id: dynamic_color_endcap
+        type: endcap
+        appearance:
+          fill: "#CC3300"
+          direction: right
+        text:
+          content: "3"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.dynamic_color_button
+            element_point: topLeft
+            target_point: topRight
+      - id: advanced_layout_and_positioning_button
+        type: rectangle
+        appearance:
+          fill: "#CC6600"
+        text:
+          content: Advanced Layout And Positioning
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.dynamic_color_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/advanced-layout-and-positioning
+      - id: advanced_layout_and_positioning_endcap
+        type: endcap
+        appearance:
+          fill: "#CC6600"
+          direction: right
+        text:
+          content: "4"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.advanced_layout_and_positioning_button
+            element_point: topLeft
+            target_point: topRight
+      - id: lcars_shape_elements_button
+        type: rectangle
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: LCARS Shape Elements
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.advanced_layout_and_positioning_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/lcars-shape-elements
+      - id: lcars_shape_elements_endcap
+        type: endcap
+        appearance:
+          fill: "#0099CC"
+          direction: right
+        text:
+          content: "5"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.lcars_shape_elements_button
+            element_point: topLeft
+            target_point: topRight
+      - id: complex_actions_and_visibility_button
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: Complex Actions And Visibility
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.lcars_shape_elements_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/complex-actions-and-visibility
+      - id: complex_actions_and_visibility_endcap
+        type: endcap
+        appearance:
+          fill: "#CC3300"
+          direction: right
+        text:
+          content: "6"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.complex_actions_and_visibility_button
+            element_point: topLeft
+            target_point: topRight
+      - id: button_actions_and_confirmations_button
+        type: rectangle
+        appearance:
+          fill: "#CC6600"
+        text:
+          content: Button Actions And Confirmations
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.complex_actions_and_visibility_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/button-actions-and-confirmations
+      - id: button_actions_and_confirmations_endcap
+        type: endcap
+        appearance:
+          fill: "#CC6600"
+          direction: right
+        text:
+          content: "7"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.button_actions_and_confirmations_button
+            element_point: topLeft
+            target_point: topRight
+      - id: animations_button
+        type: rectangle
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: Animations
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.button_actions_and_confirmations_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/animations
+      - id: animations_endcap
+        type: endcap
+        appearance:
+          fill: "#0099CC"
+          direction: right
+        text:
+          content: "8"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.animations_button
+            element_point: topLeft
+            target_point: topRight
+      - id: text_styling_button
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: Text Styling
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.animations_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/text-styling
+      - id: text_styling_endcap
+        type: endcap
+        appearance:
+          fill: "#CC3300"
+          direction: right
+        text:
+          content: "9"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.text_styling_button
+            element_point: topLeft
+            target_point: topRight
+      - id: complete_dashboard_button
+        type: rectangle
+        appearance:
+          fill: "#CC6600"
+        text:
+          content: Complete Dashboard
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.text_styling_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/complete-dashboard
+      - id: complete_dashboard_endcap
+        type: endcap
+        appearance:
+          fill: "#CC6600"
+          direction: right
+        text:
+          content: "10"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.complete_dashboard_button
+            element_point: topLeft
+            target_point: topRight
+      - id: simple_state_group_for_navigation_button
+        type: rectangle
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: Simple State Group For Navigation
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.complete_dashboard_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/simple-state-group-for-navigation
+      - id: simple_state_group_for_navigation_endcap
+        type: endcap
+        appearance:
+          fill: "#0099CC"
+          direction: right
+        text:
+          content: "11"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.simple_state_group_for_navigation_button
+            element_point: topLeft
+            target_point: topRight
+      - id: toggle_with_dependencies_button
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: Toggle With Dependencies
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.simple_state_group_for_navigation_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/toggle-with-dependencies
+      - id: toggle_with_dependencies_endcap
+        type: endcap
+        appearance:
+          fill: "#CC3300"
+          direction: right
+        text:
+          content: "12"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.toggle_with_dependencies_button
+            element_point: topLeft
+            target_point: topRight
+      - id: conditional_actions_based_on_state_button
+        type: rectangle
+        appearance:
+          fill: "#CC6600"
+        text:
+          content: Conditional Actions Based On State
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.toggle_with_dependencies_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/conditional-actions-based-on-state
+      - id: conditional_actions_based_on_state_endcap
+        type: endcap
+        appearance:
+          fill: "#CC6600"
+          direction: right
+        text:
+          content: "13"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.conditional_actions_based_on_state_button
+            element_point: topLeft
+            target_point: topRight
+      - id: state_machine_approach_button
+        type: rectangle
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: State Machine Approach
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.conditional_actions_based_on_state_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/state-machine-approach
+      - id: state_machine_approach_endcap
+        type: endcap
+        appearance:
+          fill: "#0099CC"
+          direction: right
+        text:
+          content: "14"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.state_machine_approach_button
+            element_point: topLeft
+            target_point: topRight
+      - id: hass_integration_with_state_management_button
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: Hass Integration With State Management
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.state_machine_approach_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/hass-integration-with-state-management
+      - id: hass_integration_with_state_management_endcap
+        type: endcap
+        appearance:
+          fill: "#CC3300"
+          direction: right
+        text:
+          content: "15"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.hass_integration_with_state_management_button
+            element_point: topLeft
+            target_point: topRight
+      - id: anchoring_button
+        type: rectangle
+        appearance:
+          fill: "#CC6600"
+        text:
+          content: Anchoring
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.hass_integration_with_state_management_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/anchoring
+      - id: anchoring_endcap
+        type: endcap
+        appearance:
+          fill: "#CC6600"
+          direction: right
+        text:
+          content: "16"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.anchoring_button
+            element_point: topLeft
+            target_point: topRight
+      - id: stretching_button
+        type: rectangle
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: Stretching
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.anchoring_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/stretching
+      - id: stretching_endcap
+        type: endcap
+        appearance:
+          fill: "#0099CC"
+          direction: right
+        text:
+          content: "17"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.stretching_button
+            element_point: topLeft
+            target_point: topRight
+      - id: sequential_animation_and_propogation_button
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: Sequential Animation And Propogation
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.stretching_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/sequential-animation-and-propogation
+      - id: sequential_animation_and_propogation_endcap
+        type: endcap
+        appearance:
+          fill: "#CC3300"
+          direction: right
+        text:
+          content: "18"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.sequential_animation_and_propogation_button
+            element_point: topLeft
+            target_point: topRight
+      - id: on_load_animation_button
+        type: rectangle
+        appearance:
+          fill: "#CC6600"
+        text:
+          content: On Load Animation
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.sequential_animation_and_propogation_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/onLoad-animation
+      - id: on_load_animation_endcap
+        type: endcap
+        appearance:
+          fill: "#CC6600"
+          direction: right
+        text:
+          content: "19"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.on_load_animation_button
+            element_point: topLeft
+            target_point: topRight
+      - id: on_show_hide_animation_button
+        type: rectangle
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: On Show Hide Animation
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.on_load_animation_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/onShowHide-animation
+      - id: on_show_hide_animation_endcap
+        type: endcap
+        appearance:
+          fill: "#0099CC"
+          direction: right
+        text:
+          content: "20"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.on_show_hide_animation_button
+            element_point: topLeft
+            target_point: topRight
+      - id: on_state_change_animation_button
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: On State Change Animation
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+          textAnchor: end
+        layout:
+          width: 250
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_controls.on_show_hide_animation_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/onStateChange-animation
+      - id: on_state_change_animation_endcap
+        type: endcap
+        appearance:
+          fill: "#CC3300"
+          direction: right
+        text:
+          content: "21"
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          cutout: false
+        layout:
+          width: 40
+          height: 40
+          offsetX: 5
+          anchor:
+            to: nav_controls.on_state_change_animation_button
+            element_point: topLeft
+            target_point: topRight

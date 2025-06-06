@@ -8,7 +8,7 @@ groups:
         appearance:
           fill: "#CC6600"
         text:
-          left_content: dynamic color configuration
+          left_content: Dynamic Color Configuration
           right_content: example
           fill: "#FFFFFF"
           fontSize: 18

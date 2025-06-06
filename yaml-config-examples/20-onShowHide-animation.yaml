@@ -1,0 +1,100 @@
+type: custom:lovelace-lcars-card
+card_title: On Show/Hide Animation Example
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: On Show/Hide
+          right_content: example
+          fill: "#FFFFFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: show_hide_panel_group
+    elements:
+      - id: panel_trigger_button
+        type: rectangle
+        appearance:
+          fill:
+            default: "#CC6600"
+            hover: "#DD7700"
+            active: "#BB5500"
+        text:
+          content: TOGGLE PANEL
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: toggle_state
+              target_element_ref: show_hide_panel_group.sliding_panel
+              states:
+                - hidden
+                - visible
+      - id: sliding_panel
+        type: rectangle
+        appearance:
+          fill:
+            default: "#0099CC"
+            hover: "#00AADD"
+        text:
+          content: SLIDING PANEL
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 200
+          height: 100
+          offsetY: 5
+          anchor:
+            to: nav_header.main_header
+            element_point: topRight
+            target_point: bottomRight
+        state_management:
+          default_state: hidden
+        animations:
+          on_show:
+            type: fade
+            fade_params:
+              opacity_start: 0
+              opacity_end: 1
+            duration: 3
+            ease: none
+          on_hide:
+            type: fade
+            fade_params:
+              opacity_start: 1
+              opacity_end: 0
+            duration: 3
+            ease: none
+      - id: panel_description
+        type: text
+        text:
+          content: This button should toggle the visibility of the panel with fade animations.
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          offsetX: 5
+          anchor:
+            to: show_hide_panel_group.panel_trigger_button
+            element_point: centerLeft
+            target_point: centerRight 

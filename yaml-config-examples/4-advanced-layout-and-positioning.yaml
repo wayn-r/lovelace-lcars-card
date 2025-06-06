@@ -1,21 +1,28 @@
 type: custom:lovelace-lcars-card
-card_title: "Advanced Layout and Positioning Example"
+card_title: Advanced Layout and Positioning Example
 groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Advanced Layout & positioning
+          right_content: example
+          fill: "#FFFFFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
   - group_id: "layout_examples"
     elements:
-      - id: "title_display"
-        type: "rectangle"
-        appearance:
-          fill: "#FF9900"
-        text:
-          content: "Advanced Layout and Positioning Example"
-          fill: "#000000"
-          fontSize: 16
-          fontWeight: "bold"
-          fontFamily: "Antonio"
-        layout:
-          width: 450
-          height: 40
       # Basic positioning with percentages
       - id: "percentage_element"
         type: "rectangle"
@@ -31,7 +38,7 @@ groups:
           offsetX: "5%"
           offsetY: "5%"
           anchor:
-            to: "layout_examples.title_display"
+            to: nav_header.main_header
             element_point: "topLeft"
             target_point: "bottomLeft"
       
@@ -48,9 +55,9 @@ groups:
           width: 150
           height: 30
           anchor:
-            to: "container"
+            to: "nav_header.main_header"
             element_point: "topRight"
-            target_point: "topRight"
+            target_point: "bottomRight"
       
       # Anchoring to another element
       - id: "element_anchor"
@@ -62,8 +69,8 @@ groups:
         layout:
           anchor:
             to: "layout_examples.percentage_element"
-            element_point: "centerLeft"
-            target_point: "centerRight"
+            element_point: "topLeft"
+            target_point: "bottomLeft"
       
       # Stretching between elements
       - id: "stretch_bar"
@@ -76,6 +83,10 @@ groups:
           fontFamily: "Antonio"
         layout:
           height: 20
+          anchor:
+            to: "layout_examples.element_anchor"
+            element_point: "topLeft"
+            target_point: "bottomLeft"
           stretch:
             target1:
               id: "layout_examples.percentage_element"
