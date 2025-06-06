@@ -5,13 +5,13 @@ exports[`EndcapElement > render > Non-Button Rendering > should render a basic e
   "_$litType$": 2,
   "strings": [
     "
-          <g id="",
+            <g id="",
     "">
-            ",
+                ",
     "
-            ",
+                ",
     "
-          </g>
+            </g>
         ",
   ],
   "values": [
@@ -52,13 +52,13 @@ exports[`EndcapElement > render > Non-Button Rendering > should render with dire
   "_$litType$": 2,
   "strings": [
     "
-          <g id="",
+            <g id="",
     "">
-            ",
+                ",
     "
-            ",
+                ",
     "
-          </g>
+            </g>
         ",
   ],
   "values": [
@@ -99,13 +99,13 @@ exports[`EndcapElement > render > Non-Button Rendering > should render with spec
   "_$litType$": 2,
   "strings": [
     "
-          <g id="",
+            <g id="",
     "">
-            ",
+                ",
     "
-            ",
+                ",
     "
-          </g>
+            </g>
         ",
   ],
   "values": [

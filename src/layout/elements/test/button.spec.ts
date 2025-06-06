@@ -29,9 +29,13 @@ describe('Button', () => {
         expect(svgString).not.toContain('@click');
         expect(svgString).not.toContain('@keydown');
         expect(svgString).not.toContain('role="button"');
+        expect(svgString).not.toContain('@mouseenter');
+        expect(svgString).not.toContain('@mouseleave');
+        expect(svgString).not.toContain('@mousedown');
+        expect(svgString).not.toContain('@mouseup');
     });
 
-    it('should create an interactive element with only action handlers if button is enabled', () => {
+    it('should create an interactive element with action handlers only if button is enabled', () => {
         const props = { fill: '#FF0000', button: { enabled: true } };
         const button = new Button('test-button', props, mockHass, mockRequestUpdate, mockGetShadowElement);
         const result = button.createButton('M 0 0', 0, 0, 10, 10, { rx: 0 }, { isCurrentlyHovering: false, isCurrentlyActive: false });
@@ -42,7 +46,7 @@ describe('Button', () => {
         expect(svgString).toContain('@click');
         expect(svgString).toContain('@keydown');
 
-        // Check that visual state handlers are NOT present
+        // Mouse event handlers should NOT be present in Button output since they're handled by LayoutElement
         expect(svgString).not.toContain('@mouseenter');
         expect(svgString).not.toContain('@mouseleave');
         expect(svgString).not.toContain('@mousedown');

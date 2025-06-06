@@ -312,7 +312,7 @@ describe('RectangleElement', () => {
           textColor: 'white'
         };
         rectangleElement = new RectangleElement('rect-button-text', props, {}, mockHass, mockRequestUpdate);
-        const mockButton = new Button('rect-button-text', props, mockHass, mockRequestUpdate);
+        const mockButton = new Button('rect-button-text', props, mockHass, mockRequestUpdate, vi.fn());
         const mockCreateButton = vi.spyOn(mockButton, 'createButton');
         rectangleElement.button = mockButton;
         
@@ -447,7 +447,6 @@ describe('RectangleElement', () => {
         fontFamily: 'Antonio'
       };
       
-      // Create a proper mock button that returns a valid SVG result
       const mockButton = {
         createButton: vi.fn().mockReturnValue(svg`<g class="lcars-button-group"><path d="M0,0 L100,0 L100,30 L0,30 Z"/></g>`)
       };
@@ -458,46 +457,63 @@ describe('RectangleElement', () => {
       
       const result = rectangleElement.render();
       
-      // Should render because text is configured - text handled by base Element class
       expect(result).toBeDefined();
-      expect(result).toHaveProperty('_$litType$');
       
-      // Result should contain both button and text elements wrapped together
-      expect(result).toHaveProperty('strings');
-      expect(result).toHaveProperty('values');
+      const templateToString = (template: SVGTemplateResult): string => {
+        let resultString = template.strings[0];
+        for (let i = 0; i < template.values.length; i++) {
+          const value = template.values[i];
+          if (value && typeof value === 'object' && '_$litType$' in value) {
+            resultString += templateToString(value as SVGTemplateResult);
+          } else if (value !== null) {
+            resultString += String(value);
+          }
+          resultString += template.strings[i + 1];
+        }
+        return resultString;
+      };
       
-      // The template should be a group containing both button and text elements
-      const templateStr = result!.strings.join('');
-      expect(templateStr).toMatch(/<g/); // Wrapper group for button+text from base class
+      const fullSvgString = result ? templateToString(result) : '';
+      expect(fullSvgString).toContain('lcars-button-group');
+      expect(fullSvgString).toContain('Kitchen Sink Toggle');
     });
 
     it('should not render text for button elements when no text is configured', () => {
-      const props = {
-        button: {
-          enabled: true
-        },
-        text: undefined, // Ensure no text is configured for this button
-        text_element: undefined // Ensure no text_element is configured
-        // No text property
-      };
-      // Create a proper mock button that returns a valid SVG result matching the expected format
-      const mockButton = {
-        createButton: vi.fn().mockReturnValue(svg`<g id="rect-button-no-text" class="lcars-button-group"><path d="M0,0 L100,0 L100,30 L0,30 Z"/></g>`)
-      };
-      
-      rectangleElement = new RectangleElement('rect-button-no-text', props, {}, mockHass, mockRequestUpdate);
-      rectangleElement.button = mockButton as any;
-      rectangleElement.layout = { x: 10, y: 20, width: 150, height: 30, calculated: true };
-      
-      const result = rectangleElement.render();
-      
-      // Should render button without text wrapper since no text configured
-      expect(result).toBeDefined();
-      expect(result).toHaveProperty('_$litType$');
-      
-      // Should be button template without additional text wrapping from base class
-      const templateStr = result!.strings.join('');
-      expect(templateStr).toMatch(/lcars-button-group/); // Button group should be present
-    });
+        const props = {
+          button: {
+            enabled: true
+          }
+        };
+        
+        const mockButton = {
+          createButton: vi.fn().mockReturnValue(svg`<g class="lcars-button-group"><path d="M0,0 L100,0 L100,30 L0,30 Z"/></g>`)
+        };
+        
+        rectangleElement = new RectangleElement('rect-button-no-text', props, {}, mockHass, mockRequestUpdate);
+        rectangleElement.button = mockButton as any;
+        rectangleElement.layout = { x: 10, y: 20, width: 150, height: 30, calculated: true };
+        
+        const result = rectangleElement.render();
+        
+        expect(result).toBeDefined();
+        
+        const templateToString = (template: SVGTemplateResult): string => {
+          let resultString = template.strings[0];
+          for (let i = 0; i < template.values.length; i++) {
+            const value = template.values[i];
+            if (value && typeof value === 'object' && '_$litType$' in value) {
+              resultString += templateToString(value as SVGTemplateResult);
+            } else if (value !== null) { // Exclude null text values from string
+              resultString += String(value);
+            }
+            resultString += template.strings[i + 1];
+          }
+          return resultString;
+        };
+        
+        const fullSvgString = result ? templateToString(result) : '';
+        expect(fullSvgString).toContain('lcars-button-group');
+        expect(fullSvgString).not.toContain('<text');
+      });
   });
 });

@@ -69,18 +69,18 @@ export abstract class LayoutElement {
     }
 
     set isHovering(value: boolean) {
-        if (this._isHovering === value) return;
-        
-        this._isHovering = value;
-        
-        if (this._hoverTimeout) {
-            clearTimeout(this._hoverTimeout);
-        }
-        
-        this._hoverTimeout = setTimeout(() => {
+        if (this._isHovering !== value) {
+            this._isHovering = value;
+            
+            // Clear hover timeout if it exists
+            if (this._hoverTimeout) {
+                clearTimeout(this._hoverTimeout);
+                this._hoverTimeout = undefined;
+            }
+            
+            // Request update to re-render with new interactive state
             this._requestUpdateWithInteractiveState();
-            this._hoverTimeout = undefined;
-        }, 10);
+        }
     }
 
     get isActive(): boolean {
@@ -88,18 +88,18 @@ export abstract class LayoutElement {
     }
 
     set isActive(value: boolean) {
-        if (this._isActive === value) return;
-        
-        this._isActive = value;
-        
-        if (this._activeTimeout) {
-            clearTimeout(this._activeTimeout);
-        }
-        
-        this._activeTimeout = setTimeout(() => {
+        if (this._isActive !== value) {
+            this._isActive = value;
+            
+            // Clear active timeout if it exists
+            if (this._activeTimeout) {
+                clearTimeout(this._activeTimeout);
+                this._activeTimeout = undefined;
+            }
+            
+            // Request update to re-render with new interactive state
             this._requestUpdateWithInteractiveState();
-            this._activeTimeout = undefined;
-        }, 10);
+        }
     }
 
     private _requestUpdateWithInteractiveState(): void {
@@ -137,30 +137,35 @@ export abstract class LayoutElement {
      * This should be called after the element is rendered in the DOM
      */
     setupInteractiveListeners(): void {
-        if (!this._hasStatefulColors() && !this.button) {
-            return; // No interactive features, skip listener setup
+        if (!this.getShadowElement) {
+            return;
         }
-        
-        const element = this.getShadowElement?.(this.id);
+
+        // First clean up any existing listeners
+        this._cleanupInteractiveListeners();
+
+        const element = this.getShadowElement(this.id);
         if (!element) {
             return;
         }
 
-        // Remove existing listeners
-        this._cleanupInteractiveListeners();
-        
-        // Add hover listeners
-        element.addEventListener('mouseenter', this._boundHandleMouseEnter);
-        element.addEventListener('mouseleave', this._boundHandleMouseLeave);
-        
-        // Add active (press) listeners
-        element.addEventListener('mousedown', this._boundHandleMouseDown);
-        element.addEventListener('mouseup', this._boundHandleMouseUp);
-        
-        // Touch support
-        element.addEventListener('touchstart', this._boundHandleTouchStart);
-        element.addEventListener('touchend', this._boundHandleTouchEnd);
-        element.addEventListener('touchcancel', this._boundHandleTouchEnd);
+        // Check if this element should have interactive behavior
+        const hasInteractiveFeatures = this._hasStatefulColors() || 
+                                     this._hasButtonConfig() ||
+                                     this._hasVisibilityTriggers() ||
+                                     this._hasAnimations();
+
+        if (hasInteractiveFeatures) {
+            // Add mouse event listeners
+            element.addEventListener('mouseenter', this._boundHandleMouseEnter);
+            element.addEventListener('mouseleave', this._boundHandleMouseLeave);
+            element.addEventListener('mousedown', this._boundHandleMouseDown);
+            element.addEventListener('mouseup', this._boundHandleMouseUp);
+            
+            // Add touch event listeners for mobile support
+            element.addEventListener('touchstart', this._boundHandleTouchStart);
+            element.addEventListener('touchend', this._boundHandleTouchEnd);
+        }
     }
 
     private _handleMouseEnter(): void {
@@ -716,8 +721,6 @@ export abstract class LayoutElement {
         }
     }
 
-
-
     private _getAnchorAwareStretchEdge(
         initialPosition: number, 
         initialSize: number, 
@@ -813,43 +816,43 @@ export abstract class LayoutElement {
     protected abstract renderShape(): SVGTemplateResult | null;
 
     /**
-     * Consolidated render method that handles all text management
-     * Elements should not override this - they should implement renderShape() instead
+     * Renders the complete element, including its shape and any associated text,
+     * wrapped in a group element with the main element ID. This group is the target
+     * for all interactive event listeners.
      */
     render(): SVGTemplateResult | null {
-        if (!this.layout.calculated) return null;
-
-        const shapeOrButtonSvg = this.renderShape(); // This returns <path> OR <g id="this.id"> for buttons
-
-        if (!shapeOrButtonSvg) return null;
-
-        // If shapeOrButtonSvg is already a button group (which has the ID and handles its own text), return it directly.
-        // Check if the returned SVG is a group and already has the correct ID.
-        const isButtonRender = this.button && 
-                               this.props.button?.enabled &&
-                               shapeOrButtonSvg.strings.some(s => s.includes(`<g id="${this.id}"`) || s.includes(` id="${this.id}" class="lcars-button-group"`));
-
-
-        if (isButtonRender) {
-          return shapeOrButtonSvg;
+        if (!this.layout.calculated) {
+            return null;
         }
 
-        // It's a non-button shape, so shapeOrButtonSvg is just the <path> (or similar primitive).
-        // We need to wrap it and potentially add text.
-        let textSvg: SVGTemplateResult | null = null;
-        if (this._hasText()) { // _hasText() checks for non-button text as per its implementation
-          const colors = this._resolveElementColors();
-          const { x: textX, y: textY } = this._getTextPosition();
-          textSvg = this._renderText(textX, textY, colors); // _renderText should not have ID on the <text>
+        // TextElement is a special case that handles its own rendering, as it IS the text.
+        if (this.constructor.name === 'TextElement') {
+            return this.renderShape();
         }
 
-        // Wrap the shape (and text if any) in a group with the ID.
-        // This ensures that transforms target the group, moving both shape and text.
+        const shape = this.renderShape();
+
+        // The _renderText method handles the logic for rendering text for both button and non-button elements.
+        const textElement = this._hasText() 
+            ? this._renderText(
+                this._getTextPosition().x, 
+                this._getTextPosition().y, 
+                this._resolveElementColors()
+              )
+            : null;
+
+        // If there's no shape and no text, render nothing.
+        if (!shape && !textElement) {
+            return null;
+        }
+
+        // Consistently wrap the element's shape and text in a single <g> tag.
+        // This ensures a reliable target for attaching interactive event listeners.
         return svg`
-          <g id="${this.id}">
-            ${shapeOrButtonSvg}
-            ${textSvg}
-          </g>
+            <g id="${this.id}">
+                ${shape}
+                ${textElement}
+            </g>
         `;
     }
 
@@ -1063,5 +1066,17 @@ export abstract class LayoutElement {
      */
     protected _renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
         return this._renderNonButtonText(x, y, colors);
+    }
+
+    private _hasButtonConfig(): boolean {
+        return Boolean(this.props.button?.enabled);
+    }
+
+    private _hasVisibilityTriggers(): boolean {
+        return Boolean(this.props.visibility_triggers);
+    }
+
+    private _hasAnimations(): boolean {
+        return Boolean(this.props.animations);
     }
 } 

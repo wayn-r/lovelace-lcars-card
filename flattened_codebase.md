@@ -809,7 +809,17 @@ const __dirname = path.dirname(__filename);
 
 const outputFile = 'git_history_diff.md';
 const projectRoot = process.cwd();
-const numberOfCommitsToProcess = 1; // Set to 0 to process all commits
+
+// --- Configuration ---
+// Set ONE of the following options. If commitHashToProcess is set, it takes precedence.
+
+// Option 1: Process a specific number of recent commits. Set to 0 to process all commits.
+// const numberOfCommitsToProcess = 1;
+
+// Option 2: Process all commits up to and including a specific commit hash.
+// If this is set to a valid commit hash, it will override numberOfCommitsToProcess.
+// Example: const commitHashToProcess = 'a1b2c3d';
+const commitHashToProcess = '533d966bc53314a7bb0389542dd4ac8c4f2b1444';
 
 
 function runGitCommand(command) {
@@ -982,24 +992,36 @@ try {
 
     const comprehensiveIgnorePatterns = Array.from(allGitignorePatterns);
 
-
-    const revListCommand = numberOfCommitsToProcess > 0
-        ? `rev-list --reverse --no-merges --topo-order -n ${numberOfCommitsToProcess} HEAD`
-        : 'rev-list --reverse --no-merges --topo-order HEAD';
+    let revListCommand;
+    if (commitHashToProcess && commitHashToProcess.trim() !== '') {
+        // Option 2 is active: process history up to a specific commit.
+        const targetCommit = commitHashToProcess.trim();
+        console.log(`Processing all commits up to and including ${targetCommit}...`);
+        revListCommand = `rev-list --reverse --no-merges --topo-order ${targetCommit}`;
+    } else {
+        // Option 1 is active: process a number of commits from HEAD.
+        if (numberOfCommitsToProcess > 0) {
+            console.log(`Processing the last ${numberOfCommitsToProcess} commits...`);
+            revListCommand = `rev-list --reverse --no-merges --topo-order -n ${numberOfCommitsToProcess} HEAD`;
+        } else {
+            console.log('Processing all commits in the repository...');
+            revListCommand = 'rev-list --reverse --no-merges --topo-order HEAD';
+        }
+    }
 
     let commitHashes = [];
     try {
         const revListOutput = runGitCommand(revListCommand);
         commitHashes = revListOutput.split('\n').filter(hash => hash.length > 0);
     } catch (error) {
-        // This might happen in an empty repo or if `HEAD` doesn't exist.
+        // This might happen in an empty repo or if a bad commit hash is provided.
         // The `if (commitHashes.length === 0)` block below will handle this.
         // console.warn(`Could not retrieve commit list: ${error.message}`);
     }
 
 
     if (commitHashes.length === 0) {
-        fs.appendFileSync(absoluteOutputFile, "No commits found in this repository or within the specified range.\n", 'utf8');
+        fs.appendFileSync(absoluteOutputFile, "No commits found in this repository or for the specified range/hash.\n", 'utf8');
         // We will still proceed to check for uncommitted changes below.
     } else {
         const initialCommitHashInRange = commitHashes[0];
@@ -1282,7 +1304,7 @@ export class Button {
         
         const pathElement = svg`
             <path
-                id=${this._id}
+                id=${this._id + "__shape"}
                 d=${pathData}
                 fill=${resolvedColors.fillColor}
                 stroke=${resolvedColors.strokeColor}
@@ -1291,7 +1313,7 @@ export class Button {
         `;
         
         return this.createButtonGroup([pathElement], {
-            isButton: true,
+            isButton: this._props.button?.enabled === true,
             elementId: this._id
         });
     }
@@ -1309,65 +1331,40 @@ export class Button {
             return svg`<g>${elements}</g>`;
         }
         
-        const buttonHandlers = this.createEventHandlers();
-        
+        // Button elements only include click handler for action execution
+        // All hover/mouse state is handled by parent LayoutElement
         return svg`
             <g
                 class="lcars-button-group"
-                @click=${buttonHandlers.handleClick}
-                @mouseenter=${buttonHandlers.handleMouseEnter}
-                @mouseleave=${buttonHandlers.handleMouseLeave}
-                @mousedown=${buttonHandlers.handleMouseDown}
-                @mouseup=${buttonHandlers.handleMouseUp}
+                @click=${this.handleClick.bind(this)}
                 style="cursor: pointer; outline: none;"
                 role="button"
                 aria-label=${elementId}
                 tabindex="0"
-                @keydown=${buttonHandlers.handleKeyDown}
+                @keydown=${this.handleKeyDown.bind(this)}
             >
                 ${elements}
             </g>
         `;
     }
     
-    createEventHandlers() {
-        return {
-            handleClick: (ev: Event): void => {
-                
-                const buttonConfig = this._props.button as LcarsButtonElementConfig | undefined;
-                
-                if (!this._hass || !buttonConfig?.action_config) {
-                    return; 
-                }
-                
-                ev.stopPropagation();
-            
-                const actionConfig = this.createActionConfig(buttonConfig);
-                this.executeAction(actionConfig, ev.currentTarget as Element);
-            },
-            
-            handleMouseEnter: (): void => {
-                // No-op: Timeouts are now managed by the parent LayoutElement
-            },
-            
-            handleMouseLeave: (): void => {
-                // No-op: Timeouts are now managed by the parent LayoutElement
-            },
-            
-            handleMouseDown: (): void => {
-                // No-op: Timeouts are now managed by the parent LayoutElement
-            },
-            
-            handleMouseUp: (): void => {
-                // No-op: Timeouts are now managed by the parent LayoutElement
-            },
-            
-            handleKeyDown: (e: KeyboardEvent): void => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    this.createEventHandlers().handleClick(e);
-                }
-            }
-        };
+    private handleClick(ev: Event): void {
+        const buttonConfig = this._props.button as LcarsButtonElementConfig | undefined;
+        
+        if (!this._hass || !buttonConfig?.action_config) {
+            return; 
+        }
+        
+        ev.stopPropagation();
+    
+        const actionConfig = this.createActionConfig(buttonConfig);
+        this.executeAction(actionConfig, ev.currentTarget as Element);
+    }
+    
+    private handleKeyDown(e: KeyboardEvent): void {
+        if (e.key === 'Enter' || e.key === ' ') {
+            this.handleClick(e);
+        }
     }
     
     private createActionConfig(buttonConfig: LcarsButtonElementConfig) {
@@ -1917,6 +1914,13 @@ export abstract class LayoutElement {
     private _hoverTimeout?: ReturnType<typeof setTimeout>;
     private _activeTimeout?: ReturnType<typeof setTimeout>;
 
+    private readonly _boundHandleMouseEnter: () => void;
+    private readonly _boundHandleMouseLeave: () => void;
+    private readonly _boundHandleMouseDown: () => void;
+    private readonly _boundHandleMouseUp: () => void;
+    private readonly _boundHandleTouchStart: () => void;
+    private readonly _boundHandleTouchEnd: () => void;
+
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this.id = id;
         this.props = props;
@@ -1924,6 +1928,14 @@ export abstract class LayoutElement {
         this.hass = hass;
         this.requestUpdateCallback = requestUpdateCallback;
         this.getShadowElement = getShadowElement;
+
+        // Bind event handlers once for consistent listener removal
+        this._boundHandleMouseEnter = this._handleMouseEnter.bind(this);
+        this._boundHandleMouseLeave = this._handleMouseLeave.bind(this);
+        this._boundHandleMouseDown = this._handleMouseDown.bind(this);
+        this._boundHandleMouseUp = this._handleMouseUp.bind(this);
+        this._boundHandleTouchStart = this._handleTouchStart.bind(this);
+        this._boundHandleTouchEnd = this._handleTouchEnd.bind(this);
 
         // Initialize animation state for this element
         animationManager.initializeElementAnimationTracking(id);
@@ -1943,18 +1955,18 @@ export abstract class LayoutElement {
     }
 
     set isHovering(value: boolean) {
-        if (this._isHovering === value) return;
-        
-        this._isHovering = value;
-        
-        if (this._hoverTimeout) {
-            clearTimeout(this._hoverTimeout);
-        }
-        
-        this._hoverTimeout = setTimeout(() => {
+        if (this._isHovering !== value) {
+            this._isHovering = value;
+            
+            // Clear hover timeout if it exists
+            if (this._hoverTimeout) {
+                clearTimeout(this._hoverTimeout);
+                this._hoverTimeout = undefined;
+            }
+            
+            // Request update to re-render with new interactive state
             this._requestUpdateWithInteractiveState();
-            this._hoverTimeout = undefined;
-        }, 10);
+        }
     }
 
     get isActive(): boolean {
@@ -1962,18 +1974,18 @@ export abstract class LayoutElement {
     }
 
     set isActive(value: boolean) {
-        if (this._isActive === value) return;
-        
-        this._isActive = value;
-        
-        if (this._activeTimeout) {
-            clearTimeout(this._activeTimeout);
-        }
-        
-        this._activeTimeout = setTimeout(() => {
+        if (this._isActive !== value) {
+            this._isActive = value;
+            
+            // Clear active timeout if it exists
+            if (this._activeTimeout) {
+                clearTimeout(this._activeTimeout);
+                this._activeTimeout = undefined;
+            }
+            
+            // Request update to re-render with new interactive state
             this._requestUpdateWithInteractiveState();
-            this._activeTimeout = undefined;
-        }, 10);
+        }
     }
 
     private _requestUpdateWithInteractiveState(): void {
@@ -2011,31 +2023,35 @@ export abstract class LayoutElement {
      * This should be called after the element is rendered in the DOM
      */
     setupInteractiveListeners(): void {
-        if (!this._hasStatefulColors() && !this.button) {
-            return; // No interactive features, skip listener setup
+        if (!this.getShadowElement) {
+            return;
         }
-        
-        const element = this.getShadowElement?.(this.id);
+
+        // First clean up any existing listeners
+        this._cleanupInteractiveListeners();
+
+        const element = this.getShadowElement(this.id);
         if (!element) {
             return;
         }
 
-        // Remove existing listeners
-        this._cleanupInteractiveListeners();
-        
-        // Add hover listeners
-        element.addEventListener('mouseenter', this._handleMouseEnter.bind(this));
-        element.addEventListener('mouseleave', this._handleMouseLeave.bind(this));
-        
-        // Add active (press) listeners
-        element.addEventListener('mousedown', this._handleMouseDown.bind(this));
-        element.addEventListener('mouseup', this._handleMouseUp.bind(this));
-        element.addEventListener('mouseleave', this._handleMouseUp.bind(this)); // Cancel active on leave
-        
-        // Touch support
-        element.addEventListener('touchstart', this._handleTouchStart.bind(this));
-        element.addEventListener('touchend', this._handleTouchEnd.bind(this));
-        element.addEventListener('touchcancel', this._handleTouchEnd.bind(this));
+        // Check if this element should have interactive behavior
+        const hasInteractiveFeatures = this._hasStatefulColors() || 
+                                     this._hasButtonConfig() ||
+                                     this._hasVisibilityTriggers() ||
+                                     this._hasAnimations();
+
+        if (hasInteractiveFeatures) {
+            // Add mouse event listeners
+            element.addEventListener('mouseenter', this._boundHandleMouseEnter);
+            element.addEventListener('mouseleave', this._boundHandleMouseLeave);
+            element.addEventListener('mousedown', this._boundHandleMouseDown);
+            element.addEventListener('mouseup', this._boundHandleMouseUp);
+            
+            // Add touch event listeners for mobile support
+            element.addEventListener('touchstart', this._boundHandleTouchStart);
+            element.addEventListener('touchend', this._boundHandleTouchEnd);
+        }
     }
 
     private _handleMouseEnter(): void {
@@ -2069,13 +2085,13 @@ export abstract class LayoutElement {
         const element = this.getShadowElement?.(this.id);
         if (!element) return;
 
-        element.removeEventListener('mouseenter', this._handleMouseEnter.bind(this));
-        element.removeEventListener('mouseleave', this._handleMouseLeave.bind(this));
-        element.removeEventListener('mousedown', this._handleMouseDown.bind(this));
-        element.removeEventListener('mouseup', this._handleMouseUp.bind(this));
-        element.removeEventListener('touchstart', this._handleTouchStart.bind(this));
-        element.removeEventListener('touchend', this._handleTouchEnd.bind(this));
-        element.removeEventListener('touchcancel', this._handleTouchEnd.bind(this));
+        element.removeEventListener('mouseenter', this._boundHandleMouseEnter);
+        element.removeEventListener('mouseleave', this._boundHandleMouseLeave);
+        element.removeEventListener('mousedown', this._boundHandleMouseDown);
+        element.removeEventListener('mouseup', this._boundHandleMouseUp);
+        element.removeEventListener('touchstart', this._boundHandleTouchStart);
+        element.removeEventListener('touchend', this._boundHandleTouchEnd);
+        element.removeEventListener('touchcancel', this._boundHandleTouchEnd);
     }
 
     resetLayout(): void {
@@ -2591,8 +2607,6 @@ export abstract class LayoutElement {
         }
     }
 
-
-
     private _getAnchorAwareStretchEdge(
         initialPosition: number, 
         initialSize: number, 
@@ -2688,43 +2702,43 @@ export abstract class LayoutElement {
     protected abstract renderShape(): SVGTemplateResult | null;
 
     /**
-     * Consolidated render method that handles all text management
-     * Elements should not override this - they should implement renderShape() instead
+     * Renders the complete element, including its shape and any associated text,
+     * wrapped in a group element with the main element ID. This group is the target
+     * for all interactive event listeners.
      */
     render(): SVGTemplateResult | null {
-        if (!this.layout.calculated) return null;
-
-        const shapeOrButtonSvg = this.renderShape(); // This returns <path> OR <g id="this.id"> for buttons
-
-        if (!shapeOrButtonSvg) return null;
-
-        // If shapeOrButtonSvg is already a button group (which has the ID and handles its own text), return it directly.
-        // Check if the returned SVG is a group and already has the correct ID.
-        const isButtonRender = this.button && 
-                               this.props.button?.enabled &&
-                               shapeOrButtonSvg.strings.some(s => s.includes(`<g id="${this.id}"`) || s.includes(` id="${this.id}" class="lcars-button-group"`));
-
-
-        if (isButtonRender) {
-          return shapeOrButtonSvg;
+        if (!this.layout.calculated) {
+            return null;
         }
 
-        // It's a non-button shape, so shapeOrButtonSvg is just the <path> (or similar primitive).
-        // We need to wrap it and potentially add text.
-        let textSvg: SVGTemplateResult | null = null;
-        if (this._hasText()) { // _hasText() checks for non-button text as per its implementation
-          const colors = this._resolveElementColors();
-          const { x: textX, y: textY } = this._getTextPosition();
-          textSvg = this._renderText(textX, textY, colors); // _renderText should not have ID on the <text>
+        // TextElement is a special case that handles its own rendering, as it IS the text.
+        if (this.constructor.name === 'TextElement') {
+            return this.renderShape();
         }
 
-        // Wrap the shape (and text if any) in a group with the ID.
-        // This ensures that transforms target the group, moving both shape and text.
+        const shape = this.renderShape();
+
+        // The _renderText method handles the logic for rendering text for both button and non-button elements.
+        const textElement = this._hasText() 
+            ? this._renderText(
+                this._getTextPosition().x, 
+                this._getTextPosition().y, 
+                this._resolveElementColors()
+              )
+            : null;
+
+        // If there's no shape and no text, render nothing.
+        if (!shape && !textElement) {
+            return null;
+        }
+
+        // Consistently wrap the element's shape and text in a single <g> tag.
+        // This ensures a reliable target for attaching interactive event listeners.
         return svg`
-          <g id="${this.id}">
-            ${shapeOrButtonSvg}
-            ${textSvg}
-          </g>
+            <g id="${this.id}">
+                ${shape}
+                ${textElement}
+            </g>
         `;
     }
 
@@ -2938,6 +2952,18 @@ export abstract class LayoutElement {
      */
     protected _renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
         return this._renderNonButtonText(x, y, colors);
+    }
+
+    private _hasButtonConfig(): boolean {
+        return Boolean(this.props.button?.enabled);
+    }
+
+    private _hasVisibilityTriggers(): boolean {
+        return Boolean(this.props.visibility_triggers);
+    }
+
+    private _hasAnimations(): boolean {
+        return Boolean(this.props.animations);
     }
 }
 ```
@@ -3166,21 +3192,34 @@ describe('Button', () => {
         const button = new Button('test-button', props, mockHass, mockRequestUpdate);
         const result = button.createButton('M 0 0', 0, 0, 10, 10, { rx: 0 }, { isCurrentlyHovering: false, isCurrentlyActive: false });
         expect(result).toBeDefined();
-        // Here, you could check if the interactive handlers are NOT present in the SVG, which is complex.
-        // A simpler check is that it returns a valid SVG structure.
-        expect(result.strings.join('')).not.toContain('@mouseenter');
+        
+        // A disabled button should just be a <g> tag with the path, no event handlers
+        const svgString = result.strings.join('');
+        expect(svgString).not.toContain('@click');
+        expect(svgString).not.toContain('@keydown');
+        expect(svgString).not.toContain('role="button"');
+        expect(svgString).not.toContain('@mouseenter');
+        expect(svgString).not.toContain('@mouseleave');
+        expect(svgString).not.toContain('@mousedown');
+        expect(svgString).not.toContain('@mouseup');
     });
 
-    it('should create an interactive element if button is enabled', () => {
+    it('should create an interactive element with action handlers only if button is enabled', () => {
         const props = { fill: '#FF0000', button: { enabled: true } };
         const button = new Button('test-button', props, mockHass, mockRequestUpdate, mockGetShadowElement);
         const result = button.createButton('M 0 0', 0, 0, 10, 10, { rx: 0 }, { isCurrentlyHovering: false, isCurrentlyActive: false });
         expect(result).toBeDefined();
-        // Check for presence of lit event handlers
-        expect(result.strings.join('')).toContain('@mouseenter');
-        expect(result.strings.join('')).toContain('@mouseleave');
-        expect(result.strings.join('')).toContain('@mousedown');
-        expect(result.strings.join('')).toContain('@mouseup');
+
+        const svgString = result.strings.join('');
+        // Check for presence of action event handlers
+        expect(svgString).toContain('@click');
+        expect(svgString).toContain('@keydown');
+
+        // Mouse event handlers should NOT be present in Button output since they're handled by LayoutElement
+        expect(svgString).not.toContain('@mouseenter');
+        expect(svgString).not.toContain('@mouseleave');
+        expect(svgString).not.toContain('@mousedown');
+        expect(svgString).not.toContain('@mouseup');
     });
   });
   
@@ -4241,7 +4280,7 @@ describe('Element Interactive States', () => {
       });
     });
 
-    it('should debounce state changes and trigger updates', async () => {
+    it('should trigger updates immediately on state changes', () => {
       const props: LayoutElementProps = {
         fill: {
           default: '#FF0000',
@@ -4253,11 +4292,7 @@ describe('Element Interactive States', () => {
       
       element.isHovering = true;
       
-      // Should not have called update immediately due to debounce
-      expect(mockRequestUpdateCallback).not.toHaveBeenCalled();
-      
-      // Wait for debounce timeout
-      await new Promise(resolve => setTimeout(resolve, 15)); // Slightly longer than the 10ms debounce
+      // Should have called update immediately for responsive interactivity
       expect(mockRequestUpdateCallback).toHaveBeenCalled();
     });
   });
@@ -5653,7 +5688,7 @@ describe('RectangleElement', () => {
           textColor: 'white'
         };
         rectangleElement = new RectangleElement('rect-button-text', props, {}, mockHass, mockRequestUpdate);
-        const mockButton = new Button('rect-button-text', props, mockHass, mockRequestUpdate);
+        const mockButton = new Button('rect-button-text', props, mockHass, mockRequestUpdate, vi.fn());
         const mockCreateButton = vi.spyOn(mockButton, 'createButton');
         rectangleElement.button = mockButton;
         
@@ -5788,7 +5823,6 @@ describe('RectangleElement', () => {
         fontFamily: 'Antonio'
       };
       
-      // Create a proper mock button that returns a valid SVG result
       const mockButton = {
         createButton: vi.fn().mockReturnValue(svg`<g class="lcars-button-group"><path d="M0,0 L100,0 L100,30 L0,30 Z"/></g>`)
       };
@@ -5799,47 +5833,64 @@ describe('RectangleElement', () => {
       
       const result = rectangleElement.render();
       
-      // Should render because text is configured - text handled by base Element class
       expect(result).toBeDefined();
-      expect(result).toHaveProperty('_$litType$');
       
-      // Result should contain both button and text elements wrapped together
-      expect(result).toHaveProperty('strings');
-      expect(result).toHaveProperty('values');
+      const templateToString = (template: SVGTemplateResult): string => {
+        let resultString = template.strings[0];
+        for (let i = 0; i < template.values.length; i++) {
+          const value = template.values[i];
+          if (value && typeof value === 'object' && '_$litType$' in value) {
+            resultString += templateToString(value as SVGTemplateResult);
+          } else if (value !== null) {
+            resultString += String(value);
+          }
+          resultString += template.strings[i + 1];
+        }
+        return resultString;
+      };
       
-      // The template should be a group containing both button and text elements
-      const templateStr = result!.strings.join('');
-      expect(templateStr).toMatch(/<g/); // Wrapper group for button+text from base class
+      const fullSvgString = result ? templateToString(result) : '';
+      expect(fullSvgString).toContain('lcars-button-group');
+      expect(fullSvgString).toContain('Kitchen Sink Toggle');
     });
 
     it('should not render text for button elements when no text is configured', () => {
-      const props = {
-        button: {
-          enabled: true
-        },
-        text: undefined, // Ensure no text is configured for this button
-        text_element: undefined // Ensure no text_element is configured
-        // No text property
-      };
-      // Create a proper mock button that returns a valid SVG result matching the expected format
-      const mockButton = {
-        createButton: vi.fn().mockReturnValue(svg`<g id="rect-button-no-text" class="lcars-button-group"><path d="M0,0 L100,0 L100,30 L0,30 Z"/></g>`)
-      };
-      
-      rectangleElement = new RectangleElement('rect-button-no-text', props, {}, mockHass, mockRequestUpdate);
-      rectangleElement.button = mockButton as any;
-      rectangleElement.layout = { x: 10, y: 20, width: 150, height: 30, calculated: true };
-      
-      const result = rectangleElement.render();
-      
-      // Should render button without text wrapper since no text configured
-      expect(result).toBeDefined();
-      expect(result).toHaveProperty('_$litType$');
-      
-      // Should be button template without additional text wrapping from base class
-      const templateStr = result!.strings.join('');
-      expect(templateStr).toMatch(/lcars-button-group/); // Button group should be present
-    });
+        const props = {
+          button: {
+            enabled: true
+          }
+        };
+        
+        const mockButton = {
+          createButton: vi.fn().mockReturnValue(svg`<g class="lcars-button-group"><path d="M0,0 L100,0 L100,30 L0,30 Z"/></g>`)
+        };
+        
+        rectangleElement = new RectangleElement('rect-button-no-text', props, {}, mockHass, mockRequestUpdate);
+        rectangleElement.button = mockButton as any;
+        rectangleElement.layout = { x: 10, y: 20, width: 150, height: 30, calculated: true };
+        
+        const result = rectangleElement.render();
+        
+        expect(result).toBeDefined();
+        
+        const templateToString = (template: SVGTemplateResult): string => {
+          let resultString = template.strings[0];
+          for (let i = 0; i < template.values.length; i++) {
+            const value = template.values[i];
+            if (value && typeof value === 'object' && '_$litType$' in value) {
+              resultString += templateToString(value as SVGTemplateResult);
+            } else if (value !== null) { // Exclude null text values from string
+              resultString += String(value);
+            }
+            resultString += template.strings[i + 1];
+          }
+          return resultString;
+        };
+        
+        const fullSvgString = result ? templateToString(result) : '';
+        expect(fullSvgString).toContain('lcars-button-group');
+        expect(fullSvgString).not.toContain('<text');
+      });
   });
 });
 ```

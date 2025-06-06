@@ -8,7 +8,17 @@ const __dirname = path.dirname(__filename);
 
 const outputFile = 'git_history_diff.md';
 const projectRoot = process.cwd();
-const numberOfCommitsToProcess = 1; // Set to 0 to process all commits
+
+// --- Configuration ---
+// Set ONE of the following options. If commitHashToProcess is set, it takes precedence.
+
+// Option 1: Process a specific number of recent commits. Set to 0 to process all commits.
+// const numberOfCommitsToProcess = 1;
+
+// Option 2: Process all commits up to and including a specific commit hash.
+// If this is set to a valid commit hash, it will override numberOfCommitsToProcess.
+// Example: const commitHashToProcess = 'a1b2c3d';
+const commitHashToProcess = '533d966bc53314a7bb0389542dd4ac8c4f2b1444';
 
 
 function runGitCommand(command) {
@@ -181,24 +191,36 @@ try {
 
     const comprehensiveIgnorePatterns = Array.from(allGitignorePatterns);
 
-
-    const revListCommand = numberOfCommitsToProcess > 0
-        ? `rev-list --reverse --no-merges --topo-order -n ${numberOfCommitsToProcess} HEAD`
-        : 'rev-list --reverse --no-merges --topo-order HEAD';
+    let revListCommand;
+    if (commitHashToProcess && commitHashToProcess.trim() !== '') {
+        // Option 2 is active: process history up to a specific commit.
+        const targetCommit = commitHashToProcess.trim();
+        console.log(`Processing all commits up to and including ${targetCommit}...`);
+        revListCommand = `rev-list --reverse --no-merges --topo-order ${targetCommit}`;
+    } else {
+        // Option 1 is active: process a number of commits from HEAD.
+        if (numberOfCommitsToProcess > 0) {
+            console.log(`Processing the last ${numberOfCommitsToProcess} commits...`);
+            revListCommand = `rev-list --reverse --no-merges --topo-order -n ${numberOfCommitsToProcess} HEAD`;
+        } else {
+            console.log('Processing all commits in the repository...');
+            revListCommand = 'rev-list --reverse --no-merges --topo-order HEAD';
+        }
+    }
 
     let commitHashes = [];
     try {
         const revListOutput = runGitCommand(revListCommand);
         commitHashes = revListOutput.split('\n').filter(hash => hash.length > 0);
     } catch (error) {
-        // This might happen in an empty repo or if `HEAD` doesn't exist.
+        // This might happen in an empty repo or if a bad commit hash is provided.
         // The `if (commitHashes.length === 0)` block below will handle this.
         // console.warn(`Could not retrieve commit list: ${error.message}`);
     }
 
 
     if (commitHashes.length === 0) {
-        fs.appendFileSync(absoluteOutputFile, "No commits found in this repository or within the specified range.\n", 'utf8');
+        fs.appendFileSync(absoluteOutputFile, "No commits found in this repository or for the specified range/hash.\n", 'utf8');
         // We will still proceed to check for uncommitted changes below.
     } else {
         const initialCommitHashInRange = commitHashes[0];

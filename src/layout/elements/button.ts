@@ -65,7 +65,7 @@ export class Button {
         
         const pathElement = svg`
             <path
-                id=${this._id}
+                id=${this._id + "__shape"}
                 d=${pathData}
                 fill=${resolvedColors.fillColor}
                 stroke=${resolvedColors.strokeColor}
@@ -92,61 +92,40 @@ export class Button {
             return svg`<g>${elements}</g>`;
         }
         
-        const buttonHandlers = this.createEventHandlers();
-        
+        // Button elements only include click handler for action execution
+        // All hover/mouse state is handled by parent LayoutElement
         return svg`
             <g
                 class="lcars-button-group"
-                @click=${buttonHandlers.handleClick}
+                @click=${this.handleClick.bind(this)}
                 style="cursor: pointer; outline: none;"
                 role="button"
                 aria-label=${elementId}
                 tabindex="0"
-                @keydown=${buttonHandlers.handleKeyDown}
+                @keydown=${this.handleKeyDown.bind(this)}
             >
                 ${elements}
             </g>
         `;
     }
     
-    createEventHandlers() {
-        return {
-            handleClick: (ev: Event): void => {
-                
-                const buttonConfig = this._props.button as LcarsButtonElementConfig | undefined;
-                
-                if (!this._hass || !buttonConfig?.action_config) {
-                    return; 
-                }
-                
-                ev.stopPropagation();
-            
-                const actionConfig = this.createActionConfig(buttonConfig);
-                this.executeAction(actionConfig, ev.currentTarget as Element);
-            },
-            
-            handleMouseEnter: (): void => {
-                // No-op: Timeouts are now managed by the parent LayoutElement
-            },
-            
-            handleMouseLeave: (): void => {
-                // No-op: Timeouts are now managed by the parent LayoutElement
-            },
-            
-            handleMouseDown: (): void => {
-                // No-op: Timeouts are now managed by the parent LayoutElement
-            },
-            
-            handleMouseUp: (): void => {
-                // No-op: Timeouts are now managed by the parent LayoutElement
-            },
-            
-            handleKeyDown: (e: KeyboardEvent): void => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    this.createEventHandlers().handleClick(e);
-                }
-            }
-        };
+    private handleClick(ev: Event): void {
+        const buttonConfig = this._props.button as LcarsButtonElementConfig | undefined;
+        
+        if (!this._hass || !buttonConfig?.action_config) {
+            return; 
+        }
+        
+        ev.stopPropagation();
+    
+        const actionConfig = this.createActionConfig(buttonConfig);
+        this.executeAction(actionConfig, ev.currentTarget as Element);
+    }
+    
+    private handleKeyDown(e: KeyboardEvent): void {
+        if (e.key === 'Enter' || e.key === ' ') {
+            this.handleClick(e);
+        }
     }
     
     private createActionConfig(buttonConfig: LcarsButtonElementConfig) {

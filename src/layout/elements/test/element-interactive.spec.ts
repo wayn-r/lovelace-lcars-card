@@ -131,7 +131,7 @@ describe('Element Interactive States', () => {
       });
     });
 
-    it('should debounce state changes and trigger updates', async () => {
+    it('should trigger updates immediately on state changes', () => {
       const props: LayoutElementProps = {
         fill: {
           default: '#FF0000',
@@ -143,11 +143,7 @@ describe('Element Interactive States', () => {
       
       element.isHovering = true;
       
-      // Should not have called update immediately due to debounce
-      expect(mockRequestUpdateCallback).not.toHaveBeenCalled();
-      
-      // Wait for debounce timeout
-      await new Promise(resolve => setTimeout(resolve, 15)); // Slightly longer than the 10ms debounce
+      // Should have called update immediately for responsive interactivity
       expect(mockRequestUpdateCallback).toHaveBeenCalled();
     });
   });

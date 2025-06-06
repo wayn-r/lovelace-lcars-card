@@ -5,13 +5,13 @@ exports[`ChiselEndcapElement > render > Non-Button Rendering > should render a b
   "_$litType$": 2,
   "strings": [
     "
-          <g id="",
+            <g id="",
     "">
-            ",
+                ",
     "
-            ",
+                ",
     "
-          </g>
+            </g>
         ",
   ],
   "values": [
@@ -52,13 +52,13 @@ exports[`ChiselEndcapElement > render > Non-Button Rendering > should render wit
   "_$litType$": 2,
   "strings": [
     "
-          <g id="",
+            <g id="",
     "">
-            ",
+                ",
     "
-            ",
+                ",
     "
-          </g>
+            </g>
         ",
   ],
   "values": [
@@ -99,13 +99,13 @@ exports[`ChiselEndcapElement > render > Non-Button Rendering > should render wit
   "_$litType$": 2,
   "strings": [
     "
-          <g id="",
+            <g id="",
     "">
-            ",
+                ",
     "
-            ",
+                ",
     "
-          </g>
+            </g>
         ",
   ],
   "values": [
