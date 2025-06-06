@@ -1,7 +1,7 @@
 import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { HomeAssistant } from "custom-card-helpers";
-import { colorResolver } from "../../utils/color-resolver.js";
+import { colorResolver } from "../../utils/color.js";
 import { AnimationContext } from "../../utils/animation.js";
 import { Color, ColorStateContext } from "../../utils/color.js";
 

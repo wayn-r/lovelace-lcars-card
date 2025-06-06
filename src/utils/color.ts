@@ -1,5 +1,12 @@
 import { ColorValue, DynamicColorConfig, StatefulColorConfig, isDynamicColorConfig, isStatefulColorConfig } from '../types';
 import { AnimationContext, animationManager } from './animation';
+import { LayoutElementProps } from '../layout/engine';
+import { HomeAssistant } from 'custom-card-helpers';
+import { Group } from '../layout/engine.js';
+
+// ============================================================================
+// Core Color Types and Interfaces
+// ============================================================================
 
 /**
  * State types for interactive color resolution
@@ -13,6 +20,30 @@ export interface ColorStateContext {
   isCurrentlyHovering?: boolean;
   isCurrentlyActive?: boolean;
 }
+
+/**
+ * Computed color values for an element after resolution
+ */
+export interface ComputedElementColors {
+  fillColor: string;
+  strokeColor: string;
+  strokeWidth: string;
+  textColor: string;
+}
+
+/**
+ * Default color fallbacks for color resolution
+ */
+export interface ColorResolutionDefaults {
+  fallbackFillColor?: string;
+  fallbackStrokeColor?: string;
+  fallbackStrokeWidth?: string;
+  fallbackTextColor?: string;
+}
+
+// ============================================================================
+// Unified Color Class
+// ============================================================================
 
 /**
  * Unified Color class that handles all color formats and resolution logic
@@ -233,4 +264,437 @@ export class Color {
     
     return this._fallback;
   }
-} 
+}
+
+// ============================================================================
+// Color Resolution Service
+// ============================================================================
+
+/**
+ * Simplified color resolution service using the unified Color class
+ */
+export class ColorResolver {
+  /**
+   * Resolve all color properties for an element with full animation and state support
+   */
+  resolveAllElementColors(
+    elementId: string,
+    elementProps: LayoutElementProps,
+    animationContext: AnimationContext,
+    colorDefaults: ColorResolutionDefaults = {},
+    interactiveState: ColorStateContext = {}
+  ): ComputedElementColors {
+    const {
+      fallbackFillColor = 'none',
+      fallbackStrokeColor = 'none',
+      fallbackStrokeWidth = '0',
+      fallbackTextColor = 'currentColor'
+    } = colorDefaults;
+
+    // Create Color instances for each property
+    const fillColor = elementProps.fill !== undefined 
+      ? Color.withFallback(elementProps.fill, fallbackFillColor)
+      : Color.from(fallbackFillColor);
+      
+    const strokeColor = elementProps.stroke !== undefined
+      ? Color.withFallback(elementProps.stroke, fallbackStrokeColor) 
+      : Color.from(fallbackStrokeColor);
+      
+    const textColor = elementProps.textColor !== undefined
+      ? Color.withFallback(elementProps.textColor, fallbackTextColor)
+      : Color.from(fallbackTextColor);
+
+    // Resolve all colors with context
+    return {
+      fillColor: fillColor.resolve(elementId, 'fill', animationContext, interactiveState),
+      strokeColor: strokeColor.resolve(elementId, 'stroke', animationContext, interactiveState),
+      strokeWidth: elementProps.strokeWidth?.toString() ?? fallbackStrokeWidth,
+      textColor: textColor.resolve(elementId, 'textColor', animationContext, interactiveState)
+    };
+  }
+
+  /**
+   * Create a new props object with resolved colors for button-like elements
+   * This handles the common pattern where interactive elements need computed colors
+   */
+  createButtonPropsWithResolvedColors(
+    elementId: string,
+    originalElementProps: LayoutElementProps,
+    animationContext: AnimationContext,
+    interactiveState: ColorStateContext = {}
+  ): LayoutElementProps {
+    const computedColors = this.resolveAllElementColors(elementId, originalElementProps, animationContext, {
+      fallbackTextColor: 'white' // Default text color for interactive elements
+    }, interactiveState);
+    
+    const propsWithResolvedColors = { ...originalElementProps };
+
+    // Only override colors that were actually defined in the original props (not defaults)
+    if (originalElementProps.fill !== undefined) {
+      propsWithResolvedColors.fill = computedColors.fillColor;
+    }
+    
+    if (originalElementProps.stroke !== undefined) {
+      propsWithResolvedColors.stroke = computedColors.strokeColor;
+    }
+
+    if (originalElementProps.textColor !== undefined) {
+      propsWithResolvedColors.textColor = computedColors.textColor;
+    }
+
+    return propsWithResolvedColors;
+  }
+
+  /**
+   * Simplified color resolution without animation context for basic scenarios
+   * This can be used when animation support isn't available or needed
+   */
+  resolveColorsWithoutAnimationContext(
+    elementId: string,
+    elementProps: LayoutElementProps,
+    colorDefaults: ColorResolutionDefaults = {},
+    interactiveState: ColorStateContext = {}
+  ): ComputedElementColors {
+    const basicAnimationContext: AnimationContext = {
+      elementId,
+      getShadowElement: undefined,
+      hass: undefined,
+      requestUpdateCallback: undefined
+    };
+
+    return this.resolveAllElementColors(elementId, elementProps, basicAnimationContext, colorDefaults, interactiveState);
+  }
+
+  /**
+   * Resolve a single color value using the Color class
+   */
+  resolveColor(
+    colorValue: ColorValue,
+    elementId?: string,
+    animationProperty?: 'fill' | 'stroke' | 'textColor',
+    animationContext?: AnimationContext,
+    stateContext?: ColorStateContext,
+    fallback: string = 'transparent'
+  ): string {
+    const color = Color.withFallback(colorValue, fallback);
+    return color.resolve(elementId, animationProperty, animationContext, stateContext);
+  }
+}
+
+// ============================================================================
+// Dynamic Color Management
+// ============================================================================
+
+/**
+ * Manages dynamic color system operations including cache invalidation,
+ * entity monitoring cleanup, and refresh scheduling
+ */
+export class DynamicColorManager {
+  private _dynamicColorCheckScheduled: boolean = false;
+  private _refreshTimeout?: ReturnType<typeof setTimeout>;
+
+  /**
+   * Clear all dynamic color system caches and entity monitoring
+   */
+  clearAllCaches(layoutGroups: Group[]): void {
+    // Clear element-level entity monitoring and animation state
+    for (const group of layoutGroups) {
+      for (const element of group.elements) {
+        this._clearElementState(element);
+      }
+    }
+
+    // Clear global animation manager caches
+    animationManager.invalidateDynamicColorCache();
+  }
+
+  /**
+   * Check for dynamic color changes with throttling to prevent excessive checks
+   */
+  checkDynamicColorChanges(
+    layoutGroups: Group[],
+    hass: HomeAssistant,
+    refreshCallback: () => void,
+    checkDelay: number = 25
+  ): void {
+    if (this._dynamicColorCheckScheduled) {
+      return;
+    }
+    
+    this._dynamicColorCheckScheduled = true;
+    
+    // Clear any existing timeout
+    if (this._refreshTimeout) {
+      clearTimeout(this._refreshTimeout);
+    }
+    
+    this._refreshTimeout = setTimeout(() => {
+      this._dynamicColorCheckScheduled = false;
+      this._refreshTimeout = undefined;
+      
+      const needsRefresh = this._performDynamicColorCheck(layoutGroups, hass);
+      
+      if (needsRefresh) {
+        refreshCallback();
+      }
+    }, checkDelay);
+  }
+
+  /**
+   * Schedule a dynamic color refresh with a delay
+   */
+  scheduleDynamicColorRefresh(
+    hass: HomeAssistant,
+    containerRect: DOMRect | undefined,
+    checkCallback: () => void,
+    refreshCallback: () => void,
+    delay: number = 50
+  ): void {
+    setTimeout(() => {
+      if (hass && containerRect) {
+        checkCallback();
+        refreshCallback();
+      }
+    }, delay);
+  }
+
+  /**
+   * Extract entity IDs that an element is using for dynamic colors
+   */
+  extractEntityIdsFromElement(element: any): Set<string> {
+    const entityIds = new Set<string>();
+    const props = element.props;
+    
+    if (!props) {
+      return entityIds;
+    }
+    
+    // Check dynamic color properties
+    this._extractFromColorProperty(props.fill, entityIds);
+    this._extractFromColorProperty(props.stroke, entityIds);
+    this._extractFromColorProperty(props.textColor, entityIds);
+    
+    // Check button color properties
+    if (props.button) {
+      this._extractFromColorProperty(props.button.hover_fill, entityIds);
+      this._extractFromColorProperty(props.button.active_fill, entityIds);
+      this._extractFromColorProperty(props.button.hover_text_color, entityIds);
+      this._extractFromColorProperty(props.button.active_text_color, entityIds);
+    }
+    
+    return entityIds;
+  }
+
+  /**
+   * Check if there are significant entity changes that might affect layout
+   */
+  hasSignificantEntityChanges(
+    layoutGroups: Group[],
+    lastHassStates: { [entityId: string]: any } | undefined,
+    currentHass: HomeAssistant
+  ): boolean {
+    if (!lastHassStates) {
+      return false;
+    }
+    
+    // Check for entity state changes that might affect text content or dimensions
+    for (const group of layoutGroups) {
+      for (const element of group.elements) {
+        if (this._elementHasSignificantChanges(element, lastHassStates, currentHass)) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Cleanup any pending operations
+   */
+  cleanup(): void {
+    this._dynamicColorCheckScheduled = false;
+    
+    if (this._refreshTimeout) {
+      clearTimeout(this._refreshTimeout);
+      this._refreshTimeout = undefined;
+    }
+  }
+
+  /**
+   * Clear state for a specific element
+   */
+  private _clearElementState(element: any): void {
+    // Clear entity monitoring and animation state
+    if (typeof element.clearMonitoredEntities === 'function') {
+      element.clearMonitoredEntities();
+    }
+    
+    if (typeof element.cleanupAnimations === 'function') {
+      element.cleanupAnimations();
+    }
+    
+    // Clear from animation manager directly
+    animationManager.cleanupElementAnimationTracking(element.id);
+  }
+
+  /**
+   * Perform the actual dynamic color check
+   */
+  private _performDynamicColorCheck(layoutGroups: Group[], hass: HomeAssistant): boolean {
+    let needsRefresh = false;
+    let elementsChecked = 0;
+    
+    // Collect all elements that need entity change checks
+    const elementsToCheck = this._collectElementsForChecking(layoutGroups);
+    
+    // Check each element for entity changes
+    for (const { element } of elementsToCheck) {
+      elementsChecked++;
+      if (this._checkElementEntityChanges(element, hass)) {
+        needsRefresh = true;
+        // Continue checking all elements to ensure comprehensive updates
+      }
+    }
+    
+    return needsRefresh;
+  }
+
+  /**
+   * Collect elements that need to be checked for entity changes
+   */
+  private _collectElementsForChecking(layoutGroups: Group[]): Array<{ element: any }> {
+    const elementsToCheck: Array<{ element: any }> = [];
+    
+    for (const group of layoutGroups) {
+      for (const element of group.elements) {
+        elementsToCheck.push({ element });
+      }
+    }
+    
+    return elementsToCheck;
+  }
+
+  /**
+   * Check if an element has entity changes that require refresh
+   */
+  private _checkElementEntityChanges(element: any, hass: HomeAssistant): boolean {
+    try {
+      return typeof element.checkEntityChanges === 'function' 
+        ? element.checkEntityChanges(hass)
+        : false;
+    } catch (error) {
+      console.warn('Error checking entity changes for element:', element.id, error);
+      return false;
+    }
+  }
+
+  /**
+   * Extract entity ID from a color property if it's a dynamic color config
+   */
+  private _extractFromColorProperty(colorProp: any, entityIds: Set<string>): void {
+    if (colorProp && typeof colorProp === 'object' && colorProp.entity) {
+      entityIds.add(colorProp.entity);
+    }
+  }
+
+  /**
+   * Check if a specific element has significant changes
+   */
+  private _elementHasSignificantChanges(
+    element: any,
+    lastHassStates: { [entityId: string]: any },
+    currentHass: HomeAssistant
+  ): boolean {
+    const props = element.props;
+    
+    // Check for text elements with entity-based content
+    if (this._hasEntityBasedTextChanges(props, lastHassStates, currentHass)) {
+      return true;
+    }
+    
+    // Check for dynamic color changes that might affect entity-based colors
+    if (this._hasEntityBasedColorChanges(props, lastHassStates, currentHass)) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Check for entity-based text content changes
+   */
+  private _hasEntityBasedTextChanges(
+    props: any,
+    lastHassStates: { [entityId: string]: any },
+    currentHass: HomeAssistant
+  ): boolean {
+    if (props.text && typeof props.text === 'string') {
+      return this._checkEntityReferencesInText(props.text, lastHassStates, currentHass);
+    }
+    return false;
+  }
+
+  /**
+   * Check for entity-based color changes
+   */
+  private _hasEntityBasedColorChanges(
+    props: any,
+    lastHassStates: { [entityId: string]: any },
+    currentHass: HomeAssistant
+  ): boolean {
+    const colorProps = [props.fill, props.stroke, props.textColor];
+    
+    for (const colorProp of colorProps) {
+      if (this._isEntityBasedColor(colorProp)) {
+        if (this._checkEntityReferencesInText(colorProp, lastHassStates, currentHass)) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Check if a color property is entity-based
+   */
+  private _isEntityBasedColor(colorProp: any): boolean {
+    return typeof colorProp === 'string' && colorProp.includes('states[');
+  }
+
+  /**
+   * Check entity references in text/color strings
+   */
+  private _checkEntityReferencesInText(
+    text: string,
+    lastHassStates: { [entityId: string]: any },
+    currentHass: HomeAssistant
+  ): boolean {
+    const entityMatches = text.match(/states\['([^']+)'\]/g);
+    if (!entityMatches) return false;
+    
+    for (const match of entityMatches) {
+      const entityIdMatch = match.match(/states\['([^']+)'\]/);
+      if (entityIdMatch) {
+        const entityId = entityIdMatch[1];
+        const oldState = lastHassStates[entityId]?.state;
+        const newState = currentHass.states[entityId]?.state;
+        
+        if (oldState !== newState) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+}
+
+// ============================================================================
+// Singleton Exports for Convenient Access
+// ============================================================================
+
+// Export singleton instances for convenient access across the application
+export const colorResolver = new ColorResolver();
+export const dynamicColorManager = new DynamicColorManager(); 

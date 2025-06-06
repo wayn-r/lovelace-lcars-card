@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { DynamicColorManager } from '../dynamic-color-manager.js';
+import { DynamicColorManager } from '../color.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { Group } from '../../layout/engine.js';
 

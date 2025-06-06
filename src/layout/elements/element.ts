@@ -8,7 +8,7 @@ import { StretchContext } from '../engine.js';
 import { Button } from './button.js';
 import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../../types';
 import { animationManager, AnimationContext } from '../../utils/animation.js';
-import { colorResolver, ComputedElementColors, ColorResolutionDefaults } from '../../utils/color-resolver.js';
+import { colorResolver, ComputedElementColors, ColorResolutionDefaults } from '../../utils/color.js';
 
 export abstract class LayoutElement {
     id: string;

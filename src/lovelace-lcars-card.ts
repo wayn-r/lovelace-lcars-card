@@ -14,7 +14,7 @@ import { LayoutEngine, Group } from './layout/engine.js';
 import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext } from './utils/animation.js';
-import { DynamicColorManager } from './utils/dynamic-color-manager.js';
+import { dynamicColorManager } from './utils/color.js';
 import { VisibilityManager } from './utils/visibility-manager.js';
 import { stateManager } from './utils/state-manager.js';
 import { transformPropagator } from './utils/transform-propagator.js';
@@ -46,7 +46,6 @@ export class LcarsCard extends LitElement {
   private _lastConfig?: LcarsCardConfig;
   
   // Utility classes for better organization
-  private _dynamicColorManager: DynamicColorManager = new DynamicColorManager();
   private _visibilityManager: VisibilityManager = new VisibilityManager(() => this._refreshElementRenders());
   
   // Legacy state tracking for compatibility
@@ -155,7 +154,7 @@ export class LcarsCard extends LitElement {
     this._resizeObserver?.disconnect();
     
     // Clean up utility classes
-    this._dynamicColorManager.cleanup();
+    dynamicColorManager.cleanup();
     this._visibilityManager.cleanup();
     
     // Clean up all element animations and entity monitoring
@@ -183,7 +182,7 @@ export class LcarsCard extends LitElement {
         this._performLayoutCalculation(this._containerRect);
       } else if (hasHassChanged && this._lastHassStates) {
         // Check for significant entity changes using the DynamicColorManager
-        const hasSignificantEntityChanges = this._dynamicColorManager.hasSignificantEntityChanges(
+        const hasSignificantEntityChanges = dynamicColorManager.hasSignificantEntityChanges(
           this._layoutEngine.layoutGroups,
           this._lastHassStates,
           this.hass
@@ -197,7 +196,7 @@ export class LcarsCard extends LitElement {
 
     // Handle dynamic color changes using the DynamicColorManager
     if (hasHassChanged && this.hass && this._lastHassStates) {
-      this._dynamicColorManager.checkDynamicColorChanges(
+      dynamicColorManager.checkDynamicColorChanges(
         this._layoutEngine.layoutGroups,
         this.hass,
         () => this._refreshElementRenders()
@@ -214,22 +213,22 @@ export class LcarsCard extends LitElement {
     console.log('[LCARS Card] View change detected, refreshing dynamic color system');
     
     // Clear all dynamic color caches and entity monitoring using the DynamicColorManager
-    this._dynamicColorManager.clearAllCaches(this._layoutEngine.layoutGroups);
+    dynamicColorManager.clearAllCaches(this._layoutEngine.layoutGroups);
     
     // Force invalidation of last hass states to ensure fresh comparison
     this._lastHassStates = undefined;
     
     // Schedule a dynamic color refresh using the DynamicColorManager
-    this._dynamicColorManager.scheduleDynamicColorRefresh(
-      this.hass,
-      this._containerRect,
-      () => this._dynamicColorManager.checkDynamicColorChanges(
-        this._layoutEngine.layoutGroups,
+          dynamicColorManager.scheduleDynamicColorRefresh(
         this.hass,
+        this._containerRect,
+        () => dynamicColorManager.checkDynamicColorChanges(
+          this._layoutEngine.layoutGroups,
+          this.hass,
+          () => this._refreshElementRenders()
+        ),
         () => this._refreshElementRenders()
-      ),
-      () => this._refreshElementRenders()
-    );
+      );
   }
   
   private _calculateRequiredHeight(containerWidth: number, containerHeight: number): number {

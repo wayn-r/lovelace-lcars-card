@@ -1,16 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ColorResolver, colorResolver } from '../color-resolver';
+import { ColorResolver, colorResolver } from '../color';
 import { AnimationContext } from '../animation';
 
-// Mock the Color class instead of animation manager since ColorResolver now uses Color
-vi.mock('../color', () => ({
-  Color: {
-    withFallback: vi.fn(),
-    from: vi.fn(),
-  }
+// Mock the animation manager since ColorResolver uses it for dynamic colors
+vi.mock('../animation', () => ({
+  animationManager: {
+    resolveDynamicColorWithAnimation: vi.fn(),
+    resolveDynamicColor: vi.fn()
+  },
+  AnimationContext: {}
 }));
-
-import { Color } from '../color';
 
 describe('ColorResolver', () => {
   let resolver: ColorResolver;
@@ -21,14 +20,6 @@ describe('ColorResolver', () => {
     requestUpdateCallback: vi.fn()
   };
 
-  // Mock Color instances
-  const createMockColor = (resolveValue: string) => ({
-    resolve: vi.fn().mockReturnValue(resolveValue),
-    toStaticString: vi.fn().mockReturnValue(resolveValue),
-    value: resolveValue,
-    fallback: 'transparent'
-  });
-
   beforeEach(() => {
     vi.clearAllMocks();
     resolver = new ColorResolver();
@@ -36,9 +27,6 @@ describe('ColorResolver', () => {
 
   describe('resolveAllElementColors', () => {
     it('should use default colors when no props colors are provided', () => {
-      // Mock Color.from to return mock color instances
-      (Color.from as any).mockImplementation((value: string) => createMockColor(value));
-
       const props = {};
       const result = resolver.resolveAllElementColors('test-id', props, mockContext);
       
@@ -51,8 +39,6 @@ describe('ColorResolver', () => {
     });
 
     it('should use custom defaults when provided', () => {
-      (Color.from as any).mockImplementation((value: string) => createMockColor(value));
-      
       const props = {};
       const options = {
         fallbackFillColor: '#ff0000',
@@ -71,7 +57,7 @@ describe('ColorResolver', () => {
       });
     });
 
-    it('should resolve colors using Color class', () => {
+    it('should resolve static colors correctly', () => {
       const props = {
         fill: '#ff0000',
         stroke: '#00ff00',
@@ -79,17 +65,7 @@ describe('ColorResolver', () => {
         textColor: '#ffffff'
       };
 
-      // Mock Color.withFallback to return mock color instances that resolve to the expected values
-      (Color.withFallback as any)
-        .mockReturnValueOnce(createMockColor('#ff0000'))  // For fill
-        .mockReturnValueOnce(createMockColor('#00ff00'))  // For stroke
-        .mockReturnValueOnce(createMockColor('#ffffff')); // For textColor
-
       const result = resolver.resolveAllElementColors('test-id', props, mockContext);
-
-      expect(Color.withFallback).toHaveBeenCalledWith(props.fill, 'none');
-      expect(Color.withFallback).toHaveBeenCalledWith(props.stroke, 'none');
-      expect(Color.withFallback).toHaveBeenCalledWith(props.textColor, 'currentColor');
 
       expect(result).toEqual({
         fillColor: '#ff0000',
@@ -104,8 +80,6 @@ describe('ColorResolver', () => {
         strokeWidth: 2
       };
 
-      (Color.from as any).mockImplementation((value: string) => createMockColor(value));
-
       const result = resolver.resolveAllElementColors('test-id', props, mockContext);
 
       expect(result).toEqual({
@@ -116,45 +90,51 @@ describe('ColorResolver', () => {
       });
     });
 
-    describe('interactive state handling', () => {
-      it('should pass state context to Color.resolve', () => {
-        const props = {
-          fill: '#666666'
-        };
+    it('should handle RGB array colors', () => {
+      const props = {
+        fill: [255, 0, 0],
+        stroke: [0, 255, 0],
+        textColor: [0, 0, 255]
+      };
 
-        const mockColor = createMockColor('#666666');
-        (Color.withFallback as any).mockReturnValue(mockColor);
+      const result = resolver.resolveAllElementColors('test-id', props, mockContext);
+
+      expect(result).toEqual({
+        fillColor: 'rgb(255,0,0)',
+        strokeColor: 'rgb(0,255,0)',
+        strokeWidth: '0',
+        textColor: 'rgb(0,0,255)'
+      });
+    });
+
+    describe('interactive state handling', () => {
+      it('should handle stateful colors with hover state', () => {
+        const props = {
+          fill: {
+            default: '#666666',
+            hover: '#ff0000',
+            active: '#00ff00'
+          }
+        };
 
         const stateContext = {
           isCurrentlyHovering: true,
           isCurrentlyActive: false
         };
 
-        resolver.resolveAllElementColors('test-id', props, mockContext, {}, stateContext);
+        const result = resolver.resolveAllElementColors('test-id', props, mockContext, {}, stateContext);
 
-        expect(mockColor.resolve).toHaveBeenCalledWith(
-          'test-id',
-          'fill',
-          mockContext,
-          stateContext
-        );
+        expect(result.fillColor).toBe('#ff0000');
       });
 
-      it('should handle multiple interactive states', () => {
+      it('should handle stateful colors with active state', () => {
         const props = {
-          fill: '#666666',
-          stroke: '#333333',
-          textColor: '#ffffff'
+          fill: {
+            default: '#666666',
+            hover: '#ff0000',
+            active: '#00ff00'
+          }
         };
-
-        const fillMockColor = createMockColor('#ff0000');
-        const strokeMockColor = createMockColor('#00ff00');
-        const textMockColor = createMockColor('#0000ff');
-        
-        (Color.withFallback as any)
-          .mockReturnValueOnce(fillMockColor)
-          .mockReturnValueOnce(strokeMockColor)
-          .mockReturnValueOnce(textMockColor);
 
         const stateContext = {
           isCurrentlyHovering: false,
@@ -163,16 +143,7 @@ describe('ColorResolver', () => {
 
         const result = resolver.resolveAllElementColors('test-id', props, mockContext, {}, stateContext);
 
-        expect(fillMockColor.resolve).toHaveBeenCalledWith('test-id', 'fill', mockContext, stateContext);
-        expect(strokeMockColor.resolve).toHaveBeenCalledWith('test-id', 'stroke', mockContext, stateContext);
-        expect(textMockColor.resolve).toHaveBeenCalledWith('test-id', 'textColor', mockContext, stateContext);
-
-        expect(result).toEqual({
-          fillColor: '#ff0000',
-          strokeColor: '#00ff00',
-          strokeWidth: '0',
-          textColor: '#0000ff'
-        });
+        expect(result.fillColor).toBe('#00ff00');
       });
     });
   });
@@ -185,13 +156,10 @@ describe('ColorResolver', () => {
         customProp: 'value'
       };
 
-      const mockColor = createMockColor('#ffaa00');
-      (Color.withFallback as any).mockReturnValue(mockColor);
-
       const result = resolver.createButtonPropsWithResolvedColors('test-id', originalProps, mockContext);
 
       expect(result).toEqual({
-        fill: '#ffaa00',
+        fill: '#666666',
         text: 'Click me',
         customProp: 'value'
       });
@@ -203,42 +171,39 @@ describe('ColorResolver', () => {
         customProp: 'value'
       };
 
-      (Color.from as any).mockImplementation((value: string) => createMockColor(value));
-
       const result = resolver.createButtonPropsWithResolvedColors('test-id', originalProps, mockContext);
 
       expect(result).toEqual({
         text: 'Click me',
         customProp: 'value'
       });
-      // fill, stroke, and textColor should not be added if not in original props
-      expect(result).not.toHaveProperty('fill');
-      expect(result).not.toHaveProperty('stroke');
-      expect(result).not.toHaveProperty('textColor');
+      
+      // Should not have fill, stroke, or textColor since they weren't in original props
+      expect(result.fill).toBeUndefined();
+      expect(result.stroke).toBeUndefined();
+      expect(result.textColor).toBeUndefined();
     });
 
     it('should handle stateful colors in button props', () => {
       const originalProps = {
-        fill: '#666666',
+        fill: {
+          default: '#666666',
+          hover: '#0099ff'
+        },
         textColor: '#ffffff',
         text: 'Click me'
       };
 
-      const fillMockColor = createMockColor('#0099ff');
-      const textMockColor = createMockColor('#ffaa00');
-      
-      (Color.withFallback as any)
-        .mockReturnValueOnce(fillMockColor)
-        .mockReturnValueOnce(textMockColor);
-
-      const result = resolver.createButtonPropsWithResolvedColors('test-id', originalProps, mockContext, {
+      const stateContext = {
         isCurrentlyHovering: true,
         isCurrentlyActive: false
-      });
+      };
+
+      const result = resolver.createButtonPropsWithResolvedColors('test-id', originalProps, mockContext, stateContext);
 
       expect(result).toEqual({
         fill: '#0099ff',
-        textColor: '#ffaa00',
+        textColor: '#ffffff',
         text: 'Click me'
       });
     });
@@ -252,23 +217,47 @@ describe('ColorResolver', () => {
 
   describe('resolveColor method', () => {
     it('should resolve single color values', () => {
-      const mockColor = createMockColor('#ff0000');
-      (Color.withFallback as any).mockReturnValue(mockColor);
-
       const result = resolver.resolveColor('#ff0000', 'test-element', 'fill', mockContext, {}, 'blue');
-
-      expect(Color.withFallback).toHaveBeenCalledWith('#ff0000', 'blue');
-      expect(mockColor.resolve).toHaveBeenCalledWith('test-element', 'fill', mockContext, {});
       expect(result).toBe('#ff0000');
     });
 
     it('should use transparent as default fallback', () => {
-      const mockColor = createMockColor('#ff0000');
-      (Color.withFallback as any).mockReturnValue(mockColor);
+      const result = resolver.resolveColor('#ff0000');
+      expect(result).toBe('#ff0000');
+    });
 
-      resolver.resolveColor('#ff0000');
+    it('should handle stateful colors', () => {
+      const statefulColor = {
+        default: '#666666',
+        hover: '#ff0000'
+      };
 
-      expect(Color.withFallback).toHaveBeenCalledWith('#ff0000', 'transparent');
+      const stateContext = {
+        isCurrentlyHovering: true,
+        isCurrentlyActive: false
+      };
+
+      const result = resolver.resolveColor(statefulColor, 'test-element', 'fill', mockContext, stateContext, 'blue');
+      expect(result).toBe('#ff0000');
+    });
+  });
+
+  describe('resolveColorsWithoutAnimationContext', () => {
+    it('should resolve colors without animation context', () => {
+      const props = {
+        fill: '#ff0000',
+        stroke: '#00ff00',
+        textColor: '#ffffff'
+      };
+
+      const result = resolver.resolveColorsWithoutAnimationContext('test-id', props);
+
+      expect(result).toEqual({
+        fillColor: '#ff0000',
+        strokeColor: '#00ff00',
+        strokeWidth: '0',
+        textColor: '#ffffff'
+      });
     });
   });
 }); 
