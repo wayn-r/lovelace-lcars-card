@@ -174,7 +174,7 @@ export abstract class LayoutElement {
 
     private _handleMouseLeave(): void {
         this.isHovering = false;
-        this.isActive = false; // Cancel active state on leave
+        this.isActive = false;
     }
 
     private _handleMouseDown(): void {

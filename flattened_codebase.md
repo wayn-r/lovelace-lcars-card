@@ -819,7 +819,7 @@ const projectRoot = process.cwd();
 // Option 2: Process all commits up to and including a specific commit hash.
 // If this is set to a valid commit hash, it will override numberOfCommitsToProcess.
 // Example: const commitHashToProcess = 'a1b2c3d';
-const commitHashToProcess = '533d966bc53314a7bb0389542dd4ac8c4f2b1444';
+const commitHashToProcess = 'be38579bc24edec66629383b12e422c735f402b3';
 
 
 function runGitCommand(command) {
@@ -2060,7 +2060,7 @@ export abstract class LayoutElement {
 
     private _handleMouseLeave(): void {
         this.isHovering = false;
-        this.isActive = false; // Cancel active state on leave
+        this.isActive = false;
     }
 
     private _handleMouseDown(): void {
@@ -9681,7 +9681,7 @@ export class LcarsCard extends LitElement {
       };
       
       const groups = parseConfig(this._config, this.hass, () => { 
-        this.requestUpdate(); 
+        this._refreshElementRenders(); 
       }, getShadowElement); 
       
       groups.forEach((group: Group) => { 
@@ -9786,6 +9786,9 @@ export class LcarsCard extends LitElement {
               return element || null;
             });
             
+            // Set up interactive listeners for hover/active states
+            this._setupAllElementListeners();
+            
             // Trigger on_load animations for all elements
             this._triggerOnLoadAnimations(groups);
           }, 100);
@@ -9849,8 +9852,12 @@ export class LcarsCard extends LitElement {
     // Button elements handle their color updates directly via _updateButtonAppearanceDirectly()
     this.requestUpdate();
 
-    // Schedule animation restoration to occur after the next render cycle
+    // Schedule interactive listener setup and animation restoration to occur after the next render cycle
     Promise.resolve().then(() => {
+        // Set up interactive listeners after DOM elements are updated
+        this._setupAllElementListeners();
+        
+        // Schedule animation restoration to occur after listener setup
         if (animationStates.size > 0) {
             const context: AnimationContext = {
                 elementId: '', // Not used in restoration context for multiple elements
@@ -12620,7 +12627,7 @@ export class Color {
       if (selectedColorValue !== undefined) {
         // Recursively resolve the selected color value
         const stateColor = new Color(selectedColorValue, this._fallback);
-        return stateColor.resolve(elementId, animationProperty, animationContext);
+        return stateColor.resolve(elementId, animationProperty, animationContext, stateContext);
       }
       
       return this._fallback;

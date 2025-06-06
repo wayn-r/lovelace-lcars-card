@@ -316,7 +316,7 @@ export class LcarsCard extends LitElement {
       };
       
       const groups = parseConfig(this._config, this.hass, () => { 
-        this.requestUpdate(); 
+        this._refreshElementRenders(); 
       }, getShadowElement); 
       
       groups.forEach((group: Group) => { 
@@ -421,6 +421,9 @@ export class LcarsCard extends LitElement {
               return element || null;
             });
             
+            // Set up interactive listeners for hover/active states
+            this._setupAllElementListeners();
+            
             // Trigger on_load animations for all elements
             this._triggerOnLoadAnimations(groups);
           }, 100);
@@ -484,8 +487,12 @@ export class LcarsCard extends LitElement {
     // Button elements handle their color updates directly via _updateButtonAppearanceDirectly()
     this.requestUpdate();
 
-    // Schedule animation restoration to occur after the next render cycle
+    // Schedule interactive listener setup and animation restoration to occur after the next render cycle
     Promise.resolve().then(() => {
+        // Set up interactive listeners after DOM elements are updated
+        this._setupAllElementListeners();
+        
+        // Schedule animation restoration to occur after listener setup
         if (animationStates.size > 0) {
             const context: AnimationContext = {
                 elementId: '', // Not used in restoration context for multiple elements

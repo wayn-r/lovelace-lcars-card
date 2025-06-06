@@ -18,7 +18,7 @@ const projectRoot = process.cwd();
 // Option 2: Process all commits up to and including a specific commit hash.
 // If this is set to a valid commit hash, it will override numberOfCommitsToProcess.
 // Example: const commitHashToProcess = 'a1b2c3d';
-const commitHashToProcess = '533d966bc53314a7bb0389542dd4ac8c4f2b1444';
+const commitHashToProcess = 'be38579bc24edec66629383b12e422c735f402b3';
 
 
 function runGitCommand(command) {

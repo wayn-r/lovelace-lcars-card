@@ -60,7 +60,7 @@ export class Color {
       if (selectedColorValue !== undefined) {
         // Recursively resolve the selected color value
         const stateColor = new Color(selectedColorValue, this._fallback);
-        return stateColor.resolve(elementId, animationProperty, animationContext);
+        return stateColor.resolve(elementId, animationProperty, animationContext, stateContext);
       }
       
       return this._fallback;
