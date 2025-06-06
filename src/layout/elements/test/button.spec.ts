@@ -1,71 +1,91 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Button } from '../button';
-import { svg, SVGTemplateResult } from 'lit';
+import { HomeAssistant } from 'custom-card-helpers';
+import type { Mock } from 'vitest';
 
-// Mock HomeAssistant
-const mockHass: any = {
-  callService: vi.fn(),
-  states: {}
-};
-
-describe('Button Functionality', () => {
-  let button: Button;
-  const mockRequestUpdate = vi.fn();
+describe('Button', () => {
+  let mockHass: HomeAssistant;
+  let mockRequestUpdate: () => void;
+  let mockGetShadowElement: (id: string) => Element | null;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockHass = {} as HomeAssistant;
+    mockRequestUpdate = vi.fn();
+    mockGetShadowElement = vi.fn();
+    vi.mock('custom-card-helpers', () => ({
+      handleAction: vi.fn(),
+    }));
   });
 
-  describe('createButton basic functionality', () => {
-    it('should create a button with proper SVG structure', () => {
-      const props = {
-        button: {
-          enabled: true
-        },
-        fill: '#FF0000'
-      };
-      
-      button = new Button('test-button', props, mockHass, mockRequestUpdate);
-      
-      const pathData = 'M 0,0 L 100,0 L 100,30 L 0,30 Z';
-      const result = button.createButton(pathData, 0, 0, 100, 30, {
-        rx: 0
-      });
-
-      // The result should be a button group with interactive handlers
-      expect(result).toBeDefined();
-      // Check that it's a proper SVG template result by checking for expected properties
-      expect(result).toHaveProperty('_$litType$');
-      expect(result).toHaveProperty('strings');
-      expect(result).toHaveProperty('values');
+  describe('Button Creation and Interactivity', () => {
+    it('should create a non-interactive element if button is not enabled', () => {
+        const props = { fill: '#FF0000', button: { enabled: false } };
+        const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+        const result = button.createButton('M 0 0', 0, 0, 10, 10, { rx: 0 }, { isCurrentlyHovering: false, isCurrentlyActive: false });
+        expect(result).toBeDefined();
+        
+        // A disabled button should just be a <g> tag with the path, no event handlers
+        const svgString = result.strings.join('');
+        expect(svgString).not.toContain('@click');
+        expect(svgString).not.toContain('@keydown');
+        expect(svgString).not.toContain('role="button"');
     });
 
-    it('should apply correct colors from props', () => {
+    it('should create an interactive element with only action handlers if button is enabled', () => {
+        const props = { fill: '#FF0000', button: { enabled: true } };
+        const button = new Button('test-button', props, mockHass, mockRequestUpdate, mockGetShadowElement);
+        const result = button.createButton('M 0 0', 0, 0, 10, 10, { rx: 0 }, { isCurrentlyHovering: false, isCurrentlyActive: false });
+        expect(result).toBeDefined();
+
+        const svgString = result.strings.join('');
+        // Check for presence of action event handlers
+        expect(svgString).toContain('@click');
+        expect(svgString).toContain('@keydown');
+
+        // Check that visual state handlers are NOT present
+        expect(svgString).not.toContain('@mouseenter');
+        expect(svgString).not.toContain('@mouseleave');
+        expect(svgString).not.toContain('@mousedown');
+        expect(svgString).not.toContain('@mouseup');
+    });
+  });
+  
+  describe('Button Appearance and Color Resolution', () => {
+    let mockRequestUpdate: Mock;
+    let mockGetShadowElement: Mock;
+    let mockElement: HTMLElement;
+    let button: Button;
+
+    beforeEach(() => {
+      mockRequestUpdate = vi.fn();
+      mockElement = document.createElement('div');
+      mockGetShadowElement = vi.fn().mockReturnValue(mockElement);
+      
       const props = {
-        button: {
-          enabled: true
-        },
-        fill: '#FF0000',
-        stroke: '#00FF00',
-        strokeWidth: 2
+        fill: {
+          default: '#FF0000',
+          hover: '#00FF00',
+          active: '#0000FF'
+        }
       };
       
-      button = new Button('test-button', props, mockHass, mockRequestUpdate);
-      
-      const pathData = 'M 0,0 L 100,0 L 100,30 L 0,30 Z';
-      const result = button.createButton(pathData, 0, 0, 100, 30, {
-        rx: 0
-      });
-
-      // Check that the result contains the expected structure
-      expect(result).toBeDefined();
-      // Check that it's a proper SVG template result by checking for expected properties
-      expect(result).toHaveProperty('_$litType$');
-      expect(result).toHaveProperty('strings');
-      expect(result).toHaveProperty('values');
+      button = new Button('test-button', props, undefined, mockRequestUpdate, mockGetShadowElement);
     });
 
-    it('should create interactive button group with event handlers', () => {
+    it('should resolve colors correctly based on interactive state', () => {
+      const defaultColors = (button as any).getResolvedColors({ isCurrentlyHovering: false, isCurrentlyActive: false });
+      expect(defaultColors.fillColor).toBe('#FF0000');
+      
+      const hoverColors = (button as any).getResolvedColors({ isCurrentlyHovering: true, isCurrentlyActive: false });
+      expect(hoverColors.fillColor).toBe('#00FF00');
+      
+      const activeColors = (button as any).getResolvedColors({ isCurrentlyHovering: true, isCurrentlyActive: true });
+      expect(activeColors.fillColor).toBe('#0000FF');
+    });
+  });
+
+  describe('Action Handling', () => {
+    it('should handle action configuration', () => {
       const props = {
         button: {
           enabled: true,
@@ -76,109 +96,21 @@ describe('Button Functionality', () => {
         }
       };
       
-      button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate, mockGetShadowElement);
       
       const pathData = 'M 0,0 L 100,0 L 100,30 L 0,30 Z';
-      const result = button.createButton(pathData, 0, 0, 100, 30, {
-        rx: 0
-      });
+      const result = button.createButton(pathData, 0, 0, 100, 30, { rx: 0 }, { isCurrentlyHovering: false, isCurrentlyActive: false });
 
-      // Check that the result is an interactive button
       expect(result).toBeDefined();
-      // Check that it's a proper SVG template result by checking for expected properties
       expect(result).toHaveProperty('_$litType$');
       expect(result).toHaveProperty('strings');
       expect(result).toHaveProperty('values');
     });
   });
 
-  describe('hover and active state handling', () => {
-    it('should trigger global update when hover state changes', () => {
-      const mockRequestUpdate = vi.fn();
-      
-      const button = new Button('test-button', {
-        fill: '#FF0000',
-        button: {
-          enabled: true,
-          hover_fill: '#00FF00'
-        }
-      }, undefined, mockRequestUpdate);
-      
-      // Initially not hovering
-      expect(button.isHovering).toBe(false);
-      
-      // Set hovering to true
-      button.isHovering = true;
-      
-      // Wait for the debounced update
-      return new Promise<void>((resolve) => {
-        setTimeout(() => {
-          // Should have triggered global re-render to update colors
-          expect(mockRequestUpdate).toHaveBeenCalled();
-          
-          resolve();
-        }, 15); // Wait longer than the 10ms debounce
-      });
-    });
-    
-    it('should fall back to global update if direct DOM update fails', () => {
-      const mockGetShadowElement = vi.fn().mockReturnValue(null); // Element not found
-      const mockRequestUpdate = vi.fn();
-      
-      const button = new Button('test-button', {
-        fill: '#FF0000',
-        button: {
-          enabled: true,
-          hover_fill: '#00FF00'
-        }
-      }, undefined, mockRequestUpdate, mockGetShadowElement);
-      
-      // Set hovering to true
-      button.isHovering = true;
-      
-      // Wait for the debounced update
-      return new Promise<void>((resolve) => {
-        setTimeout(() => {
-          // Should have fallen back to global re-render
-          expect(mockRequestUpdate).toHaveBeenCalled();
-          
-          resolve();
-        }, 15); // Wait longer than the 10ms debounce
-      });
-    });
-
-    it('should handle active state changes', () => {
-      const button = new Button('test-button', {
-        button: {
-          enabled: true,
-          active_fill: '#0000FF'
-        }
-      });
-      
-      // Initially not active
-      expect(button.isActive).toBe(false);
-      
-      // Set active to true
-      button.isActive = true;
-      expect(button.isActive).toBe(true);
-      
-      // Set active to false
-      button.isActive = false;
-      expect(button.isActive).toBe(false);
-    });
-  });
-
-  // Legacy button property tests removed - now using unified color system
-
   describe('cleanup', () => {
-    it('should clean up timeouts properly', () => {
-      const button = new Button('test-button', {});
-      
-      // Set hover state to trigger timeout
-      button.isHovering = true;
-      button.isActive = true;
-      
-      // Should not throw when cleaning up
+    it('should be a no-op and not throw an error', () => {
+      const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
       expect(() => button.cleanup()).not.toThrow();
     });
   });

@@ -116,10 +116,11 @@ function convertNewElementToProps(element: ElementConfig): any {
         target_element_ref: tapAction.target_element_ref,
         state: tapAction.state,
         states: tapAction.states,
-        actions: tapAction.actions,
-        animation: tapAction.animation
+        actions: tapAction.actions
       };
     }
+    
+    // No legacy transformation needed - elements support stateful colors natively
     
     // TODO: Handle hold and double_tap actions when implemented
   }

@@ -420,8 +420,6 @@ describe('parseConfig', () => {
     });
 
     describe('Button Configuration Conversion', () => {
-
-
       it('should handle elements without button configuration', () => {
         const config: LcarsCardConfig = {
           type: 'lcars-card',
@@ -446,8 +444,6 @@ describe('parseConfig', () => {
 
         expect(props.button).toBeUndefined();
       });
-
-
 
       it('should convert new direct button configuration structure', () => {
         const config: LcarsCardConfig = {
@@ -491,4 +487,6 @@ describe('parseConfig', () => {
       });
     });
   });
+
+  // Note: No legacy button color tests needed - using modern stateful color format
 });

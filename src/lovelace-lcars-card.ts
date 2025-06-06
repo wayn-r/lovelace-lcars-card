@@ -113,6 +113,56 @@ export class LcarsCard extends LitElement {
     this._scheduleInitialLayout();
   }
 
+  updated(changedProperties: Map<string | number | symbol, unknown>): void {
+    super.updated(changedProperties);
+
+    // After the DOM has been updated, setup interactive listeners for all elements.
+    // This is crucial for hover/click effects.
+    if (this._layoutEngine.layoutGroups.length > 0) {
+      this._setupAllElementListeners();
+    }
+
+    const hasHassChanged = changedProperties.has('hass');
+    const hasConfigChanged = changedProperties.has('_config');
+
+    if (hasConfigChanged || hasHassChanged) {
+      this._updateLayoutEngineWithHass();
+    }
+
+    // Simple logic: if we have both config and container, calculate layout
+    if (this._config && this._containerRect) {
+      if (hasConfigChanged) {
+        // Config changed - always recalculate
+        this._performLayoutCalculation(this._containerRect);
+      } else if (hasHassChanged && this._lastHassStates) {
+        // Check for significant entity changes using the ColorResolver
+        const hasSignificantEntityChanges = colorResolver.hasSignificantEntityChanges(
+          this._layoutEngine.layoutGroups,
+          this._lastHassStates,
+          this.hass
+        );
+        
+        if (hasSignificantEntityChanges) {
+          this._performLayoutCalculation(this._containerRect);
+        }
+      }
+    }
+
+    // Handle dynamic color changes using the ColorResolver
+    if (hasHassChanged && this.hass && this._lastHassStates) {
+      colorResolver.checkDynamicColorChanges(
+        this._layoutEngine.layoutGroups,
+        this.hass,
+        () => this._refreshElementRenders()
+      );
+    }
+
+    // Store current hass states for next comparison
+    if (this.hass) {
+      this._lastHassStates = { ...this.hass.states };
+    }
+  }
+
   private _scheduleInitialLayout(): void {
     // Wait for browser to complete layout using requestAnimationFrame
     requestAnimationFrame(() => {
@@ -160,69 +210,27 @@ export class LcarsCard extends LitElement {
     // Clean up all element animations and entity monitoring
     for (const group of this._layoutEngine.layoutGroups) {
       for (const element of group.elements) {
-        animationManager.cleanupElementAnimationTracking(element.id);
+        element.cleanup();
       }
     }
     
     super.disconnectedCallback();
   }
 
-  protected updated(changedProperties: Map<string | number | symbol, unknown>): void {
-    const hasHassChanged = changedProperties.has('hass');
-    const hasConfigChanged = changedProperties.has('_config');
-
-    if (hasConfigChanged || hasHassChanged) {
-      this._updateLayoutEngineWithHass();
-    }
-
-    // Simple logic: if we have both config and container, calculate layout
-    if (this._config && this._containerRect) {
-      if (hasConfigChanged) {
-        // Config changed - always recalculate
-        this._performLayoutCalculation(this._containerRect);
-      } else if (hasHassChanged && this._lastHassStates) {
-        // Check for significant entity changes using the ColorResolver
-        const hasSignificantEntityChanges = colorResolver.hasSignificantEntityChanges(
-          this._layoutEngine.layoutGroups,
-          this._lastHassStates,
-          this.hass
-        );
-        
-        if (hasSignificantEntityChanges) {
-          this._performLayoutCalculation(this._containerRect);
-        }
-      }
-    }
-
-          // Handle dynamic color changes using the ColorResolver
-    if (hasHassChanged && this.hass && this._lastHassStates) {
-      colorResolver.checkDynamicColorChanges(
-        this._layoutEngine.layoutGroups,
-        this.hass,
-        () => this._refreshElementRenders()
-      );
-    }
-
-    // Store current hass states for next comparison
-    if (this.hass) {
-      this._lastHassStates = { ...this.hass.states };
-    }
-  }
-
   private _handleViewChange(): void {
     console.log('[LCARS Card] View change detected, refreshing dynamic color system');
     
-          // Clear all dynamic color caches and entity monitoring using the ColorResolver
-          colorResolver.clearAllCaches(this._layoutEngine.layoutGroups);
+    // Clear all dynamic color caches and entity monitoring using the ColorResolver
+    colorResolver.clearAllCaches(this._layoutEngine.layoutGroups);
     
     // Force invalidation of last hass states to ensure fresh comparison
     this._lastHassStates = undefined;
     
-          // Schedule a dynamic color refresh using the ColorResolver
-                colorResolver.scheduleDynamicColorRefresh(
-        this.hass,
-        this._containerRect,
-        () => colorResolver.checkDynamicColorChanges(
+    // Schedule a dynamic color refresh using the ColorResolver
+    colorResolver.scheduleDynamicColorRefresh(
+      this.hass,
+      this._containerRect,
+      () => colorResolver.checkDynamicColorChanges(
         this._layoutEngine.layoutGroups,
         this.hass,
         () => this._refreshElementRenders()
@@ -671,6 +679,14 @@ export class LcarsCard extends LitElement {
       }
     }).catch(error => {
       console.error('[LcarsCard] Error importing state manager for status update:', error);
+    });
+  }
+
+  private _setupAllElementListeners(): void {
+    this._layoutEngine.layoutGroups.forEach(group => {
+      group.elements.forEach(element => {
+        element.setupInteractiveListeners();
+      });
     });
   }
 

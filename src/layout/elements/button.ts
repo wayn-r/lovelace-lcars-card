@@ -8,17 +8,11 @@ import { Color, ColorStateContext } from "../../utils/color.js";
 export type ButtonPropertyName = 'fill' | 'stroke' | 'strokeWidth';
 
 export class Button {
-    private _isHovering = false;
-    private _isActive = false;
     private _props: any;
     private _hass?: HomeAssistant;
     private _requestUpdateCallback?: () => void;
     private _id: string;
     private _getShadowElement?: (id: string) => Element | null;
-    private _hoverTimeout?: ReturnType<typeof setTimeout>;
-    private _lastHoverState = false;
-    private _activeTimeout?: ReturnType<typeof setTimeout>;
-    private _lastActiveState = false;
 
     constructor(id: string, props: any, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this._id = id;
@@ -26,58 +20,6 @@ export class Button {
         this._hass = hass;
         this._requestUpdateCallback = requestUpdateCallback;
         this._getShadowElement = getShadowElement;
-    }
-
-    get isHovering(): boolean {
-        return this._isHovering;
-    }
-
-    set isHovering(value: boolean) {
-        if (this._isHovering === value) return;
-        
-        this._isHovering = value;
-        
-        // Clear any existing timeout
-        if (this._hoverTimeout) {
-            clearTimeout(this._hoverTimeout);
-        }
-        
-        // Debounce hover state changes to prevent flickering
-        this._hoverTimeout = setTimeout(() => {
-            if (this._lastHoverState !== this._isHovering) {
-                this._lastHoverState = this._isHovering;
-                
-                // Instead of triggering a global re-render, try to update just this button's appearance
-                this._updateButtonAppearanceDirectly();
-            }
-            this._hoverTimeout = undefined;
-        }, 10); // Reduced from 50ms to 10ms for better responsiveness
-    }
-
-    get isActive(): boolean {
-        return this._isActive;
-    }
-
-    set isActive(value: boolean) {
-        if (this._isActive === value) return;
-        
-        this._isActive = value;
-        
-        // Clear any existing timeout
-        if (this._activeTimeout) {
-            clearTimeout(this._activeTimeout);
-        }
-        
-        // Debounce active state changes to prevent flickering
-        this._activeTimeout = setTimeout(() => {
-            if (this._lastActiveState !== this._isActive) {
-                this._lastActiveState = this._isActive;
-                
-                // Instead of triggering a global re-render, try to update just this button's appearance
-                this._updateButtonAppearanceDirectly();
-            }
-            this._activeTimeout = undefined;
-        }, 10); // Reduced from 50ms to 10ms for better responsiveness
     }
 
     /**
@@ -93,21 +35,10 @@ export class Button {
     }
 
     /**
-     * Get the current state context for this button
-     */
-    private getStateContext(): ColorStateContext {
-        return {
-            isCurrentlyHovering: this._isHovering,
-            isCurrentlyActive: this._isActive
-        };
-    }
-
-    /**
      * Get resolved colors for the button using the new color resolver
      */
-    private getResolvedColors() {
+    private getResolvedColors(stateContext: ColorStateContext) {
         const context = this.getAnimationContext();
-        const stateContext = this.getStateContext();
         
         return colorResolver.resolveAllElementColors(
             this._id,
@@ -118,8 +49,6 @@ export class Button {
         );
     }
 
-    // Legacy methods removed - now using unified color system via getResolvedColors()
-
     createButton(
         pathData: string,
         x: number,
@@ -128,10 +57,11 @@ export class Button {
         height: number,
         options: {
             rx: number
-        }
+        },
+        stateContext: ColorStateContext
     ): SVGTemplateResult {
         // Use the new color resolver to get colors with hover/active state support
-        const resolvedColors = this.getResolvedColors();
+        const resolvedColors = this.getResolvedColors(stateContext);
         
         const pathElement = svg`
             <path
@@ -144,7 +74,7 @@ export class Button {
         `;
         
         return this.createButtonGroup([pathElement], {
-            isButton: true,
+            isButton: this._props.button?.enabled === true,
             elementId: this._id
         });
     }
@@ -168,10 +98,6 @@ export class Button {
             <g
                 class="lcars-button-group"
                 @click=${buttonHandlers.handleClick}
-                @mouseenter=${buttonHandlers.handleMouseEnter}
-                @mouseleave=${buttonHandlers.handleMouseLeave}
-                @mousedown=${buttonHandlers.handleMouseDown}
-                @mouseup=${buttonHandlers.handleMouseUp}
                 style="cursor: pointer; outline: none;"
                 role="button"
                 aria-label=${elementId}
@@ -200,20 +126,19 @@ export class Button {
             },
             
             handleMouseEnter: (): void => {
-                this.isHovering = true;
+                // No-op: Timeouts are now managed by the parent LayoutElement
             },
             
             handleMouseLeave: (): void => {
-                this.isHovering = false;
-                this.isActive = false;
+                // No-op: Timeouts are now managed by the parent LayoutElement
             },
             
             handleMouseDown: (): void => {
-                this.isActive = true;
+                // No-op: Timeouts are now managed by the parent LayoutElement
             },
             
             handleMouseUp: (): void => {
-                this.isActive = false;
+                // No-op: Timeouts are now managed by the parent LayoutElement
             },
             
             handleKeyDown: (e: KeyboardEvent): void => {
@@ -386,21 +311,7 @@ export class Button {
         this._hass = hass;
     }
 
-    // Add cleanup method for timeouts
     cleanup(): void {
-        if (this._hoverTimeout) {
-            clearTimeout(this._hoverTimeout);
-            this._hoverTimeout = undefined;
-        }
-        if (this._activeTimeout) {
-            clearTimeout(this._activeTimeout);
-            this._activeTimeout = undefined;
-        }
-    }
-
-    private _updateButtonAppearanceDirectly(): void {
-        // Always fall back to global update to ensure proper re-rendering with state changes
-        // This ensures that the entire element gets re-rendered with the current hover/active state
-        this._requestUpdateCallback?.();
+        // No-op: State and timeouts are now managed by the parent LayoutElement
     }
 } 

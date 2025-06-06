@@ -21,6 +21,19 @@ export abstract class LayoutElement {
     public requestUpdateCallback?: () => void;
     public button?: Button;
     public getShadowElement?: (id: string) => Element | null;
+    
+    // Interactive state tracking - available for all elements
+    private _isHovering = false;
+    private _isActive = false;
+    private _hoverTimeout?: ReturnType<typeof setTimeout>;
+    private _activeTimeout?: ReturnType<typeof setTimeout>;
+
+    private readonly _boundHandleMouseEnter: () => void;
+    private readonly _boundHandleMouseLeave: () => void;
+    private readonly _boundHandleMouseDown: () => void;
+    private readonly _boundHandleMouseUp: () => void;
+    private readonly _boundHandleTouchStart: () => void;
+    private readonly _boundHandleTouchEnd: () => void;
 
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this.id = id;
@@ -29,6 +42,14 @@ export abstract class LayoutElement {
         this.hass = hass;
         this.requestUpdateCallback = requestUpdateCallback;
         this.getShadowElement = getShadowElement;
+
+        // Bind event handlers once for consistent listener removal
+        this._boundHandleMouseEnter = this._handleMouseEnter.bind(this);
+        this._boundHandleMouseLeave = this._handleMouseLeave.bind(this);
+        this._boundHandleMouseDown = this._handleMouseDown.bind(this);
+        this._boundHandleMouseUp = this._handleMouseUp.bind(this);
+        this._boundHandleTouchStart = this._handleTouchStart.bind(this);
+        this._boundHandleTouchEnd = this._handleTouchEnd.bind(this);
 
         // Initialize animation state for this element
         animationManager.initializeElementAnimationTracking(id);
@@ -40,6 +61,146 @@ export abstract class LayoutElement {
 
         this.resetLayout();
         this.intrinsicSize = { width: 0, height: 0, calculated: false };
+    }
+
+    // Interactive state management for all elements
+    get isHovering(): boolean {
+        return this._isHovering;
+    }
+
+    set isHovering(value: boolean) {
+        if (this._isHovering === value) return;
+        
+        this._isHovering = value;
+        
+        if (this._hoverTimeout) {
+            clearTimeout(this._hoverTimeout);
+        }
+        
+        this._hoverTimeout = setTimeout(() => {
+            this._requestUpdateWithInteractiveState();
+            this._hoverTimeout = undefined;
+        }, 10);
+    }
+
+    get isActive(): boolean {
+        return this._isActive;
+    }
+
+    set isActive(value: boolean) {
+        if (this._isActive === value) return;
+        
+        this._isActive = value;
+        
+        if (this._activeTimeout) {
+            clearTimeout(this._activeTimeout);
+        }
+        
+        this._activeTimeout = setTimeout(() => {
+            this._requestUpdateWithInteractiveState();
+            this._activeTimeout = undefined;
+        }, 10);
+    }
+
+    private _requestUpdateWithInteractiveState(): void {
+        this.requestUpdateCallback?.();
+    }
+
+    /**
+     * Get the current state context for this element
+     */
+    protected _getStateContext() {
+        return {
+            isCurrentlyHovering: this._isHovering,
+            isCurrentlyActive: this._isActive
+        };
+    }
+
+    /**
+     * Check if this element has stateful colors (supports hover/active states)
+     */
+    protected _hasStatefulColors(): boolean {
+        const { fill, stroke, textColor } = this.props;
+        return this._isStatefulColor(fill) || 
+               this._isStatefulColor(stroke) || 
+               this._isStatefulColor(textColor);
+    }
+
+    private _isStatefulColor(color: any): boolean {
+        return Boolean(color && typeof color === 'object' && 
+                      ('default' in color || 'hover' in color || 'active' in color) &&
+                      !('entity' in color) && !('mapping' in color));
+    }
+
+    /**
+     * Setup event listeners for interactive states (hover/active)
+     * This should be called after the element is rendered in the DOM
+     */
+    setupInteractiveListeners(): void {
+        if (!this._hasStatefulColors() && !this.button) {
+            return; // No interactive features, skip listener setup
+        }
+        
+        const element = this.getShadowElement?.(this.id);
+        if (!element) {
+            return;
+        }
+
+        // Remove existing listeners
+        this._cleanupInteractiveListeners();
+        
+        // Add hover listeners
+        element.addEventListener('mouseenter', this._boundHandleMouseEnter);
+        element.addEventListener('mouseleave', this._boundHandleMouseLeave);
+        
+        // Add active (press) listeners
+        element.addEventListener('mousedown', this._boundHandleMouseDown);
+        element.addEventListener('mouseup', this._boundHandleMouseUp);
+        
+        // Touch support
+        element.addEventListener('touchstart', this._boundHandleTouchStart);
+        element.addEventListener('touchend', this._boundHandleTouchEnd);
+        element.addEventListener('touchcancel', this._boundHandleTouchEnd);
+    }
+
+    private _handleMouseEnter(): void {
+        this.isHovering = true;
+    }
+
+    private _handleMouseLeave(): void {
+        this.isHovering = false;
+        this.isActive = false; // Cancel active state on leave
+    }
+
+    private _handleMouseDown(): void {
+        this.isActive = true;
+    }
+
+    private _handleMouseUp(): void {
+        this.isActive = false;
+    }
+
+    private _handleTouchStart(): void {
+        this.isHovering = true;
+        this.isActive = true;
+    }
+
+    private _handleTouchEnd(): void {
+        this.isHovering = false;
+        this.isActive = false;
+    }
+
+    private _cleanupInteractiveListeners(): void {
+        const element = this.getShadowElement?.(this.id);
+        if (!element) return;
+
+        element.removeEventListener('mouseenter', this._boundHandleMouseEnter);
+        element.removeEventListener('mouseleave', this._boundHandleMouseLeave);
+        element.removeEventListener('mousedown', this._boundHandleMouseDown);
+        element.removeEventListener('mouseup', this._boundHandleMouseUp);
+        element.removeEventListener('touchstart', this._boundHandleTouchStart);
+        element.removeEventListener('touchend', this._boundHandleTouchEnd);
+        element.removeEventListener('touchcancel', this._boundHandleTouchEnd);
     }
 
     resetLayout(): void {
@@ -723,7 +884,10 @@ export abstract class LayoutElement {
             requestUpdateCallback: this.requestUpdateCallback
         };
         
-        return colorResolver.resolveAllElementColors(this.id, this.props, context, options);
+        // Pass the element's current interactive state context
+        const stateContext = this._getStateContext();
+        
+        return colorResolver.resolveAllElementColors(this.id, this.props, context, options, stateContext);
     }
 
     /**
@@ -738,7 +902,10 @@ export abstract class LayoutElement {
             requestUpdateCallback: this.requestUpdateCallback
         };
         
-        return colorResolver.createButtonPropsWithResolvedColors(this.id, this.props, context);
+        // Pass the element's current interactive state context
+        const stateContext = this._getStateContext();
+        
+        return colorResolver.createButtonPropsWithResolvedColors(this.id, this.props, context, stateContext);
     }
 
     /**
@@ -774,6 +941,31 @@ export abstract class LayoutElement {
         if (this.button) {
             this.button.updateHass(hass);
         }
+    }
+
+    /**
+     * Clean up all element resources including interactive listeners
+     */
+    cleanup(): void {
+        this._cleanupInteractiveListeners();
+        
+        // Clear any pending timeouts
+        if (this._hoverTimeout) {
+            clearTimeout(this._hoverTimeout);
+            this._hoverTimeout = undefined;
+        }
+        if (this._activeTimeout) {
+            clearTimeout(this._activeTimeout);
+            this._activeTimeout = undefined;
+        }
+        
+        // Clean up button if it exists
+        if (this.button) {
+            this.button.cleanup();
+        }
+        
+        // Clean up animations
+        this.cleanupAnimations();
     }
 
     /**

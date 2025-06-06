@@ -277,8 +277,9 @@ describe('ElbowElement', () => {
         expect(generateElbowPath).toHaveBeenCalledWith(layoutX, propsElbowWidth, propsBodyWidth, propsArmHeight, layoutHeight, 'top-left', layoutY, propsArmHeight);
         expect(elbowElement.button?.createButton).toHaveBeenCalledTimes(1);
         expect(elbowElement.button?.createButton).toHaveBeenCalledWith(
-          mockPathData, layoutX, layoutY, layoutWidth, layoutHeight, // Note: layoutWidth, not propsElbowWidth for button bounding box
-          { rx: 0 }
+          mockPathData, layoutX, layoutY, layoutWidth, layoutHeight, // Note: layoutWidth, not propsElbowWidth
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
     });

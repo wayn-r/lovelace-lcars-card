@@ -74,6 +74,7 @@ export class ChiselEndcapElement extends LayoutElement {
       const isButton = Boolean(buttonConfig?.enabled);
       
       if (isButton && this.button) {
+        const stateContext = this._getStateContext();
         // Let the button handle its own color resolution with current state
         return this.button.createButton(
           pathData,
@@ -83,7 +84,8 @@ export class ChiselEndcapElement extends LayoutElement {
           height,
           {
             rx: 0
-          }
+          },
+          stateContext
         );
       } else {
         // Non-button rendering: return just the path. 

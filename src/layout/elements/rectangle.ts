@@ -46,6 +46,8 @@ export class RectangleElement extends LayoutElement {
       const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
       const pathData = generateRectanglePath(x, y, width, height, rx);
       
+      const stateContext = this._getStateContext();
+
       return this.button.createButton(
         pathData,
         x,
@@ -54,7 +56,8 @@ export class RectangleElement extends LayoutElement {
         height,
         {
           rx
-        }
+        },
+        stateContext
       );
     } else {
       // Non-button rendering: return just the path. 

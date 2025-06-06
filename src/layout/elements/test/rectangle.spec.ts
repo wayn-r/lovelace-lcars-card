@@ -234,13 +234,14 @@ describe('RectangleElement', () => {
         rectangleElement = new RectangleElement('btn-default-rx', props, {}, mockHass, mockRequestUpdate);
         rectangleElement.layout = layout;
 
-        rectangleElement.render(); // This will call the mocked createButton on the instance
+        rectangleElement.render();
 
         expect(mockCreateButton).toHaveBeenCalledTimes(1);
         const expectedPathD = generateRectanglePath(10, 10, 100, 30, 0);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 10, 100, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -256,7 +257,8 @@ describe('RectangleElement', () => {
         const expectedPathD = generateRectanglePath(0, 0, 80, 40, 8);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 0, 0, 80, 40,
-          { rx: 8 }
+          { rx: 8 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -272,7 +274,8 @@ describe('RectangleElement', () => {
         const expectedPathD = generateRectanglePath(0, 0, 70, 35, 6);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 0, 0, 70, 35,
-          { rx: 6 }
+          { rx: 6 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -284,7 +287,8 @@ describe('RectangleElement', () => {
         rectangleElement.render();
         expect(mockCreateButton).toHaveBeenCalledWith(
             expect.any(String), 1, 1, 50, 20,
-            { rx: 0 }
+            { rx: 0 },
+            { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
         mockCreateButton.mockClear();
 
@@ -294,7 +298,33 @@ describe('RectangleElement', () => {
         rectangleElement.render();
         expect(mockCreateButton).toHaveBeenCalledWith(
             expect.any(String), 1, 1, 50, 20,
-            { rx: 0 }
+            { rx: 0 },
+            { isCurrentlyHovering: false, isCurrentlyActive: false }
+        );
+      });
+
+      it('should pass text properties correctly to button.createButton', () => {
+        const props = {
+          button: {
+            enabled: true,
+          },
+          text: 'Test Button',
+          textColor: 'white'
+        };
+        rectangleElement = new RectangleElement('rect-button-text', props, {}, mockHass, mockRequestUpdate);
+        const mockButton = new Button('rect-button-text', props, mockHass, mockRequestUpdate);
+        const mockCreateButton = vi.spyOn(mockButton, 'createButton');
+        rectangleElement.button = mockButton;
+        
+        const layout = { x: 10, y: 10, width: 100, height: 50, calculated: true };
+        rectangleElement.layout = layout;
+        rectangleElement.render();
+        
+        expect(mockCreateButton).toHaveBeenCalledWith(
+          expect.any(String),
+          10, 10, 100, 50,
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -306,7 +336,8 @@ describe('RectangleElement', () => {
         rectangleElement.render();
         expect(mockCreateButton).toHaveBeenCalledWith(
             expect.any(String), 2, 2, 60, 25,
-            { rx: 0 }
+            { rx: 0 },
+            { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -318,7 +349,8 @@ describe('RectangleElement', () => {
         rectangleElement.render();
         expect(mockCreateButton).toHaveBeenCalledWith(
             expect.any(String), 3, 3, 90, 45,
-            { rx: 0 }
+            { rx: 0 },
+            { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -343,7 +375,8 @@ describe('RectangleElement', () => {
         
         expect(mockButton.createButton).toHaveBeenCalledWith(
           expect.any(String), 10, 20, 100, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
 
         mockButton.createButton.mockClear();
@@ -360,7 +393,8 @@ describe('RectangleElement', () => {
         
         expect(mockButton.createButton).toHaveBeenCalledWith(
           expect.any(String), 10, 20, 100, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
 
         mockButton.createButton.mockClear();
@@ -377,7 +411,8 @@ describe('RectangleElement', () => {
         
         expect(mockButton.createButton).toHaveBeenCalledWith(
           expect.any(String), 10, 20, 100, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
     });

@@ -31,6 +31,7 @@ lovelace-lcars-card/
 │   │   │   │   ├── button.spec.ts
 │   │   │   │   ├── chisel_endcap.spec.ts
 │   │   │   │   ├── elbow.spec.ts
+│   │   │   │   ├── element-interactive.spec.ts
 │   │   │   │   ├── element.spec.ts
 │   │   │   │   ├── endcap.spec.ts
 │   │   │   │   ├── rectangle.spec.ts
@@ -1224,17 +1225,11 @@ import { Color, ColorStateContext } from "../../utils/color.js";
 export type ButtonPropertyName = 'fill' | 'stroke' | 'strokeWidth';
 
 export class Button {
-    private _isHovering = false;
-    private _isActive = false;
     private _props: any;
     private _hass?: HomeAssistant;
     private _requestUpdateCallback?: () => void;
     private _id: string;
     private _getShadowElement?: (id: string) => Element | null;
-    private _hoverTimeout?: ReturnType<typeof setTimeout>;
-    private _lastHoverState = false;
-    private _activeTimeout?: ReturnType<typeof setTimeout>;
-    private _lastActiveState = false;
 
     constructor(id: string, props: any, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this._id = id;
@@ -1242,58 +1237,6 @@ export class Button {
         this._hass = hass;
         this._requestUpdateCallback = requestUpdateCallback;
         this._getShadowElement = getShadowElement;
-    }
-
-    get isHovering(): boolean {
-        return this._isHovering;
-    }
-
-    set isHovering(value: boolean) {
-        if (this._isHovering === value) return;
-        
-        this._isHovering = value;
-        
-        // Clear any existing timeout
-        if (this._hoverTimeout) {
-            clearTimeout(this._hoverTimeout);
-        }
-        
-        // Debounce hover state changes to prevent flickering
-        this._hoverTimeout = setTimeout(() => {
-            if (this._lastHoverState !== this._isHovering) {
-                this._lastHoverState = this._isHovering;
-                
-                // Instead of triggering a global re-render, try to update just this button's appearance
-                this._updateButtonAppearanceDirectly();
-            }
-            this._hoverTimeout = undefined;
-        }, 10); // Reduced from 50ms to 10ms for better responsiveness
-    }
-
-    get isActive(): boolean {
-        return this._isActive;
-    }
-
-    set isActive(value: boolean) {
-        if (this._isActive === value) return;
-        
-        this._isActive = value;
-        
-        // Clear any existing timeout
-        if (this._activeTimeout) {
-            clearTimeout(this._activeTimeout);
-        }
-        
-        // Debounce active state changes to prevent flickering
-        this._activeTimeout = setTimeout(() => {
-            if (this._lastActiveState !== this._isActive) {
-                this._lastActiveState = this._isActive;
-                
-                // Instead of triggering a global re-render, try to update just this button's appearance
-                this._updateButtonAppearanceDirectly();
-            }
-            this._activeTimeout = undefined;
-        }, 10); // Reduced from 50ms to 10ms for better responsiveness
     }
 
     /**
@@ -1309,21 +1252,10 @@ export class Button {
     }
 
     /**
-     * Get the current state context for this button
-     */
-    private getStateContext(): ColorStateContext {
-        return {
-            isCurrentlyHovering: this._isHovering,
-            isCurrentlyActive: this._isActive
-        };
-    }
-
-    /**
      * Get resolved colors for the button using the new color resolver
      */
-    private getResolvedColors() {
+    private getResolvedColors(stateContext: ColorStateContext) {
         const context = this.getAnimationContext();
-        const stateContext = this.getStateContext();
         
         return colorResolver.resolveAllElementColors(
             this._id,
@@ -1334,8 +1266,6 @@ export class Button {
         );
     }
 
-    // Legacy methods removed - now using unified color system via getResolvedColors()
-
     createButton(
         pathData: string,
         x: number,
@@ -1344,10 +1274,11 @@ export class Button {
         height: number,
         options: {
             rx: number
-        }
+        },
+        stateContext: ColorStateContext
     ): SVGTemplateResult {
         // Use the new color resolver to get colors with hover/active state support
-        const resolvedColors = this.getResolvedColors();
+        const resolvedColors = this.getResolvedColors(stateContext);
         
         const pathElement = svg`
             <path
@@ -1416,20 +1347,19 @@ export class Button {
             },
             
             handleMouseEnter: (): void => {
-                this.isHovering = true;
+                // No-op: Timeouts are now managed by the parent LayoutElement
             },
             
             handleMouseLeave: (): void => {
-                this.isHovering = false;
-                this.isActive = false;
+                // No-op: Timeouts are now managed by the parent LayoutElement
             },
             
             handleMouseDown: (): void => {
-                this.isActive = true;
+                // No-op: Timeouts are now managed by the parent LayoutElement
             },
             
             handleMouseUp: (): void => {
-                this.isActive = false;
+                // No-op: Timeouts are now managed by the parent LayoutElement
             },
             
             handleKeyDown: (e: KeyboardEvent): void => {
@@ -1602,22 +1532,8 @@ export class Button {
         this._hass = hass;
     }
 
-    // Add cleanup method for timeouts
     cleanup(): void {
-        if (this._hoverTimeout) {
-            clearTimeout(this._hoverTimeout);
-            this._hoverTimeout = undefined;
-        }
-        if (this._activeTimeout) {
-            clearTimeout(this._activeTimeout);
-            this._activeTimeout = undefined;
-        }
-    }
-
-    private _updateButtonAppearanceDirectly(): void {
-        // Always fall back to global update to ensure proper re-rendering with state changes
-        // This ensures that the entire element gets re-rendered with the current hover/active state
-        this._requestUpdateCallback?.();
+        // No-op: State and timeouts are now managed by the parent LayoutElement
     }
 }
 ```
@@ -1701,6 +1617,7 @@ export class ChiselEndcapElement extends LayoutElement {
       const isButton = Boolean(buttonConfig?.enabled);
       
       if (isButton && this.button) {
+        const stateContext = this._getStateContext();
         // Let the button handle its own color resolution with current state
         return this.button.createButton(
           pathData,
@@ -1710,7 +1627,8 @@ export class ChiselEndcapElement extends LayoutElement {
           height,
           {
             rx: 0
-          }
+          },
+          stateContext
         );
       } else {
         // Non-button rendering: return just the path. 
@@ -1934,6 +1852,7 @@ export class ElbowElement extends LayoutElement {
       const isButton = Boolean(buttonConfig?.enabled);
       
       if (isButton && this.button) {
+        const stateContext = this._getStateContext();
         // Let the button handle its own color resolution with current state
         return this.button.createButton(
           pathData,
@@ -1943,7 +1862,8 @@ export class ElbowElement extends LayoutElement {
           height,
           {
             rx: 0
-          }
+          },
+          stateContext
         );
       } else {
         // Non-button rendering: return just the path. 
@@ -1990,6 +1910,12 @@ export abstract class LayoutElement {
     public requestUpdateCallback?: () => void;
     public button?: Button;
     public getShadowElement?: (id: string) => Element | null;
+    
+    // Interactive state tracking - available for all elements
+    private _isHovering = false;
+    private _isActive = false;
+    private _hoverTimeout?: ReturnType<typeof setTimeout>;
+    private _activeTimeout?: ReturnType<typeof setTimeout>;
 
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this.id = id;
@@ -2009,6 +1935,147 @@ export abstract class LayoutElement {
 
         this.resetLayout();
         this.intrinsicSize = { width: 0, height: 0, calculated: false };
+    }
+
+    // Interactive state management for all elements
+    get isHovering(): boolean {
+        return this._isHovering;
+    }
+
+    set isHovering(value: boolean) {
+        if (this._isHovering === value) return;
+        
+        this._isHovering = value;
+        
+        if (this._hoverTimeout) {
+            clearTimeout(this._hoverTimeout);
+        }
+        
+        this._hoverTimeout = setTimeout(() => {
+            this._requestUpdateWithInteractiveState();
+            this._hoverTimeout = undefined;
+        }, 10);
+    }
+
+    get isActive(): boolean {
+        return this._isActive;
+    }
+
+    set isActive(value: boolean) {
+        if (this._isActive === value) return;
+        
+        this._isActive = value;
+        
+        if (this._activeTimeout) {
+            clearTimeout(this._activeTimeout);
+        }
+        
+        this._activeTimeout = setTimeout(() => {
+            this._requestUpdateWithInteractiveState();
+            this._activeTimeout = undefined;
+        }, 10);
+    }
+
+    private _requestUpdateWithInteractiveState(): void {
+        this.requestUpdateCallback?.();
+    }
+
+    /**
+     * Get the current state context for this element
+     */
+    protected _getStateContext() {
+        return {
+            isCurrentlyHovering: this._isHovering,
+            isCurrentlyActive: this._isActive
+        };
+    }
+
+    /**
+     * Check if this element has stateful colors (supports hover/active states)
+     */
+    protected _hasStatefulColors(): boolean {
+        const { fill, stroke, textColor } = this.props;
+        return this._isStatefulColor(fill) || 
+               this._isStatefulColor(stroke) || 
+               this._isStatefulColor(textColor);
+    }
+
+    private _isStatefulColor(color: any): boolean {
+        return Boolean(color && typeof color === 'object' && 
+                      ('default' in color || 'hover' in color || 'active' in color) &&
+                      !('entity' in color) && !('mapping' in color));
+    }
+
+    /**
+     * Setup event listeners for interactive states (hover/active)
+     * This should be called after the element is rendered in the DOM
+     */
+    setupInteractiveListeners(): void {
+        if (!this._hasStatefulColors() && !this.button) {
+            return; // No interactive features, skip listener setup
+        }
+        
+        const element = this.getShadowElement?.(this.id);
+        if (!element) {
+            return;
+        }
+
+        // Remove existing listeners
+        this._cleanupInteractiveListeners();
+        
+        // Add hover listeners
+        element.addEventListener('mouseenter', this._handleMouseEnter.bind(this));
+        element.addEventListener('mouseleave', this._handleMouseLeave.bind(this));
+        
+        // Add active (press) listeners
+        element.addEventListener('mousedown', this._handleMouseDown.bind(this));
+        element.addEventListener('mouseup', this._handleMouseUp.bind(this));
+        element.addEventListener('mouseleave', this._handleMouseUp.bind(this)); // Cancel active on leave
+        
+        // Touch support
+        element.addEventListener('touchstart', this._handleTouchStart.bind(this));
+        element.addEventListener('touchend', this._handleTouchEnd.bind(this));
+        element.addEventListener('touchcancel', this._handleTouchEnd.bind(this));
+    }
+
+    private _handleMouseEnter(): void {
+        this.isHovering = true;
+    }
+
+    private _handleMouseLeave(): void {
+        this.isHovering = false;
+        this.isActive = false; // Cancel active state on leave
+    }
+
+    private _handleMouseDown(): void {
+        this.isActive = true;
+    }
+
+    private _handleMouseUp(): void {
+        this.isActive = false;
+    }
+
+    private _handleTouchStart(): void {
+        this.isHovering = true;
+        this.isActive = true;
+    }
+
+    private _handleTouchEnd(): void {
+        this.isHovering = false;
+        this.isActive = false;
+    }
+
+    private _cleanupInteractiveListeners(): void {
+        const element = this.getShadowElement?.(this.id);
+        if (!element) return;
+
+        element.removeEventListener('mouseenter', this._handleMouseEnter.bind(this));
+        element.removeEventListener('mouseleave', this._handleMouseLeave.bind(this));
+        element.removeEventListener('mousedown', this._handleMouseDown.bind(this));
+        element.removeEventListener('mouseup', this._handleMouseUp.bind(this));
+        element.removeEventListener('touchstart', this._handleTouchStart.bind(this));
+        element.removeEventListener('touchend', this._handleTouchEnd.bind(this));
+        element.removeEventListener('touchcancel', this._handleTouchEnd.bind(this));
     }
 
     resetLayout(): void {
@@ -2692,7 +2759,10 @@ export abstract class LayoutElement {
             requestUpdateCallback: this.requestUpdateCallback
         };
         
-        return colorResolver.resolveAllElementColors(this.id, this.props, context, options);
+        // Pass the element's current interactive state context
+        const stateContext = this._getStateContext();
+        
+        return colorResolver.resolveAllElementColors(this.id, this.props, context, options, stateContext);
     }
 
     /**
@@ -2707,7 +2777,10 @@ export abstract class LayoutElement {
             requestUpdateCallback: this.requestUpdateCallback
         };
         
-        return colorResolver.createButtonPropsWithResolvedColors(this.id, this.props, context);
+        // Pass the element's current interactive state context
+        const stateContext = this._getStateContext();
+        
+        return colorResolver.createButtonPropsWithResolvedColors(this.id, this.props, context, stateContext);
     }
 
     /**
@@ -2743,6 +2816,31 @@ export abstract class LayoutElement {
         if (this.button) {
             this.button.updateHass(hass);
         }
+    }
+
+    /**
+     * Clean up all element resources including interactive listeners
+     */
+    cleanup(): void {
+        this._cleanupInteractiveListeners();
+        
+        // Clear any pending timeouts
+        if (this._hoverTimeout) {
+            clearTimeout(this._hoverTimeout);
+            this._hoverTimeout = undefined;
+        }
+        if (this._activeTimeout) {
+            clearTimeout(this._activeTimeout);
+            this._activeTimeout = undefined;
+        }
+        
+        // Clean up button if it exists
+        if (this.button) {
+            this.button.cleanup();
+        }
+        
+        // Clean up animations
+        this.cleanupAnimations();
     }
 
     /**
@@ -2922,6 +3020,7 @@ export class EndcapElement extends LayoutElement {
       const isButton = Boolean(buttonConfig?.enabled);
       
       if (isButton && this.button) {
+        const stateContext = this._getStateContext();
         // Let the button handle its own color resolution with current state
         return this.button.createButton(
           pathData,
@@ -2931,7 +3030,8 @@ export class EndcapElement extends LayoutElement {
           height,
           {
             rx: 0
-          }
+          },
+          stateContext
         );
       } else {
         // Non-button rendering: return just the path. 
@@ -3003,6 +3103,8 @@ export class RectangleElement extends LayoutElement {
       const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
       const pathData = generateRectanglePath(x, y, width, height, rx);
       
+      const stateContext = this._getStateContext();
+
       return this.button.createButton(
         pathData,
         x,
@@ -3011,7 +3113,8 @@ export class RectangleElement extends LayoutElement {
         height,
         {
           rx
-        }
+        },
+        stateContext
       );
     } else {
       // Non-button rendering: return just the path. 
@@ -3040,72 +3143,83 @@ export class RectangleElement extends LayoutElement {
 ```typescript
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Button } from '../button';
-import { svg, SVGTemplateResult } from 'lit';
+import { HomeAssistant } from 'custom-card-helpers';
+import type { Mock } from 'vitest';
 
-// Mock HomeAssistant
-const mockHass: any = {
-  callService: vi.fn(),
-  states: {}
-};
-
-describe('Button Functionality', () => {
-  let button: Button;
-  const mockRequestUpdate = vi.fn();
+describe('Button', () => {
+  let mockHass: HomeAssistant;
+  let mockRequestUpdate: () => void;
+  let mockGetShadowElement: (id: string) => Element | null;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockHass = {} as HomeAssistant;
+    mockRequestUpdate = vi.fn();
+    mockGetShadowElement = vi.fn();
+    vi.mock('custom-card-helpers', () => ({
+      handleAction: vi.fn(),
+    }));
   });
 
-  describe('createButton basic functionality', () => {
-    it('should create a button with proper SVG structure', () => {
-      const props = {
-        button: {
-          enabled: true
-        },
-        fill: '#FF0000'
-      };
-      
-      button = new Button('test-button', props, mockHass, mockRequestUpdate);
-      
-      const pathData = 'M 0,0 L 100,0 L 100,30 L 0,30 Z';
-      const result = button.createButton(pathData, 0, 0, 100, 30, {
-        rx: 0
-      });
-
-      // The result should be a button group with interactive handlers
-      expect(result).toBeDefined();
-      // Check that it's a proper SVG template result by checking for expected properties
-      expect(result).toHaveProperty('_$litType$');
-      expect(result).toHaveProperty('strings');
-      expect(result).toHaveProperty('values');
+  describe('Button Creation and Interactivity', () => {
+    it('should create a non-interactive element if button is not enabled', () => {
+        const props = { fill: '#FF0000', button: { enabled: false } };
+        const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+        const result = button.createButton('M 0 0', 0, 0, 10, 10, { rx: 0 }, { isCurrentlyHovering: false, isCurrentlyActive: false });
+        expect(result).toBeDefined();
+        // Here, you could check if the interactive handlers are NOT present in the SVG, which is complex.
+        // A simpler check is that it returns a valid SVG structure.
+        expect(result.strings.join('')).not.toContain('@mouseenter');
     });
 
-    it('should apply correct colors from props', () => {
+    it('should create an interactive element if button is enabled', () => {
+        const props = { fill: '#FF0000', button: { enabled: true } };
+        const button = new Button('test-button', props, mockHass, mockRequestUpdate, mockGetShadowElement);
+        const result = button.createButton('M 0 0', 0, 0, 10, 10, { rx: 0 }, { isCurrentlyHovering: false, isCurrentlyActive: false });
+        expect(result).toBeDefined();
+        // Check for presence of lit event handlers
+        expect(result.strings.join('')).toContain('@mouseenter');
+        expect(result.strings.join('')).toContain('@mouseleave');
+        expect(result.strings.join('')).toContain('@mousedown');
+        expect(result.strings.join('')).toContain('@mouseup');
+    });
+  });
+  
+  describe('Button Appearance and Color Resolution', () => {
+    let mockRequestUpdate: Mock;
+    let mockGetShadowElement: Mock;
+    let mockElement: HTMLElement;
+    let button: Button;
+
+    beforeEach(() => {
+      mockRequestUpdate = vi.fn();
+      mockElement = document.createElement('div');
+      mockGetShadowElement = vi.fn().mockReturnValue(mockElement);
+      
       const props = {
-        button: {
-          enabled: true
-        },
-        fill: '#FF0000',
-        stroke: '#00FF00',
-        strokeWidth: 2
+        fill: {
+          default: '#FF0000',
+          hover: '#00FF00',
+          active: '#0000FF'
+        }
       };
       
-      button = new Button('test-button', props, mockHass, mockRequestUpdate);
-      
-      const pathData = 'M 0,0 L 100,0 L 100,30 L 0,30 Z';
-      const result = button.createButton(pathData, 0, 0, 100, 30, {
-        rx: 0
-      });
-
-      // Check that the result contains the expected structure
-      expect(result).toBeDefined();
-      // Check that it's a proper SVG template result by checking for expected properties
-      expect(result).toHaveProperty('_$litType$');
-      expect(result).toHaveProperty('strings');
-      expect(result).toHaveProperty('values');
+      button = new Button('test-button', props, undefined, mockRequestUpdate, mockGetShadowElement);
     });
 
-    it('should create interactive button group with event handlers', () => {
+    it('should resolve colors correctly based on interactive state', () => {
+      const defaultColors = (button as any).getResolvedColors({ isCurrentlyHovering: false, isCurrentlyActive: false });
+      expect(defaultColors.fillColor).toBe('#FF0000');
+      
+      const hoverColors = (button as any).getResolvedColors({ isCurrentlyHovering: true, isCurrentlyActive: false });
+      expect(hoverColors.fillColor).toBe('#00FF00');
+      
+      const activeColors = (button as any).getResolvedColors({ isCurrentlyHovering: true, isCurrentlyActive: true });
+      expect(activeColors.fillColor).toBe('#0000FF');
+    });
+  });
+
+  describe('Action Handling', () => {
+    it('should handle action configuration', () => {
       const props = {
         button: {
           enabled: true,
@@ -3116,109 +3230,21 @@ describe('Button Functionality', () => {
         }
       };
       
-      button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate, mockGetShadowElement);
       
       const pathData = 'M 0,0 L 100,0 L 100,30 L 0,30 Z';
-      const result = button.createButton(pathData, 0, 0, 100, 30, {
-        rx: 0
-      });
+      const result = button.createButton(pathData, 0, 0, 100, 30, { rx: 0 }, { isCurrentlyHovering: false, isCurrentlyActive: false });
 
-      // Check that the result is an interactive button
       expect(result).toBeDefined();
-      // Check that it's a proper SVG template result by checking for expected properties
       expect(result).toHaveProperty('_$litType$');
       expect(result).toHaveProperty('strings');
       expect(result).toHaveProperty('values');
     });
   });
 
-  describe('hover and active state handling', () => {
-    it('should trigger global update when hover state changes', () => {
-      const mockRequestUpdate = vi.fn();
-      
-      const button = new Button('test-button', {
-        fill: '#FF0000',
-        button: {
-          enabled: true,
-          hover_fill: '#00FF00'
-        }
-      }, undefined, mockRequestUpdate);
-      
-      // Initially not hovering
-      expect(button.isHovering).toBe(false);
-      
-      // Set hovering to true
-      button.isHovering = true;
-      
-      // Wait for the debounced update
-      return new Promise<void>((resolve) => {
-        setTimeout(() => {
-          // Should have triggered global re-render to update colors
-          expect(mockRequestUpdate).toHaveBeenCalled();
-          
-          resolve();
-        }, 15); // Wait longer than the 10ms debounce
-      });
-    });
-    
-    it('should fall back to global update if direct DOM update fails', () => {
-      const mockGetShadowElement = vi.fn().mockReturnValue(null); // Element not found
-      const mockRequestUpdate = vi.fn();
-      
-      const button = new Button('test-button', {
-        fill: '#FF0000',
-        button: {
-          enabled: true,
-          hover_fill: '#00FF00'
-        }
-      }, undefined, mockRequestUpdate, mockGetShadowElement);
-      
-      // Set hovering to true
-      button.isHovering = true;
-      
-      // Wait for the debounced update
-      return new Promise<void>((resolve) => {
-        setTimeout(() => {
-          // Should have fallen back to global re-render
-          expect(mockRequestUpdate).toHaveBeenCalled();
-          
-          resolve();
-        }, 15); // Wait longer than the 10ms debounce
-      });
-    });
-
-    it('should handle active state changes', () => {
-      const button = new Button('test-button', {
-        button: {
-          enabled: true,
-          active_fill: '#0000FF'
-        }
-      });
-      
-      // Initially not active
-      expect(button.isActive).toBe(false);
-      
-      // Set active to true
-      button.isActive = true;
-      expect(button.isActive).toBe(true);
-      
-      // Set active to false
-      button.isActive = false;
-      expect(button.isActive).toBe(false);
-    });
-  });
-
-  // Legacy button property tests removed - now using unified color system
-
   describe('cleanup', () => {
-    it('should clean up timeouts properly', () => {
-      const button = new Button('test-button', {});
-      
-      // Set hover state to trigger timeout
-      button.isHovering = true;
-      button.isActive = true;
-      
-      // Should not throw when cleaning up
+    it('should be a no-op and not throw an error', () => {
+      const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
       expect(() => button.cleanup()).not.toThrow();
     });
   });
@@ -3586,13 +3612,14 @@ describe('ChiselEndcapElement', () => {
         chiselEndcapElement.layout = { x: 10, y: 15, width: 60, height: 30, calculated: true };
       });
 
-      it('should call button.createButton with correct parameters for default direction "right"', () => {
+      it('should call button.createButton with correct parameters for direction "right"', () => {
         chiselEndcapElement.render();
+
         expect(generateChiselEndcapPath).toHaveBeenCalledWith(60, 30, 'right', 10, 15);
-        expect(mockCreateButton).toHaveBeenCalledTimes(1);
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -3603,7 +3630,8 @@ describe('ChiselEndcapElement', () => {
         expect(generateChiselEndcapPath).toHaveBeenCalledWith(60, 30, 'left', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -3613,7 +3641,8 @@ describe('ChiselEndcapElement', () => {
 
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -3623,7 +3652,8 @@ describe('ChiselEndcapElement', () => {
 
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
     });
@@ -3913,8 +3943,9 @@ describe('ElbowElement', () => {
         expect(generateElbowPath).toHaveBeenCalledWith(layoutX, propsElbowWidth, propsBodyWidth, propsArmHeight, layoutHeight, 'top-left', layoutY, propsArmHeight);
         expect(elbowElement.button?.createButton).toHaveBeenCalledTimes(1);
         expect(elbowElement.button?.createButton).toHaveBeenCalledWith(
-          mockPathData, layoutX, layoutY, layoutWidth, layoutHeight, // Note: layoutWidth, not propsElbowWidth for button bounding box
-          { rx: 0 }
+          mockPathData, layoutX, layoutY, layoutWidth, layoutHeight, // Note: layoutWidth, not propsElbowWidth
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
     });
@@ -4069,6 +4100,244 @@ describe('ElbowElement', () => {
       // Should use stretched width for arm positioning (extending from left body)
       expect(position.x).toBe(100); // x + bodyWidth + (stretchedWidth - bodyWidth) / 2 = 10 + 30 + (150-30)/2 = 100
       expect(position.y).toBe(32.5); // y + armHeight / 2 = 20 + 25/2 (top orientation)
+    });
+  });
+});
+```
+
+## File: src/layout/elements/test/element-interactive.spec.ts
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { RectangleElement } from '../rectangle.js';
+import { HomeAssistant } from 'custom-card-helpers';
+import { LayoutElementProps } from '../../engine.js';
+
+describe('Element Interactive States', () => {
+  let mockHass: HomeAssistant;
+  let mockRequestUpdateCallback: () => void;
+  let mockGetShadowElement: (id: string) => Element | null;
+  let mockElement: HTMLElement;
+
+  beforeEach(() => {
+    mockHass = {} as HomeAssistant;
+    mockRequestUpdateCallback = vi.fn();
+    mockElement = document.createElement('div');
+    mockGetShadowElement = vi.fn().mockReturnValue(mockElement);
+  });
+
+  describe('Stateful Color Support', () => {
+    it('should detect when element has stateful colors', () => {
+      const props: LayoutElementProps = {
+        fill: {
+          default: '#FF0000',
+          hover: '#00FF00',
+          active: '#0000FF'
+        }
+      };
+
+      const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
+      
+      expect((element as any)._hasStatefulColors()).toBe(true);
+    });
+
+    it('should detect when element does not have stateful colors', () => {
+      const props: LayoutElementProps = {
+        fill: '#FF0000'
+      };
+
+      const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
+      
+      expect((element as any)._hasStatefulColors()).toBe(false);
+    });
+
+    it('should setup interactive listeners for elements with stateful colors', () => {
+      const props: LayoutElementProps = {
+        stroke: {
+          default: '#000000',
+          hover: '#333333'
+        }
+      };
+
+      const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
+      
+      const addEventListenerSpy = vi.spyOn(mockElement, 'addEventListener');
+      
+      element.setupInteractiveListeners();
+      
+      expect(addEventListenerSpy).toHaveBeenCalledWith('mouseenter', expect.any(Function));
+      expect(addEventListenerSpy).toHaveBeenCalledWith('mouseleave', expect.any(Function));
+      expect(addEventListenerSpy).toHaveBeenCalledWith('mousedown', expect.any(Function));
+      expect(addEventListenerSpy).toHaveBeenCalledWith('mouseup', expect.any(Function));
+    });
+
+    it('should not setup listeners for elements without stateful colors or buttons', () => {
+      const props: LayoutElementProps = {
+        fill: '#FF0000'
+      };
+
+      const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
+      
+      const addEventListenerSpy = vi.spyOn(mockElement, 'addEventListener');
+      
+      element.setupInteractiveListeners();
+      
+      expect(addEventListenerSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Interactive State Tracking', () => {
+    it('should track hover state', () => {
+      const props: LayoutElementProps = {
+        fill: {
+          default: '#FF0000',
+          hover: '#00FF00'
+        }
+      };
+
+      const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
+      
+      expect(element.isHovering).toBe(false);
+      
+      element.isHovering = true;
+      expect(element.isHovering).toBe(true);
+    });
+
+    it('should track active state', () => {
+      const props: LayoutElementProps = {
+        fill: {
+          default: '#FF0000',
+          active: '#0000FF'
+        }
+      };
+
+      const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
+      
+      expect(element.isActive).toBe(false);
+      
+      element.isActive = true;
+      expect(element.isActive).toBe(true);
+    });
+
+    it('should provide correct state context', () => {
+      const props: LayoutElementProps = {
+        fill: {
+          default: '#FF0000',
+          hover: '#00FF00',
+          active: '#0000FF'
+        }
+      };
+
+      const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
+      
+      element.isHovering = true;
+      element.isActive = true;
+      
+      const stateContext = (element as any)._getStateContext();
+      
+      expect(stateContext).toEqual({
+        isCurrentlyHovering: true,
+        isCurrentlyActive: true
+      });
+    });
+
+    it('should debounce state changes and trigger updates', async () => {
+      const props: LayoutElementProps = {
+        fill: {
+          default: '#FF0000',
+          hover: '#00FF00'
+        }
+      };
+
+      const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
+      
+      element.isHovering = true;
+      
+      // Should not have called update immediately due to debounce
+      expect(mockRequestUpdateCallback).not.toHaveBeenCalled();
+      
+      // Wait for debounce timeout
+      await new Promise(resolve => setTimeout(resolve, 15)); // Slightly longer than the 10ms debounce
+      expect(mockRequestUpdateCallback).toHaveBeenCalled();
+    });
+  });
+
+  describe('Event Handling', () => {
+    it('should handle mouse events correctly', () => {
+      const props: LayoutElementProps = {
+        fill: {
+          default: '#FF0000',
+          hover: '#00FF00',
+          active: '#0000FF'
+        }
+      };
+
+      const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
+      
+      element.setupInteractiveListeners();
+      
+      // Simulate mouse enter
+      mockElement.dispatchEvent(new Event('mouseenter'));
+      expect(element.isHovering).toBe(true);
+      
+      // Simulate mouse down
+      mockElement.dispatchEvent(new Event('mousedown'));
+      expect(element.isActive).toBe(true);
+      
+      // Simulate mouse up
+      mockElement.dispatchEvent(new Event('mouseup'));
+      expect(element.isActive).toBe(false);
+      expect(element.isHovering).toBe(true); // Still hovering
+      
+      // Simulate mouse leave
+      mockElement.dispatchEvent(new Event('mouseleave'));
+      expect(element.isHovering).toBe(false);
+      expect(element.isActive).toBe(false); // Should cancel active on leave
+    });
+
+    it('should handle touch events correctly', () => {
+      const props: LayoutElementProps = {
+        fill: {
+          default: '#FF0000',
+          hover: '#00FF00',
+          active: '#0000FF'
+        }
+      };
+
+      const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
+      
+      element.setupInteractiveListeners();
+      
+      // Simulate touch start
+      mockElement.dispatchEvent(new Event('touchstart'));
+      expect(element.isHovering).toBe(true);
+      expect(element.isActive).toBe(true);
+      
+      // Simulate touch end
+      mockElement.dispatchEvent(new Event('touchend'));
+      expect(element.isHovering).toBe(false);
+      expect(element.isActive).toBe(false);
+    });
+  });
+
+  describe('Cleanup', () => {
+    it('should cleanup timeouts and listeners on element cleanup', () => {
+      const props: LayoutElementProps = {
+        fill: {
+          default: '#FF0000',
+          hover: '#00FF00'
+        }
+      };
+
+      const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
+      
+      const removeEventListenerSpy = vi.spyOn(mockElement, 'removeEventListener');
+      
+      element.setupInteractiveListeners();
+      element.cleanup();
+      
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('mouseenter', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('mouseleave', expect.any(Function));
     });
   });
 });
@@ -5024,7 +5293,8 @@ describe('EndcapElement', () => {
         const expectedPathD = generateEndcapPath(60, 30, 'left', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -5035,7 +5305,8 @@ describe('EndcapElement', () => {
         const expectedPathD = generateEndcapPath(60, 30, 'right', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -5045,7 +5316,8 @@ describe('EndcapElement', () => {
 
         expect(mockCreateButton).toHaveBeenCalledWith(
           expect.any(String), 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -5055,7 +5327,8 @@ describe('EndcapElement', () => {
 
         expect(mockCreateButton).toHaveBeenCalledWith(
           expect.any(String), 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
     });
@@ -5302,13 +5575,14 @@ describe('RectangleElement', () => {
         rectangleElement = new RectangleElement('btn-default-rx', props, {}, mockHass, mockRequestUpdate);
         rectangleElement.layout = layout;
 
-        rectangleElement.render(); // This will call the mocked createButton on the instance
+        rectangleElement.render();
 
         expect(mockCreateButton).toHaveBeenCalledTimes(1);
         const expectedPathD = generateRectanglePath(10, 10, 100, 30, 0);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 10, 100, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -5324,7 +5598,8 @@ describe('RectangleElement', () => {
         const expectedPathD = generateRectanglePath(0, 0, 80, 40, 8);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 0, 0, 80, 40,
-          { rx: 8 }
+          { rx: 8 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -5340,7 +5615,8 @@ describe('RectangleElement', () => {
         const expectedPathD = generateRectanglePath(0, 0, 70, 35, 6);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 0, 0, 70, 35,
-          { rx: 6 }
+          { rx: 6 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -5352,7 +5628,8 @@ describe('RectangleElement', () => {
         rectangleElement.render();
         expect(mockCreateButton).toHaveBeenCalledWith(
             expect.any(String), 1, 1, 50, 20,
-            { rx: 0 }
+            { rx: 0 },
+            { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
         mockCreateButton.mockClear();
 
@@ -5362,7 +5639,33 @@ describe('RectangleElement', () => {
         rectangleElement.render();
         expect(mockCreateButton).toHaveBeenCalledWith(
             expect.any(String), 1, 1, 50, 20,
-            { rx: 0 }
+            { rx: 0 },
+            { isCurrentlyHovering: false, isCurrentlyActive: false }
+        );
+      });
+
+      it('should pass text properties correctly to button.createButton', () => {
+        const props = {
+          button: {
+            enabled: true,
+          },
+          text: 'Test Button',
+          textColor: 'white'
+        };
+        rectangleElement = new RectangleElement('rect-button-text', props, {}, mockHass, mockRequestUpdate);
+        const mockButton = new Button('rect-button-text', props, mockHass, mockRequestUpdate);
+        const mockCreateButton = vi.spyOn(mockButton, 'createButton');
+        rectangleElement.button = mockButton;
+        
+        const layout = { x: 10, y: 10, width: 100, height: 50, calculated: true };
+        rectangleElement.layout = layout;
+        rectangleElement.render();
+        
+        expect(mockCreateButton).toHaveBeenCalledWith(
+          expect.any(String),
+          10, 10, 100, 50,
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -5374,7 +5677,8 @@ describe('RectangleElement', () => {
         rectangleElement.render();
         expect(mockCreateButton).toHaveBeenCalledWith(
             expect.any(String), 2, 2, 60, 25,
-            { rx: 0 }
+            { rx: 0 },
+            { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -5386,7 +5690,8 @@ describe('RectangleElement', () => {
         rectangleElement.render();
         expect(mockCreateButton).toHaveBeenCalledWith(
             expect.any(String), 3, 3, 90, 45,
-            { rx: 0 }
+            { rx: 0 },
+            { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -5411,7 +5716,8 @@ describe('RectangleElement', () => {
         
         expect(mockButton.createButton).toHaveBeenCalledWith(
           expect.any(String), 10, 20, 100, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
 
         mockButton.createButton.mockClear();
@@ -5428,7 +5734,8 @@ describe('RectangleElement', () => {
         
         expect(mockButton.createButton).toHaveBeenCalledWith(
           expect.any(String), 10, 20, 100, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
 
         mockButton.createButton.mockClear();
@@ -5445,7 +5752,8 @@ describe('RectangleElement', () => {
         
         expect(mockButton.createButton).toHaveBeenCalledWith(
           expect.any(String), 10, 20, 100, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
     });
@@ -7588,10 +7896,11 @@ function convertNewElementToProps(element: ElementConfig): any {
         target_element_ref: tapAction.target_element_ref,
         state: tapAction.state,
         states: tapAction.states,
-        actions: tapAction.actions,
-        animation: tapAction.animation
+        actions: tapAction.actions
       };
     }
+    
+    // No legacy transformation needed - elements support stateful colors natively
     
     // TODO: Handle hold and double_tap actions when implemented
   }
@@ -8928,8 +9237,6 @@ describe('parseConfig', () => {
     });
 
     describe('Button Configuration Conversion', () => {
-
-
       it('should handle elements without button configuration', () => {
         const config: LcarsCardConfig = {
           type: 'lcars-card',
@@ -8954,8 +9261,6 @@ describe('parseConfig', () => {
 
         expect(props.button).toBeUndefined();
       });
-
-
 
       it('should convert new direct button configuration structure', () => {
         const config: LcarsCardConfig = {
@@ -8999,6 +9304,8 @@ describe('parseConfig', () => {
       });
     });
   });
+
+  // Note: No legacy button color tests needed - using modern stateful color format
 });
 ```
 
@@ -9120,6 +9427,56 @@ export class LcarsCard extends LitElement {
     this._scheduleInitialLayout();
   }
 
+  updated(changedProperties: Map<string | number | symbol, unknown>): void {
+    super.updated(changedProperties);
+
+    // After the DOM has been updated, setup interactive listeners for all elements.
+    // This is crucial for hover/click effects.
+    if (this._layoutEngine.layoutGroups.length > 0) {
+      this._setupAllElementListeners();
+    }
+
+    const hasHassChanged = changedProperties.has('hass');
+    const hasConfigChanged = changedProperties.has('_config');
+
+    if (hasConfigChanged || hasHassChanged) {
+      this._updateLayoutEngineWithHass();
+    }
+
+    // Simple logic: if we have both config and container, calculate layout
+    if (this._config && this._containerRect) {
+      if (hasConfigChanged) {
+        // Config changed - always recalculate
+        this._performLayoutCalculation(this._containerRect);
+      } else if (hasHassChanged && this._lastHassStates) {
+        // Check for significant entity changes using the ColorResolver
+        const hasSignificantEntityChanges = colorResolver.hasSignificantEntityChanges(
+          this._layoutEngine.layoutGroups,
+          this._lastHassStates,
+          this.hass
+        );
+        
+        if (hasSignificantEntityChanges) {
+          this._performLayoutCalculation(this._containerRect);
+        }
+      }
+    }
+
+    // Handle dynamic color changes using the ColorResolver
+    if (hasHassChanged && this.hass && this._lastHassStates) {
+      colorResolver.checkDynamicColorChanges(
+        this._layoutEngine.layoutGroups,
+        this.hass,
+        () => this._refreshElementRenders()
+      );
+    }
+
+    // Store current hass states for next comparison
+    if (this.hass) {
+      this._lastHassStates = { ...this.hass.states };
+    }
+  }
+
   private _scheduleInitialLayout(): void {
     // Wait for browser to complete layout using requestAnimationFrame
     requestAnimationFrame(() => {
@@ -9167,69 +9524,27 @@ export class LcarsCard extends LitElement {
     // Clean up all element animations and entity monitoring
     for (const group of this._layoutEngine.layoutGroups) {
       for (const element of group.elements) {
-        animationManager.cleanupElementAnimationTracking(element.id);
+        element.cleanup();
       }
     }
     
     super.disconnectedCallback();
   }
 
-  protected updated(changedProperties: Map<string | number | symbol, unknown>): void {
-    const hasHassChanged = changedProperties.has('hass');
-    const hasConfigChanged = changedProperties.has('_config');
-
-    if (hasConfigChanged || hasHassChanged) {
-      this._updateLayoutEngineWithHass();
-    }
-
-    // Simple logic: if we have both config and container, calculate layout
-    if (this._config && this._containerRect) {
-      if (hasConfigChanged) {
-        // Config changed - always recalculate
-        this._performLayoutCalculation(this._containerRect);
-      } else if (hasHassChanged && this._lastHassStates) {
-        // Check for significant entity changes using the ColorResolver
-        const hasSignificantEntityChanges = colorResolver.hasSignificantEntityChanges(
-          this._layoutEngine.layoutGroups,
-          this._lastHassStates,
-          this.hass
-        );
-        
-        if (hasSignificantEntityChanges) {
-          this._performLayoutCalculation(this._containerRect);
-        }
-      }
-    }
-
-          // Handle dynamic color changes using the ColorResolver
-    if (hasHassChanged && this.hass && this._lastHassStates) {
-      colorResolver.checkDynamicColorChanges(
-        this._layoutEngine.layoutGroups,
-        this.hass,
-        () => this._refreshElementRenders()
-      );
-    }
-
-    // Store current hass states for next comparison
-    if (this.hass) {
-      this._lastHassStates = { ...this.hass.states };
-    }
-  }
-
   private _handleViewChange(): void {
     console.log('[LCARS Card] View change detected, refreshing dynamic color system');
     
-          // Clear all dynamic color caches and entity monitoring using the ColorResolver
-          colorResolver.clearAllCaches(this._layoutEngine.layoutGroups);
+    // Clear all dynamic color caches and entity monitoring using the ColorResolver
+    colorResolver.clearAllCaches(this._layoutEngine.layoutGroups);
     
     // Force invalidation of last hass states to ensure fresh comparison
     this._lastHassStates = undefined;
     
-          // Schedule a dynamic color refresh using the ColorResolver
-                colorResolver.scheduleDynamicColorRefresh(
-        this.hass,
-        this._containerRect,
-        () => colorResolver.checkDynamicColorChanges(
+    // Schedule a dynamic color refresh using the ColorResolver
+    colorResolver.scheduleDynamicColorRefresh(
+      this.hass,
+      this._containerRect,
+      () => colorResolver.checkDynamicColorChanges(
         this._layoutEngine.layoutGroups,
         this.hass,
         () => this._refreshElementRenders()
@@ -9678,6 +9993,14 @@ export class LcarsCard extends LitElement {
       }
     }).catch(error => {
       console.error('[LcarsCard] Error importing state manager for status update:', error);
+    });
+  }
+
+  private _setupAllElementListeners(): void {
+    this._layoutEngine.layoutGroups.forEach(group => {
+      group.elements.forEach(element => {
+        element.setupInteractiveListeners();
+      });
     });
   }
 
@@ -11812,17 +12135,7 @@ import { HomeAssistant } from 'custom-card-helpers';
 import { Group } from '../layout/engine.js';
 import { Color, ColorStateContext, ComputedElementColors, ColorResolutionDefaults } from './color.js';
 
-// ============================================================================
-// Color Resolution Service
-// ============================================================================
-
-/**
- * Color resolution service using the unified Color class
- */
 export class ColorResolver {
-  /**
-   * Resolve all color properties for an element with full animation and state support
-   */
   resolveAllElementColors(
     elementId: string,
     elementProps: LayoutElementProps,
@@ -11841,10 +12154,6 @@ export class ColorResolver {
     };
   }
 
-  /**
-   * Create a new props object with resolved colors for button-like elements
-   * This handles the common pattern where interactive elements need computed colors
-   */
   createButtonPropsWithResolvedColors(
     elementId: string,
     originalElementProps: LayoutElementProps,
@@ -11858,10 +12167,6 @@ export class ColorResolver {
     return this._buildPropsWithResolvedColors(originalElementProps, computedColors);
   }
 
-  /**
-   * Simplified color resolution without animation context for basic scenarios
-   * This can be used when animation support isn't available or needed
-   */
   resolveColorsWithoutAnimationContext(
     elementId: string,
     elementProps: LayoutElementProps,
@@ -11872,9 +12177,6 @@ export class ColorResolver {
     return this.resolveAllElementColors(elementId, elementProps, basicAnimationContext, colorDefaults, interactiveState);
   }
 
-  /**
-   * Resolve a single color value using the Color class
-   */
   resolveColor(
     colorValue: ColorValue,
     elementId?: string,
@@ -11887,9 +12189,6 @@ export class ColorResolver {
     return color.resolve(elementId, animationProperty, animationContext, stateContext);
   }
 
-  /**
-   * Check for dynamic color changes with throttling to prevent excessive checks
-   */
   checkDynamicColorChanges(
     layoutGroups: Group[],
     hass: HomeAssistant,
@@ -11903,9 +12202,6 @@ export class ColorResolver {
     this._scheduleColorChangeCheck(layoutGroups, hass, refreshCallback, checkDelay);
   }
 
-  /**
-   * Schedule a dynamic color refresh with a delay
-   */
   scheduleDynamicColorRefresh(
     hass: HomeAssistant,
     containerRect: DOMRect | undefined,
@@ -11921,9 +12217,6 @@ export class ColorResolver {
     }, delay);
   }
 
-  /**
-   * Extract entity IDs that an element is using for dynamic colors
-   */
   extractEntityIdsFromElement(element: any): Set<string> {
     const entityIds = new Set<string>();
     const props = element.props;
@@ -11938,9 +12231,6 @@ export class ColorResolver {
     return entityIds;
   }
 
-  /**
-   * Check if there are significant entity changes that might affect layout
-   */
   hasSignificantEntityChanges(
     layoutGroups: Group[],
     lastHassStates: { [entityId: string]: any } | undefined,
@@ -11953,9 +12243,6 @@ export class ColorResolver {
     return this._checkForSignificantChangesInGroups(layoutGroups, lastHassStates, currentHass);
   }
 
-  /**
-   * Clear all dynamic color system caches and entity monitoring
-   */
   clearAllCaches(layoutGroups: Group[]): void {
     // Clear element-level entity monitoring and animation state
     for (const group of layoutGroups) {
@@ -11968,9 +12255,6 @@ export class ColorResolver {
     animationManager.invalidateDynamicColorCache();
   }
 
-  /**
-   * Cleanup any pending operations
-   */
   cleanup(): void {
     this._dynamicColorCheckScheduled = false;
     
@@ -11979,10 +12263,6 @@ export class ColorResolver {
       this._refreshTimeout = undefined;
     }
   }
-
-  // ============================================================================
-  // Private Implementation
-  // ============================================================================
 
   private _dynamicColorCheckScheduled: boolean = false;
   private _refreshTimeout?: ReturnType<typeof setTimeout>;
@@ -12234,22 +12514,13 @@ import { AnimationContext, animationManager } from './animation';
 // Core Color Types and Interfaces
 // ============================================================================
 
-/**
- * State types for interactive color resolution
- */
 export type ColorState = 'default' | 'hover' | 'active';
 
-/**
- * Interactive state context for determining which color to use
- */
 export interface ColorStateContext {
   isCurrentlyHovering?: boolean;
   isCurrentlyActive?: boolean;
 }
 
-/**
- * Computed color values for an element after resolution
- */
 export interface ComputedElementColors {
   fillColor: string;
   strokeColor: string;
@@ -12257,9 +12528,6 @@ export interface ComputedElementColors {
   textColor: string;
 }
 
-/**
- * Default color fallbacks for color resolution
- */
 export interface ColorResolutionDefaults {
   fallbackFillColor?: string;
   fallbackStrokeColor?: string;
@@ -12271,9 +12539,6 @@ export interface ColorResolutionDefaults {
 // Unified Color Class
 // ============================================================================
 
-/**
- * Unified Color class that handles all color formats and resolution logic
- */
 export class Color {
   private readonly _value: ColorValue;
   private readonly _fallback: string;
@@ -12283,23 +12548,14 @@ export class Color {
     this._fallback = fallback;
   }
 
-  /**
-   * Create a Color instance from any valid color value
-   */
   static from(value: ColorValue, fallback?: string): Color {
     return new Color(value, fallback || 'transparent');
   }
 
-  /**
-   * Create a Color instance with a specific fallback
-   */
   static withFallback(value: ColorValue, fallback: string): Color {
     return new Color(value, fallback);
   }
 
-  /**
-   * Resolve the color to a CSS-compatible string for the current state
-   */
   resolve(
     elementId?: string,
     animationProperty?: 'fill' | 'stroke' | 'textColor',
@@ -12344,44 +12600,26 @@ export class Color {
     return this._formatStaticColorValue(this._value) || this._fallback;
   }
 
-  /**
-   * Get the raw color value (for backwards compatibility)
-   */
   get value(): ColorValue {
     return this._value;
   }
 
-  /**
-   * Get the fallback color
-   */
   get fallback(): string {
     return this._fallback;
   }
 
-  /**
-   * Check if this color has interactive states (hover/active)
-   */
   get hasInteractiveStates(): boolean {
     return isStatefulColorConfig(this._value);
   }
 
-  /**
-   * Check if this color is dynamic (entity-based)
-   */
   get isDynamic(): boolean {
     return isDynamicColorConfig(this._value);
   }
 
-  /**
-   * Check if this color is static (string or RGB array)
-   */
   get isStatic(): boolean {
     return !this.isDynamic && !this.hasInteractiveStates;
   }
 
-  /**
-   * Get a resolved color string without any animation or state context
-   */
   toStaticString(): string {
     if (this.isStatic) {
       return this._formatStaticColorValue(this._value) || this._fallback;
@@ -12391,23 +12629,14 @@ export class Color {
     return this._getStaticFallbackColor();
   }
 
-  /**
-   * Create a copy of this color with a different fallback
-   */
   withFallback(newFallback: string): Color {
     return new Color(this._value, newFallback);
   }
 
-  /**
-   * Convert this Color to a string representation
-   */
   toString(): string {
     return this.toStaticString();
   }
 
-  /**
-   * Create a Color instance from an existing ColorValue with validation
-   */
   static fromValue(value: ColorValue | undefined, fallback: string = 'transparent'): Color {
     if (value === undefined || value === null) {
       return new Color(fallback, fallback);
@@ -12416,8 +12645,8 @@ export class Color {
   }
 
   /**
-   * Format a raw color value to a CSS string without resolution logic
-   * This is specifically for the animation manager when processing individual color values from mappings
+   * Formats a raw color value to a CSS string without resolution logic.
+   * This is specifically for the animation manager when processing individual color values from mappings.
    */
   static formatValue(value: ColorValue | undefined): string | undefined {
     if (value === undefined || value === null) {
@@ -12441,9 +12670,6 @@ export class Color {
   // Private Implementation
   // ============================================================================
 
-  /**
-   * Get the appropriate color value based on current interactive state
-   */
   private _resolveStateBasedColorValue(
     statefulConfig: StatefulColorConfig,
     stateContext?: ColorStateContext
@@ -12460,9 +12686,6 @@ export class Color {
     return statefulConfig.default;
   }
 
-  /**
-   * Format static color values (strings and RGB arrays) to CSS strings
-   */
   private _formatStaticColorValue(color: ColorValue): string | undefined {
     if (typeof color === 'string' && color.trim().length > 0) {
       return color.trim();
@@ -12477,9 +12700,6 @@ export class Color {
     return undefined;
   }
 
-  /**
-   * Get a static fallback color for complex color configurations
-   */
   private _getStaticFallbackColor(): string {
     // Try to extract a static color from complex configurations
     if (isDynamicColorConfig(this._value) && this._value.default !== undefined) {

@@ -345,7 +345,8 @@ describe('EndcapElement', () => {
         const expectedPathD = generateEndcapPath(60, 30, 'left', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -356,7 +357,8 @@ describe('EndcapElement', () => {
         const expectedPathD = generateEndcapPath(60, 30, 'right', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -366,7 +368,8 @@ describe('EndcapElement', () => {
 
         expect(mockCreateButton).toHaveBeenCalledWith(
           expect.any(String), 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -376,7 +379,8 @@ describe('EndcapElement', () => {
 
         expect(mockCreateButton).toHaveBeenCalledWith(
           expect.any(String), 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
     });

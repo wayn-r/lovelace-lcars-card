@@ -356,13 +356,14 @@ describe('ChiselEndcapElement', () => {
         chiselEndcapElement.layout = { x: 10, y: 15, width: 60, height: 30, calculated: true };
       });
 
-      it('should call button.createButton with correct parameters for default direction "right"', () => {
+      it('should call button.createButton with correct parameters for direction "right"', () => {
         chiselEndcapElement.render();
+
         expect(generateChiselEndcapPath).toHaveBeenCalledWith(60, 30, 'right', 10, 15);
-        expect(mockCreateButton).toHaveBeenCalledTimes(1);
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -373,7 +374,8 @@ describe('ChiselEndcapElement', () => {
         expect(generateChiselEndcapPath).toHaveBeenCalledWith(60, 30, 'left', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -383,7 +385,8 @@ describe('ChiselEndcapElement', () => {
 
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
 
@@ -393,7 +396,8 @@ describe('ChiselEndcapElement', () => {
 
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
-          { rx: 0 }
+          { rx: 0 },
+          { isCurrentlyHovering: false, isCurrentlyActive: false }
         );
       });
     });
