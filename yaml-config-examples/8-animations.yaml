@@ -84,9 +84,11 @@ groups:
           enabled: true
           actions:
             tap:
-              action: set_state
-              target_element_ref: fade_in_group.fade_in_element
-              state: visible
+              action: toggle_state
+              target_element_ref: sliding_panel_group.sliding_panel
+              states:
+                - hidden
+                - visible
       - id: sliding_panel_description
         type: text
         text:
@@ -308,7 +310,6 @@ groups:
           enabled: true
           actions:
             tap:
-              action: multi_action
               actions:
                 - action: set_state
                   target_element_ref: sliding_panel_group.sliding_panel
@@ -316,15 +317,6 @@ groups:
                 - action: set_state
                   target_element_ref: scale_target_group.scale_target
                   state: scaled
-                - action: animate
-                  animation:
-                    target_self: true
-                    type: custom_gsap
-                    custom_gsap_vars:
-                      rotation: 360
-                      transformOrigin: center center
-                      ease: bounce.out
-                    duration: 1
       - id: reset_button
         type: rectangle
         appearance:
@@ -348,7 +340,6 @@ groups:
           enabled: true
           actions:
             tap:
-              action: multi_action
               actions:
                 - action: set_state
                   target_element_ref: sliding_panel_group.sliding_panel

@@ -166,7 +166,35 @@ export interface HoldActionDefinition extends ActionDefinition {
 }
 
 export interface ActionDefinition {
-  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state' | 'multi_action';
+  // Single action format - mutually exclusive with actions array
+  action?: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state';
+  
+  // Multiple actions format - mutually exclusive with single action properties
+  actions?: SingleActionDefinition[];
+  
+  // Single action properties (only used when action is specified)
+  service?: string;
+  service_data?: Record<string, any>;
+  target?: Record<string, any>;
+  navigation_path?: string;
+  url_path?: string;
+  entity?: string;
+  target_id?: string;
+  state?: string;
+  target_element_ref?: string;
+  states?: string[];
+  
+  // General properties (apply to both formats)
+  confirmation?: boolean | {
+    text?: string;
+    exemptions?: Array<{
+      user: string;
+    }>;
+  };
+}
+
+export interface SingleActionDefinition {
+  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state';
   
   // Service call specific
   service?: string;
@@ -182,14 +210,11 @@ export interface ActionDefinition {
   // Entity specific (toggle, more-info)
   entity?: string;
   
-  // State setting specific (legacy)
+  // State setting specific
   target_id?: string;
   state?: string;
-  
-  // Custom state management actions
   target_element_ref?: string;
   states?: string[];
-  actions?: ActionDefinition[];
   
   // General properties
   confirmation?: boolean | {
@@ -364,9 +389,10 @@ export interface LcarsButtonElementConfig {
 }
 
 export interface LcarsButtonActionConfig {
-  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state' | 'multi_action';
+  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state';
   service?: string;
   service_data?: Record<string, any>;
+  target?: Record<string, any>;
   navigation_path?: string;
   url_path?: string;
   entity?: string;
@@ -380,7 +406,7 @@ export interface LcarsButtonActionConfig {
   target_element_ref?: string;
   state?: string;
   states?: string[];
-  actions?: ActionDefinition[];
+  actions?: SingleActionDefinition[];
 }
 
 // ============================================================================

@@ -110,6 +110,181 @@ describe('Button', () => {
       expect(result).toHaveProperty('strings');
       expect(result).toHaveProperty('values');
     });
+
+    it('should create single action config format correctly', () => {
+      const props = {
+        button: {
+          enabled: true,
+          action_config: {
+            type: 'toggle',
+            entity: 'light.test',
+            confirmation: true
+          }
+        }
+      };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      const actionConfig = (button as any).createActionConfig(props.button);
+      
+      expect(actionConfig).toEqual({
+        confirmation: true,
+        tap_action: {
+          action: 'toggle',
+          service: undefined,
+          service_data: undefined,
+          target: undefined,
+          navigation_path: undefined,
+          url_path: undefined,
+          entity: 'light.test',
+          target_element_ref: undefined,
+          state: undefined,
+          states: undefined,
+        },
+        entity: 'light.test'
+      });
+    });
+
+    it('should create multiple actions config format correctly', () => {
+      const props = {
+        button: {
+          enabled: true,
+          action_config: {
+            actions: [
+              {
+                action: 'toggle',
+                entity: 'light.living_room'
+              },
+              {
+                action: 'set_state',
+                target_element_ref: 'group.element',
+                state: 'active'
+              }
+            ]
+          }
+        }
+      };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      const actionConfig = (button as any).createActionConfig(props.button);
+      
+      expect(actionConfig).toEqual({
+        confirmation: undefined,
+        tap_action: {
+          actions: [
+            {
+              action: 'toggle',
+              service: undefined,
+              service_data: undefined,
+              target: undefined,
+              navigation_path: undefined,
+              url_path: undefined,
+              entity: 'light.living_room',
+              target_element_ref: undefined,
+              state: undefined,
+              states: undefined,
+              confirmation: undefined
+            },
+            {
+              action: 'set_state',
+              service: undefined,
+              service_data: undefined,
+              target: undefined,
+              navigation_path: undefined,
+              url_path: undefined,
+              entity: undefined,
+              target_element_ref: 'group.element',
+              state: 'active',
+              states: undefined,
+              confirmation: undefined
+            }
+          ]
+        }
+      });
+    });
+
+    it('should handle multiple actions execution correctly', () => {
+      const executeActionSpy = vi.spyOn(Button.prototype as any, 'executeAction');
+      const props = {
+        button: {
+          enabled: true,
+          action_config: {
+            actions: [
+              { action: 'toggle', entity: 'light.test1' },
+              { action: 'toggle', entity: 'light.test2' }
+            ]
+          }
+        }
+      };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      const actionConfig = {
+        tap_action: {
+          actions: [
+            { action: 'toggle', entity: 'light.test1' },
+            { action: 'toggle', entity: 'light.test2' }
+          ]
+        }
+      };
+      
+      (button as any)._executeMultipleActions(actionConfig.tap_action.actions, document.createElement('div'));
+      
+      expect(executeActionSpy).toHaveBeenCalledTimes(2);
+      expect(executeActionSpy).toHaveBeenNthCalledWith(1, {
+        tap_action: { action: 'toggle', entity: 'light.test1' },
+        confirmation: undefined
+      }, expect.any(HTMLElement));
+      expect(executeActionSpy).toHaveBeenNthCalledWith(2, {
+        tap_action: { action: 'toggle', entity: 'light.test2' },
+        confirmation: undefined
+      }, expect.any(HTMLElement));
+      
+      executeActionSpy.mockRestore();
+    });
+
+    it('should detect multiple actions in executeAction and delegate to _executeMultipleActions', () => {
+      const executeMultipleActionsSpy = vi.spyOn(Button.prototype as any, '_executeMultipleActions');
+      const props = { button: { enabled: true } };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      const actionConfig = {
+        tap_action: {
+          actions: [
+            { action: 'toggle', entity: 'light.test1' },
+            { action: 'toggle', entity: 'light.test2' }
+          ]
+        }
+      };
+      
+      (button as any).executeAction(actionConfig, document.createElement('div'));
+      
+      expect(executeMultipleActionsSpy).toHaveBeenCalledWith(actionConfig.tap_action.actions, expect.any(HTMLElement));
+      
+      executeMultipleActionsSpy.mockRestore();
+    });
+
+    it('should not detect multiple actions when actions array is not present', () => {
+      const executeMultipleActionsSpy = vi.spyOn(Button.prototype as any, '_executeMultipleActions');
+      const props = { button: { enabled: true } };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      const actionConfig = {
+        tap_action: {
+          action: 'toggle',
+          entity: 'light.test'
+        }
+      };
+      
+      // Mock the handleAction import to prevent actual execution
+      vi.doMock('custom-card-helpers', () => ({
+        handleAction: vi.fn()
+      }));
+      
+      (button as any).executeAction(actionConfig, document.createElement('div'));
+      
+      expect(executeMultipleActionsSpy).not.toHaveBeenCalled();
+      
+      executeMultipleActionsSpy.mockRestore();
+    });
   });
 
   describe('cleanup', () => {

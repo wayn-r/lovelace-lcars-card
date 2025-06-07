@@ -87,7 +87,9 @@ groups: <array>                  # Required: Defines groups of elements. Element
             tap: <action_definition>   # Action for a standard click/tap. See action_definition below.
             hold:                    # Optional: Action for a click-and-hold.
               duration: <number>       # Optional (ms): Hold duration. Default: 500.
+              actions: <array>         # Required: Array of actions to execute simultaneously.
               action: <string>         # Required: Type of action (same as action_definition).
+              # Either action or actions must be specified, but not both.
               # ... other action_definition properties (service, entity, etc.)
             double_tap: <action_definition>  # Optional: Action for a double-tap. See action_definition below.
 

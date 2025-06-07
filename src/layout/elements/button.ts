@@ -130,42 +130,69 @@ export class Button {
     
     private createActionConfig(buttonConfig: LcarsButtonElementConfig) {
         const actionConfig: any = {
-            tap_action: { 
+            confirmation: buttonConfig.action_config?.confirmation,
+        };
+
+        // Check if we have multiple actions or a single action
+        if (buttonConfig.action_config?.actions && Array.isArray(buttonConfig.action_config.actions)) {
+            // Multiple actions format
+            actionConfig.tap_action = {
+                actions: buttonConfig.action_config.actions.map(action => ({
+                    action: action.action,
+                    service: action.service,
+                    service_data: action.service_data,
+                    target: action.target,
+                    navigation_path: action.navigation_path,
+                    url_path: action.url_path,
+                    entity: action.entity,
+                    target_element_ref: action.target_element_ref,
+                    state: action.state,
+                    states: action.states,
+                    confirmation: action.confirmation
+                }))
+            };
+        } else {
+            // Single action format
+            actionConfig.tap_action = { 
                 action: buttonConfig.action_config?.type,
                 service: buttonConfig.action_config?.service,
                 service_data: buttonConfig.action_config?.service_data,
+                target: buttonConfig.action_config?.target,
                 navigation_path: buttonConfig.action_config?.navigation_path,
-                url: buttonConfig.action_config?.url_path,
+                url_path: buttonConfig.action_config?.url_path,
                 entity: buttonConfig.action_config?.entity,
                 // Custom action properties
                 target_element_ref: buttonConfig.action_config?.target_element_ref,
                 state: buttonConfig.action_config?.state,
                 states: buttonConfig.action_config?.states,
-                actions: buttonConfig.action_config?.actions,
-            },
-            confirmation: buttonConfig.action_config?.confirmation,
-        };
+            };
 
-        // For toggle and more-info actions, we need to provide the entity if not explicitly set
-        if (buttonConfig.action_config?.type === 'toggle' || buttonConfig.action_config?.type === 'more-info') {
-            if (!actionConfig.tap_action.entity) {
-                // Use the element ID as the entity ID (this assumes the element ID is an entity ID like "light.living_room")
-                actionConfig.tap_action.entity = this._id;
+            // For toggle and more-info actions, we need to provide the entity if not explicitly set
+            if (buttonConfig.action_config?.type === 'toggle' || buttonConfig.action_config?.type === 'more-info') {
+                if (!actionConfig.tap_action.entity) {
+                    // Use the element ID as the entity ID (this assumes the element ID is an entity ID like "light.living_room")
+                    actionConfig.tap_action.entity = this._id;
+                }
+            }
+
+            // Add entity at root level for toggle actions (required by custom-card-helpers)
+            if (buttonConfig.action_config?.type === 'toggle' || buttonConfig.action_config?.type === 'more-info') {
+                actionConfig.entity = actionConfig.tap_action.entity;
             }
         }
-
-        // Add entity at root level for toggle actions (required by custom-card-helpers)
-        if (buttonConfig.action_config?.type === 'toggle' || buttonConfig.action_config?.type === 'more-info') {
-            actionConfig.entity = actionConfig.tap_action.entity;
-        }
-
-        // Debug logging
 
         return actionConfig;
     }
     
     private executeAction(actionConfig: any, element?: Element): void {
         const hass = this._hass;
+        
+        // Check if this is a multiple actions configuration
+        if (actionConfig?.tap_action?.actions && Array.isArray(actionConfig.tap_action.actions)) {
+            this._executeMultipleActions(actionConfig.tap_action.actions, element);
+            return;
+        }
+        
         const actionType = actionConfig?.tap_action?.action;
         
         // Handle custom actions
@@ -221,8 +248,19 @@ export class Button {
         }
     }
 
+    private _executeMultipleActions(actions: any[], element?: Element): void {
+        actions.forEach(action => {
+            // Convert individual action to the expected format for executeAction
+            const singleActionConfig = {
+                tap_action: action,
+                confirmation: action.confirmation
+            };
+            this.executeAction(singleActionConfig, element);
+        });
+    }
+
     private isCustomAction(actionType: string): boolean {
-        return ['set_state', 'toggle_state', 'multi_action'].includes(actionType);
+        return ['set_state', 'toggle_state'].includes(actionType);
     }
 
     private executeCustomAction(actionConfig: any): void {
@@ -249,9 +287,6 @@ export class Button {
                 break;
             case 'toggle_state':
                 this._executeToggleStateAction(actionConfig, stateManager);
-                break;
-            case 'multi_action':
-                this._executeMultiAction(actionConfig.tap_action.actions);
                 break;
             default:
                 console.warn(`[${this._id}] Unknown custom action: ${actionType}`);
@@ -280,10 +315,6 @@ export class Button {
         }
         
         stateManager.toggleState(targetElementRef, states);
-    }
-
-    private _executeMultiAction(actions: any[]): void {
-        actions.forEach(action => this.executeAction(action));
     }
 
     updateHass(hass?: HomeAssistant): void {

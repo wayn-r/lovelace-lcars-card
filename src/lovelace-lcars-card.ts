@@ -15,8 +15,7 @@ import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext } from './utils/animation.js';
 import { colorResolver } from './utils/color-resolver.js';
-import { VisibilityManager } from './utils/visibility-manager.js';
-import { stateManager } from './utils/state-manager.js';
+import { stateManager, StateChangeEvent } from './utils/state-manager.js';
 import { transformPropagator } from './utils/transform-propagator.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
@@ -46,7 +45,7 @@ export class LcarsCard extends LitElement {
   private _lastConfig?: LcarsCardConfig;
   
   // Utility classes for better organization
-  private _visibilityManager: VisibilityManager = new VisibilityManager(() => this._refreshElementRenders());
+  // Note: visibility is now managed by stateManager
   
   // Legacy state tracking for compatibility
   private _lastHassStates?: { [entityId: string]: any };
@@ -96,6 +95,9 @@ export class LcarsCard extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    
+    // Initialize stateManager with update callback
+    stateManager.setRequestUpdateCallback(() => this._refreshElementRenders());
     
     // Set up resize observer
     this._resizeObserver = new ResizeObserver((entries) => {
@@ -210,7 +212,7 @@ export class LcarsCard extends LitElement {
     
     // Clean up utility classes
     colorResolver.cleanup();
-    this._visibilityManager.cleanup();
+    stateManager.cleanup();
     
     // Clean up all element animations and entity monitoring
     for (const group of this._layoutEngine.layoutGroups) {
@@ -313,7 +315,6 @@ export class LcarsCard extends LitElement {
       
       // Clear previous layout and visibility triggers
       this._layoutEngine.clearLayout();
-      this._visibilityManager.clearTriggers();
       
       // Parse config and add elements to layout engine
       const getShadowElement = (id: string): Element | null => {
@@ -328,10 +329,9 @@ export class LcarsCard extends LitElement {
         this._layoutEngine.addGroup(group); 
       });
 
-      // Collect all element IDs, group IDs, and visibility triggers
+      // Collect all element IDs and group IDs
       const elementIds: string[] = [];
       const groupIds: string[] = [];
-      const allVisibilityTriggers: any[] = [];
 
       groups.forEach(group => {
         groupIds.push(group.id);
@@ -339,21 +339,11 @@ export class LcarsCard extends LitElement {
         group.elements.forEach(element => {
           elementIds.push(element.id);
           console.log(`[LcarsCard] Processing element: ${element.id}`);
-          
-          // Collect visibility triggers from element props
-          if (element.props.visibility_triggers) {
-            console.log(`[LcarsCard] Found ${element.props.visibility_triggers.length} visibility triggers for element ${element.id}:`, element.props.visibility_triggers);
-            allVisibilityTriggers.push(...element.props.visibility_triggers);
-          }
         });
       });
 
-      console.log(`[LcarsCard] Total visibility triggers collected: ${allVisibilityTriggers.length}`, allVisibilityTriggers);
-
-      // Initialize visibility manager
-      this._visibilityManager.initializeVisibility(elementIds, groupIds);
-      this._visibilityManager.registerVisibilityTriggers(allVisibilityTriggers);
-      this._visibilityManager.applyInitialVisibilityStates();
+      // Initialize visibility states in state manager
+      stateManager.initializeVisibility(elementIds, groupIds);
 
       // Initialize state manager
       const animationContext: AnimationContext = {
@@ -421,12 +411,6 @@ export class LcarsCard extends LitElement {
           
           // Set up event listeners and trigger lifecycle animations after DOM elements are rendered
           setTimeout(() => {
-            this._visibilityManager.setupEventListeners((id: string) => {
-              const element = this.shadowRoot?.querySelector(`#${CSS.escape(id)}`);
-              return element || null;
-            });
-            
-            // Set up interactive listeners for hover/active states
             this._setupAllElementListeners();
             
             // Trigger on_load animations for all elements
@@ -473,14 +457,14 @@ export class LcarsCard extends LitElement {
 
     const newTemplates = this._layoutEngine.layoutGroups.flatMap(group => {
         // Check if group is visible
-        if (!this._visibilityManager.getGroupVisibility(group.id)) {
+        if (!stateManager.getGroupVisibility(group.id)) {
           return [];
         }
         
         return group.elements
             .filter(el => {
               // Check if element should be visible (both element and group visibility)
-              return this._visibilityManager.shouldElementBeVisible(el.id, group.id);
+              return stateManager.shouldElementBeVisible(el.id, group.id);
             })
             .map(el => el.render())
             .filter((template): template is SVGTemplateResult => template !== null);
@@ -634,6 +618,16 @@ export class LcarsCard extends LitElement {
             element.props.state_management,
             element.props.animations
           );
+          
+          // Handle initial visibility states
+          if (element.props.state_management?.default_state) {
+            const initialState = element.props.state_management.default_state;
+            if (initialState === 'hidden' || initialState === 'visible') {
+              const shouldBeVisible = initialState === 'visible';
+              stateManager.setElementVisibility(element.id, shouldBeVisible, false);
+              console.log(`[LcarsCard] Initial visibility state: ${element.id} -> ${initialState} (visible: ${shouldBeVisible})`);
+            }
+          }
         }
       });
     });
@@ -641,19 +635,39 @@ export class LcarsCard extends LitElement {
 
   private _setupStateChangeHandling(elementsMap: Map<string, LayoutElement>): void {
     stateManager.onStateChange((event) => {
+      // Handle visibility state changes
+      this._handleVisibilityStateChange(event);
+      
       this.updateStatusIndicators(elementsMap);
       this.requestUpdate();
     });
   }
 
+  /**
+   * Handle state changes that affect element visibility
+   */
+  private _handleVisibilityStateChange(event: StateChangeEvent): void {
+    const { elementId, toState } = event;
+    
+    // Check if this is a visibility state
+    if (toState === 'hidden' || toState === 'visible') {
+      const shouldBeVisible = toState === 'visible';
+      
+      // Update the visibility manager
+      stateManager.setElementVisibility(elementId, shouldBeVisible, true);
+      
+      console.log(`[LcarsCard] Visibility state change: ${elementId} -> ${toState} (visible: ${shouldBeVisible})`);
+    }
+  }
+
   private _renderVisibleElements(): SVGTemplateResult[] {
     return this._layoutEngine.layoutGroups.flatMap(group => {
-      if (!this._visibilityManager.getGroupVisibility(group.id)) {
+      if (!stateManager.getGroupVisibility(group.id)) {
         return [];
       }
       
       return group.elements
-        .filter(el => this._visibilityManager.shouldElementBeVisible(el.id, group.id))
+        .filter(el => stateManager.shouldElementBeVisible(el.id, group.id))
         .map(el => {
           try {
             return el.render();

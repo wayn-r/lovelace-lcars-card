@@ -20,6 +20,11 @@ export interface StateChangeEvent {
 
 export type StateChangeCallback = (event: StateChangeEvent) => void;
 
+export interface ElementVisibilityState {
+  visible: boolean;
+  animated?: boolean;
+}
+
 /**
  * Manages element states and triggers animations based on state changes
  */
@@ -30,6 +35,19 @@ export class StateManager {
   private stateChangeCallbacks: StateChangeCallback[] = [];
   private elementsMap?: Map<string, LayoutElement>;
   private animationContext?: AnimationContext;
+  
+  // Visibility management
+  private elementVisibility = new Map<string, ElementVisibilityState>();
+  private groupVisibility = new Map<string, ElementVisibilityState>();
+  private requestUpdateCallback?: () => void;
+
+  constructor(requestUpdateCallback?: () => void) {
+    this.requestUpdateCallback = requestUpdateCallback;
+  }
+
+  setRequestUpdateCallback(callback: () => void): void {
+    this.requestUpdateCallback = callback;
+  }
 
   /**
    * Initialize an element's state management
@@ -42,16 +60,30 @@ export class StateManager {
     if (stateConfig) {
       this.stateConfigs.set(elementId, stateConfig);
       
-      // Set initial state
-      const initialState = stateConfig.default_state || 'default';
+      // Initialize with default state
+      const defaultState = stateConfig.default_state || 'default';
       this.elementStates.set(elementId, {
-        currentState: initialState,
+        currentState: defaultState,
         lastChange: Date.now()
       });
+      
+      // Handle visibility states
+      if (defaultState === 'hidden' || defaultState === 'visible') {
+        const shouldBeVisible = defaultState === 'visible';
+        this.setElementVisibility(elementId, shouldBeVisible, false);
+      }
     }
-
+    
     if (animationConfig) {
       this.animationConfigs.set(elementId, animationConfig);
+    }
+    
+    // Initialize state tracking for elements with only animations (no explicit state_management)
+    if (!stateConfig && animationConfig) {
+      this.elementStates.set(elementId, {
+        currentState: 'default',
+        lastChange: Date.now()
+      });
     }
   }
 
@@ -72,6 +104,9 @@ export class StateManager {
    * Set element state and trigger any associated animations
    */
   setState(elementId: string, newState: string): boolean {
+    // Auto-initialize element if not already initialized
+    this._ensureElementInitialized(elementId);
+    
     if (!this._isElementInitialized(elementId)) {
       return false;
     }
@@ -84,6 +119,10 @@ export class StateManager {
     const previousState = currentStateData.currentState;
     this._updateElementState(elementId, newState, previousState);
     this._notifyStateChangeCallbacks(elementId, previousState, newState);
+    
+    // Handle visibility states
+    this._handleVisibilityState(elementId, newState, previousState);
+    
     this._triggerStateChangeAnimations(elementId, previousState, newState);
 
     return true;
@@ -93,7 +132,8 @@ export class StateManager {
    * Get current state of an element
    */
   getState(elementId: string): string | undefined {
-    return this.elementStates.get(elementId)?.currentState;
+    const stateData = this.elementStates.get(elementId);
+    return stateData?.currentState;
   }
 
   /**
@@ -105,17 +145,25 @@ export class StateManager {
       return false;
     }
 
+    // Auto-initialize element if not already initialized
+    this._ensureElementInitialized(elementId);
+
     const currentState = this.getState(elementId);
     if (!currentState) {
-      console.warn(`[StateManager] Element ${elementId} not initialized for state management`);
-      return false;
+      // If no current state, set to the first state
+      return this.setState(elementId, states[0]);
     }
 
+    // Find current state index
     const currentIndex = states.indexOf(currentState);
-    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % states.length;
-    const nextState = states[nextIndex];
+    if (currentIndex === -1) {
+      // Current state not in the provided states array, set to first state
+      return this.setState(elementId, states[0]);
+    }
 
-    return this.setState(elementId, nextState);
+    // Toggle to next state (cycle back to beginning if at end)
+    const nextIndex = (currentIndex + 1) % states.length;
+    return this.setState(elementId, states[nextIndex]);
   }
 
   /**
@@ -130,7 +178,7 @@ export class StateManager {
    */
   removeStateChangeCallback(callback: StateChangeCallback): void {
     const index = this.stateChangeCallbacks.indexOf(callback);
-    if (index !== -1) {
+    if (index > -1) {
       this.stateChangeCallbacks.splice(index, 1);
     }
   }
@@ -139,11 +187,11 @@ export class StateManager {
    * Get all element states for template access
    */
   getAllStates(): Record<string, ElementState> {
-    const result: Record<string, ElementState> = {};
+    const states: Record<string, ElementState> = {};
     this.elementStates.forEach((state, elementId) => {
-      result[elementId] = state;
+      states[elementId] = { ...state };
     });
-    return result;
+    return states;
   }
 
   /**
@@ -155,6 +203,45 @@ export class StateManager {
       console.warn(`[StateManager] Element ${elementId} not initialized for state management`);
     }
     return isInitialized;
+  }
+
+  /**
+   * Ensure element is initialized for state management.
+   * Auto-initializes elements that aren't explicitly configured but are being targeted by actions.
+   */
+  private _ensureElementInitialized(elementId: string): void {
+    if (this.elementStates.has(elementId)) {
+      return; // Already initialized
+    }
+
+    // Look up the element in the elements map to get its configuration
+    const element = this.elementsMap?.get(elementId);
+    if (!element) {
+      console.warn(`[StateManager] Cannot auto-initialize ${elementId}: element not found in layout`);
+      return;
+    }
+
+    // Check if element has state_management or animations configuration
+    const hasStateConfig = Boolean(element.props.state_management);
+    const hasAnimationConfig = Boolean(element.props.animations);
+
+    if (hasStateConfig || hasAnimationConfig) {
+      // Initialize using the element's actual configuration
+      console.log(`[StateManager] Auto-initializing element ${elementId}`);
+      this.initializeElementState(
+        elementId,
+        element.props.state_management,
+        element.props.animations
+      );
+    } else {
+      // Initialize with minimal default state for elements that don't have explicit config
+      // but are being targeted by button actions
+      console.log(`[StateManager] Auto-initializing ${elementId} with default state (no config found)`);
+      this.elementStates.set(elementId, {
+        currentState: 'default',
+        lastChange: Date.now()
+      });
+    }
   }
 
   /**
@@ -196,16 +283,9 @@ export class StateManager {
   }
 
   /**
-   * Trigger state change animations
-   */
-  private _triggerStateChangeAnimations(elementId: string, fromState: string, toState: string): void {
-    this.triggerStateChangeAnimations(elementId, fromState, toState);
-  }
-
-  /**
    * Trigger animations based on state changes
    */
-  private triggerStateChangeAnimations(elementId: string, fromState: string, toState: string): void {
+  private _triggerStateChangeAnimations(elementId: string, fromState: string, toState: string): void {
     const animationConfig = this.animationConfigs.get(elementId);
     if (!animationConfig?.on_state_change || !this.animationContext) {
       return;
@@ -264,6 +344,8 @@ export class StateManager {
     this.stateConfigs.clear();
     this.animationConfigs.clear();
     this.stateChangeCallbacks = [];
+    this.elementVisibility.clear();
+    this.groupVisibility.clear();
   }
 
   /**
@@ -424,6 +506,83 @@ export class StateManager {
     this.elementStates.delete(elementId);
     this.stateConfigs.delete(elementId);
     this.animationConfigs.delete(elementId);
+    this.elementVisibility.delete(elementId);
+  }
+
+  /**
+   * Handle visibility-related states (hidden/visible)
+   */
+  private _handleVisibilityState(elementId: string, newState: string, previousState: string): void {
+    // Check if this is a visibility state transition
+    const isVisibilityState = (state: string) => state === 'hidden' || state === 'visible';
+    
+    if (isVisibilityState(newState)) {
+      const shouldBeVisible = newState === 'visible';
+      
+      // Update the visibility directly
+      this.setElementVisibility(elementId, shouldBeVisible, true);
+      
+      console.log(`[StateManager] Visibility state change: ${elementId} ${previousState} -> ${newState}`);
+      
+      // Trigger a re-render to update visibility
+      this.requestUpdateCallback?.();
+    }
+  }
+
+  // ============================================================================
+  // Visibility Management
+  // ============================================================================
+
+  initializeVisibility(elementIds: string[], groupIds: string[]): void {
+    // Initialize all elements as visible by default
+    elementIds.forEach(id => {
+      if (!this.elementVisibility.has(id)) {
+        this.elementVisibility.set(id, { visible: true });
+      }
+    });
+
+    // Initialize all groups as visible by default
+    groupIds.forEach(id => {
+      if (!this.groupVisibility.has(id)) {
+        this.groupVisibility.set(id, { visible: true });
+      }
+    });
+  }
+
+  setElementVisibility(elementId: string, visible: boolean, animated: boolean = false): void {
+    const previousVisibility = this.elementVisibility.get(elementId)?.visible ?? true;
+    this.elementVisibility.set(elementId, { visible, animated });
+    
+    // Trigger lifecycle animations for show/hide
+    if (animated && previousVisibility !== visible) {
+      this.triggerLifecycleAnimation(elementId, visible ? 'on_show' : 'on_hide');
+    }
+  }
+
+  setGroupVisibility(groupId: string, visible: boolean, animated: boolean = false): void {
+    const previousVisibility = this.groupVisibility.get(groupId)?.visible ?? true;
+    this.groupVisibility.set(groupId, { visible, animated });
+    
+    // Note: Group visibility changes don't directly trigger animations
+    // Individual elements within the group handle their own animations
+  }
+
+  getElementVisibility(elementId: string): boolean {
+    return this.elementVisibility.get(elementId)?.visible ?? true;
+  }
+
+  getGroupVisibility(groupId: string): boolean {
+    return this.groupVisibility.get(groupId)?.visible ?? true;
+  }
+
+  shouldElementBeVisible(elementId: string, groupId: string): boolean {
+    const elementVisible = this.getElementVisibility(elementId);
+    const groupVisible = this.getGroupVisibility(groupId);
+    return elementVisible && groupVisible;
+  }
+
+  cleanup(): void {
+    this.clearAll();
   }
 }
 

@@ -62,9 +62,9 @@ lovelace-lcars-card/
 │       │   ├── color-resolver.spec.ts
 │       │   ├── color.spec.ts
 │       │   ├── shapes.spec.ts
+│       │   ├── state-manager.spec.ts
 │       │   └── transform-propagator.spec.ts
-│       ├── transform-propagator.ts
-│       └── visibility-manager.ts
+│       └── transform-propagator.ts
 ├── tsconfig.json
 ├── vite.config.ts
 ├── vitest.config.ts
@@ -1369,42 +1369,69 @@ export class Button {
     
     private createActionConfig(buttonConfig: LcarsButtonElementConfig) {
         const actionConfig: any = {
-            tap_action: { 
+            confirmation: buttonConfig.action_config?.confirmation,
+        };
+
+        // Check if we have multiple actions or a single action
+        if (buttonConfig.action_config?.actions && Array.isArray(buttonConfig.action_config.actions)) {
+            // Multiple actions format
+            actionConfig.tap_action = {
+                actions: buttonConfig.action_config.actions.map(action => ({
+                    action: action.action,
+                    service: action.service,
+                    service_data: action.service_data,
+                    target: action.target,
+                    navigation_path: action.navigation_path,
+                    url_path: action.url_path,
+                    entity: action.entity,
+                    target_element_ref: action.target_element_ref,
+                    state: action.state,
+                    states: action.states,
+                    confirmation: action.confirmation
+                }))
+            };
+        } else {
+            // Single action format
+            actionConfig.tap_action = { 
                 action: buttonConfig.action_config?.type,
                 service: buttonConfig.action_config?.service,
                 service_data: buttonConfig.action_config?.service_data,
+                target: buttonConfig.action_config?.target,
                 navigation_path: buttonConfig.action_config?.navigation_path,
-                url: buttonConfig.action_config?.url_path,
+                url_path: buttonConfig.action_config?.url_path,
                 entity: buttonConfig.action_config?.entity,
                 // Custom action properties
                 target_element_ref: buttonConfig.action_config?.target_element_ref,
                 state: buttonConfig.action_config?.state,
                 states: buttonConfig.action_config?.states,
-                actions: buttonConfig.action_config?.actions,
-            },
-            confirmation: buttonConfig.action_config?.confirmation,
-        };
+            };
 
-        // For toggle and more-info actions, we need to provide the entity if not explicitly set
-        if (buttonConfig.action_config?.type === 'toggle' || buttonConfig.action_config?.type === 'more-info') {
-            if (!actionConfig.tap_action.entity) {
-                // Use the element ID as the entity ID (this assumes the element ID is an entity ID like "light.living_room")
-                actionConfig.tap_action.entity = this._id;
+            // For toggle and more-info actions, we need to provide the entity if not explicitly set
+            if (buttonConfig.action_config?.type === 'toggle' || buttonConfig.action_config?.type === 'more-info') {
+                if (!actionConfig.tap_action.entity) {
+                    // Use the element ID as the entity ID (this assumes the element ID is an entity ID like "light.living_room")
+                    actionConfig.tap_action.entity = this._id;
+                }
+            }
+
+            // Add entity at root level for toggle actions (required by custom-card-helpers)
+            if (buttonConfig.action_config?.type === 'toggle' || buttonConfig.action_config?.type === 'more-info') {
+                actionConfig.entity = actionConfig.tap_action.entity;
             }
         }
-
-        // Add entity at root level for toggle actions (required by custom-card-helpers)
-        if (buttonConfig.action_config?.type === 'toggle' || buttonConfig.action_config?.type === 'more-info') {
-            actionConfig.entity = actionConfig.tap_action.entity;
-        }
-
-        // Debug logging
 
         return actionConfig;
     }
     
     private executeAction(actionConfig: any, element?: Element): void {
         const hass = this._hass;
+        
+        // Check if this is a multiple actions configuration
+        if (actionConfig?.tap_action?.actions && Array.isArray(actionConfig.tap_action.actions)) {
+            this._executeMultipleActions(actionConfig.tap_action.actions, element);
+            return;
+        }
+        
         const actionType = actionConfig?.tap_action?.action;
         
         // Handle custom actions
@@ -1460,8 +1487,19 @@ export class Button {
         }
     }
 
+    private _executeMultipleActions(actions: any[], element?: Element): void {
+        actions.forEach(action => {
+            // Convert individual action to the expected format for executeAction
+            const singleActionConfig = {
+                tap_action: action,
+                confirmation: action.confirmation
+            };
+            this.executeAction(singleActionConfig, element);
+        });
+    }
+
     private isCustomAction(actionType: string): boolean {
-        return ['set_state', 'toggle_state', 'multi_action'].includes(actionType);
+        return ['set_state', 'toggle_state'].includes(actionType);
     }
 
     private executeCustomAction(actionConfig: any): void {
@@ -1488,9 +1526,6 @@ export class Button {
                 break;
             case 'toggle_state':
                 this._executeToggleStateAction(actionConfig, stateManager);
-                break;
-            case 'multi_action':
-                this._executeMultiAction(actionConfig.tap_action.actions);
                 break;
             default:
                 console.warn(`[${this._id}] Unknown custom action: ${actionType}`);
@@ -1519,10 +1554,6 @@ export class Button {
         }
         
         stateManager.toggleState(targetElementRef, states);
-    }
-
-    private _executeMultiAction(actions: any[]): void {
-        actions.forEach(action => this.executeAction(action));
     }
 
     updateHass(hass?: HomeAssistant): void {
@@ -3278,6 +3309,181 @@ describe('Button', () => {
       expect(result).toHaveProperty('_$litType$');
       expect(result).toHaveProperty('strings');
       expect(result).toHaveProperty('values');
+    });
+
+    it('should create single action config format correctly', () => {
+      const props = {
+        button: {
+          enabled: true,
+          action_config: {
+            type: 'toggle',
+            entity: 'light.test',
+            confirmation: true
+          }
+        }
+      };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      const actionConfig = (button as any).createActionConfig(props.button);
+      
+      expect(actionConfig).toEqual({
+        confirmation: true,
+        tap_action: {
+          action: 'toggle',
+          service: undefined,
+          service_data: undefined,
+          target: undefined,
+          navigation_path: undefined,
+          url_path: undefined,
+          entity: 'light.test',
+          target_element_ref: undefined,
+          state: undefined,
+          states: undefined,
+        },
+        entity: 'light.test'
+      });
+    });
+
+    it('should create multiple actions config format correctly', () => {
+      const props = {
+        button: {
+          enabled: true,
+          action_config: {
+            actions: [
+              {
+                action: 'toggle',
+                entity: 'light.living_room'
+              },
+              {
+                action: 'set_state',
+                target_element_ref: 'group.element',
+                state: 'active'
+              }
+            ]
+          }
+        }
+      };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      const actionConfig = (button as any).createActionConfig(props.button);
+      
+      expect(actionConfig).toEqual({
+        confirmation: undefined,
+        tap_action: {
+          actions: [
+            {
+              action: 'toggle',
+              service: undefined,
+              service_data: undefined,
+              target: undefined,
+              navigation_path: undefined,
+              url_path: undefined,
+              entity: 'light.living_room',
+              target_element_ref: undefined,
+              state: undefined,
+              states: undefined,
+              confirmation: undefined
+            },
+            {
+              action: 'set_state',
+              service: undefined,
+              service_data: undefined,
+              target: undefined,
+              navigation_path: undefined,
+              url_path: undefined,
+              entity: undefined,
+              target_element_ref: 'group.element',
+              state: 'active',
+              states: undefined,
+              confirmation: undefined
+            }
+          ]
+        }
+      });
+    });
+
+    it('should handle multiple actions execution correctly', () => {
+      const executeActionSpy = vi.spyOn(Button.prototype as any, 'executeAction');
+      const props = {
+        button: {
+          enabled: true,
+          action_config: {
+            actions: [
+              { action: 'toggle', entity: 'light.test1' },
+              { action: 'toggle', entity: 'light.test2' }
+            ]
+          }
+        }
+      };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      const actionConfig = {
+        tap_action: {
+          actions: [
+            { action: 'toggle', entity: 'light.test1' },
+            { action: 'toggle', entity: 'light.test2' }
+          ]
+        }
+      };
+      
+      (button as any)._executeMultipleActions(actionConfig.tap_action.actions, document.createElement('div'));
+      
+      expect(executeActionSpy).toHaveBeenCalledTimes(2);
+      expect(executeActionSpy).toHaveBeenNthCalledWith(1, {
+        tap_action: { action: 'toggle', entity: 'light.test1' },
+        confirmation: undefined
+      }, expect.any(HTMLElement));
+      expect(executeActionSpy).toHaveBeenNthCalledWith(2, {
+        tap_action: { action: 'toggle', entity: 'light.test2' },
+        confirmation: undefined
+      }, expect.any(HTMLElement));
+      
+      executeActionSpy.mockRestore();
+    });
+
+    it('should detect multiple actions in executeAction and delegate to _executeMultipleActions', () => {
+      const executeMultipleActionsSpy = vi.spyOn(Button.prototype as any, '_executeMultipleActions');
+      const props = { button: { enabled: true } };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      const actionConfig = {
+        tap_action: {
+          actions: [
+            { action: 'toggle', entity: 'light.test1' },
+            { action: 'toggle', entity: 'light.test2' }
+          ]
+        }
+      };
+      
+      (button as any).executeAction(actionConfig, document.createElement('div'));
+      
+      expect(executeMultipleActionsSpy).toHaveBeenCalledWith(actionConfig.tap_action.actions, expect.any(HTMLElement));
+      
+      executeMultipleActionsSpy.mockRestore();
+    });
+
+    it('should not detect multiple actions when actions array is not present', () => {
+      const executeMultipleActionsSpy = vi.spyOn(Button.prototype as any, '_executeMultipleActions');
+      const props = { button: { enabled: true } };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      const actionConfig = {
+        tap_action: {
+          action: 'toggle',
+          entity: 'light.test'
+        }
+      };
+      
+      // Mock the handleAction import to prevent actual execution
+      vi.doMock('custom-card-helpers', () => ({
+        handleAction: vi.fn()
+      }));
+      
+      (button as any).executeAction(actionConfig, document.createElement('div'));
+      
+      expect(executeMultipleActionsSpy).not.toHaveBeenCalled();
+      
+      executeMultipleActionsSpy.mockRestore();
     });
   });
 
@@ -9380,8 +9586,7 @@ import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext } from './utils/animation.js';
 import { colorResolver } from './utils/color-resolver.js';
-import { VisibilityManager } from './utils/visibility-manager.js';
-import { stateManager } from './utils/state-manager.js';
+import { stateManager, StateChangeEvent } from './utils/state-manager.js';
 import { transformPropagator } from './utils/transform-propagator.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
@@ -9411,7 +9616,7 @@ export class LcarsCard extends LitElement {
   private _lastConfig?: LcarsCardConfig;
   
   // Utility classes for better organization
-  private _visibilityManager: VisibilityManager = new VisibilityManager(() => this._refreshElementRenders());
+  // Note: visibility is now managed by stateManager
   
   // Legacy state tracking for compatibility
   private _lastHassStates?: { [entityId: string]: any };
@@ -9461,6 +9666,9 @@ export class LcarsCard extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    
+    // Initialize stateManager with update callback
+    stateManager.setRequestUpdateCallback(() => this._refreshElementRenders());
     
     // Set up resize observer
     this._resizeObserver = new ResizeObserver((entries) => {
@@ -9575,7 +9783,7 @@ export class LcarsCard extends LitElement {
     
     // Clean up utility classes
     colorResolver.cleanup();
-    this._visibilityManager.cleanup();
+    stateManager.cleanup();
     
     // Clean up all element animations and entity monitoring
     for (const group of this._layoutEngine.layoutGroups) {
@@ -9678,7 +9886,6 @@ export class LcarsCard extends LitElement {
       
       // Clear previous layout and visibility triggers
       this._layoutEngine.clearLayout();
-      this._visibilityManager.clearTriggers();
       
       // Parse config and add elements to layout engine
       const getShadowElement = (id: string): Element | null => {
@@ -9693,10 +9900,9 @@ export class LcarsCard extends LitElement {
         this._layoutEngine.addGroup(group); 
       });
 
-      // Collect all element IDs, group IDs, and visibility triggers
+      // Collect all element IDs and group IDs
       const elementIds: string[] = [];
       const groupIds: string[] = [];
-      const allVisibilityTriggers: any[] = [];
 
       groups.forEach(group => {
         groupIds.push(group.id);
@@ -9704,21 +9910,11 @@ export class LcarsCard extends LitElement {
         group.elements.forEach(element => {
           elementIds.push(element.id);
           console.log(`[LcarsCard] Processing element: ${element.id}`);
-          
-          // Collect visibility triggers from element props
-          if (element.props.visibility_triggers) {
-            console.log(`[LcarsCard] Found ${element.props.visibility_triggers.length} visibility triggers for element ${element.id}:`, element.props.visibility_triggers);
-            allVisibilityTriggers.push(...element.props.visibility_triggers);
-          }
         });
       });
 
-      console.log(`[LcarsCard] Total visibility triggers collected: ${allVisibilityTriggers.length}`, allVisibilityTriggers);
-
-      // Initialize visibility manager
-      this._visibilityManager.initializeVisibility(elementIds, groupIds);
-      this._visibilityManager.registerVisibilityTriggers(allVisibilityTriggers);
-      this._visibilityManager.applyInitialVisibilityStates();
+      // Initialize visibility states in state manager
+      stateManager.initializeVisibility(elementIds, groupIds);
 
       // Initialize state manager
       const animationContext: AnimationContext = {
@@ -9786,12 +9982,6 @@ export class LcarsCard extends LitElement {
           
           // Set up event listeners and trigger lifecycle animations after DOM elements are rendered
           setTimeout(() => {
-            this._visibilityManager.setupEventListeners((id: string) => {
-              const element = this.shadowRoot?.querySelector(`#${CSS.escape(id)}`);
-              return element || null;
-            });
-            
-            // Set up interactive listeners for hover/active states
             this._setupAllElementListeners();
             
             // Trigger on_load animations for all elements
@@ -9838,14 +10028,14 @@ export class LcarsCard extends LitElement {
 
     const newTemplates = this._layoutEngine.layoutGroups.flatMap(group => {
         // Check if group is visible
-        if (!this._visibilityManager.getGroupVisibility(group.id)) {
+        if (!stateManager.getGroupVisibility(group.id)) {
           return [];
         }
         
         return group.elements
             .filter(el => {
               // Check if element should be visible (both element and group visibility)
-              return this._visibilityManager.shouldElementBeVisible(el.id, group.id);
+              return stateManager.shouldElementBeVisible(el.id, group.id);
             })
             .map(el => el.render())
             .filter((template): template is SVGTemplateResult => template !== null);
@@ -9999,6 +10189,16 @@ export class LcarsCard extends LitElement {
             element.props.state_management,
             element.props.animations
           );
+          
+          // Handle initial visibility states
+          if (element.props.state_management?.default_state) {
+            const initialState = element.props.state_management.default_state;
+            if (initialState === 'hidden' || initialState === 'visible') {
+              const shouldBeVisible = initialState === 'visible';
+              stateManager.setElementVisibility(element.id, shouldBeVisible, false);
+              console.log(`[LcarsCard] Initial visibility state: ${element.id} -> ${initialState} (visible: ${shouldBeVisible})`);
+            }
+          }
         }
       });
     });
@@ -10006,19 +10206,39 @@ export class LcarsCard extends LitElement {
 
   private _setupStateChangeHandling(elementsMap: Map<string, LayoutElement>): void {
     stateManager.onStateChange((event) => {
+      // Handle visibility state changes
+      this._handleVisibilityStateChange(event);
+      
       this.updateStatusIndicators(elementsMap);
       this.requestUpdate();
     });
   }
 
+  /**
+   * Handle state changes that affect element visibility
+   */
+  private _handleVisibilityStateChange(event: StateChangeEvent): void {
+    const { elementId, toState } = event;
+    
+    // Check if this is a visibility state
+    if (toState === 'hidden' || toState === 'visible') {
+      const shouldBeVisible = toState === 'visible';
+      
+      // Update the visibility manager
+      stateManager.setElementVisibility(elementId, shouldBeVisible, true);
+      
+      console.log(`[LcarsCard] Visibility state change: ${elementId} -> ${toState} (visible: ${shouldBeVisible})`);
+    }
+  }
+
   private _renderVisibleElements(): SVGTemplateResult[] {
     return this._layoutEngine.layoutGroups.flatMap(group => {
-      if (!this._visibilityManager.getGroupVisibility(group.id)) {
+      if (!stateManager.getGroupVisibility(group.id)) {
         return [];
       }
       
       return group.elements
-        .filter(el => this._visibilityManager.shouldElementBeVisible(el.id, group.id))
+        .filter(el => stateManager.shouldElementBeVisible(el.id, group.id))
         .map(el => {
           try {
             return el.render();
@@ -10716,7 +10936,35 @@ export interface HoldActionDefinition extends ActionDefinition {
 }
 
 export interface ActionDefinition {
-  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state' | 'multi_action';
+  // Single action format - mutually exclusive with actions array
+  action?: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state';
+  
+  // Multiple actions format - mutually exclusive with single action properties
+  actions?: SingleActionDefinition[];
+  
+  // Single action properties (only used when action is specified)
+  service?: string;
+  service_data?: Record<string, any>;
+  target?: Record<string, any>;
+  navigation_path?: string;
+  url_path?: string;
+  entity?: string;
+  target_id?: string;
+  state?: string;
+  target_element_ref?: string;
+  states?: string[];
+  
+  // General properties (apply to both formats)
+  confirmation?: boolean | {
+    text?: string;
+    exemptions?: Array<{
+      user: string;
+    }>;
+  };
+}
+
+export interface SingleActionDefinition {
+  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state';
   
   // Service call specific
   service?: string;
@@ -10732,14 +10980,11 @@ export interface ActionDefinition {
   // Entity specific (toggle, more-info)
   entity?: string;
   
-  // State setting specific (legacy)
+  // State setting specific
   target_id?: string;
   state?: string;
-  
-  // Custom state management actions
   target_element_ref?: string;
   states?: string[];
-  actions?: ActionDefinition[];
   
   // General properties
   confirmation?: boolean | {
@@ -10914,9 +11159,10 @@ export interface LcarsButtonElementConfig {
 }
 
 export interface LcarsButtonActionConfig {
-  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state' | 'multi_action';
+  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state';
   service?: string;
   service_data?: Record<string, any>;
+  target?: Record<string, any>;
   navigation_path?: string;
   url_path?: string;
   entity?: string;
@@ -10930,7 +11176,7 @@ export interface LcarsButtonActionConfig {
   target_element_ref?: string;
   state?: string;
   states?: string[];
-  actions?: ActionDefinition[];
+  actions?: SingleActionDefinition[];
 }
 
 // ============================================================================
@@ -13391,6 +13637,11 @@ export interface StateChangeEvent {
 
 export type StateChangeCallback = (event: StateChangeEvent) => void;
 
+export interface ElementVisibilityState {
+  visible: boolean;
+  animated?: boolean;
+}
+
 /**
  * Manages element states and triggers animations based on state changes
  */
@@ -13401,6 +13652,19 @@ export class StateManager {
   private stateChangeCallbacks: StateChangeCallback[] = [];
   private elementsMap?: Map<string, LayoutElement>;
   private animationContext?: AnimationContext;
+  
+  // Visibility management
+  private elementVisibility = new Map<string, ElementVisibilityState>();
+  private groupVisibility = new Map<string, ElementVisibilityState>();
+  private requestUpdateCallback?: () => void;
+
+  constructor(requestUpdateCallback?: () => void) {
+    this.requestUpdateCallback = requestUpdateCallback;
+  }
+
+  setRequestUpdateCallback(callback: () => void): void {
+    this.requestUpdateCallback = callback;
+  }
 
   /**
    * Initialize an element's state management
@@ -13413,16 +13677,30 @@ export class StateManager {
     if (stateConfig) {
       this.stateConfigs.set(elementId, stateConfig);
       
-      // Set initial state
-      const initialState = stateConfig.default_state || 'default';
+      // Initialize with default state
+      const defaultState = stateConfig.default_state || 'default';
       this.elementStates.set(elementId, {
-        currentState: initialState,
+        currentState: defaultState,
         lastChange: Date.now()
       });
+      
+      // Handle visibility states
+      if (defaultState === 'hidden' || defaultState === 'visible') {
+        const shouldBeVisible = defaultState === 'visible';
+        this.setElementVisibility(elementId, shouldBeVisible, false);
+      }
     }
-
+    
     if (animationConfig) {
       this.animationConfigs.set(elementId, animationConfig);
+    }
+    
+    // Initialize state tracking for elements with only animations (no explicit state_management)
+    if (!stateConfig && animationConfig) {
+      this.elementStates.set(elementId, {
+        currentState: 'default',
+        lastChange: Date.now()
+      });
     }
   }
 
@@ -13443,6 +13721,9 @@ export class StateManager {
    * Set element state and trigger any associated animations
    */
   setState(elementId: string, newState: string): boolean {
+    // Auto-initialize element if not already initialized
+    this._ensureElementInitialized(elementId);
+    
     if (!this._isElementInitialized(elementId)) {
       return false;
     }
@@ -13455,6 +13736,10 @@ export class StateManager {
     const previousState = currentStateData.currentState;
     this._updateElementState(elementId, newState, previousState);
     this._notifyStateChangeCallbacks(elementId, previousState, newState);
+    
+    // Handle visibility states
+    this._handleVisibilityState(elementId, newState, previousState);
+    
     this._triggerStateChangeAnimations(elementId, previousState, newState);
 
     return true;
@@ -13464,7 +13749,8 @@ export class StateManager {
    * Get current state of an element
    */
   getState(elementId: string): string | undefined {
-    return this.elementStates.get(elementId)?.currentState;
+    const stateData = this.elementStates.get(elementId);
+    return stateData?.currentState;
   }
 
   /**
@@ -13476,17 +13762,25 @@ export class StateManager {
       return false;
     }
 
+    // Auto-initialize element if not already initialized
+    this._ensureElementInitialized(elementId);
+
     const currentState = this.getState(elementId);
     if (!currentState) {
-      console.warn(`[StateManager] Element ${elementId} not initialized for state management`);
-      return false;
+      // If no current state, set to the first state
+      return this.setState(elementId, states[0]);
     }
 
+    // Find current state index
     const currentIndex = states.indexOf(currentState);
-    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % states.length;
-    const nextState = states[nextIndex];
+    if (currentIndex === -1) {
+      // Current state not in the provided states array, set to first state
+      return this.setState(elementId, states[0]);
+    }
 
-    return this.setState(elementId, nextState);
+    // Toggle to next state (cycle back to beginning if at end)
+    const nextIndex = (currentIndex + 1) % states.length;
+    return this.setState(elementId, states[nextIndex]);
   }
 
   /**
@@ -13501,7 +13795,7 @@ export class StateManager {
    */
   removeStateChangeCallback(callback: StateChangeCallback): void {
     const index = this.stateChangeCallbacks.indexOf(callback);
-    if (index !== -1) {
+    if (index > -1) {
       this.stateChangeCallbacks.splice(index, 1);
     }
   }
@@ -13510,11 +13804,11 @@ export class StateManager {
    * Get all element states for template access
    */
   getAllStates(): Record<string, ElementState> {
-    const result: Record<string, ElementState> = {};
+    const states: Record<string, ElementState> = {};
     this.elementStates.forEach((state, elementId) => {
-      result[elementId] = state;
+      states[elementId] = { ...state };
     });
-    return result;
+    return states;
   }
 
   /**
@@ -13526,6 +13820,45 @@ export class StateManager {
       console.warn(`[StateManager] Element ${elementId} not initialized for state management`);
     }
     return isInitialized;
+  }
+
+  /**
+   * Ensure element is initialized for state management.
+   * Auto-initializes elements that aren't explicitly configured but are being targeted by actions.
+   */
+  private _ensureElementInitialized(elementId: string): void {
+    if (this.elementStates.has(elementId)) {
+      return; // Already initialized
+    }
+
+    // Look up the element in the elements map to get its configuration
+    const element = this.elementsMap?.get(elementId);
+    if (!element) {
+      console.warn(`[StateManager] Cannot auto-initialize ${elementId}: element not found in layout`);
+      return;
+    }
+
+    // Check if element has state_management or animations configuration
+    const hasStateConfig = Boolean(element.props.state_management);
+    const hasAnimationConfig = Boolean(element.props.animations);
+
+    if (hasStateConfig || hasAnimationConfig) {
+      // Initialize using the element's actual configuration
+      console.log(`[StateManager] Auto-initializing element ${elementId}`);
+      this.initializeElementState(
+        elementId,
+        element.props.state_management,
+        element.props.animations
+      );
+    } else {
+      // Initialize with minimal default state for elements that don't have explicit config
+      // but are being targeted by button actions
+      console.log(`[StateManager] Auto-initializing ${elementId} with default state (no config found)`);
+      this.elementStates.set(elementId, {
+        currentState: 'default',
+        lastChange: Date.now()
+      });
+    }
   }
 
   /**
@@ -13567,16 +13900,9 @@ export class StateManager {
   }
 
   /**
-   * Trigger state change animations
-   */
-  private _triggerStateChangeAnimations(elementId: string, fromState: string, toState: string): void {
-    this.triggerStateChangeAnimations(elementId, fromState, toState);
-  }
-
-  /**
    * Trigger animations based on state changes
    */
-  private triggerStateChangeAnimations(elementId: string, fromState: string, toState: string): void {
+  private _triggerStateChangeAnimations(elementId: string, fromState: string, toState: string): void {
     const animationConfig = this.animationConfigs.get(elementId);
     if (!animationConfig?.on_state_change || !this.animationContext) {
       return;
@@ -13635,6 +13961,8 @@ export class StateManager {
     this.stateConfigs.clear();
     this.animationConfigs.clear();
     this.stateChangeCallbacks = [];
+    this.elementVisibility.clear();
+    this.groupVisibility.clear();
   }
 
   /**
@@ -13795,6 +14123,83 @@ export class StateManager {
     this.elementStates.delete(elementId);
     this.stateConfigs.delete(elementId);
     this.animationConfigs.delete(elementId);
+    this.elementVisibility.delete(elementId);
+  }
+
+  /**
+   * Handle visibility-related states (hidden/visible)
+   */
+  private _handleVisibilityState(elementId: string, newState: string, previousState: string): void {
+    // Check if this is a visibility state transition
+    const isVisibilityState = (state: string) => state === 'hidden' || state === 'visible';
+    
+    if (isVisibilityState(newState)) {
+      const shouldBeVisible = newState === 'visible';
+      
+      // Update the visibility directly
+      this.setElementVisibility(elementId, shouldBeVisible, true);
+      
+      console.log(`[StateManager] Visibility state change: ${elementId} ${previousState} -> ${newState}`);
+      
+      // Trigger a re-render to update visibility
+      this.requestUpdateCallback?.();
+    }
+  }
+
+  // ============================================================================
+  // Visibility Management
+  // ============================================================================
+
+  initializeVisibility(elementIds: string[], groupIds: string[]): void {
+    // Initialize all elements as visible by default
+    elementIds.forEach(id => {
+      if (!this.elementVisibility.has(id)) {
+        this.elementVisibility.set(id, { visible: true });
+      }
+    });
+
+    // Initialize all groups as visible by default
+    groupIds.forEach(id => {
+      if (!this.groupVisibility.has(id)) {
+        this.groupVisibility.set(id, { visible: true });
+      }
+    });
+  }
+
+  setElementVisibility(elementId: string, visible: boolean, animated: boolean = false): void {
+    const previousVisibility = this.elementVisibility.get(elementId)?.visible ?? true;
+    this.elementVisibility.set(elementId, { visible, animated });
+    
+    // Trigger lifecycle animations for show/hide
+    if (animated && previousVisibility !== visible) {
+      this.triggerLifecycleAnimation(elementId, visible ? 'on_show' : 'on_hide');
+    }
+  }
+
+  setGroupVisibility(groupId: string, visible: boolean, animated: boolean = false): void {
+    const previousVisibility = this.groupVisibility.get(groupId)?.visible ?? true;
+    this.groupVisibility.set(groupId, { visible, animated });
+    
+    // Note: Group visibility changes don't directly trigger animations
+    // Individual elements within the group handle their own animations
+  }
+
+  getElementVisibility(elementId: string): boolean {
+    return this.elementVisibility.get(elementId)?.visible ?? true;
+  }
+
+  getGroupVisibility(groupId: string): boolean {
+    return this.groupVisibility.get(groupId)?.visible ?? true;
+  }
+
+  shouldElementBeVisible(elementId: string, groupId: string): boolean {
+    const elementVisible = this.getElementVisibility(elementId);
+    const groupVisible = this.getGroupVisibility(groupId);
+    return elementVisible && groupVisible;
+  }
+
+  cleanup(): void {
+    this.clearAll();
   }
 }
 
@@ -16085,6 +16490,98 @@ describe('shapes.ts utility functions', () => {
 });
 ```
 
+## File: src/utils/test/state-manager.spec.ts
+
+```typescript
+import { describe, it, expect, beforeEach } from 'vitest';
+import { StateManager, StateChangeEvent } from '../state-manager.js';
+
+describe('StateManager Visibility Integration', () => {
+  let stateManager: StateManager;
+  let stateChangeEvents: StateChangeEvent[] = [];
+
+  beforeEach(() => {
+    stateManager = new StateManager();
+    stateChangeEvents = [];
+    
+    // Set up state change listener
+    stateManager.onStateChange((event) => {
+      stateChangeEvents.push(event);
+    });
+  });
+
+  describe('Visibility States', () => {
+    it('should initialize element with hidden state', () => {
+      stateManager.initializeElementState('test-element', {
+        default_state: 'hidden'
+      });
+      
+      const state = stateManager.getState('test-element');
+      expect(state).toBe('hidden');
+    });
+
+    it('should initialize element with visible state', () => {
+      stateManager.initializeElementState('test-element', {
+        default_state: 'visible'
+      });
+      
+      const state = stateManager.getState('test-element');
+      expect(state).toBe('visible');
+    });
+
+    it('should toggle between hidden and visible states', () => {
+      stateManager.initializeElementState('test-element', {
+        default_state: 'hidden'
+      });
+      
+      // Toggle from hidden to visible
+      const result1 = stateManager.toggleState('test-element', ['hidden', 'visible']);
+      expect(result1).toBe(true);
+      expect(stateManager.getState('test-element')).toBe('visible');
+      
+      // Toggle from visible back to hidden
+      const result2 = stateManager.toggleState('test-element', ['hidden', 'visible']);
+      expect(result2).toBe(true);
+      expect(stateManager.getState('test-element')).toBe('hidden');
+    });
+
+    it('should emit state change events for visibility states', () => {
+      stateManager.initializeElementState('test-element', {
+        default_state: 'hidden'
+      });
+      
+      // Clear initial events
+      stateChangeEvents = [];
+      
+      // Change state to visible
+      stateManager.setState('test-element', 'visible');
+      
+      expect(stateChangeEvents).toHaveLength(1);
+      expect(stateChangeEvents[0]).toMatchObject({
+        elementId: 'test-element',
+        fromState: 'hidden',
+        toState: 'visible'
+      });
+    });
+
+    it('should handle toggle with uninitialized element', () => {
+      const result = stateManager.toggleState('uninitialized-element', ['hidden', 'visible']);
+      expect(result).toBe(false);
+      expect(stateManager.getState('uninitialized-element')).toBe(undefined);
+    });
+
+    it('should handle toggle with empty states array', () => {
+      stateManager.initializeElementState('test-element', {
+        default_state: 'hidden'
+      });
+      
+      const result = stateManager.toggleState('test-element', []);
+      expect(result).toBe(false);
+    });
+  });
+});
+```
+
 ## File: src/utils/test/transform-propagator.spec.ts
 
 ```typescript
@@ -17754,387 +18251,6 @@ export class TransformPropagator {
 
 // Export singleton instance
 export const transformPropagator = new TransformPropagator();
-```
-
-## File: src/utils/visibility-manager.ts
-
-```typescript
-import { VisibilityTriggerConfig, TargetConfig } from '../types.js';
-import { HomeAssistant } from 'custom-card-helpers';
-import { animationManager } from './animation.js';
-
-export interface VisibilityState {
-  visible: boolean;
-  animated?: boolean;
-}
-
-export interface TriggerState {
-  hovered: boolean;
-  clicked: boolean;
-  hoverTimeoutId?: ReturnType<typeof setTimeout>;
-}
-
-export class VisibilityManager {
-  private elementVisibility = new Map<string, VisibilityState>();
-  private groupVisibility = new Map<string, VisibilityState>();
-  private triggerStates = new Map<string, TriggerState>();
-  private visibilityTriggers: VisibilityTriggerConfig[] = [];
-  private elementListeners = new Map<string, { element: Element; listeners: Array<{ event: string; handler: EventListener }> }>();
-  private requestUpdateCallback?: () => void;
-
-  constructor(requestUpdateCallback?: () => void) {
-    this.requestUpdateCallback = requestUpdateCallback;
-  }
-
-  /**
-   * Initialize visibility states for all elements and groups
-   */
-  initializeVisibility(elementIds: string[], groupIds: string[]): void {
-    // Initialize all elements as visible by default
-    elementIds.forEach(id => {
-      if (!this.elementVisibility.has(id)) {
-        this.elementVisibility.set(id, { visible: true });
-      }
-    });
-
-    // Initialize all groups as visible by default
-    groupIds.forEach(id => {
-      if (!this.groupVisibility.has(id)) {
-        this.groupVisibility.set(id, { visible: true });
-      }
-    });
-
-    // Note: Initial visibility states will be applied after triggers are registered
-  }
-
-  /**
-   * Apply initial visibility states based on trigger configurations
-   * This should be called after registerVisibilityTriggers()
-   */
-  applyInitialVisibilityStates(): void {
-    // Groups that have show triggers should start hidden
-    this.visibilityTriggers.forEach(trigger => {
-      if (trigger.action === 'show' && trigger.targets) {
-        trigger.targets.forEach((target: TargetConfig) => {
-          if (target.type === 'group') {
-            this.setGroupVisibility(target.id, false, false);
-          } else if (target.type === 'element') {
-            this.setElementVisibility(target.id, false, false);
-          }
-        });
-      }
-    });
-  }
-
-  /**
-   * Register visibility triggers from element configurations
-   */
-  registerVisibilityTriggers(triggers: VisibilityTriggerConfig[]): void {
-    this.visibilityTriggers = [...this.visibilityTriggers, ...triggers];
-  }
-
-  /**
-   * Clear all registered triggers (useful for config changes)
-   */
-  clearTriggers(): void {
-    this.visibilityTriggers = [];
-    this.cleanupEventListeners();
-  }
-
-  /**
-   * Set up event listeners for trigger sources
-   */
-  setupEventListeners(getShadowElement: (id: string) => Element | null): void {
-    this.cleanupEventListeners();
-
-    this.visibilityTriggers.forEach((trigger, index) => {
-      const sourceId = trigger.trigger_source.element_id_ref;
-      const event = trigger.trigger_source.event;
-      
-      // Handle "self" reference - should already be resolved by parser, but keep as-is for safety
-      const actualSourceId = sourceId;
-      
-      const element = getShadowElement(actualSourceId);
-      if (!element) {
-        console.warn(`[VisibilityManager] Visibility trigger source element not found: ${actualSourceId}`);
-        return;
-      }
-
-      console.log(`[VisibilityManager] Found element for trigger:`, element);
-      
-      // Initialize trigger state
-      if (!this.triggerStates.has(actualSourceId)) {
-        this.triggerStates.set(actualSourceId, { hovered: false, clicked: false });
-      }
-      
-      const listeners: Array<{ event: string; handler: EventListener }> = [];
-      
-      if (event === 'hover') {
-        const mouseEnterHandler = () => {
-          console.log(`[VisibilityManager] Mouse enter on ${actualSourceId}`);
-          this.handleHoverEnter(trigger, actualSourceId);
-        };
-        const mouseLeaveHandler = () => {
-          console.log(`[VisibilityManager] Mouse leave on ${actualSourceId}`);
-          this.handleHoverLeave(trigger, actualSourceId);
-        };
-        
-        element.addEventListener('mouseenter', mouseEnterHandler);
-        element.addEventListener('mouseleave', mouseLeaveHandler);
-        listeners.push({ event: 'mouseenter', handler: mouseEnterHandler });
-        listeners.push({ event: 'mouseleave', handler: mouseLeaveHandler });
-        console.log(`[VisibilityManager] Added hover listeners to ${actualSourceId}`, element);
-      } else if (event === 'click') {
-        const clickHandler = (e: Event) => {
-          console.log(`[VisibilityManager] Click on ${actualSourceId}`);
-          this.handleClick(trigger, actualSourceId, e);
-        };
-        
-        element.addEventListener('click', clickHandler);
-        listeners.push({ event: 'click', handler: clickHandler });
-        console.log(`[VisibilityManager] Added click listener to ${actualSourceId}`, element);
-      }
-      
-      this.elementListeners.set(actualSourceId, { element, listeners });
-    });
-    
-    console.log(`[VisibilityManager] Set up ${this.elementListeners.size} element listeners`);
-    
-    // Set up global click listener for click-outside behavior
-    document.addEventListener('click', this.handleGlobalClick.bind(this));
-  }
-
-  private handleHoverEnter(trigger: VisibilityTriggerConfig, sourceId: string): void {
-    const triggerState = this.triggerStates.get(sourceId);
-    if (!triggerState) return;
-
-    triggerState.hovered = true;
-
-    // Clear any existing timeout
-    if (triggerState.hoverTimeoutId) {
-      clearTimeout(triggerState.hoverTimeoutId);
-      triggerState.hoverTimeoutId = undefined;
-    }
-
-    const mode = trigger.hover_options?.mode || 'show_on_enter_hide_on_leave';
-    
-    if (mode === 'show_on_enter_hide_on_leave') {
-      if (trigger.action === 'show') {
-        this.executeAction(trigger);
-      }
-    } else if (mode === 'toggle_on_enter_hide_on_leave') {
-      if (trigger.action === 'toggle') {
-        this.executeAction(trigger);
-      }
-    }
-  }
-
-  private handleHoverLeave(trigger: VisibilityTriggerConfig, sourceId: string): void {
-    const triggerState = this.triggerStates.get(sourceId);
-    if (!triggerState) return;
-
-    triggerState.hovered = false;
-
-    const mode = trigger.hover_options?.mode || 'show_on_enter_hide_on_leave';
-    const hideDelay = trigger.hover_options?.hide_delay || 0;
-
-    if (mode === 'show_on_enter_hide_on_leave') {
-      if (trigger.action === 'show') {
-        // Execute hide action with delay
-        if (hideDelay > 0) {
-          triggerState.hoverTimeoutId = setTimeout(() => {
-            this.executeHideAction(trigger);
-          }, hideDelay);
-        } else {
-          this.executeHideAction(trigger);
-        }
-      }
-    } else if (mode === 'toggle_on_enter_hide_on_leave') {
-      // Hide on leave for toggle mode
-      if (hideDelay > 0) {
-        triggerState.hoverTimeoutId = setTimeout(() => {
-          this.executeHideAction(trigger);
-        }, hideDelay);
-      } else {
-        this.executeHideAction(trigger);
-      }
-    }
-  }
-
-  private handleClick(trigger: VisibilityTriggerConfig, sourceId: string, event: Event): void {
-    event.stopPropagation();
-    
-    const triggerState = this.triggerStates.get(sourceId);
-    if (!triggerState) return;
-
-    triggerState.clicked = true;
-    this.executeAction(trigger);
-  }
-
-  private handleGlobalClick(event: Event): void {
-    // Handle revert_on_click_outside for click triggers
-    this.visibilityTriggers.forEach(trigger => {
-      if (trigger.trigger_source.event === 'click' && 
-          trigger.click_options?.revert_on_click_outside) {
-        
-        const sourceElement = this.elementListeners.get(trigger.trigger_source.element_id_ref)?.element;
-        if (sourceElement && !sourceElement.contains(event.target as Node)) {
-          // Click was outside the trigger source, revert visibility
-          this.executeHideAction(trigger);
-        }
-      }
-    });
-  }
-
-  private executeAction(trigger: VisibilityTriggerConfig): void {
-    console.log('[VisibilityManager] Executing action:', trigger.action, 'for targets:', trigger.targets);
-    if (!trigger.targets) return;
-
-    trigger.targets.forEach((target: TargetConfig) => {
-      console.log('[VisibilityManager] Processing target:', target.type, target.id);
-      if (trigger.action === 'show') {
-        this.showTarget(target);
-      } else if (trigger.action === 'hide') {
-        this.hideTarget(target);
-      } else if (trigger.action === 'toggle') {
-        this.toggleTarget(target);
-      }
-    });
-
-    // Trigger re-render
-    console.log('[VisibilityManager] Triggering re-render after action execution');
-    this.requestUpdateCallback?.();
-  }
-
-  private executeHideAction(trigger: VisibilityTriggerConfig): void {
-    if (!trigger.targets) return;
-
-    trigger.targets.forEach((target: TargetConfig) => {
-      this.hideTarget(target);
-    });
-
-    this.requestUpdateCallback?.();
-  }
-
-  private showTarget(target: TargetConfig): void {
-    if (target.type === 'group') {
-      this.setGroupVisibility(target.id, true, true);
-    } else if (target.type === 'element') {
-      this.setElementVisibility(target.id, true, true);
-    }
-  }
-
-  private hideTarget(target: TargetConfig): void {
-    if (target.type === 'group') {
-      this.setGroupVisibility(target.id, false, true);
-    } else if (target.type === 'element') {
-      this.setElementVisibility(target.id, false, true);
-    }
-  }
-
-  private toggleTarget(target: TargetConfig): void {
-    if (target.type === 'group') {
-      const current = this.getGroupVisibility(target.id);
-      this.setGroupVisibility(target.id, !current, true);
-    } else if (target.type === 'element') {
-      const current = this.getElementVisibility(target.id);
-      this.setElementVisibility(target.id, !current, true);
-    }
-  }
-
-  /**
-   * Set element visibility
-   */
-  setElementVisibility(elementId: string, visible: boolean, animated: boolean = false): void {
-    const previousVisibility = this.elementVisibility.get(elementId)?.visible ?? true;
-    this.elementVisibility.set(elementId, { visible, animated });
-    
-    // Trigger lifecycle animations for show/hide
-    if (animated && previousVisibility !== visible) {
-      this._triggerVisibilityAnimation(elementId, visible ? 'on_show' : 'on_hide');
-    }
-  }
-
-  /**
-   * Set group visibility
-   */
-  setGroupVisibility(groupId: string, visible: boolean, animated: boolean = false): void {
-    const previousVisibility = this.groupVisibility.get(groupId)?.visible ?? true;
-    this.groupVisibility.set(groupId, { visible, animated });
-    
-    // Note: Group visibility changes don't directly trigger animations
-    // Individual elements within the group handle their own animations
-  }
-
-  /**
-   * Get element visibility
-   */
-  getElementVisibility(elementId: string): boolean {
-    return this.elementVisibility.get(elementId)?.visible ?? true;
-  }
-
-  /**
-   * Get group visibility
-   */
-  getGroupVisibility(groupId: string): boolean {
-    return this.groupVisibility.get(groupId)?.visible ?? true;
-  }
-
-  /**
-   * Check if an element should be rendered based on its own visibility and its group's visibility
-   */
-  shouldElementBeVisible(elementId: string, groupId: string): boolean {
-    const elementVisible = this.getElementVisibility(elementId);
-    const groupVisible = this.getGroupVisibility(groupId);
-    return elementVisible && groupVisible;
-  }
-
-  /**
-   * Cleanup event listeners
-   */
-  private cleanupEventListeners(): void {
-    this.elementListeners.forEach(({ element, listeners }) => {
-      listeners.forEach(({ event, handler }) => {
-        element.removeEventListener(event, handler);
-      });
-    });
-    this.elementListeners.clear();
-
-    // Remove global click listener
-    document.removeEventListener('click', this.handleGlobalClick.bind(this));
-  }
-
-  /**
-   * Trigger visibility-related animations (on_show/on_hide)
-   */
-  private _triggerVisibilityAnimation(elementId: string, lifecycle: 'on_show' | 'on_hide'): void {
-    // Import state manager dynamically to avoid circular dependencies
-    import('./state-manager.js').then(({ stateManager }) => {
-      stateManager.triggerLifecycleAnimation(elementId, lifecycle);
-    }).catch(error => {
-      console.error(`[VisibilityManager] Error importing state manager for ${lifecycle} animation:`, error);
-    });
-  }
-
-  /**
-   * Cleanup all resources
-   */
-  cleanup(): void {
-    this.cleanupEventListeners();
-    
-    // Clear any pending timeouts
-    this.triggerStates.forEach(state => {
-      if (state.hoverTimeoutId) {
-        clearTimeout(state.hoverTimeoutId);
-      }
-    });
-    
-    this.elementVisibility.clear();
-    this.groupVisibility.clear();
-    this.triggerStates.clear();
-    this.visibilityTriggers = [];
-  }
-}
 ```
 
 ## File: tsconfig.json
