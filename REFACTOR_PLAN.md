@@ -1,6 +1,7 @@
 # LCARS-Card Refactor Roadmap
 
 *Each checkbox can be marked ✓ when the step is complete.*
+*With each step and change, add and commit the changes to the current repo.*
 
 ---
 
@@ -29,7 +30,7 @@
 
 Why → remove manual conversions, enforce schema.
 
-- [ ] Add `/src/parsers/schema.ts` (use `zod`)  
+- [x] Add `/src/parsers/schema.ts` (use `zod`)  
 - [ ] Replace `parseConfig()` return with `ParsedConfig` from schema  
 - [ ] CLI validates every file in `yaml-config-examples`
 

@@ -48,7 +48,8 @@
         "ignore": "^7.0.4",
         "junit": "^1.4.9",
         "lit": "^3.0.0",
-        "sortablejs": "^1.15.6"
+        "sortablejs": "^1.15.6",
+        "zod": "^3.25.63"
     },
     "overrides": {
         "rollup": "4.29.2"
