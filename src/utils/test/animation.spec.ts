@@ -1126,4 +1126,62 @@ describe('AnimationManager', () => {
       expect(color).toBe('#FF9900');
     });
   });
+
+  describe('AnimationManager Distance Parsing', () => {
+    let animationManager: AnimationManager;
+    let mockElement: Element;
+
+    beforeEach(() => {
+      animationManager = new AnimationManager();
+      
+      // Create a mock element with getBoundingClientRect
+      mockElement = {
+        getBoundingClientRect: () => ({
+          width: 200,
+          height: 100,
+          top: 0,
+          left: 0,
+          right: 200,
+          bottom: 100,
+          x: 0,
+          y: 0
+        } as DOMRect)
+      } as Element;
+    });
+
+    it('should parse percentage distances correctly', () => {
+      const parseDistanceValue = (animationManager as any)._parseDistanceValue.bind(animationManager);
+      
+      const result = parseDistanceValue('100%', mockElement);
+      expect(result).toBe(200); // Should use the larger dimension (width=200 > height=100)
+    });
+
+    it('should parse pixel distances correctly', () => {
+      const parseDistanceValue = (animationManager as any)._parseDistanceValue.bind(animationManager);
+      
+      const result = parseDistanceValue('150px', mockElement);
+      expect(result).toBe(150);
+    });
+
+    it('should handle distances without units as pixels', () => {
+      const parseDistanceValue = (animationManager as any)._parseDistanceValue.bind(animationManager);
+      
+      const result = parseDistanceValue('75', mockElement);
+      expect(result).toBe(75);
+    });
+
+    it('should handle empty or invalid distances', () => {
+      const parseDistanceValue = (animationManager as any)._parseDistanceValue.bind(animationManager);
+      
+      expect(parseDistanceValue('', mockElement)).toBe(0);
+      expect(parseDistanceValue('invalid', mockElement)).toBe(0);
+    });
+
+    it('should fall back to percentage value when no element provided', () => {
+      const parseDistanceValue = (animationManager as any)._parseDistanceValue.bind(animationManager);
+      
+      const result = parseDistanceValue('50%', undefined);
+      expect(result).toBe(50); // Fallback behavior
+    });
+  });
 }); 

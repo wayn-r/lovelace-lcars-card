@@ -1010,6 +1010,32 @@ export class AnimationManager {
   }
 
   /**
+   * Parse distance string to handle both pixels and percentages
+   */
+  private _parseDistanceValue(distanceStr: string, element?: Element): number {
+    if (!distanceStr) return 0;
+    
+    if (distanceStr.endsWith('%')) {
+      const percentage = parseFloat(distanceStr);
+      if (element) {
+        // For percentage, use the element's width for horizontal movements or height for vertical
+        const rect = element.getBoundingClientRect();
+        // Since we don't know the direction here, use the larger dimension as a reasonable default
+        const referenceSize = Math.max(rect.width, rect.height);
+        return (percentage / 100) * referenceSize;
+      } else {
+        // Fallback: assume 100px as reference for percentage calculations
+        return percentage;
+      }
+    } else if (distanceStr.endsWith('px')) {
+      return parseFloat(distanceStr);
+    } else {
+      // Assume pixels if no unit specified
+      return parseFloat(distanceStr) || 0;
+    }
+  }
+
+  /**
    * Execute a generic GSAP animation that may affect transforms and require propagation.
    * This handles scale, slide, and custom_gsap animations.
    */
@@ -1087,7 +1113,7 @@ export class AnimationManager {
       case 'slide':
         const { slide_params } = animationConfig;
         if (slide_params) {
-          const distance = parseFloat(slide_params.distance) || 0;
+          const distance = this._parseDistanceValue(slide_params.distance, targetElement);
           const movement = slide_params.movement; // 'in', 'out', or undefined
 
           let calculatedX = 0;
@@ -1120,10 +1146,31 @@ export class AnimationManager {
             if (calculatedX !== 0) animationProps.x = calculatedX;
             if (calculatedY !== 0) animationProps.y = calculatedY;
           } else {
-            // No movement parameter: standard slide relative to current position.
-            // GSAP handles this as a relative animation if x/y are not already set (e.g. by a previous step in a timeline).
-            if (calculatedX !== 0) animationProps.x = calculatedX;
-            if (calculatedY !== 0) animationProps.y = calculatedY;
+            // No movement parameter: For visibility state transitions, infer the appropriate behavior
+            // based on opacity settings - if opacity goes from 0 to 1, treat as 'in' movement
+            const isShowingAnimation = slide_params.opacity_start === 0 && slide_params.opacity_end === 1;
+            const isHidingAnimation = slide_params.opacity_start === 1 && slide_params.opacity_end === 0;
+            
+            if (isShowingAnimation) {
+              // Treat as 'in' movement - element slides in from the direction specified
+              if (slide_params.direction === 'left' || slide_params.direction === 'right') {
+                initialSetProps.x = (slide_params.direction === 'left') ? distance : -distance;
+                animationProps.x = 0;
+              }
+              if (slide_params.direction === 'up' || slide_params.direction === 'down') {
+                initialSetProps.y = (slide_params.direction === 'up') ? distance : -distance;
+                animationProps.y = 0;
+              }
+              needsInitialSet = true;
+            } else if (isHidingAnimation) {
+              // Treat as 'out' movement - element slides out in the direction specified
+              if (calculatedX !== 0) animationProps.x = calculatedX;
+              if (calculatedY !== 0) animationProps.y = calculatedY;
+            } else {
+              // Default case: standard slide relative to current position
+              if (calculatedX !== 0) animationProps.x = calculatedX;
+              if (calculatedY !== 0) animationProps.y = calculatedY;
+            }
           }
 
           // Handle opacity settings

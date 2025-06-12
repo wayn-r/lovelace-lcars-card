@@ -1351,8 +1351,20 @@ export class Button {
     private handleClick(ev: Event): void {
         const buttonConfig = this._props.button as LcarsButtonElementConfig | undefined;
         
-        if (!this._hass || !buttonConfig?.action_config) {
-            return; 
+        // Ensure we have an action configuration. For standard Home Assistant actions we also
+        // need the `hass` object, but for custom internal actions (set_state / toggle_state)
+        // we can proceed even if `hass` is not available yet (e.g. during early render).
+        if (!buttonConfig?.action_config) {
+            return;
+        }
+
+        const actionType = buttonConfig.action_config?.type;
+        const requiresHass = !this.isCustomAction(actionType);
+
+        if (requiresHass && !this._hass) {
+            // Defer execution until Home Assistant is available.
+            console.warn(`[${this._id}] Ignoring action – Home Assistant instance not yet available.`);
+            return;
         }
         
         ev.stopPropagation();
@@ -10206,29 +10218,11 @@ export class LcarsCard extends LitElement {
 
   private _setupStateChangeHandling(elementsMap: Map<string, LayoutElement>): void {
     stateManager.onStateChange((event) => {
-      // Handle visibility state changes
-      this._handleVisibilityStateChange(event);
+      console.log(`[LcarsCard] State change: ${event.elementId} -> ${event.toState}`);
       
       this.updateStatusIndicators(elementsMap);
       this.requestUpdate();
     });
-  }
-
-  /**
-   * Handle state changes that affect element visibility
-   */
-  private _handleVisibilityStateChange(event: StateChangeEvent): void {
-    const { elementId, toState } = event;
-    
-    // Check if this is a visibility state
-    if (toState === 'hidden' || toState === 'visible') {
-      const shouldBeVisible = toState === 'visible';
-      
-      // Update the visibility manager
-      stateManager.setElementVisibility(elementId, shouldBeVisible, true);
-      
-      console.log(`[LcarsCard] Visibility state change: ${elementId} -> ${toState} (visible: ${shouldBeVisible})`);
-    }
   }
 
   private _renderVisibleElements(): SVGTemplateResult[] {
@@ -10238,10 +10232,24 @@ export class LcarsCard extends LitElement {
       }
       
       return group.elements
-        .filter(el => stateManager.shouldElementBeVisible(el.id, group.id))
         .map(el => {
           try {
-            return el.render();
+            // Always render elements - let CSS and animations handle visibility
+            const elementTemplate = el.render();
+            if (!elementTemplate) {
+              return null;
+            }
+
+            // For elements in hidden state, apply CSS visibility
+            const currentState = stateManager.getState(el.id);
+            const isVisible = currentState !== 'hidden';
+            
+            if (!isVisible) {
+              // Wrap hidden elements with visibility style but keep them in DOM for animations
+              return svg`<g style="visibility: hidden; opacity: 0; pointer-events: none;">${elementTemplate}</g>`;
+            }
+            
+            return elementTemplate;
           } catch (error) {
             console.error("[_performLayoutCalculation] Error rendering element", el.id, error);
             return null;
@@ -12263,6 +12271,32 @@ export class AnimationManager {
   }
 
   /**
+   * Parse distance string to handle both pixels and percentages
+   */
+  private _parseDistanceValue(distanceStr: string, element?: Element): number {
+    if (!distanceStr) return 0;
+    
+    if (distanceStr.endsWith('%')) {
+      const percentage = parseFloat(distanceStr);
+      if (element) {
+        // For percentage, use the element's width for horizontal movements or height for vertical
+        const rect = element.getBoundingClientRect();
+        // Since we don't know the direction here, use the larger dimension as a reasonable default
+        const referenceSize = Math.max(rect.width, rect.height);
+        return (percentage / 100) * referenceSize;
+      } else {
+        // Fallback: assume 100px as reference for percentage calculations
+        return percentage;
+      }
+    } else if (distanceStr.endsWith('px')) {
+      return parseFloat(distanceStr);
+    } else {
+      // Assume pixels if no unit specified
+      return parseFloat(distanceStr) || 0;
+    }
+  }
+
+  /**
    * Execute a generic GSAP animation that may affect transforms and require propagation.
    * This handles scale, slide, and custom_gsap animations.
    */
@@ -12340,7 +12374,7 @@ export class AnimationManager {
       case 'slide':
         const { slide_params } = animationConfig;
         if (slide_params) {
-          const distance = parseFloat(slide_params.distance) || 0;
+          const distance = this._parseDistanceValue(slide_params.distance, targetElement);
           const movement = slide_params.movement; // 'in', 'out', or undefined
 
           let calculatedX = 0;
@@ -12373,10 +12407,31 @@ export class AnimationManager {
             if (calculatedX !== 0) animationProps.x = calculatedX;
             if (calculatedY !== 0) animationProps.y = calculatedY;
           } else {
-            // No movement parameter: standard slide relative to current position.
-            // GSAP handles this as a relative animation if x/y are not already set (e.g. by a previous step in a timeline).
-            if (calculatedX !== 0) animationProps.x = calculatedX;
-            if (calculatedY !== 0) animationProps.y = calculatedY;
+            // No movement parameter: For visibility state transitions, infer the appropriate behavior
+            // based on opacity settings - if opacity goes from 0 to 1, treat as 'in' movement
+            const isShowingAnimation = slide_params.opacity_start === 0 && slide_params.opacity_end === 1;
+            const isHidingAnimation = slide_params.opacity_start === 1 && slide_params.opacity_end === 0;
+            
+            if (isShowingAnimation) {
+              // Treat as 'in' movement - element slides in from the direction specified
+              if (slide_params.direction === 'left' || slide_params.direction === 'right') {
+                initialSetProps.x = (slide_params.direction === 'left') ? distance : -distance;
+                animationProps.x = 0;
+              }
+              if (slide_params.direction === 'up' || slide_params.direction === 'down') {
+                initialSetProps.y = (slide_params.direction === 'up') ? distance : -distance;
+                animationProps.y = 0;
+              }
+              needsInitialSet = true;
+            } else if (isHidingAnimation) {
+              // Treat as 'out' movement - element slides out in the direction specified
+              if (calculatedX !== 0) animationProps.x = calculatedX;
+              if (calculatedY !== 0) animationProps.y = calculatedY;
+            } else {
+              // Default case: standard slide relative to current position
+              if (calculatedX !== 0) animationProps.x = calculatedX;
+              if (calculatedY !== 0) animationProps.y = calculatedY;
+            }
           }
 
           // Handle opacity settings
@@ -13725,6 +13780,7 @@ export class StateManager {
     this._ensureElementInitialized(elementId);
     
     if (!this._isElementInitialized(elementId)) {
+      console.warn(`[StateManager] setState failed - element ${elementId} not initialized`);
       return false;
     }
 
@@ -13734,6 +13790,7 @@ export class StateManager {
     }
 
     const previousState = currentStateData.currentState;
+    
     this._updateElementState(elementId, newState, previousState);
     this._notifyStateChangeCallbacks(elementId, previousState, newState);
     
@@ -13766,6 +13823,7 @@ export class StateManager {
     this._ensureElementInitialized(elementId);
 
     const currentState = this.getState(elementId);
+    
     if (!currentState) {
       // If no current state, set to the first state
       return this.setState(elementId, states[0]);
@@ -14134,14 +14192,9 @@ export class StateManager {
     const isVisibilityState = (state: string) => state === 'hidden' || state === 'visible';
     
     if (isVisibilityState(newState)) {
-      const shouldBeVisible = newState === 'visible';
-      
-      // Update the visibility directly
-      this.setElementVisibility(elementId, shouldBeVisible, true);
-      
       console.log(`[StateManager] Visibility state change: ${elementId} ${previousState} -> ${newState}`);
       
-      // Trigger a re-render to update visibility
+      // Just trigger a re-render - the render logic will handle visibility via CSS
       this.requestUpdateCallback?.();
     }
   }
@@ -14170,10 +14223,7 @@ export class StateManager {
     const previousVisibility = this.elementVisibility.get(elementId)?.visible ?? true;
     this.elementVisibility.set(elementId, { visible, animated });
     
-    // Trigger lifecycle animations for show/hide
-    if (animated && previousVisibility !== visible) {
-      this.triggerLifecycleAnimation(elementId, visible ? 'on_show' : 'on_hide');
-    }
+    // No complex lifecycle animations - let state change animations handle everything
   }
 
   setGroupVisibility(groupId: string, visible: boolean, animated: boolean = false): void {
@@ -14196,6 +14246,27 @@ export class StateManager {
     const elementVisible = this.getElementVisibility(elementId);
     const groupVisible = this.getGroupVisibility(groupId);
     return elementVisible && groupVisible;
+  }
+
+  /**
+   * Check if element should be rendered in DOM (even if not visible) for animations
+   */
+  shouldElementBeRendered(elementId: string, groupId: string): boolean {
+    const groupVisible = this.getGroupVisibility(groupId);
+    if (!groupVisible) {
+      return false;
+    }
+
+    // Always render elements that have animations, even if they're in hidden state
+    const element = this.elementsMap?.get(elementId);
+    const hasAnimations = element?.props?.animations || element?.props?.state_management;
+    
+    if (hasAnimations) {
+      return true;
+    }
+
+    // For elements without animations, use normal visibility logic
+    return this.shouldElementBeVisible(elementId, groupId);
   }
 
   cleanup(): void {
@@ -15336,6 +15407,64 @@ describe('AnimationManager', () => {
 
       color = manager.resolveDynamicColor('brightness-element', brightnessConfig, mockHass);
       expect(color).toBe('#FF9900');
+    });
+  });
+
+  describe('AnimationManager Distance Parsing', () => {
+    let animationManager: AnimationManager;
+    let mockElement: Element;
+
+    beforeEach(() => {
+      animationManager = new AnimationManager();
+      
+      // Create a mock element with getBoundingClientRect
+      mockElement = {
+        getBoundingClientRect: () => ({
+          width: 200,
+          height: 100,
+          top: 0,
+          left: 0,
+          right: 200,
+          bottom: 100,
+          x: 0,
+          y: 0
+        } as DOMRect)
+      } as Element;
+    });
+
+    it('should parse percentage distances correctly', () => {
+      const parseDistanceValue = (animationManager as any)._parseDistanceValue.bind(animationManager);
+      
+      const result = parseDistanceValue('100%', mockElement);
+      expect(result).toBe(200); // Should use the larger dimension (width=200 > height=100)
+    });
+
+    it('should parse pixel distances correctly', () => {
+      const parseDistanceValue = (animationManager as any)._parseDistanceValue.bind(animationManager);
+      
+      const result = parseDistanceValue('150px', mockElement);
+      expect(result).toBe(150);
+    });
+
+    it('should handle distances without units as pixels', () => {
+      const parseDistanceValue = (animationManager as any)._parseDistanceValue.bind(animationManager);
+      
+      const result = parseDistanceValue('75', mockElement);
+      expect(result).toBe(75);
+    });
+
+    it('should handle empty or invalid distances', () => {
+      const parseDistanceValue = (animationManager as any)._parseDistanceValue.bind(animationManager);
+      
+      expect(parseDistanceValue('', mockElement)).toBe(0);
+      expect(parseDistanceValue('invalid', mockElement)).toBe(0);
+    });
+
+    it('should fall back to percentage value when no element provided', () => {
+      const parseDistanceValue = (animationManager as any)._parseDistanceValue.bind(animationManager);
+      
+      const result = parseDistanceValue('50%', undefined);
+      expect(result).toBe(50); // Fallback behavior
     });
   });
 });
@@ -17617,7 +17746,7 @@ export class TransformPropagator {
   ): TransformEffect {
     const slideParams = animationConfig.slide_params;
     const direction = slideParams?.direction;
-    const distance = this._parseDistance(slideParams?.distance || '0px');
+    const distance = this._parseDistance(slideParams?.distance || '0px', element);
     const movement = slideParams?.movement;
 
     let translateX = 0;
@@ -18197,17 +18326,28 @@ export class TransformPropagator {
   }
 
   /**
-   * Parse distance string to pixels
+   * Parse distance string to handle both pixels and percentages
    */
-  private _parseDistance(distance: string): number {
-    if (distance.endsWith('px')) {
-      return parseFloat(distance);
-    } else if (distance.endsWith('%')) {
-      // For percentage, we'd need container context - assuming 100px for now
+  private _parseDistance(distance: string, element?: LayoutElement): number {
+    if (!distance) return 0;
+    
+    if (distance.endsWith('%')) {
       const percentage = parseFloat(distance);
-      return percentage; // Simplified
+      if (element) {
+        // For percentage, use the element's width for horizontal movements or height for vertical
+        // Since we don't know the direction here, use the larger dimension as a reasonable default
+        const referenceSize = Math.max(element.layout.width, element.layout.height);
+        return (percentage / 100) * referenceSize;
+      } else {
+        // Fallback: assume 100px as reference for percentage calculations
+        return percentage;
+      }
+    } else if (distance.endsWith('px')) {
+      return parseFloat(distance);
+    } else {
+      // Assume pixels if no unit specified
+      return parseFloat(distance) || 0;
     }
-    return parseFloat(distance) || 0;
   }
 
   /**

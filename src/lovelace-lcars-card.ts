@@ -635,29 +635,11 @@ export class LcarsCard extends LitElement {
 
   private _setupStateChangeHandling(elementsMap: Map<string, LayoutElement>): void {
     stateManager.onStateChange((event) => {
-      // Handle visibility state changes
-      this._handleVisibilityStateChange(event);
+      console.log(`[LcarsCard] State change: ${event.elementId} -> ${event.toState}`);
       
       this.updateStatusIndicators(elementsMap);
       this.requestUpdate();
     });
-  }
-
-  /**
-   * Handle state changes that affect element visibility
-   */
-  private _handleVisibilityStateChange(event: StateChangeEvent): void {
-    const { elementId, toState } = event;
-    
-    // Check if this is a visibility state
-    if (toState === 'hidden' || toState === 'visible') {
-      const shouldBeVisible = toState === 'visible';
-      
-      // Update the visibility manager
-      stateManager.setElementVisibility(elementId, shouldBeVisible, true);
-      
-      console.log(`[LcarsCard] Visibility state change: ${elementId} -> ${toState} (visible: ${shouldBeVisible})`);
-    }
   }
 
   private _renderVisibleElements(): SVGTemplateResult[] {
@@ -667,10 +649,24 @@ export class LcarsCard extends LitElement {
       }
       
       return group.elements
-        .filter(el => stateManager.shouldElementBeVisible(el.id, group.id))
         .map(el => {
           try {
-            return el.render();
+            // Always render elements - let CSS and animations handle visibility
+            const elementTemplate = el.render();
+            if (!elementTemplate) {
+              return null;
+            }
+
+            // For elements in hidden state, apply CSS visibility
+            const currentState = stateManager.getState(el.id);
+            const isVisible = currentState !== 'hidden';
+            
+            if (!isVisible) {
+              // Wrap hidden elements with visibility style but keep them in DOM for animations
+              return svg`<g style="visibility: hidden; opacity: 0; pointer-events: none;">${elementTemplate}</g>`;
+            }
+            
+            return elementTemplate;
           } catch (error) {
             console.error("[_performLayoutCalculation] Error rendering element", el.id, error);
             return null;

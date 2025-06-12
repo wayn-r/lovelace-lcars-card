@@ -455,7 +455,7 @@ export class TransformPropagator {
   ): TransformEffect {
     const slideParams = animationConfig.slide_params;
     const direction = slideParams?.direction;
-    const distance = this._parseDistance(slideParams?.distance || '0px');
+    const distance = this._parseDistance(slideParams?.distance || '0px', element);
     const movement = slideParams?.movement;
 
     let translateX = 0;
@@ -1035,17 +1035,28 @@ export class TransformPropagator {
   }
 
   /**
-   * Parse distance string to pixels
+   * Parse distance string to handle both pixels and percentages
    */
-  private _parseDistance(distance: string): number {
-    if (distance.endsWith('px')) {
-      return parseFloat(distance);
-    } else if (distance.endsWith('%')) {
-      // For percentage, we'd need container context - assuming 100px for now
+  private _parseDistance(distance: string, element?: LayoutElement): number {
+    if (!distance) return 0;
+    
+    if (distance.endsWith('%')) {
       const percentage = parseFloat(distance);
-      return percentage; // Simplified
+      if (element) {
+        // For percentage, use the element's width for horizontal movements or height for vertical
+        // Since we don't know the direction here, use the larger dimension as a reasonable default
+        const referenceSize = Math.max(element.layout.width, element.layout.height);
+        return (percentage / 100) * referenceSize;
+      } else {
+        // Fallback: assume 100px as reference for percentage calculations
+        return percentage;
+      }
+    } else if (distance.endsWith('px')) {
+      return parseFloat(distance);
+    } else {
+      // Assume pixels if no unit specified
+      return parseFloat(distance) || 0;
     }
-    return parseFloat(distance) || 0;
   }
 
   /**

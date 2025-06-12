@@ -108,6 +108,7 @@ export class StateManager {
     this._ensureElementInitialized(elementId);
     
     if (!this._isElementInitialized(elementId)) {
+      console.warn(`[StateManager] setState failed - element ${elementId} not initialized`);
       return false;
     }
 
@@ -117,6 +118,7 @@ export class StateManager {
     }
 
     const previousState = currentStateData.currentState;
+    
     this._updateElementState(elementId, newState, previousState);
     this._notifyStateChangeCallbacks(elementId, previousState, newState);
     
@@ -149,6 +151,7 @@ export class StateManager {
     this._ensureElementInitialized(elementId);
 
     const currentState = this.getState(elementId);
+    
     if (!currentState) {
       // If no current state, set to the first state
       return this.setState(elementId, states[0]);
@@ -517,14 +520,9 @@ export class StateManager {
     const isVisibilityState = (state: string) => state === 'hidden' || state === 'visible';
     
     if (isVisibilityState(newState)) {
-      const shouldBeVisible = newState === 'visible';
-      
-      // Update the visibility directly
-      this.setElementVisibility(elementId, shouldBeVisible, true);
-      
       console.log(`[StateManager] Visibility state change: ${elementId} ${previousState} -> ${newState}`);
       
-      // Trigger a re-render to update visibility
+      // Just trigger a re-render - the render logic will handle visibility via CSS
       this.requestUpdateCallback?.();
     }
   }
@@ -553,10 +551,7 @@ export class StateManager {
     const previousVisibility = this.elementVisibility.get(elementId)?.visible ?? true;
     this.elementVisibility.set(elementId, { visible, animated });
     
-    // Trigger lifecycle animations for show/hide
-    if (animated && previousVisibility !== visible) {
-      this.triggerLifecycleAnimation(elementId, visible ? 'on_show' : 'on_hide');
-    }
+    // No complex lifecycle animations - let state change animations handle everything
   }
 
   setGroupVisibility(groupId: string, visible: boolean, animated: boolean = false): void {
@@ -579,6 +574,27 @@ export class StateManager {
     const elementVisible = this.getElementVisibility(elementId);
     const groupVisible = this.getGroupVisibility(groupId);
     return elementVisible && groupVisible;
+  }
+
+  /**
+   * Check if element should be rendered in DOM (even if not visible) for animations
+   */
+  shouldElementBeRendered(elementId: string, groupId: string): boolean {
+    const groupVisible = this.getGroupVisibility(groupId);
+    if (!groupVisible) {
+      return false;
+    }
+
+    // Always render elements that have animations, even if they're in hidden state
+    const element = this.elementsMap?.get(elementId);
+    const hasAnimations = element?.props?.animations || element?.props?.state_management;
+    
+    if (hasAnimations) {
+      return true;
+    }
+
+    // For elements without animations, use normal visibility logic
+    return this.shouldElementBeVisible(elementId, groupId);
   }
 
   cleanup(): void {

@@ -21,6 +21,7 @@ groups:
             to: container
             element_point: topLeft
             target_point: topLeft
+
   - group_id: fade_in_group
     elements:
       - id: fade_in_element
@@ -47,6 +48,7 @@ groups:
               opacity_end: 1
             duration: 2
             ease: power3.out
+
       - id: fade_in_description
         type: text
         text:
@@ -59,9 +61,11 @@ groups:
             to: fade_in_group.fade_in_element
             element_point: centerLeft
             target_point: centerRight
+
+
   - group_id: sliding_panel_group
     elements:
-      - id: panel_trigger_button
+      - id: sliding_panel_trigger_button
         type: rectangle
         appearance:
           fill:
@@ -89,6 +93,7 @@ groups:
               states:
                 - hidden
                 - visible
+
       - id: sliding_panel_description
         type: text
         text:
@@ -98,9 +103,10 @@ groups:
         layout:
           offsetX: 5
           anchor:
-            to: sliding_panel_group.panel_trigger_button
+            to: sliding_panel_group.sliding_panel_trigger_button
             element_point: centerLeft
             target_point: centerRight
+
       - id: sliding_panel
         type: rectangle
         appearance:
@@ -143,8 +149,53 @@ groups:
                 opacity_end: 0
               duration: 0.3
               ease: power2.in
+
   - group_id: scale_target_group
     elements:
+      - id: scale_trigger_button
+        type: rectangle
+        appearance:
+          fill:
+            default: "#336699"
+            hover: "#4477AA"
+            active: "#225588"
+        text:
+          content: SCALE
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 5
+          anchor:
+            to: sliding_panel_group.sliding_panel_trigger_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: toggle_state
+              target_element_ref: scale_target_group.scale_target
+              states:
+                - normal
+                - scaled
+
+      - id: scale_target_description
+        type: text
+        text:
+          content: >-
+            This button should toggle the scale of the "scale_target" element
+            when pressed.
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          offsetX: 5
+          anchor:
+            to: scale_target_group.scale_target
+            element_point: centerLeft
+            target_point: centerRight
+
       - id: scale_target
         type: rectangle
         appearance:
@@ -183,48 +234,8 @@ groups:
                 transform_origin: center center
               duration: 0.3
               ease: power2.inOut
-      - id: scale_trigger_button
-        type: rectangle
-        appearance:
-          fill:
-            default: "#336699"
-            hover: "#4477AA"
-            active: "#225588"
-        text:
-          content: SCALE
-          fill: "#FFFFFF"
-          fontFamily: Antonio
-        layout:
-          width: 100
-          height: 40
-          offsetY: 5
-          anchor:
-            to: sliding_panel_group.panel_trigger_button
-            element_point: topLeft
-            target_point: bottomLeft
-        button:
-          enabled: true
-          actions:
-            tap:
-              action: toggle_state
-              target_element_ref: scale_target_group.scale_target
-              states:
-                - normal
-                - scaled
-      - id: scale_target_description
-        type: text
-        text:
-          content: >-
-            This button should toggle the scale of the "scale_target" element
-            when pressed.
-          fill: "#FFFFFF"
-          fontFamily: Antonio
-        layout:
-          offsetX: 5
-          anchor:
-            to: scale_target_group.scale_target
-            element_point: centerLeft
-            target_point: centerRight
+
+
   - group_id: sequence_group
     elements:
       - id: sequence_element
@@ -273,6 +284,7 @@ groups:
                     duration: 0.5
                     repeat: 2
                     yoyo: true
+                    
       - id: sequence_description
         type: text
         text:
@@ -285,6 +297,8 @@ groups:
             to: sequence_group.sequence_element
             element_point: centerLeft
             target_point: centerRight
+
+
   - group_id: multi_action_group
     elements:
       - id: multi_trigger_button
@@ -317,6 +331,7 @@ groups:
                 - action: set_state
                   target_element_ref: scale_target_group.scale_target
                   state: scaled
+
       - id: reset_button
         type: rectangle
         appearance:
@@ -347,31 +362,3 @@ groups:
                 - action: set_state
                   target_element_ref: scale_target_group.scale_target
                   state: normal
-  - group_id: status_indicators
-    elements:
-      - id: panel_status
-        type: text
-        text:
-          content: "Panel: hidden"
-          fill: "#FFAA00"
-          fontFamily: Antonio
-          fontSize: 14
-        layout:
-          offsetY: 5
-          anchor:
-            to: multi_action_group.reset_button
-            element_point: topLeft
-            target_point: bottomLeft
-      - id: scale_status
-        type: text
-        text:
-          content: "Scale: normal"
-          fill: "#FFAA00"
-          fontFamily: Antonio
-          fontSize: 14
-        layout:
-          offsetY: 5
-          anchor:
-            to: status_indicators.panel_status
-            element_point: topLeft
-            target_point: bottomLeft
