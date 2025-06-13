@@ -46,6 +46,7 @@
         "fontmetrics": "^1.0.0",
         "gsap": "^3.12.7",
         "ignore": "^7.0.4",
+        "js-yaml": "^4.1.0",
         "junit": "^1.4.9",
         "lit": "^3.0.0",
         "sortablejs": "^1.15.6",

@@ -600,6 +600,36 @@ export class StateManager {
   cleanup(): void {
     this.clearAll();
   }
+
+  /**
+   * Execute a set_state action using the unified Action interface
+   */
+  executeSetStateAction(action: import('../types.js').Action): void {
+    const targetElementRef = action.target_element_ref;
+    const state = action.state;
+    
+    if (!targetElementRef || !state) {
+      console.warn('set_state action missing target_element_ref or state');
+      return;
+    }
+    
+    this.setState(targetElementRef, state);
+  }
+
+  /**
+   * Execute a toggle_state action using the unified Action interface
+   */
+  executeToggleStateAction(action: import('../types.js').Action): void {
+    const targetElementRef = action.target_element_ref;
+    const states = action.states;
+    
+    if (!targetElementRef || !states || !Array.isArray(states)) {
+      console.warn('toggle_state action missing target_element_ref or states array');
+      return;
+    }
+    
+    this.toggleState(targetElementRef, states);
+  }
 }
 
 // Export singleton instance

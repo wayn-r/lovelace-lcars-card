@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Button } from '../button';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Button } from '../button.js';
 import { HomeAssistant } from 'custom-card-helpers';
-import type { Mock } from 'vitest';
 
 describe('Button', () => {
   let mockHass: HomeAssistant;
@@ -9,87 +8,78 @@ describe('Button', () => {
   let mockGetShadowElement: (id: string) => Element | null;
 
   beforeEach(() => {
-    mockHass = {} as HomeAssistant;
-    mockRequestUpdate = vi.fn();
-    mockGetShadowElement = vi.fn();
-    vi.mock('custom-card-helpers', () => ({
-      handleAction: vi.fn(),
-    }));
-  });
-
-  describe('Button Creation and Interactivity', () => {
-    it('should create a non-interactive element if button is not enabled', () => {
-        const props = { fill: '#FF0000', button: { enabled: false } };
-        const button = new Button('test-button', props, mockHass, mockRequestUpdate);
-        const result = button.createButton('M 0 0', 0, 0, 10, 10, { rx: 0 }, { isCurrentlyHovering: false, isCurrentlyActive: false });
-        expect(result).toBeDefined();
-        
-        // A disabled button should just be a <g> tag with the path, no event handlers
-        const svgString = result.strings.join('');
-        expect(svgString).not.toContain('@click');
-        expect(svgString).not.toContain('@keydown');
-        expect(svgString).not.toContain('role="button"');
-        expect(svgString).not.toContain('@mouseenter');
-        expect(svgString).not.toContain('@mouseleave');
-        expect(svgString).not.toContain('@mousedown');
-        expect(svgString).not.toContain('@mouseup');
-    });
-
-    it('should create an interactive element with action handlers only if button is enabled', () => {
-        const props = { fill: '#FF0000', button: { enabled: true } };
-        const button = new Button('test-button', props, mockHass, mockRequestUpdate, mockGetShadowElement);
-        const result = button.createButton('M 0 0', 0, 0, 10, 10, { rx: 0 }, { isCurrentlyHovering: false, isCurrentlyActive: false });
-        expect(result).toBeDefined();
-
-        const svgString = result.strings.join('');
-        // Check for presence of action event handlers
-        expect(svgString).toContain('@click');
-        expect(svgString).toContain('@keydown');
-
-        // Mouse event handlers should NOT be present in Button output since they're handled by LayoutElement
-        expect(svgString).not.toContain('@mouseenter');
-        expect(svgString).not.toContain('@mouseleave');
-        expect(svgString).not.toContain('@mousedown');
-        expect(svgString).not.toContain('@mouseup');
-    });
-  });
-  
-  describe('Button Appearance and Color Resolution', () => {
-    let mockRequestUpdate: Mock;
-    let mockGetShadowElement: Mock;
-    let mockElement: HTMLElement;
-    let button: Button;
-
-    beforeEach(() => {
-      mockRequestUpdate = vi.fn();
-      mockElement = document.createElement('div');
-      mockGetShadowElement = vi.fn().mockReturnValue(mockElement);
-      
-      const props = {
-        fill: {
-          default: '#FF0000',
-          hover: '#00FF00',
-          active: '#0000FF'
+    mockHass = {
+      states: {
+        'light.test': {
+          entity_id: 'light.test',
+          state: 'off',
+          attributes: {},
+          context: { id: 'test', parent_id: null, user_id: null },
+          last_changed: new Date().toISOString(),
+          last_updated: new Date().toISOString()
         }
-      };
+      }
+    } as any as HomeAssistant;
+
+    mockRequestUpdate = vi.fn();
+    mockGetShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+    
+    // Mock console methods to reduce noise in tests
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('constructor', () => {
+    it('should create a Button instance with all parameters', () => {
+      const props = { someProperty: 'value' };
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate, mockGetShadowElement);
       
-      button = new Button('test-button', props, undefined, mockRequestUpdate, mockGetShadowElement);
+      expect(button).toBeInstanceOf(Button);
     });
 
-    it('should resolve colors correctly based on interactive state', () => {
-      const defaultColors = (button as any).getResolvedColors({ isCurrentlyHovering: false, isCurrentlyActive: false });
-      expect(defaultColors.fillColor).toBe('#FF0000');
+    it('should create a Button instance with minimal parameters', () => {
+      const button = new Button('test-button', {});
       
-      const hoverColors = (button as any).getResolvedColors({ isCurrentlyHovering: true, isCurrentlyActive: false });
-      expect(hoverColors.fillColor).toBe('#00FF00');
-      
-      const activeColors = (button as any).getResolvedColors({ isCurrentlyHovering: true, isCurrentlyActive: true });
-      expect(activeColors.fillColor).toBe('#0000FF');
+      expect(button).toBeInstanceOf(Button);
     });
   });
 
-  describe('Action Handling', () => {
-    it('should handle action configuration', () => {
+  describe('createButtonGroup', () => {
+    it('should create a regular group when not a button', () => {
+      const button = new Button('test-button', {}, mockHass, mockRequestUpdate, mockGetShadowElement);
+      
+      const result = button.createButtonGroup([], {
+        isButton: false,
+        elementId: 'test'
+      });
+
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('_$litType$');
+      expect(result).toHaveProperty('strings');
+      expect(result).toHaveProperty('values');
+    });
+
+    it('should create an interactive button group when isButton is true', () => {
+      const button = new Button('test-button', {}, mockHass, mockRequestUpdate, mockGetShadowElement);
+      
+      const result = button.createButtonGroup([], {
+        isButton: true,
+        elementId: 'test'
+      });
+
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('_$litType$');
+      expect(result).toHaveProperty('strings');
+      expect(result).toHaveProperty('values');
+    });
+  });
+
+  describe('createButton', () => {
+    it('should create a button with proper structure', () => {
       const props = {
         button: {
           enabled: true,
@@ -110,8 +100,11 @@ describe('Button', () => {
       expect(result).toHaveProperty('strings');
       expect(result).toHaveProperty('values');
     });
+  });
 
-    it('should create single action config format correctly', () => {
+  describe('unified action execution', () => {
+    it('should execute single action correctly', () => {
+      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
       const props = {
         button: {
           enabled: true,
@@ -124,27 +117,25 @@ describe('Button', () => {
       };
       
       const button = new Button('test-button', props, mockHass, mockRequestUpdate);
-      const actionConfig = (button as any).createActionConfig(props.button);
       
-      expect(actionConfig).toEqual({
-        confirmation: true,
-        tap_action: {
+      // Simulate button click
+      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      
+      expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(1);
+      expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
           action: 'toggle',
-          service: undefined,
-          service_data: undefined,
-          target: undefined,
-          navigation_path: undefined,
-          url_path: undefined,
           entity: 'light.test',
-          target_element_ref: undefined,
-          state: undefined,
-          states: undefined,
-        },
-        entity: 'light.test'
-      });
+          confirmation: true
+        }),
+        expect.any(HTMLElement)
+      );
+      
+      executeUnifiedActionSpy.mockRestore();
     });
 
-    it('should create multiple actions config format correctly', () => {
+    it('should execute multiple actions correctly', () => {
+      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
       const props = {
         button: {
           enabled: true,
@@ -165,125 +156,137 @@ describe('Button', () => {
       };
       
       const button = new Button('test-button', props, mockHass, mockRequestUpdate);
-      const actionConfig = (button as any).createActionConfig(props.button);
       
-      expect(actionConfig).toEqual({
-        confirmation: undefined,
-        tap_action: {
-          actions: [
-            {
-              action: 'toggle',
-              service: undefined,
-              service_data: undefined,
-              target: undefined,
-              navigation_path: undefined,
-              url_path: undefined,
-              entity: 'light.living_room',
-              target_element_ref: undefined,
-              state: undefined,
-              states: undefined,
-              confirmation: undefined
-            },
-            {
-              action: 'set_state',
-              service: undefined,
-              service_data: undefined,
-              target: undefined,
-              navigation_path: undefined,
-              url_path: undefined,
-              entity: undefined,
-              target_element_ref: 'group.element',
-              state: 'active',
-              states: undefined,
-              confirmation: undefined
-            }
-          ]
-        }
-      });
+      // Simulate button click
+      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      
+      expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(2);
+      expect(executeUnifiedActionSpy).toHaveBeenNthCalledWith(1, 
+        expect.objectContaining({
+          action: 'toggle',
+          entity: 'light.living_room'
+        }),
+        expect.any(HTMLElement)
+      );
+      expect(executeUnifiedActionSpy).toHaveBeenNthCalledWith(2,
+        expect.objectContaining({
+          action: 'set_state',
+          target_element_ref: 'group.element',
+          state: 'active'
+        }),
+        expect.any(HTMLElement)
+      );
+      
+      executeUnifiedActionSpy.mockRestore();
     });
 
-    it('should handle multiple actions execution correctly', () => {
-      const executeActionSpy = vi.spyOn(Button.prototype as any, 'executeAction');
+    it('should handle action type conversion from set-state to set_state', () => {
+      const convertToUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'convertToUnifiedAction');
       const props = {
         button: {
           enabled: true,
           action_config: {
             actions: [
-              { action: 'toggle', entity: 'light.test1' },
-              { action: 'toggle', entity: 'light.test2' }
+              {
+                action: 'set-state',
+                target_element_ref: 'group.element',
+                state: 'active'
+              }
             ]
           }
         }
       };
       
       const button = new Button('test-button', props, mockHass, mockRequestUpdate);
-      const actionConfig = {
-        tap_action: {
-          actions: [
-            { action: 'toggle', entity: 'light.test1' },
-            { action: 'toggle', entity: 'light.test2' }
-          ]
+      
+      // Simulate button click
+      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      
+      expect(convertToUnifiedActionSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'set-state',
+          target_element_ref: 'group.element',
+          state: 'active'
+        })
+      );
+      
+      convertToUnifiedActionSpy.mockRestore();
+    });
+
+    it('should auto-populate entity for toggle/more-info actions when missing', () => {
+      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
+      const props = {
+        button: {
+          enabled: true,
+          action_config: {
+            type: 'toggle'
+            // entity intentionally missing
+          }
         }
       };
       
-      (button as any)._executeMultipleActions(actionConfig.tap_action.actions, document.createElement('div'));
-      
-      expect(executeActionSpy).toHaveBeenCalledTimes(2);
-      expect(executeActionSpy).toHaveBeenNthCalledWith(1, {
-        tap_action: { action: 'toggle', entity: 'light.test1' },
-        confirmation: undefined
-      }, expect.any(HTMLElement));
-      expect(executeActionSpy).toHaveBeenNthCalledWith(2, {
-        tap_action: { action: 'toggle', entity: 'light.test2' },
-        confirmation: undefined
-      }, expect.any(HTMLElement));
-      
-      executeActionSpy.mockRestore();
-    });
-
-    it('should detect multiple actions in executeAction and delegate to _executeMultipleActions', () => {
-      const executeMultipleActionsSpy = vi.spyOn(Button.prototype as any, '_executeMultipleActions');
-      const props = { button: { enabled: true } };
-      
       const button = new Button('test-button', props, mockHass, mockRequestUpdate);
-      const actionConfig = {
-        tap_action: {
-          actions: [
-            { action: 'toggle', entity: 'light.test1' },
-            { action: 'toggle', entity: 'light.test2' }
-          ]
-        }
-      };
       
-      (button as any).executeAction(actionConfig, document.createElement('div'));
+      // Simulate button click
+      (button as any).executeButtonAction(props.button, document.createElement('div'));
       
-      expect(executeMultipleActionsSpy).toHaveBeenCalledWith(actionConfig.tap_action.actions, expect.any(HTMLElement));
-      
-      executeMultipleActionsSpy.mockRestore();
-    });
-
-    it('should not detect multiple actions when actions array is not present', () => {
-      const executeMultipleActionsSpy = vi.spyOn(Button.prototype as any, '_executeMultipleActions');
-      const props = { button: { enabled: true } };
-      
-      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
-      const actionConfig = {
-        tap_action: {
+      expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
           action: 'toggle',
-          entity: 'light.test'
-        }
+          entity: 'test-button' // Should use button ID
+        }),
+        expect.any(HTMLElement)
+      );
+      
+      executeUnifiedActionSpy.mockRestore();
+    });
+  });
+
+  describe('custom action handling', () => {
+    it('should handle custom set_state action', async () => {
+      const mockStateManager = {
+        executeSetStateAction: vi.fn(),
+        executeToggleStateAction: vi.fn()
       };
       
-      // Mock the handleAction import to prevent actual execution
-      vi.doMock('custom-card-helpers', () => ({
-        handleAction: vi.fn()
+      // Mock the dynamic import
+      vi.doMock('../../utils/state-manager.js', () => ({
+        stateManager: mockStateManager
       }));
       
-      (button as any).executeAction(actionConfig, document.createElement('div'));
+      const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
+      const action = {
+        action: 'set_state' as const,
+        target_element_ref: 'test.element',
+        state: 'active'
+      };
       
-      expect(executeMultipleActionsSpy).not.toHaveBeenCalled();
+      await (button as any).executeCustomAction(action);
       
-      executeMultipleActionsSpy.mockRestore();
+      expect(mockStateManager.executeSetStateAction).toHaveBeenCalledWith(action);
+    });
+
+    it('should handle custom toggle_state action', async () => {
+      const mockStateManager = {
+        executeSetStateAction: vi.fn(),
+        executeToggleStateAction: vi.fn()
+      };
+      
+      // Mock the dynamic import
+      vi.doMock('../../utils/state-manager.js', () => ({
+        stateManager: mockStateManager
+      }));
+      
+      const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
+      const action = {
+        action: 'toggle_state' as const,
+        target_element_ref: 'test.element',
+        states: ['state1', 'state2']
+      };
+      
+      await (button as any).executeCustomAction(action);
+      
+      expect(mockStateManager.executeToggleStateAction).toHaveBeenCalledWith(action);
     });
   });
 

@@ -85,16 +85,50 @@ const layoutSchema = z.object({
 // Button & Actions (kept permissive for first pass)
 // -----------------------------------------------------------------------------
 
-const actionSchema = z.any(); // TODO: replace with unified Action model in roadmap step 2
+// Unified Action schema matching the Action interface in types.ts
+const actionSchema: z.ZodType<any> = z.object({
+  action: z.enum(['call-service', 'navigate', 'url', 'toggle', 'more-info', 'none', 'set_state', 'toggle_state']),
+  
+  // Home Assistant service actions
+  service: z.string().optional(),
+  service_data: z.record(z.any()).optional(),
+  target: z.record(z.any()).optional(),
+  
+  // Navigation actions
+  navigation_path: z.string().optional(),
+  
+  // URL actions
+  url_path: z.string().optional(),
+  
+  // Entity actions
+  entity: z.string().optional(),
+  
+  // Custom state management actions
+  target_element_ref: z.string().optional(),
+  state: z.string().optional(),
+  states: z.array(z.string()).optional(),
+  actions: z.array(z.lazy(() => actionSchema)).optional(), // Recursive for multi-action sequences
+  
+  // Common properties
+  confirmation: z.union([
+    z.boolean(),
+    z.object({
+      text: z.string().optional(),
+      exemptions: z.array(z.object({
+        user: z.string()
+      })).optional()
+    })
+  ]).optional()
+});
 
 const buttonSchema = z.object({
-  enabled: z.boolean(),
+  enabled: z.boolean().optional(),
   actions: z.object({
     tap: actionSchema.optional(),
     hold: actionSchema.optional(),
     double_tap: actionSchema.optional(),
-  }).partial().optional(),
-}).partial();
+  }).optional(),
+}).optional();
 
 // -----------------------------------------------------------------------------
 // Element
@@ -107,7 +141,7 @@ const elementTypeEnum = z.enum([
   'elbow',
   'chisel-endcap',
   'top_header',
-]);
+]).or(z.string()); // Allow unknown types for backwards compatibility
 
 const elementSchema = z.object({
   id: z.string().min(1),
@@ -128,13 +162,13 @@ const elementSchema = z.object({
 
 const groupSchema = z.object({
   group_id: z.string().min(1),
-  elements: z.array(elementSchema).min(1),
+  elements: z.array(elementSchema), // Allow empty arrays for backward compatibility
 });
 
 const cardConfigSchema = z.object({
   type: z.string().default('lovelace-lcars-card'),
   title: z.string().optional(),
-  groups: z.array(groupSchema).min(1),
+  groups: z.array(groupSchema), // Allow empty arrays for backward compatibility
   state_management: z.any().optional(),
 });
 

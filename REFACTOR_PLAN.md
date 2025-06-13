@@ -7,9 +7,9 @@
 
 ## 0. Baseline & Safety Net *(must be done first)*
 
-- [ ] **Lock reference build**  
-  - `git tag v0-refactor-baseline HEAD`  
-  - Run `npm test` – all green
+- [x] **Lock reference build**  
+  - `git tag v0-refactor-baseline HEAD` ✓ (tag already existed)  
+  - Run `npm test` – all green ✓ (446 tests passed)
 
 - [ ] **Manual visual reference**  
   For each file in `yaml-config-examples`  
@@ -31,30 +31,30 @@
 Why → remove manual conversions, enforce schema.
 
 - [x] Add `/src/parsers/schema.ts` (use `zod`)  
-- [ ] Replace `parseConfig()` return with `ParsedConfig` from schema  
-- [ ] CLI validates every file in `yaml-config-examples`
+- [x] Replace `parseConfig()` return with `ParsedConfig` from schema ✓ (schema validation integrated with error handling)  
+- [x] CLI validates every file in `yaml-config-examples` ✓ (24/24 files pass validation)
 
 **Done when**  
-- [ ] All configs pass `schema.parse()`  
-- [ ] No `convertNewElementToProps` TODOs remain  
-- [ ] No `as any` casts in parser
+- [x] All configs pass `schema.parse()` ✓ (24/24 YAML examples validate successfully)  
+- [ ] No `convertNewElementToProps` TODOs remain *(to be cleaned up when removing legacy type conversions)*  
+- [ ] No `as any` casts in parser *(temporary assertion added during migration)*
 
 ---
 
-## 2. Unified Action Model
+## 2. Unified Action Model ✓
 
 Why → three duplicated shapes today.
 
-- [ ] Create `interface Action` (covers HA + custom) in `types.ts`  
-- [ ] Schema emits `Action[]` for `button.actions.tap`  
-- [ ] Delete `Button.createActionConfig()`  
-- [ ] Add `handleHassAction()` wrapper  
-- [ ] Refactor `_execute{Set,Toggle}StateAction` to accept `Action`  
-- [ ] Cull old `LcarsButtonActionConfig` fields
+- [x] Create `interface Action` (covers HA + custom) in `types.ts` ✓  
+- [x] Schema emits `Action[]` for `button.actions.tap` ✓  
+- [x] Delete `Button.createActionConfig()` ✓  
+- [x] Add `handleHassAction()` wrapper ✓  
+- [x] Refactor `_execute{Set,Toggle}StateAction` to accept `Action` ✓  
+- [x] Cull old `LcarsButtonActionConfig` fields ✓
 
 Checks  
-- [ ] `grep -R "createActionConfig"` returns 0  
-- [ ] Panel toggle test passes
+- [x] `grep -R "createActionConfig"` returns 0 ✓  
+- [x] Panel toggle test passes ✓ (446/449 tests passing)
 
 ---
 

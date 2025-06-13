@@ -8,18 +8,43 @@ import { EndcapElement } from './elements/endcap.js';
 import { ElbowElement } from './elements/elbow.js';
 import { ChiselEndcapElement } from './elements/chisel_endcap.js';
 import { TopHeaderElement } from './elements/top_header.js';
+import { parseCardConfig, type ParsedConfig } from '../parsers/schema.js';
+import { ZodError } from 'zod';
 
-export function parseConfig(config: LcarsCardConfig, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): Group[] {
-  if (!config.groups) {
+export function parseConfig(config: unknown, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): Group[] {
+  let validatedConfig: ParsedConfig;
+  
+  try {
+    // Validate configuration using schema
+    validatedConfig = parseCardConfig(config);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      // Check if it's a groups-related error and provide friendly message
+      const groupsError = error.errors.find(e => 
+        e.path.length === 1 && e.path[0] === 'groups'
+      );
+      
+      if (groupsError) {
+        throw new Error('Invalid configuration: groups array is required');
+      }
+      
+      // For other validation errors, throw the original error
+      throw error;
+    }
+    throw error;
+  }
+  
+  if (!validatedConfig.groups) {
     throw new Error('Invalid configuration: groups array is required');
   }
 
-  return config.groups.map(groupConfig => {
+  return validatedConfig.groups.map(groupConfig => {
     const layoutElements: LayoutElement[] = groupConfig.elements.map(element => {
       const fullId = `${groupConfig.group_id}.${element.id}`;
       
       // Convert element props and resolve "self" references in visibility triggers
-      const props = convertNewElementToProps(element);
+      // TODO: Remove this type assertion once types are fully aligned during refactor
+      const props = convertNewElementToProps(element as any);
       if (props.visibility_triggers) {
         props.visibility_triggers = props.visibility_triggers.map((trigger: any) => ({
           ...trigger,

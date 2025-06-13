@@ -144,10 +144,45 @@ export interface StretchTargetConfig {
   padding?: number;
 }
 
+// ============================================================================
+// Unified Action Model - covers both Home Assistant and Custom actions
+// ============================================================================
 
+export interface Action {
+  // Core action type
+  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'none' | 'set_state' | 'toggle_state';
+  
+  // Home Assistant service actions
+  service?: string;
+  service_data?: Record<string, any>;
+  target?: Record<string, any>;
+  
+  // Navigation actions
+  navigation_path?: string;
+  
+  // URL actions
+  url_path?: string;
+  
+  // Entity actions (toggle, more-info)
+  entity?: string;
+  
+  // Custom state management actions
+  target_element_ref?: string;
+  state?: string;
+  states?: string[];
+  actions?: Action[]; // For multi-action sequences
+  
+  // Common properties
+  confirmation?: boolean | {
+    text?: string;
+    exemptions?: Array<{
+      user: string;
+    }>;
+  };
+}
 
 // ============================================================================
-// Button Configuration (Updated to match YAML definition)
+// Button Configuration
 // ============================================================================
 
 export interface ButtonConfig {
@@ -158,8 +193,6 @@ export interface ButtonConfig {
     double_tap?: ActionDefinition;
   };
 }
-
-
 
 export interface HoldActionDefinition extends ActionDefinition {
   duration?: number; // Hold duration in milliseconds, default 500
