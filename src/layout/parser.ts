@@ -2,7 +2,7 @@ import { HomeAssistant } from 'custom-card-helpers';
 import { Group } from './engine.js';
 import { LayoutElement } from './elements/element.js';
 import { RectangleElement } from './elements/rectangle.js';
-import { LcarsCardConfig, GroupConfig, ElementConfig } from '../types.js';
+import { LcarsCardConfig, GroupConfig, ElementConfig, ButtonConfig } from '../types.js';
 import { TextElement } from './elements/text.js';
 import { EndcapElement } from './elements/endcap.js';
 import { ElbowElement } from './elements/elbow.js';
@@ -10,6 +10,79 @@ import { ChiselEndcapElement } from './elements/chisel_endcap.js';
 import { TopHeaderElement } from './elements/top_header.js';
 import { parseCardConfig, type ParsedConfig } from '../parsers/schema.js';
 import { ZodError } from 'zod';
+
+// Define the properly typed props interface that LayoutElement expects
+interface ConvertedElementProps {
+  // Appearance properties
+  fill?: any;
+  stroke?: any;
+  strokeWidth?: number;
+  rx?: number;
+  direction?: 'left' | 'right';
+  orientation?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  bodyWidth?: number;
+  armHeight?: number;
+  
+  // Text properties
+  text?: string;
+  textColor?: any;
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: string | number;
+  letterSpacing?: string | number;
+  textAnchor?: 'start' | 'middle' | 'end';
+  dominantBaseline?: string;
+  textTransform?: string;
+  elbowTextPosition?: 'arm' | 'body';
+  leftContent?: string;
+  rightContent?: string;
+  
+  // Button configuration
+  button?: {
+    enabled?: boolean;
+    action_config?: {
+      type: string;
+      service?: string;
+      service_data?: Record<string, any>;
+      target?: Record<string, any>;
+      navigation_path?: string;
+      url_path?: string;
+      entity?: string;
+      confirmation?: any;
+      target_element_ref?: string;
+      state?: string;
+      states?: string[];
+      actions?: any[];
+    };
+  };
+  
+  // Other configurations
+  visibility_rules?: any;
+  visibility_triggers?: any;
+  state_management?: any;
+  animations?: any;
+}
+
+// Define the engine layout format interface
+interface ConvertedLayoutConfig {
+  width?: any;
+  height?: any;
+  offsetX?: any;
+  offsetY?: any;
+  anchor?: {
+    anchorTo: string;
+    anchorPoint: string;
+    targetAnchorPoint: string;
+  };
+  stretch?: {
+    stretchTo1: string;
+    targetStretchAnchorPoint1: string;
+    stretchPadding1: number;
+    stretchTo2?: string;
+    targetStretchAnchorPoint2?: string;
+    stretchPadding2?: number;
+  };
+}
 
 export function parseConfig(config: unknown, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): Group[] {
   let validatedConfig: ParsedConfig;
@@ -42,9 +115,10 @@ export function parseConfig(config: unknown, hass?: HomeAssistant, requestUpdate
     const layoutElements: LayoutElement[] = groupConfig.elements.map(element => {
       const fullId = `${groupConfig.group_id}.${element.id}`;
       
-      // Convert element props and resolve "self" references in visibility triggers
-      // TODO: Remove this type assertion once types are fully aligned during refactor
-      const props = convertNewElementToProps(element as any);
+      // Convert element configuration to props format
+      const props = convertElementToProps(element);
+      
+      // Resolve "self" references in visibility triggers
       if (props.visibility_triggers) {
         props.visibility_triggers = props.visibility_triggers.map((trigger: any) => ({
           ...trigger,
@@ -61,7 +135,7 @@ export function parseConfig(config: unknown, hass?: HomeAssistant, requestUpdate
         fullId,
         element.type,
         props,
-        convertNewLayoutToEngineFormat(element.layout),
+        convertLayoutToEngineFormat(element.layout),
         hass,
         requestUpdateCallback,
         getShadowElement
@@ -72,8 +146,8 @@ export function parseConfig(config: unknown, hass?: HomeAssistant, requestUpdate
   });
 }
 
-function convertNewElementToProps(element: ElementConfig): any {
-  const props: any = {};
+function convertElementToProps(element: any): ConvertedElementProps {
+  const props: ConvertedElementProps = {};
   
   // Convert appearance properties
   if (element.appearance) {
@@ -144,28 +218,21 @@ function convertNewElementToProps(element: ElementConfig): any {
         actions: tapAction.actions
       };
     }
-    
-    // No legacy transformation needed - elements support stateful colors natively
-    
-    // TODO: Handle hold and double_tap actions when implemented
   }
 
-  // Convert visibility rules
+  // Convert other configurations directly
   if (element.visibility_rules) {
     props.visibility_rules = element.visibility_rules;
   }
   
-  // Convert visibility triggers
   if (element.visibility_triggers) {
     props.visibility_triggers = element.visibility_triggers;
   }
   
-  // Convert state management
   if (element.state_management) {
     props.state_management = element.state_management;
   }
   
-  // Convert animations
   if (element.animations) {
     props.animations = element.animations;
   }
@@ -173,10 +240,10 @@ function convertNewElementToProps(element: ElementConfig): any {
   return props;
 }
 
-function convertNewLayoutToEngineFormat(layout?: any): any {
+function convertLayoutToEngineFormat(layout?: any): ConvertedLayoutConfig {
   if (!layout) return {};
   
-  const engineLayout: any = {};
+  const engineLayout: ConvertedLayoutConfig = {};
   
   if (layout.width !== undefined) engineLayout.width = layout.width;
   if (layout.height !== undefined) engineLayout.height = layout.height;
@@ -211,8 +278,8 @@ function convertNewLayoutToEngineFormat(layout?: any): any {
 function createLayoutElement(
   id: string,
   type: string,
-  props: any,
-  layoutConfig: any,
+  props: ConvertedElementProps,
+  layoutConfig: ConvertedLayoutConfig,
   hass?: HomeAssistant,
   requestUpdateCallback?: () => void,
   getShadowElement?: (id: string) => Element | null

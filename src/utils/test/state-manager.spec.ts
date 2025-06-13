@@ -1,11 +1,14 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { StateManager, StateChangeEvent } from '../state-manager.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { StateManager } from '../state-manager.js';
+import { StoreProvider, StateChangeEvent } from '../../core/store.js';
 
 describe('StateManager Visibility Integration', () => {
   let stateManager: StateManager;
   let stateChangeEvents: StateChangeEvent[] = [];
 
   beforeEach(() => {
+    // Reset the store to ensure clean state
+    StoreProvider.reset();
     stateManager = new StateManager();
     stateChangeEvents = [];
     
@@ -13,6 +16,12 @@ describe('StateManager Visibility Integration', () => {
     stateManager.onStateChange((event) => {
       stateChangeEvents.push(event);
     });
+  });
+
+  afterEach(() => {
+    // Clean up after each test
+    stateManager.cleanup();
+    StoreProvider.reset();
   });
 
   describe('Visibility States', () => {

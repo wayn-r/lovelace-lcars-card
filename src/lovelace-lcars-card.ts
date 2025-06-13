@@ -15,7 +15,8 @@ import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext } from './utils/animation.js';
 import { colorResolver } from './utils/color-resolver.js';
-import { stateManager, StateChangeEvent } from './utils/state-manager.js';
+import { stateManager } from './utils/state-manager.js';
+import { StateChangeEvent } from './core/store.js';
 import { transformPropagator } from './utils/transform-propagator.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
@@ -342,8 +343,7 @@ export class LcarsCard extends LitElement {
         });
       });
 
-      // Initialize visibility states in state manager
-      stateManager.initializeVisibility(elementIds, groupIds);
+      // Visibility is now managed through regular state values ('hidden'/'visible')
 
       // Initialize state manager
       const animationContext: AnimationContext = {
@@ -393,8 +393,8 @@ export class LcarsCard extends LitElement {
       // Store the calculated height for rendering
       this._calculatedHeight = layoutDimensions.height;
 
-      // Render elements with visibility filtering
-      const newTemplates = this._renderVisibleElements();
+      // Render all elements (hidden elements styled with CSS)
+      const newTemplates = this._renderAllElements();
 
       const TOP_MARGIN = 8;  // offset for broken HA UI
       
@@ -455,20 +455,33 @@ export class LcarsCard extends LitElement {
         (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null
     );
 
-    const newTemplates = this._layoutEngine.layoutGroups.flatMap(group => {
-        // Check if group is visible
-        if (!stateManager.getGroupVisibility(group.id)) {
-          return [];
-        }
-        
-        return group.elements
-            .filter(el => {
-              // Check if element should be visible (both element and group visibility)
-              return stateManager.shouldElementBeVisible(el.id, group.id);
+    const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
+        group.elements
+            .map(el => {
+              try {
+                // Always render all elements to keep them in DOM for animations
+                const elementTemplate = el.render();
+                if (!elementTemplate) {
+                  return null;
+                }
+
+                // Apply CSS visibility for hidden elements but keep them in DOM
+                const currentState = stateManager.getState(el.id);
+                const isVisible = currentState !== 'hidden';
+                
+                if (!isVisible) {
+                  // Wrap hidden elements with CSS to hide them but keep in DOM for animations
+                  return svg`<g style="visibility: hidden; opacity: 0; pointer-events: none;">${elementTemplate}</g>`;
+                }
+                
+                return elementTemplate;
+              } catch (error) {
+                console.error("[LcarsCard] Error rendering element", el.id, error);
+                return null;
+              }
             })
-            .map(el => el.render())
-            .filter((template): template is SVGTemplateResult => template !== null);
-    });
+            .filter((template): template is SVGTemplateResult => template !== null)
+    );
 
     this._layoutElementTemplates = newTemplates;
     
@@ -619,15 +632,8 @@ export class LcarsCard extends LitElement {
             element.props.animations
           );
           
-          // Handle initial visibility states
-          if (element.props.state_management?.default_state) {
-            const initialState = element.props.state_management.default_state;
-            if (initialState === 'hidden' || initialState === 'visible') {
-              const shouldBeVisible = initialState === 'visible';
-              stateManager.setElementVisibility(element.id, shouldBeVisible, false);
-              console.log(`[LcarsCard] Initial visibility state: ${element.id} -> ${initialState} (visible: ${shouldBeVisible})`);
-            }
-          }
+          // Initial visibility states are now handled by the state system automatically
+          // through the default_state configuration in initializeElementState
         }
       });
     });
@@ -642,38 +648,34 @@ export class LcarsCard extends LitElement {
     });
   }
 
-  private _renderVisibleElements(): SVGTemplateResult[] {
-    return this._layoutEngine.layoutGroups.flatMap(group => {
-      if (!stateManager.getGroupVisibility(group.id)) {
-        return [];
-      }
-      
-      return group.elements
+  private _renderAllElements(): SVGTemplateResult[] {
+    return this._layoutEngine.layoutGroups.flatMap(group =>
+      group.elements
         .map(el => {
           try {
-            // Always render elements - let CSS and animations handle visibility
+            // Always render all elements to keep them in DOM for animations
             const elementTemplate = el.render();
             if (!elementTemplate) {
               return null;
             }
 
-            // For elements in hidden state, apply CSS visibility
+            // Apply CSS visibility for hidden elements but keep them in DOM
             const currentState = stateManager.getState(el.id);
             const isVisible = currentState !== 'hidden';
             
             if (!isVisible) {
-              // Wrap hidden elements with visibility style but keep them in DOM for animations
+              // Wrap hidden elements with CSS to hide them but keep in DOM for animations
               return svg`<g style="visibility: hidden; opacity: 0; pointer-events: none;">${elementTemplate}</g>`;
             }
             
             return elementTemplate;
           } catch (error) {
-            console.error("[_performLayoutCalculation] Error rendering element", el.id, error);
+            console.error("[LcarsCard] Error rendering element", el.id, error);
             return null;
           }
         })
-        .filter((template): template is SVGTemplateResult => template !== null);
-    });
+        .filter((template): template is SVGTemplateResult => template !== null)
+    );
   }
 
   private _triggerOnLoadAnimations(groups: Group[]): void {

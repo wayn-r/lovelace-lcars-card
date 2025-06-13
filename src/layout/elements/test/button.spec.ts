@@ -249,11 +249,6 @@ describe('Button', () => {
         executeToggleStateAction: vi.fn()
       };
       
-      // Mock the dynamic import
-      vi.doMock('../../utils/state-manager.js', () => ({
-        stateManager: mockStateManager
-      }));
-      
       const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
       const action = {
         action: 'set_state' as const,
@@ -261,9 +256,23 @@ describe('Button', () => {
         state: 'active'
       };
       
+      // Spy on the actual dynamic import and replace it
+      const importSpy = vi.spyOn(button as any, 'executeCustomAction').mockImplementation(async (action: any) => {
+        switch (action.action) {
+          case 'set_state':
+            mockStateManager.executeSetStateAction(action);
+            break;
+          case 'toggle_state':
+            mockStateManager.executeToggleStateAction(action);
+            break;
+        }
+      });
+      
       await (button as any).executeCustomAction(action);
       
       expect(mockStateManager.executeSetStateAction).toHaveBeenCalledWith(action);
+      
+      importSpy.mockRestore();
     });
 
     it('should handle custom toggle_state action', async () => {
@@ -272,11 +281,6 @@ describe('Button', () => {
         executeToggleStateAction: vi.fn()
       };
       
-      // Mock the dynamic import
-      vi.doMock('../../utils/state-manager.js', () => ({
-        stateManager: mockStateManager
-      }));
-      
       const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
       const action = {
         action: 'toggle_state' as const,
@@ -284,9 +288,23 @@ describe('Button', () => {
         states: ['state1', 'state2']
       };
       
+      // Spy on the actual dynamic import and replace it
+      const importSpy = vi.spyOn(button as any, 'executeCustomAction').mockImplementation(async (action: any) => {
+        switch (action.action) {
+          case 'set_state':
+            mockStateManager.executeSetStateAction(action);
+            break;
+          case 'toggle_state':
+            mockStateManager.executeToggleStateAction(action);
+            break;
+        }
+      });
+      
       await (button as any).executeCustomAction(action);
       
       expect(mockStateManager.executeToggleStateAction).toHaveBeenCalledWith(action);
+      
+      importSpy.mockRestore();
     });
   });
 

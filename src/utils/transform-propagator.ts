@@ -1,6 +1,7 @@
 import { LayoutElement } from '../layout/elements/element.js';
 import { AnimationDefinition } from '../types.js';
 import { HomeAssistant } from 'custom-card-helpers';
+import { StoreProvider, StateChangeEvent } from '../core/store.js';
 
 /**
  * Represents a visual transformation that will occur during an animation
@@ -63,9 +64,11 @@ export class TransformPropagator {
   private getShadowElement?: (id: string) => Element | null;
   // Track current transformation state of elements
   private elementTransformStates = new Map<string, ElementTransformState>();
+  // Store subscription for reactive updates
+  private storeUnsubscribe?: () => void;
 
   /**
-   * Initialize the propagator with current layout state
+   * Initialize the propagator with current layout state and subscribe to store
    */
   initialize(
     elementsMap: Map<string, LayoutElement>,
@@ -75,6 +78,37 @@ export class TransformPropagator {
     this.getShadowElement = getShadowElement;
     this._buildDependencyGraph();
     this._initializeTransformStates();
+    this._subscribeToStore();
+  }
+
+  /**
+   * Subscribe to store state changes to handle dynamic dependencies
+   */
+  private _subscribeToStore(): void {
+    // Clean up any existing subscription
+    if (this.storeUnsubscribe) {
+      this.storeUnsubscribe();
+    }
+
+    const store = StoreProvider.getStore();
+    this.storeUnsubscribe = store.onStateChange((event: StateChangeEvent) => {
+      // Handle state changes that might affect transform dependencies
+      this._handleStateChange(event);
+    });
+  }
+
+  /**
+   * Handle state changes that might affect transform relationships
+   */
+  private _handleStateChange(event: StateChangeEvent): void {
+    // If an element's state changes (e.g., becomes visible/hidden), 
+    // we may need to update dependency relationships or propagate transforms
+    
+    // For now, we'll rebuild dependencies when state changes occur
+    // This ensures that new visibility states are properly handled
+    if (this.elementsMap) {
+      this._buildDependencyGraph();
+    }
   }
 
   /**
@@ -1095,6 +1129,19 @@ export class TransformPropagator {
   clearDependencies(): void {
     this.elementDependencies.clear();
     this.elementTransformStates.clear();
+  }
+
+  /**
+   * Clean up all resources including store subscription
+   */
+  cleanup(): void {
+    this.clearDependencies();
+    
+    // Unsubscribe from store
+    if (this.storeUnsubscribe) {
+      this.storeUnsubscribe();
+      this.storeUnsubscribe = undefined;
+    }
   }
 }
 
