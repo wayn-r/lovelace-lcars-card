@@ -922,9 +922,49 @@ export abstract class LayoutElement {
      * Check if any monitored entities have changed and trigger update if needed
      */
     public checkEntityChanges(hass: HomeAssistant): boolean {
-        // Entity change checking is now handled by ColorResolver
-        // This is a placeholder for backward compatibility
-        return false;
+        if (!hass) return false;
+
+        let changed = false;
+
+        // Cache object for last resolved dynamic colours (per element instance)
+        if (!(this as any)._lastResolvedDynamicColors) {
+            (this as any)._lastResolvedDynamicColors = {
+                fill: undefined,
+                stroke: undefined,
+                textColor: undefined
+            };
+        }
+
+        const cache = (this as any)._lastResolvedDynamicColors as Record<string, string | undefined>;
+
+        const animationContext: any = {
+            elementId: this.id,
+            hass,
+            getShadowElement: this.getShadowElement,
+            requestUpdateCallback: this.requestUpdateCallback
+        };
+
+        const stateContext = this._getStateContext();
+
+        const checkProp = (propName: 'fill' | 'stroke' | 'textColor') => {
+            const value = (this.props as any)[propName];
+            if (value === undefined) return;
+
+            // Only evaluate dynamic or stateful configs – static colours cannot change
+            if (typeof value === 'object') {
+                const resolved = colorResolver.resolveColor(value, this.id, propName as any, animationContext, stateContext, 'transparent');
+                if (cache[propName] !== resolved) {
+                    cache[propName] = resolved;
+                    changed = true;
+                }
+            }
+        };
+
+        checkProp('fill');
+        checkProp('stroke');
+        checkProp('textColor');
+
+        return changed;
     }
 
     /**
