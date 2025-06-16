@@ -6,6 +6,7 @@ import { AnimationContext } from "../../utils/animation.js";
 import { Color, ColorStateContext } from "../../utils/color.js";
 import { Action } from "../../types.js";
 import { handleHassAction, isCustomAction, validateAction } from "../../utils/action-helpers.js";
+import { stateManager } from "../../utils/state-manager.js";
 
 export type ButtonPropertyName = 'fill' | 'stroke' | 'strokeWidth';
 
@@ -222,27 +223,22 @@ export class Button {
     }
 
     private executeCustomAction(action: Action): void {
-        // Import stateManager dynamically to avoid circular dependencies
-        import('../../utils/state-manager.js').then(({ stateManager }) => {
-            try {
-                switch (action.action) {
-                    case 'set_state':
-                        stateManager.executeSetStateAction(action);
-                        break;
-                    case 'toggle_state':
-                        stateManager.executeToggleStateAction(action);
-                        break;
-                    default:
-                        console.warn(`[${this._id}] Unknown custom action: ${action.action}`);
-                }
-                this._requestUpdateCallback?.();
-            } catch (error) {
-                console.error(`[${this._id}] Custom action execution failed:`, error);
-                this._requestUpdateCallback?.();
+        try {
+            switch (action.action) {
+                case 'set_state':
+                    stateManager.executeSetStateAction(action);
+                    break;
+                case 'toggle_state':
+                    stateManager.executeToggleStateAction(action);
+                    break;
+                default:
+                    console.warn(`[${this._id}] Unknown custom action: ${action.action}`);
             }
-        }).catch(error => {
-            console.error(`[${this._id}] Failed to import stateManager:`, error);
-        });
+            this._requestUpdateCallback?.();
+        } catch (error) {
+            console.error(`[${this._id}] Custom action execution failed:`, error);
+            this._requestUpdateCallback?.();
+        }
     }
 
     private executeHassAction(action: Action, element?: Element): void {

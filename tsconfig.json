@@ -15,6 +15,14 @@
       "strictPropertyInitialization": false // Disable strict initialization checks for classes
     },
     "include": ["src/**/*.ts"], // Which files to compile
-    "exclude": ["node_modules", "dist", "src/editor/**/*", "src/layout/test/**/*"]
+    "exclude": [
+      "node_modules",
+      "dist",
+      "src/editor/**/*",
+      "src/layout/test/**/*",
+      "src/utils/test/**/*",
+      "src/**/*.spec.ts",
+      "tests/**/*"
+    ]
   }
   

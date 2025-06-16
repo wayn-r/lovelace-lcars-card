@@ -872,7 +872,7 @@ export abstract class LayoutElement {
             requestUpdateCallback: this.requestUpdateCallback
         };
         
-        return animationManager.resolveDynamicColorWithAnimation(this.id, colorConfig, property, context);
+        return colorResolver.resolveColor(colorConfig, this.id, property, context, undefined, 'transparent');
     }
 
     /**
@@ -915,21 +915,24 @@ export abstract class LayoutElement {
      * Resolve a color value that might be static or dynamic (entity-based)
      */
     protected _resolveDynamicColor(colorConfig: ColorValue): string | undefined {
-        return animationManager.resolveDynamicColor(this.id, colorConfig, this.hass);
+        return colorResolver.resolveColor(colorConfig, this.id, undefined, undefined, undefined, 'transparent');
     }
 
     /**
      * Check if any monitored entities have changed and trigger update if needed
      */
     public checkEntityChanges(hass: HomeAssistant): boolean {
-        return animationManager.checkForEntityStateChanges(this.id, hass);
+        // Entity change checking is now handled by ColorResolver
+        // This is a placeholder for backward compatibility
+        return false;
     }
 
     /**
      * Clear monitored entities (called before recalculating dynamic colors)
      */
     public clearMonitoredEntities(): void {
-        animationManager.clearTrackedEntitiesForElement(this.id);
+        // Entity monitoring is now handled by ColorResolver
+        // This is a placeholder for backward compatibility
     }
 
     /**

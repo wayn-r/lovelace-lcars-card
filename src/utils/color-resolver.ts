@@ -121,8 +121,7 @@ export class ColorResolver {
       }
     }
 
-    // Clear global animation manager caches
-    animationManager.invalidateDynamicColorCache();
+    // Note: Dynamic color caching is now handled by the store/ColorResolver itself
   }
 
   cleanup(): void {

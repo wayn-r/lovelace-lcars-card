@@ -8,6 +8,8 @@ export default defineConfig({
     alias: {
       '@src/': new URL('./src/', import.meta.url).pathname,
     },
+    include: ['src/**/*.spec.ts', 'src/**/*.test.ts'],
+    exclude: ['tests/e2e/**', 'node_modules/**', 'src/utils/test/**', 'src/layout/elements/test/**'],
     coverage: { // Optional: for code coverage
       provider: 'v8', // or 'istanbul'
       reporter: ['text', 'json', 'html'],

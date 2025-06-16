@@ -16,7 +16,7 @@ import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext } from './utils/animation.js';
 import { colorResolver } from './utils/color-resolver.js';
 import { stateManager } from './utils/state-manager.js';
-import { StateChangeEvent } from './core/store.js';
+import { StateChangeEvent, StoreProvider } from './core/store.js';
 import { transformPropagator } from './utils/transform-propagator.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
@@ -97,8 +97,8 @@ export class LcarsCard extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
     
-    // Initialize stateManager with update callback
-    stateManager.setRequestUpdateCallback(() => this._refreshElementRenders());
+    // Subscribe to store changes directly
+    StoreProvider.getStore().subscribe(() => this._refreshElementRenders());
     
     // Set up resize observer
     this._resizeObserver = new ResizeObserver((entries) => {
@@ -689,24 +689,19 @@ export class LcarsCard extends LitElement {
   }
 
   private updateStatusIndicators(elementsMap: Map<string, LayoutElement>): void {
-    // Import state manager to get current states
-    import('./utils/state-manager.js').then(({ stateManager: sm }) => {
-      // Update panel status indicator
-      const panelStatus = elementsMap.get('status_indicators.panel_status');
-      if (panelStatus && panelStatus.props) {
-        const panelState = sm.getState('animated_elements.sliding_panel') || 'hidden';
-        panelStatus.props.text = `Panel: ${panelState}`;
-      }
+    // Update panel status indicator
+    const panelStatus = elementsMap.get('status_indicators.panel_status');
+    if (panelStatus && panelStatus.props) {
+      const panelState = stateManager.getState('animated_elements.sliding_panel') || 'hidden';
+      panelStatus.props.text = `Panel: ${panelState}`;
+    }
 
-      // Update scale status indicator
-      const scaleStatus = elementsMap.get('status_indicators.scale_status');
-      if (scaleStatus && scaleStatus.props) {
-        const scaleState = sm.getState('animated_elements.scale_target') || 'normal';
-        scaleStatus.props.text = `Scale: ${scaleState}`;
-      }
-    }).catch(error => {
-      console.error('[LcarsCard] Error importing state manager for status update:', error);
-    });
+    // Update scale status indicator
+    const scaleStatus = elementsMap.get('status_indicators.scale_status');
+    if (scaleStatus && scaleStatus.props) {
+      const scaleState = stateManager.getState('animated_elements.scale_target') || 'normal';
+      scaleStatus.props.text = `Scale: ${scaleState}`;
+    }
   }
 
   private _setupAllElementListeners(): void {

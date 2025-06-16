@@ -31,13 +31,6 @@ export class StateManager {
     }
   }
 
-  setRequestUpdateCallback(callback: () => void): void {
-    // Subscribe to store changes and call the legacy callback
-    this.store.subscribe(() => {
-      callback();
-    });
-  }
-
   /**
    * Initialize an element's state management
    */
@@ -180,17 +173,53 @@ export class StateManager {
    * Execute an animation using the animation manager
    */
   executeAnimation(elementId: string, animationDef: AnimationDefinition): void {
-    if (!this.animationContext) {
+    if (!this.animationContext || !this.elementsMap) {
       console.warn(`[StateManager] No animation context available for ${elementId}`);
       return;
     }
 
-    animationManager.executeTransformableAnimation(
-      elementId,
-      animationDef,
-      gsap,
-      this.animationContext.getShadowElement
-    );
+    const element = this.elementsMap.get(elementId);
+    if (!element) {
+      console.warn(`[StateManager] Element ${elementId} not found for animation`);
+      return;
+    }
+
+    // Convert to pure animation config and execute
+    const pureConfig = this._convertToPureAnimationConfig(animationDef);
+    if (pureConfig) {
+      animationManager.executeAnimation(elementId, pureConfig, this.animationContext, gsap);
+    }
+  }
+
+  private _convertToPureAnimationConfig(animationDef: any): import('./animation.js').PureAnimationConfig | null {
+    if (!animationDef || !animationDef.type) {
+      return null;
+    }
+
+    const config: import('./animation.js').PureAnimationConfig = {
+      type: animationDef.type,
+      duration: animationDef.duration || 500,
+      ease: animationDef.ease || 'power2.out',
+      delay: animationDef.delay,
+      repeat: animationDef.repeat,
+      yoyo: animationDef.yoyo
+    };
+
+    // Copy type-specific parameters
+    if (animationDef.scale_params) {
+      config.scale_params = animationDef.scale_params;
+    }
+    if (animationDef.slide_params) {
+      config.slide_params = animationDef.slide_params;
+    }
+    if (animationDef.fade_params) {
+      config.fade_params = animationDef.fade_params;
+    }
+    if (animationDef.custom_gsap_params) {
+      config.custom_gsap_params = animationDef.custom_gsap_params;
+    }
+
+    return config;
   }
 
   /**
@@ -217,37 +246,6 @@ export class StateManager {
 
   getElementVisibility(elementId: string): boolean {
     return this.store.isElementVisible(elementId);
-  }
-
-  // Group visibility is no longer supported - use individual element states instead
-  getGroupVisibility(groupId: string): boolean {
-    console.warn('[StateManager] Group visibility is deprecated. Use individual element states instead.');
-    return true; // Default to visible for backward compatibility
-  }
-
-  shouldElementBeVisible(elementId: string, groupId: string): boolean {
-    return this.getElementVisibility(elementId);
-  }
-
-  /**
-   * Check if element should be rendered in DOM (even if not visible) for animations
-   */
-  shouldElementBeRendered(elementId: string, groupId: string): boolean {
-    const groupVisible = this.getGroupVisibility(groupId);
-    if (!groupVisible) {
-      return false;
-    }
-
-    // Always render elements that have animations, even if they're in hidden state
-    const element = this.elementsMap?.get(elementId);
-    const hasAnimations = element?.props?.animations || element?.props?.state_management;
-    
-    if (hasAnimations) {
-      return true;
-    }
-
-    // For elements without animations, use normal visibility logic
-    return this.shouldElementBeVisible(elementId, groupId);
   }
 
   cleanup(): void {

@@ -1,5 +1,5 @@
 import { Action } from '../types.js';
-import { HomeAssistant } from 'custom-card-helpers';
+import { HomeAssistant, handleAction } from 'custom-card-helpers';
 
 /**
  * Wrapper function for handling Home Assistant actions using the unified Action interface
@@ -10,7 +10,6 @@ export async function handleHassAction(
   hass: HomeAssistant,
   actionType: 'tap' | 'hold' | 'double_tap' = 'tap'
 ): Promise<void> {
-  const { handleAction } = await import('custom-card-helpers');
   
   // Convert unified Action to Home Assistant action config format
   const actionConfig: any = {

@@ -1,5 +1,6 @@
 import { ColorValue, DynamicColorConfig, StatefulColorConfig, isDynamicColorConfig, isStatefulColorConfig } from '../types';
 import { AnimationContext, animationManager } from './animation';
+import { colorResolver } from './color-resolver';
 
 // ============================================================================
 // Core Color Types and Interfaces
@@ -69,19 +70,24 @@ export class Color {
     // Handle dynamic colors (entity-based)
     if (isDynamicColorConfig(this._value)) {
       if (elementId && animationProperty && animationContext) {
-        const resolved = animationManager.resolveDynamicColorWithAnimation(
-          elementId,
+        const resolved = colorResolver.resolveColor(
           this._value,
+          elementId,
           animationProperty,
-          animationContext
+          animationContext,
+          undefined,
+          'transparent'
         );
         return resolved || this._getStaticFallbackColor();
       } else {
         // Basic resolution without animation
-        const resolved = animationManager.resolveDynamicColor(
-          elementId || 'fallback',
+        const resolved = colorResolver.resolveColor(
           this._value,
-          animationContext?.hass
+          elementId || 'fallback',
+          undefined,
+          animationContext,
+          undefined,
+          'transparent'
         );
         return resolved || this._getStaticFallbackColor();
       }
