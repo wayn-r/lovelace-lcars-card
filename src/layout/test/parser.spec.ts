@@ -480,10 +480,11 @@ describe('parseConfig', () => {
         expect(props.button).toBeDefined();
         expect(props.button.enabled).toBe(true);
         expect(props.text).toBe('New Button');
-        expect(props.button.action_config).toBeDefined();
-        expect(props.button.action_config.type).toBe('toggle');
-        expect(props.button.action_config.entity).toBe('light.living_room');
-        expect(props.button.action_config.confirmation).toBe(true);
+        expect(props.button.actions).toBeDefined();
+        expect(props.button.actions.tap).toBeDefined();
+        expect(props.button.actions.tap.action).toBe('toggle');
+        expect(props.button.actions.tap.entity).toBe('light.living_room');
+        expect(props.button.actions.tap.confirmation).toBe(true);
       });
     });
   });

@@ -171,7 +171,7 @@ color_property:                      # Option 4: Stateful color configuration fo
 action_definition:                   # Action configuration object.
   action: <string>                   # Required: Type of action.
                                      #   Options: "call-service", "navigate", "url", "toggle", "more-info", 
-                                     #           "set-state", "none".
+                                     #           "set_state", "toggle_state", "none".
 
   # --- Service Call Specific (if action: "call-service") ---
   service: <string>                  # Required: Service to call (e.g., "light.turn_on").
@@ -187,7 +187,7 @@ action_definition:                   # Action configuration object.
   # --- Entity Specific (if action: "toggle" or "more-info") ---
   entity: <string>                   # Required: Entity ID for the action (e.g., "switch.fan").
 
-  # --- State Setting Specific (if action: "set-state") ---
+  # --- State Setting Specific (if action: "set_state") ---
   target_id: <string>                # Required: Full ID of target element/group ("group_id.element_id" or "group_id").
   state: <string>                    # Required: State value to set.
 

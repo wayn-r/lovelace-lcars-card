@@ -40,20 +40,7 @@ interface ConvertedElementProps {
   // Button configuration
   button?: {
     enabled?: boolean;
-    action_config?: {
-      type: string;
-      service?: string;
-      service_data?: Record<string, any>;
-      target?: Record<string, any>;
-      navigation_path?: string;
-      url_path?: string;
-      entity?: string;
-      confirmation?: any;
-      target_element_ref?: string;
-      state?: string;
-      states?: string[];
-      actions?: any[];
-    };
+    actions?: any;
   };
   
   // Other configurations
@@ -194,30 +181,11 @@ function convertElementToProps(element: any): ConvertedElementProps {
   
   // Convert button configuration
   if (element.button) {
-    const buttonConfig = element.button;
+    // Pass the button config through largely unchanged to props
     props.button = {
-      enabled: buttonConfig.enabled
+      enabled: element.button.enabled,
+      actions: element.button.actions
     };
-    
-    // Convert actions with new structure
-    if (buttonConfig.actions?.tap) {
-      const tapAction = buttonConfig.actions.tap;
-      props.button.action_config = {
-        type: tapAction.action,
-        service: tapAction.service,
-        service_data: tapAction.service_data,
-        target: tapAction.target,
-        navigation_path: tapAction.navigation_path,
-        url_path: tapAction.url_path,
-        entity: tapAction.entity,
-        confirmation: tapAction.confirmation,
-        // Custom action properties
-        target_element_ref: tapAction.target_element_ref,
-        state: tapAction.state,
-        states: tapAction.states,
-        actions: tapAction.actions
-      };
-    }
   }
 
   // Convert other configurations directly

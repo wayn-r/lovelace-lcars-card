@@ -2036,7 +2036,6 @@ export const selectors = {
 ## File: src/layout/elements/button.ts
 
 ```typescript
-import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { HomeAssistant } from "custom-card-helpers";
 import { colorResolver } from "../../utils/color-resolver.js";
@@ -2151,90 +2150,24 @@ export class Button {
     }
     
     private handleClick(ev: Event): void {
-        const buttonConfig = this._props.button as LcarsButtonElementConfig | undefined;
+        const buttonConfig = this._props.button as any;
         
-        if (!this._hass || !buttonConfig?.action_config) {
+        if (!this._hass || !buttonConfig?.enabled) {
             return; 
         }
         
         ev.stopPropagation();
-    
-        this.executeButtonAction(buttonConfig, ev.currentTarget as Element);
+
+        // New format (button.actions.tap etc.)
+        if (buttonConfig.actions?.tap) {
+            this.executeActionDefinition(buttonConfig.actions.tap, ev.currentTarget as Element);
+        }
     }
     
     private handleKeyDown(e: KeyboardEvent): void {
         if (e.key === 'Enter' || e.key === ' ') {
             this.handleClick(e);
         }
-    }
-    
-    private executeButtonAction(buttonConfig: LcarsButtonElementConfig, element?: Element): void {
-        if (!buttonConfig.action_config) {
-            return;
-        }
-
-        // Check if we have multiple actions or a single action
-        if (buttonConfig.action_config.actions && Array.isArray(buttonConfig.action_config.actions)) {
-            // Execute multiple actions - convert each action to unified format
-            buttonConfig.action_config.actions.forEach(singleAction => {
-                const unifiedAction: Action = this.convertToUnifiedAction(singleAction);
-                this.executeUnifiedAction(unifiedAction, element);
-            });
-        } else {
-            // Execute single action - convert from old format to unified Action
-            const action: Action = this.convertLegacyActionToUnified(buttonConfig.action_config);
-
-            // For toggle and more-info actions, use element ID as entity if not specified
-            if ((action.action === 'toggle' || action.action === 'more-info') && !action.entity) {
-                action.entity = this._id;
-            }
-
-            this.executeUnifiedAction(action, element);
-        }
-    }
-
-    /**
-     * Convert a SingleActionDefinition to the unified Action interface
-     */
-    private convertToUnifiedAction(singleAction: any): Action {
-        // Handle action type conversion (set-state -> set_state)
-        let actionType = singleAction.action;
-        if (actionType === 'set-state') {
-            actionType = 'set_state';
-        }
-
-        return {
-            action: actionType,
-            service: singleAction.service,
-            service_data: singleAction.service_data,
-            target: singleAction.target,
-            navigation_path: singleAction.navigation_path,
-            url_path: singleAction.url_path,
-            entity: singleAction.entity,
-            target_element_ref: singleAction.target_element_ref || singleAction.target_id,
-            state: singleAction.state,
-            states: singleAction.states,
-            confirmation: singleAction.confirmation
-        };
-    }
-
-    /**
-     * Convert legacy LcarsButtonActionConfig to the unified Action interface
-     */
-    private convertLegacyActionToUnified(actionConfig: any): Action {
-        return {
-            action: actionConfig.type || 'none',
-            service: actionConfig.service,
-            service_data: actionConfig.service_data,
-            target: actionConfig.target,
-            navigation_path: actionConfig.navigation_path,
-            url_path: actionConfig.url_path,
-            entity: actionConfig.entity,
-            target_element_ref: actionConfig.target_element_ref,
-            state: actionConfig.state,
-            states: actionConfig.states,
-            confirmation: actionConfig.confirmation
-        };
     }
     
     private executeUnifiedAction(action: Action, element?: Element): void {
@@ -2314,6 +2247,75 @@ export class Button {
                 // Still trigger update even if action failed
                 this._requestUpdateCallback?.();
             });
+    }
+
+    /**
+     * Execute an ActionDefinition (new button.actions.* format)
+     */
+    private executeActionDefinition(actionDef: any, element?: Element): void {
+        if (!this._hass) {
+            console.error(`[${this._id}] No hass object available for action execution`);
+            return;
+        }
+
+        // Handle multiple actions array first
+        if (actionDef.actions && Array.isArray(actionDef.actions)) {
+            actionDef.actions.forEach((singleAction: any) => {
+                const unified = this.convertToUnifiedAction(singleAction);
+                this.executeUnifiedAction(unified, element);
+            });
+            return;
+        }
+
+        // Single action - map fields to unified Action interface
+        let actionType = actionDef.action || actionDef.type || 'none';
+        if (actionType === 'set-state') actionType = 'set_state';
+
+        const unifiedAction: Action = {
+            action: actionType,
+            service: actionDef.service,
+            service_data: actionDef.service_data,
+            target: actionDef.target,
+            navigation_path: actionDef.navigation_path,
+            url_path: actionDef.url_path,
+            entity: actionDef.entity,
+            target_element_ref: actionDef.target_element_ref || actionDef.target_id,
+            state: actionDef.state,
+            states: actionDef.states,
+            confirmation: actionDef.confirmation
+        };
+
+        // Default entity fallback for toggle / more-info
+        if ((unifiedAction.action === 'toggle' || unifiedAction.action === 'more-info') && !unifiedAction.entity) {
+            unifiedAction.entity = this._id;
+        }
+
+        this.executeUnifiedAction(unifiedAction, element);
+    }
+
+    /**
+     * Convert a SingleActionDefinition to the unified Action interface
+     */
+    private convertToUnifiedAction(singleAction: any): Action {
+        // Handle action type conversion (set-state -> set_state)
+        let actionType = singleAction.action;
+        if (actionType === 'set-state') {
+            actionType = 'set_state';
+        }
+
+        return {
+            action: actionType,
+            service: singleAction.service,
+            service_data: singleAction.service_data,
+            target: singleAction.target,
+            navigation_path: singleAction.navigation_path,
+            url_path: singleAction.url_path,
+            entity: singleAction.entity,
+            target_element_ref: singleAction.target_element_ref || singleAction.target_id,
+            state: singleAction.state,
+            states: singleAction.states,
+            confirmation: singleAction.confirmation
+        };
     }
 
     updateHass(hass?: HomeAssistant): void {
@@ -8901,20 +8903,7 @@ interface ConvertedElementProps {
   // Button configuration
   button?: {
     enabled?: boolean;
-    action_config?: {
-      type: string;
-      service?: string;
-      service_data?: Record<string, any>;
-      target?: Record<string, any>;
-      navigation_path?: string;
-      url_path?: string;
-      entity?: string;
-      confirmation?: any;
-      target_element_ref?: string;
-      state?: string;
-      states?: string[];
-      actions?: any[];
-    };
+    actions?: any;
   };
   
   // Other configurations
@@ -9055,30 +9044,11 @@ function convertElementToProps(element: any): ConvertedElementProps {
   
   // Convert button configuration
   if (element.button) {
-    const buttonConfig = element.button;
+    // Pass the button config through largely unchanged to props
     props.button = {
-      enabled: buttonConfig.enabled
+      enabled: element.button.enabled,
+      actions: element.button.actions
     };
-    
-    // Convert actions with new structure
-    if (buttonConfig.actions?.tap) {
-      const tapAction = buttonConfig.actions.tap;
-      props.button.action_config = {
-        type: tapAction.action,
-        service: tapAction.service,
-        service_data: tapAction.service_data,
-        target: tapAction.target,
-        navigation_path: tapAction.navigation_path,
-        url_path: tapAction.url_path,
-        entity: tapAction.entity,
-        confirmation: tapAction.confirmation,
-        // Custom action properties
-        target_element_ref: tapAction.target_element_ref,
-        state: tapAction.state,
-        states: tapAction.states,
-        actions: tapAction.actions
-      };
-    }
   }
 
   // Convert other configurations directly
@@ -10470,10 +10440,11 @@ describe('parseConfig', () => {
         expect(props.button).toBeDefined();
         expect(props.button.enabled).toBe(true);
         expect(props.text).toBe('New Button');
-        expect(props.button.action_config).toBeDefined();
-        expect(props.button.action_config.type).toBe('toggle');
-        expect(props.button.action_config.entity).toBe('light.living_room');
-        expect(props.button.action_config.confirmation).toBe(true);
+        expect(props.button.actions).toBeDefined();
+        expect(props.button.actions.tap).toBeDefined();
+        expect(props.button.actions.tap.action).toBe('toggle');
+        expect(props.button.actions.tap.entity).toBe('light.living_room');
+        expect(props.button.actions.tap.confirmation).toBe(true);
       });
     });
   });
@@ -12415,7 +12386,12 @@ export async function handleHassAction(
     confirmation: action.confirmation
   };
   
-  // For toggle and more-info actions, ensure entity is available
+  // Always mirror entity to the top-level for helpers that expect it there
+  if (action.entity) {
+    actionConfig.entity = action.entity;
+  }
+  
+  // For toggle and more-info actions, ensure entity is available as fallback
   if ((action.action === 'toggle' || action.action === 'more-info') && !action.entity) {
     actionConfig.tap_action.entity = element.id;
     actionConfig.entity = element.id;

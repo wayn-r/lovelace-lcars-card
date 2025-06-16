@@ -30,7 +30,12 @@ export async function handleHassAction(
     confirmation: action.confirmation
   };
   
-  // For toggle and more-info actions, ensure entity is available
+  // Always mirror entity to the top-level for helpers that expect it there
+  if (action.entity) {
+    actionConfig.entity = action.entity;
+  }
+  
+  // For toggle and more-info actions, ensure entity is available as fallback
   if ((action.action === 'toggle' || action.action === 'more-info') && !action.entity) {
     actionConfig.tap_action.entity = element.id;
     actionConfig.entity = element.id;
