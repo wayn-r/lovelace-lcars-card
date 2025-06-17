@@ -29,7 +29,7 @@ const mockButtonInstance = {
     createButton: vi.fn(),
     // Add any other methods/properties of Button that LayoutElement might interact with
 };
-vi.mock('../button.js', () => {
+vi.mock('../../../utils/button.js', () => {
   return {
     Button: vi.fn().mockImplementation((id, props, hass, cb) => {
         mockButtonInstance.id = id;
@@ -41,7 +41,7 @@ vi.mock('../button.js', () => {
     })
   };
 });
-import { Button } from '../button.js';
+import { Button } from '../../../utils/button.js';
 
 
 // Concrete implementation for testing

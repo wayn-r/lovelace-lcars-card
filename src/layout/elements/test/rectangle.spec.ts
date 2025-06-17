@@ -1,6 +1,6 @@
 // Mocking setup needs to be at the top, before imports
 const mockCreateButton = vi.fn();
-vi.mock('../button.js', () => {
+vi.mock('../../../utils/button.js', () => {
   return {
     Button: vi.fn().mockImplementation((id, props, hass, cb) => {
       return {
@@ -18,7 +18,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RectangleElement } from '../rectangle';
 import { generateRectanglePath } from '../../../utils/shapes';
 import { svg, SVGTemplateResult } from 'lit';
-import { Button } from '../button.js';
+import { Button } from '../../../utils/button.js';
 
 describe('RectangleElement', () => {
   let rectangleElement: RectangleElement;

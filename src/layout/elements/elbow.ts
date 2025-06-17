@@ -4,7 +4,7 @@ import { HomeAssistant } from "custom-card-helpers";
 import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { generateElbowPath } from "../../utils/shapes.js";
-import { Button } from "./button.js";
+import { Button } from "../../utils/button.js";
 
 export class ElbowElement extends LayoutElement {
     button?: Button;

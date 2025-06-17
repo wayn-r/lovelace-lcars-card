@@ -1,11 +1,11 @@
 import { svg, SVGTemplateResult } from "lit";
 import { HomeAssistant } from "custom-card-helpers";
-import { colorResolver } from "../../utils/color-resolver.js";
-import { AnimationContext } from "../../utils/animation.js";
-import { Color, ColorStateContext } from "../../utils/color.js";
-import { Action } from "../../types.js";
-import { handleHassAction, isCustomAction, validateAction } from "../../utils/action-helpers.js";
-import { stateManager } from "../../utils/state-manager.js";
+import { colorResolver } from "./color-resolver.js";
+import { AnimationContext } from "./animation.js";
+import { ColorStateContext } from "./color.js";
+import { Action } from "../types.js";
+import { handleHassAction, isCustomAction, validateAction } from "./action-helpers.js";
+import { stateManager } from "./state-manager.js";
 
 export type ButtonPropertyName = 'fill' | 'stroke' | 'strokeWidth';
 
@@ -24,9 +24,6 @@ export class Button {
         this._getShadowElement = getShadowElement;
     }
 
-    /**
-     * Get the current animation context for this button
-     */
     private getAnimationContext(): AnimationContext {
         return {
             elementId: this._id,
@@ -36,12 +33,8 @@ export class Button {
         };
     }
 
-    /**
-     * Get resolved colors for the button using the new color resolver
-     */
     private getResolvedColors(stateContext: ColorStateContext) {
         const context = this.getAnimationContext();
-        
         return colorResolver.resolveAllElementColors(
             this._id,
             this._props,
@@ -57,14 +50,10 @@ export class Button {
         y: number,
         width: number,
         height: number,
-        options: {
-            rx: number
-        },
+        options: { rx: number },
         stateContext: ColorStateContext
     ): SVGTemplateResult {
-        // Use the new color resolver to get colors with hover/active state support
         const resolvedColors = this.getResolvedColors(stateContext);
-        
         const pathElement = svg`
             <path
                 id=${this._id + "__shape"}
@@ -74,7 +63,6 @@ export class Button {
                 stroke-width=${resolvedColors.strokeWidth}
             />
         `;
-        
         return this.createButtonGroup([pathElement], {
             isButton: this._props.button?.enabled === true,
             elementId: this._id
@@ -83,19 +71,12 @@ export class Button {
 
     createButtonGroup(
         elements: SVGTemplateResult[],
-        config: {
-            isButton: boolean,
-            elementId: string
-        }
+        config: { isButton: boolean; elementId: string }
     ): SVGTemplateResult {
         const { isButton, elementId } = config;
-        
         if (!isButton) {
             return svg`<g>${elements}</g>`;
         }
-        
-        // Button elements only include click handler for action execution
-        // All hover/mouse state is handled by parent LayoutElement
         return svg`
             <g
                 class="lcars-button-group"
@@ -110,48 +91,38 @@ export class Button {
             </g>
         `;
     }
-    
+
     private handleClick(ev: Event): void {
         const buttonConfig = this._props.button as any;
-        
         if (!this._hass || !buttonConfig?.enabled) {
-            return; 
+            return;
         }
-        
         ev.stopPropagation();
-
-        // New format (button.actions.tap etc.)
         if (buttonConfig.actions?.tap) {
             this.executeActionDefinition(buttonConfig.actions.tap, ev.currentTarget as Element);
         }
     }
-    
+
     private handleKeyDown(e: KeyboardEvent): void {
         if (e.key === 'Enter' || e.key === ' ') {
             this.handleClick(e);
         }
     }
-    
+
     private executeUnifiedAction(action: Action, element?: Element): void {
         if (!this._hass) {
             console.error(`[${this._id}] No hass object available for action execution`);
             return;
         }
-
-        // Validate the action
         const validationErrors = validateAction(action);
         if (validationErrors.length > 0) {
             console.warn(`[${this._id}] Action validation failed:`, validationErrors);
             return;
         }
-
-        // Handle custom actions
         if (isCustomAction(action)) {
             this.executeCustomAction(action);
             return;
         }
-
-        // Handle standard Home Assistant actions using the unified wrapper
         this.executeHassAction(action, element);
     }
 
@@ -175,52 +146,38 @@ export class Button {
     }
 
     private executeHassAction(action: Action, element?: Element): void {
-        // Get target element for the action
         let targetElement: HTMLElement = element as HTMLElement;
-        
         if (!targetElement) {
             const foundElement = document.getElementById(this._id);
             if (foundElement) {
-                targetElement = foundElement;
+                targetElement = foundElement as HTMLElement;
             } else {
-                // Create a fallback element with the correct ID
                 targetElement = document.createElement('div');
                 targetElement.id = this._id;
                 console.warn(`[${this._id}] Could not find DOM element, using fallback`);
             }
         }
-
-        // Use the unified action helper
         handleHassAction(action, targetElement, this._hass!)
             .then(() => {
-                // Force immediate update for state-changing actions
                 if (action.action === 'toggle' || action.action === 'call-service') {
-                    // Use shorter timeout for immediate responsiveness to action feedback
                     setTimeout(() => {
                         this._requestUpdateCallback?.();
-                    }, 25); // Quick feedback for user actions
+                    }, 25);
                 } else {
-                    // Normal update callback for other actions
                     this._requestUpdateCallback?.();
                 }
             })
             .catch(error => {
                 console.error(`[${this._id}] handleHassAction failed:`, error);
-                // Still trigger update even if action failed
                 this._requestUpdateCallback?.();
             });
     }
 
-    /**
-     * Execute an ActionDefinition (new button.actions.* format)
-     */
     private executeActionDefinition(actionDef: any, element?: Element): void {
         if (!this._hass) {
             console.error(`[${this._id}] No hass object available for action execution`);
             return;
         }
-
-        // Handle multiple actions array first
         if (actionDef.actions && Array.isArray(actionDef.actions)) {
             actionDef.actions.forEach((singleAction: any) => {
                 const unified = this.convertToUnifiedAction(singleAction);
@@ -228,11 +185,8 @@ export class Button {
             });
             return;
         }
-
-        // Single action - map fields to unified Action interface
         let actionType = actionDef.action || actionDef.type || 'none';
         if (actionType === 'set-state') actionType = 'set_state';
-
         const unifiedAction: Action = {
             action: actionType,
             service: actionDef.service,
@@ -246,25 +200,17 @@ export class Button {
             states: actionDef.states,
             confirmation: actionDef.confirmation
         };
-
-        // Default entity fallback for toggle / more-info
         if ((unifiedAction.action === 'toggle' || unifiedAction.action === 'more-info') && !unifiedAction.entity) {
             unifiedAction.entity = this._id;
         }
-
         this.executeUnifiedAction(unifiedAction, element);
     }
 
-    /**
-     * Convert a SingleActionDefinition to the unified Action interface
-     */
     private convertToUnifiedAction(singleAction: any): Action {
-        // Handle action type conversion (set-state -> set_state)
         let actionType = singleAction.action;
         if (actionType === 'set-state') {
             actionType = 'set_state';
         }
-
         return {
             action: actionType,
             service: singleAction.service,
@@ -285,6 +231,6 @@ export class Button {
     }
 
     cleanup(): void {
-        // No-op: State and timeouts are now managed by the parent LayoutElement
+        // No-op for now
     }
 } 

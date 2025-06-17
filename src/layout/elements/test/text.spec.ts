@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Set up mocks - IMPORTANT: Use factory functions with no external variables
-vi.mock('../button.js', () => {
+vi.mock('../../../utils/button.js', () => {
   return {
     Button: vi.fn().mockImplementation((id, props, hass, cb) => {
       return {
@@ -29,7 +29,7 @@ vi.mock('../../../utils/shapes.js', () => {
 
 // Now import the mocked modules
 import { TextElement } from '../text';
-import { Button } from '../button.js';
+import { Button } from '../../../utils/button.js';
 import { svg, SVGTemplateResult } from 'lit';
 import { HomeAssistant } from 'custom-card-helpers';
 import * as shapes from '../../../utils/shapes.js';

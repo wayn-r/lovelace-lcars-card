@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'v
 
 // Important: vi.mock calls are hoisted to the top of the file 
 // so they must come before any imports of the mocked modules
-vi.mock('../button.js', () => ({
+vi.mock('../../../utils/button.js', () => ({
   Button: vi.fn().mockImplementation((id, props, hass, cb) => ({
     id,
     props,
@@ -23,7 +23,7 @@ vi.mock('../../../utils/shapes.js', () => ({
 
 // Import mocked modules after mock setup
 import { ElbowElement } from '../elbow';
-import { Button } from '../button.js';
+import { Button } from '../../../utils/button.js';
 import { LayoutElement } from '../element.js';
 import { generateElbowPath } from '../../../utils/shapes.js';
 import { svg, SVGTemplateResult } from 'lit';

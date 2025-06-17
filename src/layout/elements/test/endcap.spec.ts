@@ -2,7 +2,7 @@
 
 // Mocking Button class
 const mockCreateButton = vi.fn();
-vi.mock('../button.js', () => {
+vi.mock('../../../utils/button.js', () => {
   // Ensure the mock constructor matches the actual class for type compatibility if used
   const Button = vi.fn().mockImplementation((id, props, hass, cb) => {
     return {
@@ -18,7 +18,7 @@ vi.mock('../button.js', () => {
 
 import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'vitest';
 import { EndcapElement } from '../endcap';
-import { Button } from '../button'; // Import the mocked Button
+import { Button } from '../../../utils/button.js'; // Import the mocked Button
 import { LayoutElement } from '../element'; // For spying on superclass methods
 import { RectangleElement } from '../rectangle'; // Import RectangleElement
 import { generateEndcapPath } from '../../../utils/shapes'; // Actual function

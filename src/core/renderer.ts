@@ -3,7 +3,7 @@ import { IRenderer } from './interfaces.js';
 import { LayoutElementProps, LayoutState } from '../layout/engine.js';
 import { ComputedElementColors, ColorResolutionDefaults } from '../utils/color.js';
 import { colorResolver } from '../utils/color-resolver.js';
-import { Button } from '../layout/elements/button.js';
+import { Button } from '../utils/button.js';
 import { HomeAssistant } from 'custom-card-helpers';
 
 /**

@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'v
 
 // Mock Button class
 const mockCreateButton = vi.fn();
-vi.mock('../button.js', () => {
+vi.mock('../../../utils/button.js', () => {
   return {
     Button: vi.fn().mockImplementation((id, props, hass, cb) => {
       return {
@@ -28,7 +28,7 @@ vi.mock('../../../utils/shapes.js', () => {
 
 // Import after mocks
 import { ChiselEndcapElement } from '../chisel_endcap';
-import { Button } from '../button.js';
+import { Button } from '../../../utils/button.js';
 import { LayoutElement } from '../element.js';
 import { RectangleElement } from '../rectangle';
 import { generateChiselEndcapPath } from '../../../utils/shapes.js';

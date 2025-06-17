@@ -5,7 +5,7 @@ import { generateRectanglePath, generateEndcapPath, generateElbowPath, generateC
 import { SVGTemplateResult, html, svg } from 'lit';
 import { LcarsButtonElementConfig } from '../../types.js';
 import { StretchContext } from '../engine.js';
-import { Button } from './button.js';
+import { Button } from '../../utils/button.js';
 import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../../types';
 import { animationManager, AnimationContext } from '../../utils/animation.js';
 import { colorResolver } from '../../utils/color-resolver.js';
