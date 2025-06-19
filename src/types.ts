@@ -188,75 +188,43 @@ export interface Action {
 export interface ButtonConfig {
   enabled: boolean;
   actions?: {
-    tap?: ActionDefinition;
-    hold?: HoldActionDefinition;
-    double_tap?: ActionDefinition;
+    /**
+     * A single Action or an array of Actions to execute on tap.
+     */
+    tap?: Action | Action[];
+
+    /**
+     * Action(s) to execute on hold. You can provide either:
+     *   1) A single Action or array of Actions, or
+     *   2) An object that extends Action with an optional duration property.
+     *
+     * Example:
+     *   hold: {
+     *     duration: 750,
+     *     action: 'toggle'
+     *   }
+     */
+    hold?: HoldAction;
+
+    /**
+     * A single Action or an array of Actions to execute on double-tap.
+     */
+    double_tap?: Action | Action[];
   };
 }
 
-export interface HoldActionDefinition extends ActionDefinition {
-  duration?: number; // Hold duration in milliseconds, default 500
+/**
+ * A HoldAction is an Action with an optional duration (milliseconds).
+ */
+export interface HoldAction extends Action {
+  duration?: number;
 }
 
-export interface ActionDefinition {
-  // Single action format - mutually exclusive with actions array
-  action?: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state';
-  
-  // Multiple actions format - mutually exclusive with single action properties
-  actions?: SingleActionDefinition[];
-  
-  // Single action properties (only used when action is specified)
-  service?: string;
-  service_data?: Record<string, any>;
-  target?: Record<string, any>;
-  navigation_path?: string;
-  url_path?: string;
-  entity?: string;
-  target_id?: string;
-  state?: string;
-  target_element_ref?: string;
-  states?: string[];
-  
-  // General properties (apply to both formats)
-  confirmation?: boolean | {
-    text?: string;
-    exemptions?: Array<{
-      user: string;
-    }>;
-  };
-}
-
-export interface SingleActionDefinition {
-  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state';
-  
-  // Service call specific
-  service?: string;
-  service_data?: Record<string, any>;
-  target?: Record<string, any>;
-  
-  // Navigation specific
-  navigation_path?: string;
-  
-  // URL specific
-  url_path?: string;
-  
-  // Entity specific (toggle, more-info)
-  entity?: string;
-  
-  // State setting specific
-  target_id?: string;
-  state?: string;
-  target_element_ref?: string;
-  states?: string[];
-  
-  // General properties
-  confirmation?: boolean | {
-    text?: string;
-    exemptions?: Array<{
-      user: string;
-    }>;
-  };
-}
+// Backwards-compatibility type aliases – these now point directly to Action.
+// They will be removed in a future breaking release.
+export type ActionDefinition = Action;
+export type SingleActionDefinition = Action;
+export type HoldActionDefinition = HoldAction;
 
 // ============================================================================
 // Home Assistant Actions
@@ -422,24 +390,37 @@ export interface LcarsButtonElementConfig {
 }
 
 export interface LcarsButtonActionConfig {
-  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state';
+  /** Either 'action' (single) or 'actions' (multiple) should be provided. */
+  type?: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state'; // legacy property (will be removed)
+  action?: Action; // preferred single action variant
+  actions?: Action[]; // preferred multi-action variant
+
+  // Service call specific
   service?: string;
   service_data?: Record<string, any>;
   target?: Record<string, any>;
+
+  // Navigation specific
   navigation_path?: string;
+
+  // URL specific
   url_path?: string;
+
+  // Entity specific (toggle, more-info)
   entity?: string;
+
+  // Confirmation support
   confirmation?: boolean | {
     text?: string;
     exemptions?: Array<{
       user: string;
     }>;
   };
-  // Custom action properties
+
+  // Custom state management properties
   target_element_ref?: string;
   state?: string;
   states?: string[];
-  actions?: SingleActionDefinition[];
 }
 
 // ============================================================================

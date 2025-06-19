@@ -4,25 +4,31 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 import { HomeAssistant, PlaywrightBrowser } from 'hass-taste-test';
+import './test-helpers';
 
-// Directory containing YAML example configs
+// ----------------------------------------------------------------------------
+// Setup helpers
+// ----------------------------------------------------------------------------
+
 const EXAMPLES_DIR = path.resolve(process.cwd(), 'yaml-config-examples');
 
-// Collect YAML files once at import time
 const exampleFiles = fs
   .readdirSync(EXAMPLES_DIR)
-  .filter((file) => file.endsWith('.yaml'))
-  .map((file) => path.join(EXAMPLES_DIR, file));
+  .filter((f) => f.endsWith('.yaml'))
+  .map((f) => path.join(EXAMPLES_DIR, f));
 
-// Spin up a single Home Assistant instance for this suite
 let hass: any;
 
 test.beforeAll(async () => {
+  // We pass an *empty* string here because our test-helpers monkey-patch
+  // already writes a minimal configuration (frontend, http, plus a template
+  // light called kitchen_sink_light). Keeping this blank avoids duplicate YAML
+  // keys like `light:`.
+
   hass = await HomeAssistant.create('', {
     browser: new PlaywrightBrowser('chromium'),
   });
 
-  // Register the dist file path of our card so dashboards can load it
   const distPath = path.resolve(process.cwd(), 'dist/lovelace-lcars-card.js');
   await hass.addResource(distPath, 'module');
 });
@@ -31,24 +37,109 @@ test.afterAll(async () => {
   if (hass) await hass.close();
 });
 
-// Dynamically generate one test per example file
+// ----------------------------------------------------------------------------
+// Utility – YAML inspection for interactive metadata
+// ----------------------------------------------------------------------------
+
+type ButtonMeta = {
+  fullId: string; // group_id.element_id
+  targetElementRefs: string[]; // derived from actions
+};
+
+function analyseYamlForInteractions(yamlObj: any): ButtonMeta[] {
+  const buttons: ButtonMeta[] = [];
+
+  if (!yamlObj?.groups) return buttons;
+
+  for (const group of yamlObj.groups) {
+    const groupId = group.group_id;
+    if (!group.elements) continue;
+
+    for (const el of group.elements) {
+      if (el?.button?.enabled) {
+        const fullId = `${groupId}.${el.id}`;
+        const targetRefs: string[] = [];
+
+        const actionContainers = [] as any[];
+        if (el.button.actions?.tap) actionContainers.push(el.button.actions.tap);
+        if (el.button.actions?.hold) actionContainers.push(el.button.actions.hold);
+        if (el.button.actions?.double_tap) actionContainers.push(el.button.actions.double_tap);
+
+        actionContainers.flat().forEach((action: any) => {
+          if (typeof action !== 'object') return;
+          const unified = Array.isArray(action) ? action : [action];
+          unified.forEach((a) => {
+            if (a.target_element_ref) targetRefs.push(a.target_element_ref);
+          });
+        });
+
+        buttons.push({ fullId, targetElementRefs: targetRefs });
+      }
+    }
+  }
+
+  return buttons;
+}
+
+// ----------------------------------------------------------------------------
+// Dynamic per-yaml tests
+// ----------------------------------------------------------------------------
+
 for (const filePath of exampleFiles) {
-  const fileName = path.basename(filePath);
+  const fileName = path.basename(filePath); // e.g. 3-dynamic-color.yaml
+  const baseName = path.parse(fileName).name; // e.g. 3-dynamic-color
 
-  test(`config example – ${fileName} renders`, async ({ page }) => {
-    // Parse YAML
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    const configObj = yaml.load(raw);
+  test.describe(`${baseName}`, () => {
+    test(`baseline & interactions`, async ({ page }) => {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      const configObj = yaml.load(raw);
 
-    // Create a fresh one-card dashboard for this config
-    const dashboard = await hass.Dashboard([configObj]);
-    const url = await dashboard.link();
+      // Use dark colour-scheme so screenshots have consistent dark background.
+      const dashboard = await hass.Dashboard([configObj]);
+      const url = await dashboard.link();
 
-    await page.goto(url, { timeout: 60_000 });
+      await page.goto(url, { timeout: 60_000 });
 
-    const card = page.locator('lovelace-lcars-card').first();
-    await card.locator('svg').waitFor();
+      const card = page.locator('lovelace-lcars-card').first();
+      await card.locator('svg').waitFor();
+      await page.evaluate(() => document.fonts.ready);
 
-    await expect(card).toHaveScreenshot(`example-${fileName}.png`, { threshold: 0.2 });
+      // Baseline screenshot
+      await expect(card).toHaveScreenshot(`${baseName}-initial.png`);
+
+      // Analyse YAML for interactive buttons
+      const buttons = analyseYamlForInteractions(configObj);
+
+      for (const button of buttons) {
+        const shapeSelector = `path[id="${button.fullId}__shape"]`;
+        const btn = card.locator(shapeSelector);
+
+        // If button shape not in DOM, skip this interaction
+        try {
+          await btn.waitFor({ state: 'attached', timeout: 5000 });
+        } catch {
+          continue;
+        }
+
+        // Hover state
+        await btn.hover();
+        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-hover.png`);
+
+        // Active (mouse down)
+        const box = await btn.boundingBox();
+        if (box) {
+          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+          await page.mouse.down();
+          await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-active.png`);
+          await page.mouse.up();
+        }
+
+        // Click / tap – may trigger state change elsewhere
+        await btn.click();
+        await page.waitForTimeout(450); // allow animations
+
+        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-post-click.png`);
+      }
+    });
   });
 } 

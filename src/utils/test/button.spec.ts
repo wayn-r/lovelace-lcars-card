@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Button } from '../../../utils/button.js';
+import { Button } from '../button.js';
 import { HomeAssistant } from 'custom-card-helpers';
 
 describe('Button', () => {

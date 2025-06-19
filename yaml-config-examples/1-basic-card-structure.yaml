@@ -10,7 +10,7 @@ groups:
         text:
           left_content: Basic Card Structure
           right_content: example
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontSize: 18
           fontWeight: bold
           fontFamily: Antonio
@@ -29,7 +29,7 @@ groups:
           fill: "#0099CC"
         text:
           content: "Example Element"
-          fill: "#FFFFFF"
+          fill: "#000000"
           fontFamily: "Antonio"
         layout:
           width: 200

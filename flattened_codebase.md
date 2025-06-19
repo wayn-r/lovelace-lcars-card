@@ -28,14 +28,12 @@ lovelace-lcars-card/
 │   │   └── store.ts
 │   ├── layout/
 │   │   ├── elements/
-│   │   │   ├── button.ts
 │   │   │   ├── chisel_endcap.ts
 │   │   │   ├── elbow.ts
 │   │   │   ├── element.ts
 │   │   │   ├── endcap.ts
 │   │   │   ├── rectangle.ts
 │   │   │   ├── test/
-│   │   │   │   ├── button.spec.ts
 │   │   │   │   ├── chisel_endcap.spec.ts
 │   │   │   │   ├── elbow.spec.ts
 │   │   │   │   ├── element-interactive.spec.ts
@@ -62,6 +60,7 @@ lovelace-lcars-card/
 │   └── utils/
 │       ├── action-helpers.ts
 │       ├── animation.ts
+│       ├── button.ts
 │       ├── color-resolver.ts
 │       ├── color.ts
 │       ├── fontmetrics.d.ts
@@ -69,6 +68,7 @@ lovelace-lcars-card/
 │       ├── state-manager.ts
 │       ├── test/
 │       │   ├── animation.spec.ts
+│       │   ├── button.spec.ts
 │       │   ├── color-resolver.spec.ts
 │       │   ├── color.spec.ts
 │       │   ├── shapes.spec.ts
@@ -77,24 +77,129 @@ lovelace-lcars-card/
 │       └── transform-propagator.ts
 ├── test-results/
 │   ├── .last-run.json
-│   ├── config-examples-config-exa-ad4df-based-on-state-yaml-renders-chromium/
+│   ├── config-examples-1-basic-card-structure-baseline-interactions-chromium/
+│   │   ├── 1-basic-card-structure-initial-actual.png
+│   │   ├── 1-basic-card-structure-initial-diff.png
+│   │   ├── 1-basic-card-structure-initial-expected.png
 │   │   ├── error-context.md
-│   │   ├── example-13-conditional-actions-based-on-state-yaml-actual.png
-│   │   ├── example-13-conditional-actions-based-on-state-yaml-diff.png
-│   │   ├── example-13-conditional-actions-based-on-state-yaml-expected.png
 │   │   ├── trace.zip
 │   │   └── video.webm
-│   └── config-examples-config-exa-c300e-card-structure-yaml-renders-chromium/
-│       ├── error-context.md
-│       ├── example-1-basic-card-structure-yaml-actual.png
-│       ├── example-1-basic-card-structure-yaml-diff.png
-│       ├── example-1-basic-card-structure-yaml-expected.png
-│       ├── trace.zip
+│   ├── config-examples-2-navigation-panel-baseline-interactions-chromium/
+│   │   ├── 2-navigation-panel-initial-actual.png
+│   │   ├── 2-navigation-panel-initial-diff.png
+│   │   ├── 2-navigation-panel-initial-expected.png
+│   │   ├── error-context.md
+│   │   ├── trace.zip
+│   │   └── video.webm
+│   ├── config-examples-3-dynamic-color-baseline-interactions-chromium/
+│   │   ├── 3-dynamic-color-initial-actual.png
+│   │   ├── 3-dynamic-color-initial-diff.png
+│   │   ├── 3-dynamic-color-initial-expected.png
+│   │   ├── error-context.md
+│   │   ├── trace.zip
+│   │   └── video.webm
+│   ├── hass-integration-LCARS-car-3c1ca-est-card-renders-and-reacts-chromium/
+│   │   ├── error-context.md
+│   │   ├── hass-lcars-initial-actual.png
+│   │   ├── hass-lcars-initial-diff.png
+│   │   ├── hass-lcars-initial-expected.png
+│   │   ├── trace.zip
+│   │   └── video.webm
+│   ├── lcars-card-LCARS-Card-–-vi-da743-ction-renders-initial-state-chromium/
+│   │   └── video.webm
+│   └── lcars-card-LCARS-Card-–-vi-df78f-g-updates-interactive-state-chromium/
 │       └── video.webm
 ├── tests/
 │   └── e2e/
 │       ├── config-examples.spec.ts
 │       ├── config-examples.spec.ts-snapshots/
+│       │   ├── 1-basic-card-structure-initial-chromium-linux.png
+│       │   ├── 10-complete-dashboard-initial-chromium-linux.png
+│       │   ├── 11-simple-state-group-for-navigation-initial-chromium-linux.png
+│       │   ├── 11-simple-state-group-for-navigation-nav-button-a-active-chromium-linux.png
+│       │   ├── 11-simple-state-group-for-navigation-nav-button-a-hover-chromium-linux.png
+│       │   ├── 11-simple-state-group-for-navigation-nav-button-a-post-click-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-initial-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-nav-button-a-active-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-nav-button-a-hover-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-nav-button-a-post-click-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-nav-button-b-active-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-nav-button-b-hover-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-nav-button-b-post-click-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-nav-button-c-active-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-nav-button-c-hover-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-nav-button-c-post-click-chromium-linux.png
+│       │   ├── 13-conditional-actions-based-on-state-controls-dynamic-button-active-chromium-linux.png
+│       │   ├── 13-conditional-actions-based-on-state-controls-dynamic-button-hover-chromium-linux.png
+│       │   ├── 13-conditional-actions-based-on-state-controls-dynamic-button-post-click-chromium-linux.png
+│       │   ├── 13-conditional-actions-based-on-state-initial-chromium-linux.png
+│       │   ├── 14-state-machine-approach-initial-chromium-linux.png
+│       │   ├── 14-state-machine-approach-nav-button-a-active-chromium-linux.png
+│       │   ├── 14-state-machine-approach-nav-button-a-hover-chromium-linux.png
+│       │   ├── 14-state-machine-approach-nav-button-a-post-click-chromium-linux.png
+│       │   ├── 14-state-machine-approach-nav-button-b-active-chromium-linux.png
+│       │   ├── 14-state-machine-approach-nav-button-b-hover-chromium-linux.png
+│       │   ├── 14-state-machine-approach-nav-button-b-post-click-chromium-linux.png
+│       │   ├── 14-state-machine-approach-nav-button-c-active-chromium-linux.png
+│       │   ├── 14-state-machine-approach-nav-button-c-hover-chromium-linux.png
+│       │   ├── 14-state-machine-approach-nav-button-c-post-click-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-initial-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-living-room-lights-control-active-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-living-room-lights-control-hover-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-living-room-lights-control-post-click-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-living-room-temperature-display-active-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-living-room-temperature-display-hover-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-nav-living-room-btn-active-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-nav-living-room-btn-hover-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-nav-living-room-btn-post-click-chromium-linux.png
+│       │   ├── 16-anchoring-initial-chromium-linux.png
+│       │   ├── 17-stretching-initial-chromium-linux.png
+│       │   ├── 18-sequential-animation-and-propogation-initial-chromium-linux.png
+│       │   ├── 19-onLoad-animation-initial-chromium-linux.png
+│       │   ├── 2-navigation-panel-initial-chromium-linux.png
+│       │   ├── 2-navigation-panel-nav-controls-basic-card-structure-button-active-chromium-linux.png
+│       │   ├── 2-navigation-panel-nav-controls-basic-card-structure-button-hover-chromium-linux.png
+│       │   ├── 20-onShowHide-animation-initial-chromium-linux.png
+│       │   ├── 20-onShowHide-animation-show-hide-panel-group-panel-trigger-button-active-chromium-linux.png
+│       │   ├── 20-onShowHide-animation-show-hide-panel-group-panel-trigger-button-hover-chromium-linux.png
+│       │   ├── 20-onShowHide-animation-show-hide-panel-group-panel-trigger-button-post-click-chromium-linux.png
+│       │   ├── 21-onStateChange-animation-initial-chromium-linux.png
+│       │   ├── 21-onStateChange-animation-state-change-group-state-trigger-button-active-chromium-linux.png
+│       │   ├── 21-onStateChange-animation-state-change-group-state-trigger-button-hover-chromium-linux.png
+│       │   ├── 21-onStateChange-animation-state-change-group-state-trigger-button-post-click-chromium-linux.png
+│       │   ├── 22-visibility-rules-controller-toggle-button-active-chromium-linux.png
+│       │   ├── 22-visibility-rules-controller-toggle-button-hover-chromium-linux.png
+│       │   ├── 22-visibility-rules-controller-toggle-button-post-click-chromium-linux.png
+│       │   ├── 22-visibility-rules-initial-chromium-linux.png
+│       │   ├── 23-url-and-more-info-actions-action-buttons-info-button-active-chromium-linux.png
+│       │   ├── 23-url-and-more-info-actions-action-buttons-info-button-hover-chromium-linux.png
+│       │   ├── 23-url-and-more-info-actions-action-buttons-url-button-active-chromium-linux.png
+│       │   ├── 23-url-and-more-info-actions-action-buttons-url-button-hover-chromium-linux.png
+│       │   ├── 23-url-and-more-info-actions-action-buttons-url-button-post-click-chromium-linux.png
+│       │   ├── 23-url-and-more-info-actions-initial-chromium-linux.png
+│       │   ├── 24-custom-state-animations-controls-alert-toggle-active-chromium-linux.png
+│       │   ├── 24-custom-state-animations-controls-alert-toggle-hover-chromium-linux.png
+│       │   ├── 24-custom-state-animations-controls-alert-toggle-post-click-chromium-linux.png
+│       │   ├── 24-custom-state-animations-initial-chromium-linux.png
+│       │   ├── 3-dynamic-color-initial-chromium-linux.png
+│       │   ├── 3-dynamic-color-stateful-description-stateful-test-active-chromium-linux.png
+│       │   ├── 3-dynamic-color-stateful-description-stateful-test-hover-chromium-linux.png
+│       │   ├── 3-dynamic-color-stateful-description-stateful-test-post-click-chromium-linux.png
+│       │   ├── 4-advanced-layout-and-positioning-initial-chromium-linux.png
+│       │   ├── 5-lcars-shape-elements-initial-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-initial-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-main-controls-menu-trigger-active-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-main-controls-menu-trigger-hover-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-main-controls-menu-trigger-post-click-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-menu-items-option-1-active-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-menu-items-option-1-hover-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-menu-items-option-1-post-click-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-initial-chromium-linux.png
+│       │   ├── 8-animations-initial-chromium-linux.png
+│       │   ├── 9-text-styling-initial-chromium-linux.png
+│       │   ├── 9-text-styling-text-examples-cutout-button-active-chromium-linux.png
+│       │   ├── 9-text-styling-text-examples-cutout-button-hover-chromium-linux.png
+│       │   ├── 9-text-styling-text-examples-cutout-button-post-click-chromium-linux.png
 │       │   ├── example-1-basic-card-structure-yaml-chromium-linux.png
 │       │   ├── example-10-complete-dashboard-yaml-chromium-linux.png
 │       │   ├── example-11-simple-state-group-for-navigation-yaml-chromium-linux.png
@@ -122,15 +227,39 @@ lovelace-lcars-card/
 │       ├── hass-integration.spec.ts
 │       ├── hass-integration.spec.ts-snapshots/
 │       │   └── hass-lcars-initial-chromium-linux.png
+│       ├── interactive-state.spec.ts
 │       ├── lcars-card.spec.ts
 │       ├── lcars-card.spec.ts-snapshots/
 │       │   ├── lcars-card-hover-chromium-linux.png
 │       │   └── lcars-card-initial-chromium-linux.png
 │       ├── test-harness.html
+│       ├── test-helpers.ts
 │       └── utils/
 ├── tsconfig.json
 ├── vite.config.ts
 ├── vitest.config.ts
+├── yaml-bak/
+│   ├── 10-complete-dashboard.yaml
+│   ├── 11-simple-state-group-for-navigation.yaml
+│   ├── 12-toggle-with-dependencies.yaml
+│   ├── 13-conditional-actions-based-on-state.yaml
+│   ├── 14-state-machine-approach.yaml
+│   ├── 15-hass-integration-with-state-management.yaml
+│   ├── 16-anchoring.yaml
+│   ├── 17-stretching.yaml
+│   ├── 18-sequential-animation-and-propogation.yaml
+│   ├── 19-onLoad-animation.yaml
+│   ├── 20-onShowHide-animation.yaml
+│   ├── 21-onStateChange-animation.yaml
+│   ├── 22-visibility-rules.yaml
+│   ├── 23-url-and-more-info-actions.yaml
+│   ├── 24-custom-state-animations.yaml
+│   ├── 4-advanced-layout-and-positioning.yaml
+│   ├── 5-lcars-shape-elements.yaml
+│   ├── 6-complex-actions-and-visibility.yaml
+│   ├── 7-button-actions-and-confirmations.yaml
+│   ├── 8-animations.yaml
+│   └── 9-text-styling.yaml
 ├── yaml-config-definition.yaml
 └── yaml-config-examples/
 ```
@@ -1048,7 +1177,11 @@ export default defineConfig({
     // Tests set their own target URLs (either dev server or Hass Taste Test links).
     headless: true,
     trace: 'retain-on-failure',
-    video: 'retain-on-failure',
+    video: 'on',
+    viewport: { width: 1920, height: 1080 },
+    launchOptions: {
+      args: ['--window-size=1920,1080'],
+    },
   },
   projects: [
     {
@@ -1535,7 +1668,7 @@ import { IRenderer } from './interfaces.js';
 import { LayoutElementProps, LayoutState } from '../layout/engine.js';
 import { ComputedElementColors, ColorResolutionDefaults } from '../utils/color.js';
 import { colorResolver } from '../utils/color-resolver.js';
-import { Button } from '../layout/elements/button.js';
+import { Button } from '../utils/button.js';
 import { HomeAssistant } from 'custom-card-helpers';
 
 /**
@@ -2033,301 +2166,6 @@ export const selectors = {
 };
 ```
 
-## File: src/layout/elements/button.ts
-
-```typescript
-import { svg, SVGTemplateResult } from "lit";
-import { HomeAssistant } from "custom-card-helpers";
-import { colorResolver } from "../../utils/color-resolver.js";
-import { AnimationContext } from "../../utils/animation.js";
-import { Color, ColorStateContext } from "../../utils/color.js";
-import { Action } from "../../types.js";
-import { handleHassAction, isCustomAction, validateAction } from "../../utils/action-helpers.js";
-import { stateManager } from "../../utils/state-manager.js";
-
-export type ButtonPropertyName = 'fill' | 'stroke' | 'strokeWidth';
-
-export class Button {
-    private _props: any;
-    private _hass?: HomeAssistant;
-    private _requestUpdateCallback?: () => void;
-    private _id: string;
-    private _getShadowElement?: (id: string) => Element | null;
-
-    constructor(id: string, props: any, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
-        this._id = id;
-        this._props = props;
-        this._hass = hass;
-        this._requestUpdateCallback = requestUpdateCallback;
-        this._getShadowElement = getShadowElement;
-    }
-
-    /**
-     * Get the current animation context for this button
-     */
-    private getAnimationContext(): AnimationContext {
-        return {
-            elementId: this._id,
-            getShadowElement: this._getShadowElement,
-            hass: this._hass,
-            requestUpdateCallback: this._requestUpdateCallback
-        };
-    }
-
-    /**
-     * Get resolved colors for the button using the new color resolver
-     */
-    private getResolvedColors(stateContext: ColorStateContext) {
-        const context = this.getAnimationContext();
-        
-        return colorResolver.resolveAllElementColors(
-            this._id,
-            this._props,
-            context,
-            {},
-            stateContext
-        );
-    }
-
-    createButton(
-        pathData: string,
-        x: number,
-        y: number,
-        width: number,
-        height: number,
-        options: {
-            rx: number
-        },
-        stateContext: ColorStateContext
-    ): SVGTemplateResult {
-        // Use the new color resolver to get colors with hover/active state support
-        const resolvedColors = this.getResolvedColors(stateContext);
-        
-        const pathElement = svg`
-            <path
-                id=${this._id + "__shape"}
-                d=${pathData}
-                fill=${resolvedColors.fillColor}
-                stroke=${resolvedColors.strokeColor}
-                stroke-width=${resolvedColors.strokeWidth}
-            />
-        `;
-        
-        return this.createButtonGroup([pathElement], {
-            isButton: this._props.button?.enabled === true,
-            elementId: this._id
-        });
-    }
-
-    createButtonGroup(
-        elements: SVGTemplateResult[],
-        config: {
-            isButton: boolean,
-            elementId: string
-        }
-    ): SVGTemplateResult {
-        const { isButton, elementId } = config;
-        
-        if (!isButton) {
-            return svg`<g>${elements}</g>`;
-        }
-        
-        // Button elements only include click handler for action execution
-        // All hover/mouse state is handled by parent LayoutElement
-        return svg`
-            <g
-                class="lcars-button-group"
-                @click=${this.handleClick.bind(this)}
-                style="cursor: pointer; outline: none;"
-                role="button"
-                aria-label=${elementId}
-                tabindex="0"
-                @keydown=${this.handleKeyDown.bind(this)}
-            >
-                ${elements}
-            </g>
-        `;
-    }
-    
-    private handleClick(ev: Event): void {
-        const buttonConfig = this._props.button as any;
-        
-        if (!this._hass || !buttonConfig?.enabled) {
-            return; 
-        }
-        
-        ev.stopPropagation();
-
-        // New format (button.actions.tap etc.)
-        if (buttonConfig.actions?.tap) {
-            this.executeActionDefinition(buttonConfig.actions.tap, ev.currentTarget as Element);
-        }
-    }
-    
-    private handleKeyDown(e: KeyboardEvent): void {
-        if (e.key === 'Enter' || e.key === ' ') {
-            this.handleClick(e);
-        }
-    }
-    
-    private executeUnifiedAction(action: Action, element?: Element): void {
-        if (!this._hass) {
-            console.error(`[${this._id}] No hass object available for action execution`);
-            return;
-        }
-
-        // Validate the action
-        const validationErrors = validateAction(action);
-        if (validationErrors.length > 0) {
-            console.warn(`[${this._id}] Action validation failed:`, validationErrors);
-            return;
-        }
-
-        // Handle custom actions
-        if (isCustomAction(action)) {
-            this.executeCustomAction(action);
-            return;
-        }
-
-        // Handle standard Home Assistant actions using the unified wrapper
-        this.executeHassAction(action, element);
-    }
-
-    private executeCustomAction(action: Action): void {
-        try {
-            switch (action.action) {
-                case 'set_state':
-                    stateManager.executeSetStateAction(action);
-                    break;
-                case 'toggle_state':
-                    stateManager.executeToggleStateAction(action);
-                    break;
-                default:
-                    console.warn(`[${this._id}] Unknown custom action: ${action.action}`);
-            }
-            this._requestUpdateCallback?.();
-        } catch (error) {
-            console.error(`[${this._id}] Custom action execution failed:`, error);
-            this._requestUpdateCallback?.();
-        }
-    }
-
-    private executeHassAction(action: Action, element?: Element): void {
-        // Get target element for the action
-        let targetElement: HTMLElement = element as HTMLElement;
-        
-        if (!targetElement) {
-            const foundElement = document.getElementById(this._id);
-            if (foundElement) {
-                targetElement = foundElement;
-            } else {
-                // Create a fallback element with the correct ID
-                targetElement = document.createElement('div');
-                targetElement.id = this._id;
-                console.warn(`[${this._id}] Could not find DOM element, using fallback`);
-            }
-        }
-
-        // Use the unified action helper
-        handleHassAction(action, targetElement, this._hass!)
-            .then(() => {
-                // Force immediate update for state-changing actions
-                if (action.action === 'toggle' || action.action === 'call-service') {
-                    // Use shorter timeout for immediate responsiveness to action feedback
-                    setTimeout(() => {
-                        this._requestUpdateCallback?.();
-                    }, 25); // Quick feedback for user actions
-                } else {
-                    // Normal update callback for other actions
-                    this._requestUpdateCallback?.();
-                }
-            })
-            .catch(error => {
-                console.error(`[${this._id}] handleHassAction failed:`, error);
-                // Still trigger update even if action failed
-                this._requestUpdateCallback?.();
-            });
-    }
-
-    /**
-     * Execute an ActionDefinition (new button.actions.* format)
-     */
-    private executeActionDefinition(actionDef: any, element?: Element): void {
-        if (!this._hass) {
-            console.error(`[${this._id}] No hass object available for action execution`);
-            return;
-        }
-
-        // Handle multiple actions array first
-        if (actionDef.actions && Array.isArray(actionDef.actions)) {
-            actionDef.actions.forEach((singleAction: any) => {
-                const unified = this.convertToUnifiedAction(singleAction);
-                this.executeUnifiedAction(unified, element);
-            });
-            return;
-        }
-
-        // Single action - map fields to unified Action interface
-        let actionType = actionDef.action || actionDef.type || 'none';
-        if (actionType === 'set-state') actionType = 'set_state';
-
-        const unifiedAction: Action = {
-            action: actionType,
-            service: actionDef.service,
-            service_data: actionDef.service_data,
-            target: actionDef.target,
-            navigation_path: actionDef.navigation_path,
-            url_path: actionDef.url_path,
-            entity: actionDef.entity,
-            target_element_ref: actionDef.target_element_ref || actionDef.target_id,
-            state: actionDef.state,
-            states: actionDef.states,
-            confirmation: actionDef.confirmation
-        };
-
-        // Default entity fallback for toggle / more-info
-        if ((unifiedAction.action === 'toggle' || unifiedAction.action === 'more-info') && !unifiedAction.entity) {
-            unifiedAction.entity = this._id;
-        }
-
-        this.executeUnifiedAction(unifiedAction, element);
-    }
-
-    /**
-     * Convert a SingleActionDefinition to the unified Action interface
-     */
-    private convertToUnifiedAction(singleAction: any): Action {
-        // Handle action type conversion (set-state -> set_state)
-        let actionType = singleAction.action;
-        if (actionType === 'set-state') {
-            actionType = 'set_state';
-        }
-
-        return {
-            action: actionType,
-            service: singleAction.service,
-            service_data: singleAction.service_data,
-            target: singleAction.target,
-            navigation_path: singleAction.navigation_path,
-            url_path: singleAction.url_path,
-            entity: singleAction.entity,
-            target_element_ref: singleAction.target_element_ref || singleAction.target_id,
-            state: singleAction.state,
-            states: singleAction.states,
-            confirmation: singleAction.confirmation
-        };
-    }
-
-    updateHass(hass?: HomeAssistant): void {
-        this._hass = hass;
-    }
-
-    cleanup(): void {
-        // No-op: State and timeouts are now managed by the parent LayoutElement
-    }
-}
-```
-
 ## File: src/layout/elements/chisel_endcap.ts
 
 ```typescript
@@ -2337,7 +2175,7 @@ import { HomeAssistant } from "custom-card-helpers";
 import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { generateChiselEndcapPath } from "../../utils/shapes.js";
-import { Button } from "./button.js";
+import { Button } from "../../utils/button.js";
 
 export class ChiselEndcapElement extends LayoutElement {
     button?: Button;
@@ -2448,7 +2286,7 @@ import { HomeAssistant } from "custom-card-helpers";
 import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { generateElbowPath } from "../../utils/shapes.js";
-import { Button } from "./button.js";
+import { Button } from "../../utils/button.js";
 
 export class ElbowElement extends LayoutElement {
     button?: Button;
@@ -2684,7 +2522,7 @@ import { generateRectanglePath, generateEndcapPath, generateElbowPath, generateC
 import { SVGTemplateResult, html, svg } from 'lit';
 import { LcarsButtonElementConfig } from '../../types.js';
 import { StretchContext } from '../engine.js';
-import { Button } from './button.js';
+import { Button } from '../../utils/button.js';
 import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../../types';
 import { animationManager, AnimationContext } from '../../utils/animation.js';
 import { colorResolver } from '../../utils/color-resolver.js';
@@ -3923,7 +3761,7 @@ import { HomeAssistant } from "custom-card-helpers";
 import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { generateRectanglePath } from "../../utils/shapes.js";
-import { Button } from "./button.js";
+import { Button } from "../../utils/button.js";
 
 export class RectangleElement extends LayoutElement {
   button?: Button;
@@ -4000,328 +3838,6 @@ export class RectangleElement extends LayoutElement {
 }
 ```
 
-## File: src/layout/elements/test/button.spec.ts
-
-```typescript
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Button } from '../button.js';
-import { HomeAssistant } from 'custom-card-helpers';
-
-describe('Button', () => {
-  let mockHass: HomeAssistant;
-  let mockRequestUpdate: () => void;
-  let mockGetShadowElement: (id: string) => Element | null;
-
-  beforeEach(() => {
-    mockHass = {
-      states: {
-        'light.test': {
-          entity_id: 'light.test',
-          state: 'off',
-          attributes: {},
-          context: { id: 'test', parent_id: null, user_id: null },
-          last_changed: new Date().toISOString(),
-          last_updated: new Date().toISOString()
-        }
-      }
-    } as any as HomeAssistant;
-
-    mockRequestUpdate = vi.fn();
-    mockGetShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
-    
-    // Mock console methods to reduce noise in tests
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  describe('constructor', () => {
-    it('should create a Button instance with all parameters', () => {
-      const props = { someProperty: 'value' };
-      const button = new Button('test-button', props, mockHass, mockRequestUpdate, mockGetShadowElement);
-      
-      expect(button).toBeInstanceOf(Button);
-    });
-
-    it('should create a Button instance with minimal parameters', () => {
-      const button = new Button('test-button', {});
-      
-      expect(button).toBeInstanceOf(Button);
-    });
-  });
-
-  describe('createButtonGroup', () => {
-    it('should create a regular group when not a button', () => {
-      const button = new Button('test-button', {}, mockHass, mockRequestUpdate, mockGetShadowElement);
-      
-      const result = button.createButtonGroup([], {
-        isButton: false,
-        elementId: 'test'
-      });
-
-      expect(result).toBeDefined();
-      expect(result).toHaveProperty('_$litType$');
-      expect(result).toHaveProperty('strings');
-      expect(result).toHaveProperty('values');
-    });
-
-    it('should create an interactive button group when isButton is true', () => {
-      const button = new Button('test-button', {}, mockHass, mockRequestUpdate, mockGetShadowElement);
-      
-      const result = button.createButtonGroup([], {
-        isButton: true,
-        elementId: 'test'
-      });
-
-      expect(result).toBeDefined();
-      expect(result).toHaveProperty('_$litType$');
-      expect(result).toHaveProperty('strings');
-      expect(result).toHaveProperty('values');
-    });
-  });
-
-  describe('createButton', () => {
-    it('should create a button with proper structure', () => {
-      const props = {
-        button: {
-          enabled: true,
-          action_config: {
-            type: 'toggle',
-            entity: 'light.test'
-          }
-        }
-      };
-      
-      const button = new Button('test-button', props, mockHass, mockRequestUpdate, mockGetShadowElement);
-      
-      const pathData = 'M 0,0 L 100,0 L 100,30 L 0,30 Z';
-      const result = button.createButton(pathData, 0, 0, 100, 30, { rx: 0 }, { isCurrentlyHovering: false, isCurrentlyActive: false });
-
-      expect(result).toBeDefined();
-      expect(result).toHaveProperty('_$litType$');
-      expect(result).toHaveProperty('strings');
-      expect(result).toHaveProperty('values');
-    });
-  });
-
-  describe('unified action execution', () => {
-    it('should execute single action correctly', () => {
-      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
-      const props = {
-        button: {
-          enabled: true,
-          action_config: {
-            type: 'toggle',
-            entity: 'light.test',
-            confirmation: true
-          }
-        }
-      };
-      
-      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
-      
-      // Simulate button click
-      (button as any).executeButtonAction(props.button, document.createElement('div'));
-      
-      expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(1);
-      expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: 'toggle',
-          entity: 'light.test',
-          confirmation: true
-        }),
-        expect.any(HTMLElement)
-      );
-      
-      executeUnifiedActionSpy.mockRestore();
-    });
-
-    it('should execute multiple actions correctly', () => {
-      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
-      const props = {
-        button: {
-          enabled: true,
-          action_config: {
-            actions: [
-              {
-                action: 'toggle',
-                entity: 'light.living_room'
-              },
-              {
-                action: 'set_state',
-                target_element_ref: 'group.element',
-                state: 'active'
-              }
-            ]
-          }
-        }
-      };
-      
-      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
-      
-      // Simulate button click
-      (button as any).executeButtonAction(props.button, document.createElement('div'));
-      
-      expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(2);
-      expect(executeUnifiedActionSpy).toHaveBeenNthCalledWith(1, 
-        expect.objectContaining({
-          action: 'toggle',
-          entity: 'light.living_room'
-        }),
-        expect.any(HTMLElement)
-      );
-      expect(executeUnifiedActionSpy).toHaveBeenNthCalledWith(2,
-        expect.objectContaining({
-          action: 'set_state',
-          target_element_ref: 'group.element',
-          state: 'active'
-        }),
-        expect.any(HTMLElement)
-      );
-      
-      executeUnifiedActionSpy.mockRestore();
-    });
-
-    it('should handle action type conversion from set-state to set_state', () => {
-      const convertToUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'convertToUnifiedAction');
-      const props = {
-        button: {
-          enabled: true,
-          action_config: {
-            actions: [
-              {
-                action: 'set-state',
-                target_element_ref: 'group.element',
-                state: 'active'
-              }
-            ]
-          }
-        }
-      };
-      
-      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
-      
-      // Simulate button click
-      (button as any).executeButtonAction(props.button, document.createElement('div'));
-      
-      expect(convertToUnifiedActionSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: 'set-state',
-          target_element_ref: 'group.element',
-          state: 'active'
-        })
-      );
-      
-      convertToUnifiedActionSpy.mockRestore();
-    });
-
-    it('should auto-populate entity for toggle/more-info actions when missing', () => {
-      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
-      const props = {
-        button: {
-          enabled: true,
-          action_config: {
-            type: 'toggle'
-            // entity intentionally missing
-          }
-        }
-      };
-      
-      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
-      
-      // Simulate button click
-      (button as any).executeButtonAction(props.button, document.createElement('div'));
-      
-      expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: 'toggle',
-          entity: 'test-button' // Should use button ID
-        }),
-        expect.any(HTMLElement)
-      );
-      
-      executeUnifiedActionSpy.mockRestore();
-    });
-  });
-
-  describe('custom action handling', () => {
-    it('should handle custom set_state action', async () => {
-      const mockStateManager = {
-        executeSetStateAction: vi.fn(),
-        executeToggleStateAction: vi.fn()
-      };
-      
-      const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
-      const action = {
-        action: 'set_state' as const,
-        target_element_ref: 'test.element',
-        state: 'active'
-      };
-      
-      // Spy on the actual dynamic import and replace it
-      const importSpy = vi.spyOn(button as any, 'executeCustomAction').mockImplementation(async (action: any) => {
-        switch (action.action) {
-          case 'set_state':
-            mockStateManager.executeSetStateAction(action);
-            break;
-          case 'toggle_state':
-            mockStateManager.executeToggleStateAction(action);
-            break;
-        }
-      });
-      
-      await (button as any).executeCustomAction(action);
-      
-      expect(mockStateManager.executeSetStateAction).toHaveBeenCalledWith(action);
-      
-      importSpy.mockRestore();
-    });
-
-    it('should handle custom toggle_state action', async () => {
-      const mockStateManager = {
-        executeSetStateAction: vi.fn(),
-        executeToggleStateAction: vi.fn()
-      };
-      
-      const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
-      const action = {
-        action: 'toggle_state' as const,
-        target_element_ref: 'test.element',
-        states: ['state1', 'state2']
-      };
-      
-      // Spy on the actual dynamic import and replace it
-      const importSpy = vi.spyOn(button as any, 'executeCustomAction').mockImplementation(async (action: any) => {
-        switch (action.action) {
-          case 'set_state':
-            mockStateManager.executeSetStateAction(action);
-            break;
-          case 'toggle_state':
-            mockStateManager.executeToggleStateAction(action);
-            break;
-        }
-      });
-      
-      await (button as any).executeCustomAction(action);
-      
-      expect(mockStateManager.executeToggleStateAction).toHaveBeenCalledWith(action);
-      
-      importSpy.mockRestore();
-    });
-  });
-
-  describe('cleanup', () => {
-    it('should be a no-op and not throw an error', () => {
-      const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
-      expect(() => button.cleanup()).not.toThrow();
-    });
-  });
-});
-```
-
 ## File: src/layout/elements/test/chisel_endcap.spec.ts
 
 ```typescript
@@ -4331,7 +3847,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'v
 
 // Mock Button class
 const mockCreateButton = vi.fn();
-vi.mock('../button.js', () => {
+vi.mock('../../../utils/button.js', () => {
   return {
     Button: vi.fn().mockImplementation((id, props, hass, cb) => {
       return {
@@ -4355,7 +3871,7 @@ vi.mock('../../../utils/shapes.js', () => {
 
 // Import after mocks
 import { ChiselEndcapElement } from '../chisel_endcap';
-import { Button } from '../button.js';
+import { Button } from '../../../utils/button.js';
 import { LayoutElement } from '../element.js';
 import { RectangleElement } from '../rectangle';
 import { generateChiselEndcapPath } from '../../../utils/shapes.js';
@@ -4741,7 +4257,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'v
 
 // Important: vi.mock calls are hoisted to the top of the file 
 // so they must come before any imports of the mocked modules
-vi.mock('../button.js', () => ({
+vi.mock('../../../utils/button.js', () => ({
   Button: vi.fn().mockImplementation((id, props, hass, cb) => ({
     id,
     props,
@@ -4760,7 +4276,7 @@ vi.mock('../../../utils/shapes.js', () => ({
 
 // Import mocked modules after mock setup
 import { ElbowElement } from '../elbow';
-import { Button } from '../button.js';
+import { Button } from '../../../utils/button.js';
 import { LayoutElement } from '../element.js';
 import { generateElbowPath } from '../../../utils/shapes.js';
 import { svg, SVGTemplateResult } from 'lit';
@@ -5444,7 +4960,7 @@ const mockButtonInstance = {
     createButton: vi.fn(),
     // Add any other methods/properties of Button that LayoutElement might interact with
 };
-vi.mock('../button.js', () => {
+vi.mock('../../../utils/button.js', () => {
   return {
     Button: vi.fn().mockImplementation((id, props, hass, cb) => {
         mockButtonInstance.id = id;
@@ -5456,7 +4972,7 @@ vi.mock('../button.js', () => {
     })
   };
 });
-import { Button } from '../button.js';
+import { Button } from '../../../utils/button.js';
 
 
 // Concrete implementation for testing
@@ -6017,7 +5533,7 @@ describe('LayoutElement', () => {
 
 // Mocking Button class
 const mockCreateButton = vi.fn();
-vi.mock('../button.js', () => {
+vi.mock('../../../utils/button.js', () => {
   // Ensure the mock constructor matches the actual class for type compatibility if used
   const Button = vi.fn().mockImplementation((id, props, hass, cb) => {
     return {
@@ -6033,7 +5549,7 @@ vi.mock('../button.js', () => {
 
 import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'vitest';
 import { EndcapElement } from '../endcap';
-import { Button } from '../button'; // Import the mocked Button
+import { Button } from '../../../utils/button.js'; // Import the mocked Button
 import { LayoutElement } from '../element'; // For spying on superclass methods
 import { RectangleElement } from '../rectangle'; // Import RectangleElement
 import { generateEndcapPath } from '../../../utils/shapes'; // Actual function
@@ -6408,7 +5924,7 @@ describe('EndcapElement', () => {
 ```typescript
 // Mocking setup needs to be at the top, before imports
 const mockCreateButton = vi.fn();
-vi.mock('../button.js', () => {
+vi.mock('../../../utils/button.js', () => {
   return {
     Button: vi.fn().mockImplementation((id, props, hass, cb) => {
       return {
@@ -6426,7 +5942,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RectangleElement } from '../rectangle';
 import { generateRectanglePath } from '../../../utils/shapes';
 import { svg, SVGTemplateResult } from 'lit';
-import { Button } from '../button.js';
+import { Button } from '../../../utils/button.js';
 
 describe('RectangleElement', () => {
   let rectangleElement: RectangleElement;
@@ -6936,7 +6452,7 @@ describe('RectangleElement', () => {
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Set up mocks - IMPORTANT: Use factory functions with no external variables
-vi.mock('../button.js', () => {
+vi.mock('../../../utils/button.js', () => {
   return {
     Button: vi.fn().mockImplementation((id, props, hass, cb) => {
       return {
@@ -6961,7 +6477,7 @@ vi.mock('../../../utils/shapes.js', () => {
 
 // Now import the mocked modules
 import { TextElement } from '../text';
-import { Button } from '../button.js';
+import { Button } from '../../../utils/button.js';
 import { svg, SVGTemplateResult } from 'lit';
 import { HomeAssistant } from 'custom-card-helpers';
 import * as shapes from '../../../utils/shapes.js';
@@ -8080,7 +7596,7 @@ export class TopHeaderElement extends LayoutElement {
       letterSpacing: props.letterSpacing || 'normal',
       textTransform: props.textTransform || 'uppercase',
       fontSize: props.fontSize || 16,
-      fill: props.textColor || props.fill || '#FFFFFF'
+      fill: props.textColor || props.fill || '#99CCFF'
     }, {
       // No anchor - we'll position this manually in layoutTextElements
     }, hass, requestUpdateCallback, getShadowElement);
@@ -10490,6 +10006,24 @@ window.customCards.push({
   description: 'A LCARS themed card for Home Assistant',
 });
 
+// ---------------------------------------------------------------------------
+// Ensure Antonio font is loaded once for every environment (dev server, tests,
+// Home Assistant dashboards). Doing this at module-initialisation time means it
+// happens before any <lovelace-lcars-card> element renders text.
+// ---------------------------------------------------------------------------
+
+(() => {
+  if (typeof document === 'undefined') return;
+  const href = 'https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap';
+  const alreadyLoaded = document.head.querySelector(`link[href="${href}"]`);
+  if (!alreadyLoaded) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    document.head.appendChild(link);
+  }
+})();
+
 @customElement(CARD_TYPE)
 export class LcarsCard extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
@@ -12028,75 +11562,43 @@ export interface Action {
 export interface ButtonConfig {
   enabled: boolean;
   actions?: {
-    tap?: ActionDefinition;
-    hold?: HoldActionDefinition;
-    double_tap?: ActionDefinition;
+    /**
+     * A single Action or an array of Actions to execute on tap.
+     */
+    tap?: Action | Action[];
+
+    /**
+     * Action(s) to execute on hold. You can provide either:
+     *   1) A single Action or array of Actions, or
+     *   2) An object that extends Action with an optional duration property.
+     *
+     * Example:
+     *   hold: {
+     *     duration: 750,
+     *     action: 'toggle'
+     *   }
+     */
+    hold?: HoldAction;
+
+    /**
+     * A single Action or an array of Actions to execute on double-tap.
+     */
+    double_tap?: Action | Action[];
   };
 }
 
-export interface HoldActionDefinition extends ActionDefinition {
-  duration?: number; // Hold duration in milliseconds, default 500
+/**
+ * A HoldAction is an Action with an optional duration (milliseconds).
+ */
+export interface HoldAction extends Action {
+  duration?: number;
 }
 
-export interface ActionDefinition {
-  // Single action format - mutually exclusive with actions array
-  action?: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state';
-  
-  // Multiple actions format - mutually exclusive with single action properties
-  actions?: SingleActionDefinition[];
-  
-  // Single action properties (only used when action is specified)
-  service?: string;
-  service_data?: Record<string, any>;
-  target?: Record<string, any>;
-  navigation_path?: string;
-  url_path?: string;
-  entity?: string;
-  target_id?: string;
-  state?: string;
-  target_element_ref?: string;
-  states?: string[];
-  
-  // General properties (apply to both formats)
-  confirmation?: boolean | {
-    text?: string;
-    exemptions?: Array<{
-      user: string;
-    }>;
-  };
-}
-
-export interface SingleActionDefinition {
-  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'set-state' | 'none' | 'set_state' | 'toggle_state';
-  
-  // Service call specific
-  service?: string;
-  service_data?: Record<string, any>;
-  target?: Record<string, any>;
-  
-  // Navigation specific
-  navigation_path?: string;
-  
-  // URL specific
-  url_path?: string;
-  
-  // Entity specific (toggle, more-info)
-  entity?: string;
-  
-  // State setting specific
-  target_id?: string;
-  state?: string;
-  target_element_ref?: string;
-  states?: string[];
-  
-  // General properties
-  confirmation?: boolean | {
-    text?: string;
-    exemptions?: Array<{
-      user: string;
-    }>;
-  };
-}
+// Backwards-compatibility type aliases – these now point directly to Action.
+// They will be removed in a future breaking release.
+export type ActionDefinition = Action;
+export type SingleActionDefinition = Action;
+export type HoldActionDefinition = HoldAction;
 
 // ============================================================================
 // Home Assistant Actions
@@ -12262,24 +11764,37 @@ export interface LcarsButtonElementConfig {
 }
 
 export interface LcarsButtonActionConfig {
-  type: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state';
+  /** Either 'action' (single) or 'actions' (multiple) should be provided. */
+  type?: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state'; // legacy property (will be removed)
+  action?: Action; // preferred single action variant
+  actions?: Action[]; // preferred multi-action variant
+
+  // Service call specific
   service?: string;
   service_data?: Record<string, any>;
   target?: Record<string, any>;
+
+  // Navigation specific
   navigation_path?: string;
+
+  // URL specific
   url_path?: string;
+
+  // Entity specific (toggle, more-info)
   entity?: string;
+
+  // Confirmation support
   confirmation?: boolean | {
     text?: string;
     exemptions?: Array<{
       user: string;
     }>;
   };
-  // Custom action properties
+
+  // Custom state management properties
   target_element_ref?: string;
   state?: string;
   states?: string[];
-  actions?: SingleActionDefinition[];
 }
 
 // ============================================================================
@@ -13306,6 +12821,272 @@ export function parseDistanceValue(
 
 // Export singleton instance
 export const animationManager = new AnimationManager();
+```
+
+## File: src/utils/button.ts
+
+```typescript
+import { svg, SVGTemplateResult } from "lit";
+import { HomeAssistant } from "custom-card-helpers";
+import { colorResolver } from "./color-resolver.js";
+import { AnimationContext } from "./animation.js";
+import { ColorStateContext } from "./color.js";
+import { Action } from "../types.js";
+import { handleHassAction, isCustomAction, validateAction } from "./action-helpers.js";
+import { stateManager } from "./state-manager.js";
+
+export type ButtonPropertyName = 'fill' | 'stroke' | 'strokeWidth';
+
+export class Button {
+    private _props: any;
+    private _hass?: HomeAssistant;
+    private _requestUpdateCallback?: () => void;
+    private _id: string;
+    private _getShadowElement?: (id: string) => Element | null;
+
+    constructor(id: string, props: any, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
+        this._id = id;
+        this._props = props;
+        this._hass = hass;
+        this._requestUpdateCallback = requestUpdateCallback;
+        this._getShadowElement = getShadowElement;
+    }
+
+    private getAnimationContext(): AnimationContext {
+        return {
+            elementId: this._id,
+            getShadowElement: this._getShadowElement,
+            hass: this._hass,
+            requestUpdateCallback: this._requestUpdateCallback
+        };
+    }
+
+    private getResolvedColors(stateContext: ColorStateContext) {
+        const context = this.getAnimationContext();
+        return colorResolver.resolveAllElementColors(
+            this._id,
+            this._props,
+            context,
+            {},
+            stateContext
+        );
+    }
+
+    createButton(
+        pathData: string,
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        options: { rx: number },
+        stateContext: ColorStateContext
+    ): SVGTemplateResult {
+        const resolvedColors = this.getResolvedColors(stateContext);
+        const pathElement = svg`
+            <path
+                id=${this._id + "__shape"}
+                d=${pathData}
+                fill=${resolvedColors.fillColor}
+                stroke=${resolvedColors.strokeColor}
+                stroke-width=${resolvedColors.strokeWidth}
+            />
+        `;
+        return this.createButtonGroup([pathElement], {
+            isButton: this._props.button?.enabled === true,
+            elementId: this._id
+        });
+    }
+
+    createButtonGroup(
+        elements: SVGTemplateResult[],
+        config: { isButton: boolean; elementId: string }
+    ): SVGTemplateResult {
+        const { isButton, elementId } = config;
+        if (!isButton) {
+            return svg`<g>${elements}</g>`;
+        }
+        return svg`
+            <g
+                class="lcars-button-group"
+                @click=${this.handleClick.bind(this)}
+                style="cursor: pointer; outline: none;"
+                role="button"
+                aria-label=${elementId}
+                tabindex="0"
+                @keydown=${this.handleKeyDown.bind(this)}
+            >
+                ${elements}
+            </g>
+        `;
+    }
+
+    private handleClick(ev: Event): void {
+        const buttonConfig = this._props.button as any;
+        if (!this._hass || !buttonConfig?.enabled) {
+            return;
+        }
+        ev.stopPropagation();
+
+        const tapConfig = buttonConfig.actions?.tap;
+        if (!tapConfig) return;
+
+        if (Array.isArray(tapConfig)) {
+            // New concise format: an array of Action objects
+            tapConfig.forEach((actionObj: any) => {
+                const unified = this.convertToUnifiedAction(actionObj);
+                this.executeUnifiedAction(unified, ev.currentTarget as Element);
+            });
+        } else {
+            // Legacy / object format handled by existing helper
+            this.executeActionDefinition(tapConfig, ev.currentTarget as Element);
+        }
+    }
+
+    private handleKeyDown(e: KeyboardEvent): void {
+        if (e.key === 'Enter' || e.key === ' ') {
+            this.handleClick(e);
+        }
+    }
+
+    private executeUnifiedAction(action: Action, element?: Element): void {
+        if (!this._hass) {
+            console.error(`[${this._id}] No hass object available for action execution`);
+            return;
+        }
+        const validationErrors = validateAction(action);
+        if (validationErrors.length > 0) {
+            console.warn(`[${this._id}] Action validation failed:`, validationErrors);
+            return;
+        }
+        if (isCustomAction(action)) {
+            this.executeCustomAction(action);
+            return;
+        }
+        this.executeHassAction(action, element);
+    }
+
+    private executeCustomAction(action: Action): void {
+        try {
+            switch (action.action) {
+                case 'set_state':
+                    stateManager.executeSetStateAction(action);
+                    break;
+                case 'toggle_state':
+                    stateManager.executeToggleStateAction(action);
+                    break;
+                default:
+                    console.warn(`[${this._id}] Unknown custom action: ${action.action}`);
+            }
+            this._requestUpdateCallback?.();
+        } catch (error) {
+            console.error(`[${this._id}] Custom action execution failed:`, error);
+            this._requestUpdateCallback?.();
+        }
+    }
+
+    private executeHassAction(action: Action, element?: Element): void {
+        let targetElement: HTMLElement = element as HTMLElement;
+        if (!targetElement) {
+            const foundElement = document.getElementById(this._id);
+            if (foundElement) {
+                targetElement = foundElement as HTMLElement;
+            } else {
+                targetElement = document.createElement('div');
+                targetElement.id = this._id;
+                console.warn(`[${this._id}] Could not find DOM element, using fallback`);
+            }
+        }
+        handleHassAction(action, targetElement, this._hass!)
+            .then(() => {
+                if (action.action === 'toggle' || action.action === 'call-service') {
+                    setTimeout(() => {
+                        this._requestUpdateCallback?.();
+                    }, 25);
+                } else {
+                    this._requestUpdateCallback?.();
+                }
+            })
+            .catch(error => {
+                console.error(`[${this._id}] handleHassAction failed:`, error);
+                this._requestUpdateCallback?.();
+            });
+    }
+
+    /**
+     * @deprecated This method supports legacy action definition objects. It will be removed once
+     *             all configs migrate to the new unified Action format.
+     */
+    private executeActionDefinition(actionDef: any, element?: Element): void {
+        if (!this._hass) {
+            console.error(`[${this._id}] No hass object available for action execution`);
+            return;
+        }
+
+        // Allow new direct-array format to pass through for backwards compatibility
+        if (Array.isArray(actionDef)) {
+            actionDef.forEach((singleAction: any) => {
+                const unified = this.convertToUnifiedAction(singleAction);
+                this.executeUnifiedAction(unified, element);
+            });
+            return;
+        }
+
+        if (actionDef.actions && Array.isArray(actionDef.actions)) {
+            actionDef.actions.forEach((singleAction: any) => {
+                const unified = this.convertToUnifiedAction(singleAction);
+                this.executeUnifiedAction(unified, element);
+            });
+            return;
+        }
+        let actionType = actionDef.action || actionDef.type || 'none';
+        if (actionType === 'set-state') actionType = 'set_state';
+        const unifiedAction: Action = {
+            action: actionType,
+            service: actionDef.service,
+            service_data: actionDef.service_data,
+            target: actionDef.target,
+            navigation_path: actionDef.navigation_path,
+            url_path: actionDef.url_path,
+            entity: actionDef.entity,
+            target_element_ref: actionDef.target_element_ref || actionDef.target_id,
+            state: actionDef.state,
+            states: actionDef.states,
+            confirmation: actionDef.confirmation
+        };
+        if ((unifiedAction.action === 'toggle' || unifiedAction.action === 'more-info') && !unifiedAction.entity) {
+            unifiedAction.entity = this._id;
+        }
+        this.executeUnifiedAction(unifiedAction, element);
+    }
+
+    private convertToUnifiedAction(singleAction: any): Action {
+        let actionType = singleAction.action;
+        if (actionType === 'set-state') {
+            actionType = 'set_state';
+        }
+        return {
+            action: actionType,
+            service: singleAction.service,
+            service_data: singleAction.service_data,
+            target: singleAction.target,
+            navigation_path: singleAction.navigation_path,
+            url_path: singleAction.url_path,
+            entity: singleAction.entity,
+            target_element_ref: singleAction.target_element_ref || singleAction.target_id,
+            state: singleAction.state,
+            states: singleAction.states,
+            confirmation: singleAction.confirmation
+        };
+    }
+
+    updateHass(hass?: HomeAssistant): void {
+        this._hass = hass;
+    }
+
+    cleanup(): void {
+        // No-op for now
+    }
+}
 ```
 
 ## File: src/utils/color-resolver.ts
@@ -15068,6 +14849,328 @@ describe('AnimationManager - Pure Animation API', () => {
     it('should not detect positioning effects for fade animations', () => {
       const config: PureAnimationConfig = { type: 'fade' };
       expect(manager.doesAnimationEffectPositioning(config)).toBe(false);
+    });
+  });
+});
+```
+
+## File: src/utils/test/button.spec.ts
+
+```typescript
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Button } from '../button.js';
+import { HomeAssistant } from 'custom-card-helpers';
+
+describe('Button', () => {
+  let mockHass: HomeAssistant;
+  let mockRequestUpdate: () => void;
+  let mockGetShadowElement: (id: string) => Element | null;
+
+  beforeEach(() => {
+    mockHass = {
+      states: {
+        'light.test': {
+          entity_id: 'light.test',
+          state: 'off',
+          attributes: {},
+          context: { id: 'test', parent_id: null, user_id: null },
+          last_changed: new Date().toISOString(),
+          last_updated: new Date().toISOString()
+        }
+      }
+    } as any as HomeAssistant;
+
+    mockRequestUpdate = vi.fn();
+    mockGetShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+    
+    // Mock console methods to reduce noise in tests
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('constructor', () => {
+    it('should create a Button instance with all parameters', () => {
+      const props = { someProperty: 'value' };
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate, mockGetShadowElement);
+      
+      expect(button).toBeInstanceOf(Button);
+    });
+
+    it('should create a Button instance with minimal parameters', () => {
+      const button = new Button('test-button', {});
+      
+      expect(button).toBeInstanceOf(Button);
+    });
+  });
+
+  describe('createButtonGroup', () => {
+    it('should create a regular group when not a button', () => {
+      const button = new Button('test-button', {}, mockHass, mockRequestUpdate, mockGetShadowElement);
+      
+      const result = button.createButtonGroup([], {
+        isButton: false,
+        elementId: 'test'
+      });
+
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('_$litType$');
+      expect(result).toHaveProperty('strings');
+      expect(result).toHaveProperty('values');
+    });
+
+    it('should create an interactive button group when isButton is true', () => {
+      const button = new Button('test-button', {}, mockHass, mockRequestUpdate, mockGetShadowElement);
+      
+      const result = button.createButtonGroup([], {
+        isButton: true,
+        elementId: 'test'
+      });
+
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('_$litType$');
+      expect(result).toHaveProperty('strings');
+      expect(result).toHaveProperty('values');
+    });
+  });
+
+  describe('createButton', () => {
+    it('should create a button with proper structure', () => {
+      const props = {
+        button: {
+          enabled: true,
+          action_config: {
+            type: 'toggle',
+            entity: 'light.test'
+          }
+        }
+      };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate, mockGetShadowElement);
+      
+      const pathData = 'M 0,0 L 100,0 L 100,30 L 0,30 Z';
+      const result = button.createButton(pathData, 0, 0, 100, 30, { rx: 0 }, { isCurrentlyHovering: false, isCurrentlyActive: false });
+
+      expect(result).toBeDefined();
+      expect(result).toHaveProperty('_$litType$');
+      expect(result).toHaveProperty('strings');
+      expect(result).toHaveProperty('values');
+    });
+  });
+
+  describe('unified action execution', () => {
+    it('should execute single action correctly', () => {
+      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
+      const props = {
+        button: {
+          enabled: true,
+          action_config: {
+            type: 'toggle',
+            entity: 'light.test',
+            confirmation: true
+          }
+        }
+      };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      
+      // Simulate button click
+      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      
+      expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(1);
+      expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'toggle',
+          entity: 'light.test',
+          confirmation: true
+        }),
+        expect.any(HTMLElement)
+      );
+      
+      executeUnifiedActionSpy.mockRestore();
+    });
+
+    it('should execute multiple actions correctly', () => {
+      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
+      const props = {
+        button: {
+          enabled: true,
+          action_config: {
+            actions: [
+              {
+                action: 'toggle',
+                entity: 'light.living_room'
+              },
+              {
+                action: 'set_state',
+                target_element_ref: 'group.element',
+                state: 'active'
+              }
+            ]
+          }
+        }
+      };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      
+      // Simulate button click
+      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      
+      expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(2);
+      expect(executeUnifiedActionSpy).toHaveBeenNthCalledWith(1, 
+        expect.objectContaining({
+          action: 'toggle',
+          entity: 'light.living_room'
+        }),
+        expect.any(HTMLElement)
+      );
+      expect(executeUnifiedActionSpy).toHaveBeenNthCalledWith(2,
+        expect.objectContaining({
+          action: 'set_state',
+          target_element_ref: 'group.element',
+          state: 'active'
+        }),
+        expect.any(HTMLElement)
+      );
+      
+      executeUnifiedActionSpy.mockRestore();
+    });
+
+    it('should handle action type conversion from set-state to set_state', () => {
+      const convertToUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'convertToUnifiedAction');
+      const props = {
+        button: {
+          enabled: true,
+          action_config: {
+            actions: [
+              {
+                action: 'set-state',
+                target_element_ref: 'group.element',
+                state: 'active'
+              }
+            ]
+          }
+        }
+      };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      
+      // Simulate button click
+      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      
+      expect(convertToUnifiedActionSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'set-state',
+          target_element_ref: 'group.element',
+          state: 'active'
+        })
+      );
+      
+      convertToUnifiedActionSpy.mockRestore();
+    });
+
+    it('should auto-populate entity for toggle/more-info actions when missing', () => {
+      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
+      const props = {
+        button: {
+          enabled: true,
+          action_config: {
+            type: 'toggle'
+            // entity intentionally missing
+          }
+        }
+      };
+      
+      const button = new Button('test-button', props, mockHass, mockRequestUpdate);
+      
+      // Simulate button click
+      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      
+      expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'toggle',
+          entity: 'test-button' // Should use button ID
+        }),
+        expect.any(HTMLElement)
+      );
+      
+      executeUnifiedActionSpy.mockRestore();
+    });
+  });
+
+  describe('custom action handling', () => {
+    it('should handle custom set_state action', async () => {
+      const mockStateManager = {
+        executeSetStateAction: vi.fn(),
+        executeToggleStateAction: vi.fn()
+      };
+      
+      const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
+      const action = {
+        action: 'set_state' as const,
+        target_element_ref: 'test.element',
+        state: 'active'
+      };
+      
+      // Spy on the actual dynamic import and replace it
+      const importSpy = vi.spyOn(button as any, 'executeCustomAction').mockImplementation(async (action: any) => {
+        switch (action.action) {
+          case 'set_state':
+            mockStateManager.executeSetStateAction(action);
+            break;
+          case 'toggle_state':
+            mockStateManager.executeToggleStateAction(action);
+            break;
+        }
+      });
+      
+      await (button as any).executeCustomAction(action);
+      
+      expect(mockStateManager.executeSetStateAction).toHaveBeenCalledWith(action);
+      
+      importSpy.mockRestore();
+    });
+
+    it('should handle custom toggle_state action', async () => {
+      const mockStateManager = {
+        executeSetStateAction: vi.fn(),
+        executeToggleStateAction: vi.fn()
+      };
+      
+      const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
+      const action = {
+        action: 'toggle_state' as const,
+        target_element_ref: 'test.element',
+        states: ['state1', 'state2']
+      };
+      
+      // Spy on the actual dynamic import and replace it
+      const importSpy = vi.spyOn(button as any, 'executeCustomAction').mockImplementation(async (action: any) => {
+        switch (action.action) {
+          case 'set_state':
+            mockStateManager.executeSetStateAction(action);
+            break;
+          case 'toggle_state':
+            mockStateManager.executeToggleStateAction(action);
+            break;
+        }
+      });
+      
+      await (button as any).executeCustomAction(action);
+      
+      expect(mockStateManager.executeToggleStateAction).toHaveBeenCalledWith(action);
+      
+      importSpy.mockRestore();
+    });
+  });
+
+  describe('cleanup', () => {
+    it('should be a no-op and not throw an error', () => {
+      const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
+      expect(() => button.cleanup()).not.toThrow();
     });
   });
 });
@@ -18058,64 +18161,15 @@ export const transformPropagator = new TransformPropagator();
 {
   "status": "failed",
   "failedTests": [
-    "10708c82281818d9902f-83387f4283305cf9987d",
-    "10708c82281818d9902f-2cd005a3965ec406aec8"
+    "10708c82281818d9902f-83f7d7c7a5778d257c0a",
+    "10708c82281818d9902f-be032ccab32410497f2c",
+    "10708c82281818d9902f-89715616b03945b2afd3",
+    "ea01c0eed340df98b730-4d7cbee9acdd289163e0"
   ]
 }
 ```
 
-## File: test-results/config-examples-config-exa-ad4df-based-on-state-yaml-renders-chromium/error-context.md
-
-```markdown
-# Page snapshot
-
-```yaml
-- complementary:
-  - button "Sidebar toggle"
-  - text: Home Assistant
-  - listbox:
-    - option "Overview":
-      - option "Overview"
-    - option "Dashboard 1":
-      - option "Dashboard 1"
-    - option "Dashboard 2":
-      - option "Dashboard 2"
-    - option "Dashboard 3":
-      - option "Dashboard 3"
-    - option "Dashboard 4" [selected]:
-      - option "Dashboard 4"
-    - option "Map":
-      - option "Map"
-    - option "Energy":
-      - option "Energy"
-    - option "Logbook":
-      - option "Logbook"
-    - option "History":
-      - option "History"
-    - option "Media":
-      - option "Media"
-    - option "To-do lists":
-      - option "To-do lists"
-    - option "Developer tools":
-      - option "Developer tools"
-    - option "Settings 2":
-      - option "Settings 2"
-  - option "Notifications 1"
-  - option "Profile":
-    - option "Developer"
-- text: View
-- button "Entity search"
-- button "Assist"
-- button "Edit dashboard"
-- img:
-  - text: Context-Aware Dynamic Button example
-  - button "controls.dynamic_button"
-  - text: SMART BUTTON BUTTON B Group A is currently visible Click smart button to hide
-- img
-```
-```
-
-## File: test-results/config-examples-config-exa-c300e-card-structure-yaml-renders-chromium/error-context.md
+## File: test-results/config-examples-1-basic-card-structure-baseline-interactions-chromium/error-context.md
 
 ```markdown
 # Page snapshot
@@ -18131,28 +18185,162 @@ export const transformPropagator = new TransformPropagator();
       - option "Dashboard 1"
     - option "Map":
       - option "Map"
-    - option "Energy":
-      - option "Energy"
-    - option "Logbook":
-      - option "Logbook"
-    - option "History":
-      - option "History"
-    - option "Media":
-      - option "Media"
     - option "To-do lists":
       - option "To-do lists"
     - option "Developer tools":
       - option "Developer tools"
     - option "Settings 2":
       - option "Settings 2"
-  - option "Notifications 1"
+  - option "Notifications"
   - option "Profile":
     - option "Developer"
-- text: View
+- text: LCARS
 - button "Entity search"
-- button "Assist"
 - button "Edit dashboard"
 - img: Basic Card Structure example Example Element
+- img
+```
+```
+
+## File: test-results/config-examples-2-navigation-panel-baseline-interactions-chromium/error-context.md
+
+```markdown
+# Page snapshot
+
+```yaml
+- complementary:
+  - button "Sidebar toggle"
+  - text: Home Assistant
+  - listbox:
+    - option "Overview":
+      - option "Overview"
+    - option "Dashboard 1" [selected]:
+      - option "Dashboard 1"
+    - option "Map":
+      - option "Map"
+    - option "To-do lists":
+      - option "To-do lists"
+    - option "Developer tools":
+      - option "Developer tools"
+    - option "Settings 2":
+      - option "Settings 2"
+  - option "Notifications"
+  - option "Profile":
+    - option "Developer"
+- text: LCARS
+- button "Entity search"
+- button "Edit dashboard"
+- img:
+  - text: Navigation Control panel example
+  - button "nav_controls.basic_card_structure_button"
+  - text: Basic Card Structure 1
+  - button "nav_controls.dynamic_color_button"
+  - text: Dynamic Color 3
+  - button "nav_controls.advanced_layout_and_positioning_button"
+  - text: Advanced Layout And Positioning 4
+  - button "nav_controls.lcars_shape_elements_button"
+  - text: LCARS Shape Elements 5
+  - button "nav_controls.complex_actions_and_visibility_button"
+  - text: Complex Actions And Visibility 6
+  - button "nav_controls.button_actions_and_confirmations_button"
+  - text: Button Actions And Confirmations 7
+  - button "nav_controls.animations_button"
+  - text: Animations 8
+  - button "nav_controls.text_styling_button"
+  - text: Text Styling 9
+  - button "nav_controls.complete_dashboard_button"
+  - text: Complete Dashboard 10
+  - button "nav_controls.simple_state_group_for_navigation_button"
+  - text: Simple State Group For Navigation 11
+  - button "nav_controls.toggle_with_dependencies_button"
+  - text: Toggle With Dependencies 12
+  - button "nav_controls.conditional_actions_based_on_state_button"
+  - text: Conditional Actions Based On State 13
+  - button "nav_controls.state_machine_approach_button"
+  - text: State Machine Approach 14
+  - button "nav_controls.hass_integration_with_state_management_button"
+  - text: Hass Integration With State Management 15
+  - button "nav_controls.anchoring_button"
+  - text: Anchoring 16
+  - button "nav_controls.stretching_button"
+  - text: Stretching 17
+  - button "nav_controls.sequential_animation_and_propogation_button"
+  - text: Sequential Animation And Propogation 18
+  - button "nav_controls.on_load_animation_button"
+  - text: On Load Animation 19
+  - button "nav_controls.on_show_hide_animation_button"
+  - text: On Show Hide Animation 20
+  - button "nav_controls.on_state_change_animation_button"
+  - text: On State Change Animation 21
+- img
+```
+```
+
+## File: test-results/config-examples-3-dynamic-color-baseline-interactions-chromium/error-context.md
+
+```markdown
+# Page snapshot
+
+```yaml
+- complementary:
+  - button "Sidebar toggle"
+  - text: Home Assistant
+  - listbox:
+    - option "Overview":
+      - option "Overview"
+    - option "Dashboard 1" [selected]:
+      - option "Dashboard 1"
+    - option "Map":
+      - option "Map"
+    - option "To-do lists":
+      - option "To-do lists"
+    - option "Developer tools":
+      - option "Developer tools"
+    - option "Settings 2":
+      - option "Settings 2"
+  - option "Notifications"
+  - option "Profile":
+    - option "Developer"
+- text: LCARS
+- button "Entity search"
+- button "Edit dashboard"
+- img:
+  - text: "Dynamic Color Configuration example Static Hex should render #FF9900 for the rectangle fill and #000000 for the text. Static Hex: #FF9900 Static RGB should render RGB [255, 153, 0] for the rectangle fill and RGB [0, 0, 0] for the text. Static RGB: [255, 153, 0] Dynamic should render #FFFF00 when on, #333333 when off, #FF0000 when unavailable, and #666666 as default. Text should render #000000 when on, #FFFFFF when off, and #CCCCCC as default. kitchen sink status Dynamic Interpolation should render #000000 at brightness 0, #FF9900 at brightness 128, #FFFF00 at brightness 255, and #333333 as default. Text should render #FFFFFF at brightness 0, #000000 at brightness 255, and #FFFFFF as default. kitchen sink brightness Stateful should render #0099CC by default, #00CCFF when hovered, and #0066AA when active. Text should always render #FFFFFF in all states."
+  - button "stateful_description.stateful_test"
+  - text: kitchen sink toggle
+- img
+```
+```
+
+## File: test-results/hass-integration-LCARS-car-3c1ca-est-card-renders-and-reacts-chromium/error-context.md
+
+```markdown
+# Page snapshot
+
+```yaml
+- complementary:
+  - button "Sidebar toggle"
+  - text: Home Assistant
+  - listbox:
+    - option "Overview":
+      - option "Overview"
+    - option "Dashboard 1" [selected]:
+      - option "Dashboard 1"
+    - option "Map":
+      - option "Map"
+    - option "To-do lists":
+      - option "To-do lists"
+    - option "Developer tools":
+      - option "Developer tools"
+    - option "Settings 2":
+      - option "Settings 2"
+  - option "Notifications"
+  - option "Profile":
+    - option "Developer"
+- text: LCARS
+- button "Entity search"
+- button "Edit dashboard"
+- img: No layout elements to render
 - img
 ```
 ```
@@ -18166,25 +18354,31 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 import { HomeAssistant, PlaywrightBrowser } from 'hass-taste-test';
+import './test-helpers';
 
-// Directory containing YAML example configs
+// ----------------------------------------------------------------------------
+// Setup helpers
+// ----------------------------------------------------------------------------
+
 const EXAMPLES_DIR = path.resolve(process.cwd(), 'yaml-config-examples');
 
-// Collect YAML files once at import time
 const exampleFiles = fs
   .readdirSync(EXAMPLES_DIR)
-  .filter((file) => file.endsWith('.yaml'))
-  .map((file) => path.join(EXAMPLES_DIR, file));
+  .filter((f) => f.endsWith('.yaml'))
+  .map((f) => path.join(EXAMPLES_DIR, f));
 
-// Spin up a single Home Assistant instance for this suite
 let hass: any;
 
 test.beforeAll(async () => {
+  // We pass an *empty* string here because our test-helpers monkey-patch
+  // already writes a minimal configuration (frontend, http, plus a template
+  // light called kitchen_sink_light). Keeping this blank avoids duplicate YAML
+  // keys like `light:`.
+
   hass = await HomeAssistant.create('', {
     browser: new PlaywrightBrowser('chromium'),
   });
 
-  // Register the dist file path of our card so dashboards can load it
   const distPath = path.resolve(process.cwd(), 'dist/lovelace-lcars-card.js');
   await hass.addResource(distPath, 'module');
 });
@@ -18193,25 +18387,110 @@ test.afterAll(async () => {
   if (hass) await hass.close();
 });
 
-// Dynamically generate one test per example file
+// ----------------------------------------------------------------------------
+// Utility – YAML inspection for interactive metadata
+// ----------------------------------------------------------------------------
+
+type ButtonMeta = {
+  fullId: string; // group_id.element_id
+  targetElementRefs: string[]; // derived from actions
+};
+
+function analyseYamlForInteractions(yamlObj: any): ButtonMeta[] {
+  const buttons: ButtonMeta[] = [];
+
+  if (!yamlObj?.groups) return buttons;
+
+  for (const group of yamlObj.groups) {
+    const groupId = group.group_id;
+    if (!group.elements) continue;
+
+    for (const el of group.elements) {
+      if (el?.button?.enabled) {
+        const fullId = `${groupId}.${el.id}`;
+        const targetRefs: string[] = [];
+
+        const actionContainers = [] as any[];
+        if (el.button.actions?.tap) actionContainers.push(el.button.actions.tap);
+        if (el.button.actions?.hold) actionContainers.push(el.button.actions.hold);
+        if (el.button.actions?.double_tap) actionContainers.push(el.button.actions.double_tap);
+
+        actionContainers.flat().forEach((action: any) => {
+          if (typeof action !== 'object') return;
+          const unified = Array.isArray(action) ? action : [action];
+          unified.forEach((a) => {
+            if (a.target_element_ref) targetRefs.push(a.target_element_ref);
+          });
+        });
+
+        buttons.push({ fullId, targetElementRefs: targetRefs });
+      }
+    }
+  }
+
+  return buttons;
+}
+
+// ----------------------------------------------------------------------------
+// Dynamic per-yaml tests
+// ----------------------------------------------------------------------------
+
 for (const filePath of exampleFiles) {
-  const fileName = path.basename(filePath);
+  const fileName = path.basename(filePath); // e.g. 3-dynamic-color.yaml
+  const baseName = path.parse(fileName).name; // e.g. 3-dynamic-color
 
-  test(`config example – ${fileName} renders`, async ({ page }) => {
-    // Parse YAML
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    const configObj = yaml.load(raw);
+  test.describe(`${baseName}`, () => {
+    test(`baseline & interactions`, async ({ page }) => {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      const configObj = yaml.load(raw);
 
-    // Create a fresh one-card dashboard for this config
-    const dashboard = await hass.Dashboard([configObj]);
-    const url = await dashboard.link();
+      // Use dark colour-scheme so screenshots have consistent dark background.
+      const dashboard = await hass.Dashboard([configObj]);
+      const url = await dashboard.link();
 
-    await page.goto(url, { timeout: 60_000 });
+      await page.goto(url, { timeout: 60_000 });
 
-    const card = page.locator('lovelace-lcars-card').first();
-    await card.locator('svg').waitFor();
+      const card = page.locator('lovelace-lcars-card').first();
+      await card.locator('svg').waitFor();
+      await page.evaluate(() => document.fonts.ready);
 
-    await expect(card).toHaveScreenshot(`example-${fileName}.png`, { threshold: 0.2 });
+      // Baseline screenshot
+      await expect(card).toHaveScreenshot(`${baseName}-initial.png`);
+
+      // Analyse YAML for interactive buttons
+      const buttons = analyseYamlForInteractions(configObj);
+
+      for (const button of buttons) {
+        const shapeSelector = `path[id="${button.fullId}__shape"]`;
+        const btn = card.locator(shapeSelector);
+
+        // If button shape not in DOM, skip this interaction
+        try {
+          await btn.waitFor({ state: 'attached', timeout: 5000 });
+        } catch {
+          continue;
+        }
+
+        // Hover state
+        await btn.hover();
+        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-hover.png`);
+
+        // Active (mouse down)
+        const box = await btn.boundingBox();
+        if (box) {
+          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+          await page.mouse.down();
+          await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-active.png`);
+          await page.mouse.up();
+        }
+
+        // Click / tap – may trigger state change elsewhere
+        await btn.click();
+        await page.waitForTimeout(450); // allow animations
+
+        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-post-click.png`);
+      }
+    });
   });
 }
 ```
@@ -18221,6 +18500,7 @@ for (const filePath of exampleFiles) {
 ```typescript
 // @ts-nocheck
 import { test, expect } from '@playwright/test';
+import './test-helpers';
 import { HomeAssistant, PlaywrightBrowser } from 'hass-taste-test';
 import path from 'path';
 
@@ -18232,8 +18512,9 @@ test.describe('LCARS card inside isolated Home Assistant (hass-taste-test)', () 
   let dashboardUrl: string;
 
   test.beforeAll(async () => {
-    // Create the HA instance.  Use PlaywrightBrowser so hass-taste-test has a browser
-    // to drive when it builds dashboards – this is separate from the Playwright test runner.
+    // test-helpers installs a minimal HA config for us; pass an empty string
+    // here to avoid duplicate YAML keys.
+
     hass = await HomeAssistant.create('', {
       browser: new PlaywrightBrowser('chromium'),
     });
@@ -18253,6 +18534,7 @@ test.describe('LCARS card inside isolated Home Assistant (hass-taste-test)', () 
       ],
     };
 
+    // Use dark colour-scheme so screenshots have a consistent dark background.
     const dashboard = await hass.Dashboard([cardConfig]);
     dashboardUrl = await dashboard.link();
   }, 120_000); // Allow plenty of time for HA to download & initialise
@@ -18267,6 +18549,9 @@ test.describe('LCARS card inside isolated Home Assistant (hass-taste-test)', () 
     const card = page.locator('lovelace-lcars-card');
     await card.locator('svg').waitFor();
 
+    // Ensure web fonts have loaded before taking screenshots
+    await page.evaluate(() => document.fonts.ready);
+
     await expect(card).toHaveScreenshot('hass-lcars-initial.png');
 
     // Try hovering a generic shape inside the card just to exercise interactive colours.
@@ -18275,6 +18560,212 @@ test.describe('LCARS card inside isolated Home Assistant (hass-taste-test)', () 
       await rect.hover();
       await expect(card).toHaveScreenshot('hass-lcars-hover.png');
     }
+  });
+});
+```
+
+## File: tests/e2e/interactive-state.spec.ts
+
+```typescript
+// @ts-nocheck
+import { test, expect } from '@playwright/test';
+
+/**
+ * Additional interaction tests for the LCARS card.
+ *
+ * This file focuses on verifying that:
+ * 1. Hovering updates stateful colours.
+ * 2. Mouse down ("active" state) updates colours.
+ * 3. A button element can toggle another element's state via the `toggle_state` action.
+ *
+ * The test re-uses the generic test harness HTML to avoid duplicating example files. It
+ * dynamically injects a purpose-built configuration into the card at runtime so we
+ * can exercise the various interaction paths without changing the static harness.
+ */
+
+test.describe.skip('LCARS Card – interaction states', () => {
+  const harnessPath = '/tests/e2e/test-harness.html';
+  const devBase = process.env.DEV_BASE_URL || 'http://localhost:5000';
+
+  async function loadCustomConfig(page) {
+    // Reconfigure the existing <lovelace-lcars-card id="test-card"> in the harness.
+    await page.evaluate(() => {
+      const card = document.getElementById('test-card');
+      const hassMock = {
+        states: {},
+        themes: {},
+        language: 'en',
+        resources: {},
+      };
+
+      // Simple layout: a rectangular button at the top toggles a status rectangle below.
+      card.setConfig({
+        type: 'lovelace-lcars-card',
+        groups: [
+          {
+            group_id: 'controls',
+            elements: [
+              {
+                id: 'toggle_btn',
+                type: 'rectangle',
+                appearance: {
+                  fill: {
+                    default: '#2266ff',
+                    hover: '#3388ff',
+                    active: '#1144cc',
+                  },
+                  stroke: '#ffffff',
+                  strokeWidth: 2,
+                  cornerRadius: 4,
+                },
+                text: {
+                  content: 'Toggle',
+                  fill: '#ffffff',
+                  fontFamily: 'Antonio',
+                  fontSize: 16,
+                  textAnchor: 'middle',
+                  dominantBaseline: 'middle',
+                },
+                button: {
+                  enabled: true,
+                  actions: {
+                    tap: [
+                      {
+                        action: 'toggle_state',
+                        target_element_ref: 'status_group.status_rect',
+                        states: ['default', 'highlight'],
+                      },
+                    ],
+                  },
+                },
+                layout: {
+                  width: 120,
+                  height: 40,
+                  offsetX: 20,
+                  offsetY: 20,
+                },
+              },
+            ],
+          },
+          {
+            group_id: 'status_group',
+            elements: [
+              {
+                id: 'status_rect',
+                type: 'rectangle',
+                appearance: {
+                  // Colour changes will be driven by state-based animations so keep static here.
+                  fill: {
+                    default: '#666666',
+                  },
+                  stroke: '#ffffff',
+                  strokeWidth: 2,
+                  cornerRadius: 4,
+                },
+                state_management: {
+                  default_state: 'default',
+                },
+                animations: {
+                  custom_states: [
+                    {
+                      state: 'highlight',
+                      animation: {
+                        type: 'fade',
+                        duration: 300,
+                        fade_params: {
+                          opacity_start: 0.4,
+                          opacity_end: 1,
+                        },
+                      },
+                    },
+                  ],
+                },
+                layout: {
+                  width: 120,
+                  height: 40,
+                  offsetX: 20,
+                  offsetY: 80,
+                },
+              },
+            ],
+          },
+        ],
+      });
+      card.hass = hassMock;
+    });
+  }
+
+  test('hover & active visual states', async ({ page }) => {
+    // Load harness and replace config.
+    try {
+      await page.goto(`${devBase}${harnessPath}`, { timeout: 10000 });
+    } catch (error) {
+      test.skip(true, `Dev server not reachable at ${devBase}`);
+    }
+
+    const card = page.locator('lovelace-lcars-card');
+    await card.locator('svg').waitFor();
+
+    // Ensure fonts loaded after the card has been initialised
+    await page.evaluate(() => document.fonts.ready);
+
+    await loadCustomConfig(page);
+
+    const buttonShape = card.locator('path[id="controls.toggle_btn__shape"]');
+
+    // Wait until the toggle button is rendered inside the card's shadow DOM.
+    await buttonShape.waitFor({ state: 'attached', timeout: 15000 });
+
+    // Check default fill colour.
+    await expect(await buttonShape.getAttribute('fill')).toBe('#2266ff');
+
+    // Hover state should update the fill.
+    await buttonShape.hover();
+    await expect(await buttonShape.getAttribute('fill')).toBe('#3388ff');
+
+    // Active (mouse down) state – hold mouse down to keep the active fill visible.
+    const box = await buttonShape.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await expect(await buttonShape.getAttribute('fill')).toBe('#1144cc');
+      await page.mouse.up();
+    }
+  });
+
+  test('button click toggles target state', async ({ page }) => {
+    try {
+      await page.goto(`${devBase}${harnessPath}`, { timeout: 10000 });
+    } catch (error) {
+      test.skip(true, `Dev server not reachable at ${devBase}`);
+    }
+
+    const card = page.locator('lovelace-lcars-card');
+    await card.locator('svg').waitFor();
+
+    // Ensure fonts loaded after the card has been initialised
+    await page.evaluate(() => document.fonts.ready);
+
+    await loadCustomConfig(page);
+
+    const buttonShape = card.locator('path[id="controls.toggle_btn__shape"]');
+
+    // Ensure button exists before interaction
+    await buttonShape.waitFor({ state: 'attached', timeout: 15000 });
+
+    // Click the button – this should toggle the state of the status rectangle.
+    await buttonShape.click();
+
+    // Wait for the state change animation (~300ms) to complete.
+    await page.waitForTimeout(400);
+
+    // The target rectangle should now be in "highlight" state which we detect by opacity 1.
+    const statusShape = card.locator('path[id="status_group.status_rect__shape"]');
+    const opacity = await statusShape.evaluate((el) => {
+      const o = window.getComputedStyle(el).opacity;
+      return parseFloat(o);
+    });
+    expect(opacity).toBeGreaterThan(0.9);
   });
 });
 ```
@@ -18309,6 +18800,9 @@ test.describe('LCARS Card – visual & interaction', () => {
     // Ensure the SVG content inside the shadow DOM is rendered before taking a screenshot.
     await card.locator('svg').waitFor();
 
+    // Ensure web fonts have loaded
+    await page.evaluate(() => document.fonts.ready);
+
     // Take a full-card screenshot and compare.
     await expect(card).toHaveScreenshot('lcars-card-initial.png');
   });
@@ -18320,18 +18814,24 @@ test.describe('LCARS Card – visual & interaction', () => {
       test.skip(true, `Dev server not reachable at ${devBase}`);
     }
 
+    // Ensure the SVG content inside the shadow DOM is rendered before taking a screenshot.
+    const card = page.locator('lovelace-lcars-card');
+    await card.locator('svg').waitFor();
+
+    // Ensure web fonts have loaded
+    await page.evaluate(() => document.fonts.ready);
+
     // Target the rectangle shape path inside the card's shadow-root.
     const shape = page.locator('lovelace-lcars-card').locator('svg path').first();
-
-    // Ensure the SVG has rendered so the path can exist.
-    await page.locator('lovelace-lcars-card').locator('svg').waitFor({ timeout: 10000 });
 
     // Wait for the shape element to appear inside the shadow DOM.
     await shape.waitFor({ state: 'attached', timeout: 15000 });
 
+    // Ensure web fonts have loaded
+    await page.evaluate(() => document.fonts.ready);
+
     await shape.hover();
 
-    const card = page.locator('lovelace-lcars-card');
     await expect(card).toHaveScreenshot('lcars-card-hover.png');
   });
 });
@@ -18345,6 +18845,8 @@ test.describe('LCARS Card – visual & interaction', () => {
   <head>
     <meta charset="UTF-8" />
     <title>LCARS Card Test Harness</title>
+    <!-- Load Antonio font for consistent rendering -->
+    <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap" rel="stylesheet" />
     <!-- Import the card via Vite dev server. -->
     <script type="module" src="/src/lovelace-lcars-card.ts"></script>
     <style>
@@ -18411,6 +18913,86 @@ test.describe('LCARS Card – visual & interaction', () => {
     </script>
   </body>
 </html>
+```
+
+## File: tests/e2e/test-helpers.ts
+
+```typescript
+// Helpers to modify hass-taste-test behaviour for our e2e suite.
+// 1) Create a *very* minimal Home Assistant configuration so startup is fast
+//    and only the integrations/entities the LCARS examples need are loaded.
+// 2) Force each generated Lovelace view into panel-mode so the LCARS card can
+//    use the full width in our screenshots. We no longer override the theme or
+//    background – the test pages will use Home Assistant's default styles.
+
+import { promises as fs } from 'fs';
+import { HomeAssistant } from 'hass-taste-test';
+
+// Prevent double-patching if this file is imported in multiple spec files.
+if (!(HomeAssistant as any)._lcarsPatched) {
+  //--------------------------------------------------------------------------
+  // 1. Patch writeYAMLConfiguration → strip `default_config:` and add only the
+  //    integrations we explicitly need.
+  //--------------------------------------------------------------------------
+  (HomeAssistant.prototype as any).writeYAMLConfiguration = async function (additionalCfg: string) {
+    // Core services so Lovelace & HTTP work.
+    const base = [
+      'frontend:',
+      'http:',
+      `  server_host: ${this.options.host}`,
+      `  server_port: ${this.chosenPort}`,
+    ];
+
+    // Lightweight "demo" entities the example dashboards rely on.
+    const demoEntities = [
+      'input_boolean:',
+      '  kitchen_sink_light:',
+      '    name: Kitchen Sink Light',
+      '',
+      'light:',
+      '  - platform: template',
+      '    lights:',
+      '      kitchen_sink_light:',
+      "        friendly_name: 'Kitchen Sink Light'",
+      "        value_template: '{{ states(\"input_boolean.kitchen_sink_light\") == \"on\" }}'",
+      '        turn_on:',
+      '          service: input_boolean.turn_on',
+      '          target:',
+      '            entity_id: input_boolean.kitchen_sink_light',
+      '        turn_off:',
+      '          service: input_boolean.turn_off',
+      '          target:',
+      '            entity_id: input_boolean.kitchen_sink_light',
+    ];
+
+    const contents = [...base, '', additionalCfg.trim(), '', ...demoEntities, ''].join('\n');
+    await fs.writeFile(this.path_confFile(), contents);
+  };
+
+  //--------------------------------------------------------------------------
+  // 2. Patch setDashboardView → save dashboards in *panel* mode so the LCARS
+  //    card always occupies the full browser width.
+  //--------------------------------------------------------------------------
+  (HomeAssistant.prototype as any).setDashboardView = async function (dashboardPath: string, cards: any[]) {
+    await this.ws.sendMessagePromise({
+      type: 'lovelace/config/save',
+      url_path: dashboardPath,
+      config: {
+        title: 'LCARS Test',
+        views: [
+          {
+            path: 'default_view',
+            title: 'LCARS',
+            panel: true,
+            cards,
+          },
+        ],
+      },
+    });
+  };
+
+  (HomeAssistant as any)._lcarsPatched = true;
+}
 ```
 
 ## File: tsconfig.json

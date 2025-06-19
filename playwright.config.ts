@@ -15,7 +15,11 @@ export default defineConfig({
     // Tests set their own target URLs (either dev server or Hass Taste Test links).
     headless: true,
     trace: 'retain-on-failure',
-    video: 'retain-on-failure',
+    video: 'on',
+    viewport: { width: 1920, height: 1080 },
+    launchOptions: {
+      args: ['--window-size=1920,1080'],
+    },
   },
   projects: [
     {

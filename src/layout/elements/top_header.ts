@@ -71,7 +71,7 @@ export class TopHeaderElement extends LayoutElement {
       letterSpacing: props.letterSpacing || 'normal',
       textTransform: props.textTransform || 'uppercase',
       fontSize: props.fontSize || 16,
-      fill: props.textColor || props.fill || '#FFFFFF'
+      fill: props.textColor || props.fill || '#99CCFF'
     }, {
       // No anchor - we'll position this manually in layoutTextElements
     }, hass, requestUpdateCallback, getShadowElement);

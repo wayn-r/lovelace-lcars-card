@@ -1,0 +1,364 @@
+type: custom:lovelace-lcars-card
+card_title: State-Driven Animation Examples
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Animation Configuration
+          right_content: example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+
+  - group_id: fade_in_group
+    elements:
+      - id: fade_in_element
+        type: rectangle
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: LOADING...
+          fill: "#000000"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+        animations:
+          on_load:
+            type: fade
+            fade_params:
+              opacity_start: 0
+              opacity_end: 1
+            duration: 2
+            ease: power3.out
+
+      - id: fade_in_description
+        type: text
+        text:
+          content: This element should have a fade-in effect when it loads.
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          offsetX: 5
+          anchor:
+            to: fade_in_group.fade_in_element
+            element_point: centerLeft
+            target_point: centerRight
+
+
+  - group_id: sliding_panel_group
+    elements:
+      - id: sliding_panel_trigger_button
+        type: rectangle
+        appearance:
+          fill:
+            default: "#CC6600"
+            hover: "#DD7700"
+            active: "#BB5500"
+        text:
+          content: SHOW PANEL
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 5
+          anchor:
+            to: fade_in_group.fade_in_element
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: toggle_state
+              target_element_ref: sliding_panel_group.sliding_panel
+              states:
+                - hidden
+                - visible
+
+      - id: sliding_panel_description
+        type: text
+        text:
+          content: This button should trigger a panel to slide in from the left..
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          offsetX: 5
+          anchor:
+            to: sliding_panel_group.sliding_panel_trigger_button
+            element_point: centerLeft
+            target_point: centerRight
+
+      - id: sliding_panel
+        type: rectangle
+        appearance:
+          fill:
+            default: "#0099CC"
+            hover: "#00AADD"
+        text:
+          content: SLIDING PANEL
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 200
+          height: 100
+          offsetY: 5
+          anchor:
+            to: nav_header.main_header
+            element_point: topRight
+            target_point: bottomRight
+        state_management:
+          default_state: hidden
+        animations:
+          on_state_change:
+            - from_state: hidden
+              to_state: visible
+              type: slide
+              slide_params:
+                direction: right
+                distance: 100%
+                opacity_start: 0
+                opacity_end: 1
+              duration: 0.5
+              ease: power2.out
+            - from_state: visible
+              to_state: hidden
+              type: slide
+              slide_params:
+                direction: left
+                distance: 100%
+                opacity_start: 1
+                opacity_end: 0
+              duration: 0.3
+              ease: power2.in
+
+  - group_id: scale_target_group
+    elements:
+      - id: scale_trigger_button
+        type: rectangle
+        appearance:
+          fill:
+            default: "#336699"
+            hover: "#4477AA"
+            active: "#225588"
+        text:
+          content: SCALE
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 5
+          anchor:
+            to: sliding_panel_group.sliding_panel_trigger_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: toggle_state
+              target_element_ref: scale_target_group.scale_target
+              states:
+                - normal
+                - scaled
+
+      - id: scale_target_description
+        type: text
+        text:
+          content: >-
+            This button should toggle the scale of the "scale_target" element
+            when pressed.
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          offsetX: 5
+          anchor:
+            to: scale_target_group.scale_target
+            element_point: centerLeft
+            target_point: centerRight
+
+      - id: scale_target
+        type: rectangle
+        appearance:
+          fill: "#9966CC"
+        text:
+          content: SCALE TARGET
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetX: 5
+          anchor:
+            to: scale_target_group.scale_trigger_button
+            element_point: topLeft
+            target_point: topRight
+        state_management:
+          default_state: normal
+        animations:
+          on_state_change:
+            - from_state: normal
+              to_state: scaled
+              type: scale
+              scale_params:
+                scale_start: 1
+                scale_end: 1.2
+                transform_origin: center center
+              duration: 0.3
+              ease: bounce.out
+            - from_state: scaled
+              to_state: normal
+              type: scale
+              scale_params:
+                scale_start: 1.2
+                scale_end: 1
+                transform_origin: center center
+              duration: 0.3
+              ease: power2.inOut
+
+
+  - group_id: sequence_group
+    elements:
+      - id: sequence_element
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: SEQUENCE
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 5
+          anchor:
+            to: scale_target_group.scale_trigger_button
+            element_point: topLeft
+            target_point: bottomLeft
+        state_management:
+          default_state: idle
+        animations:
+          on_load:
+            steps:
+              - index: 0
+                animations:
+                  - type: slide
+                    slide_params:
+                      direction: down
+                      distance: 20px
+                      movement: in
+                    duration: 0.5
+                  - type: fade
+                    fade_params:
+                      opacity_start: 0
+                      opacity_end: 1
+                    duration: 2
+                    ease: power3.out
+                    delay: 0.25
+              - index: 1
+                animations:
+                  - type: slide
+                    slide_params:
+                      direction: right
+                      distance: 20px
+                      movement: in
+                    duration: 0.5
+                    repeat: 2
+                    yoyo: true
+                    
+      - id: sequence_description
+        type: text
+        text:
+          content: This element should fade in, slide up, and scale up when it loads.
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          offsetX: 5
+          anchor:
+            to: sequence_group.sequence_element
+            element_point: centerLeft
+            target_point: centerRight
+
+
+  - group_id: multi_action_group
+    elements:
+      - id: multi_trigger_button
+        type: rectangle
+        appearance:
+          fill:
+            default: "#669933"
+            hover: "#77AA44"
+            active: "#558822"
+        text:
+          content: MULTI ACTION
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 5
+          anchor:
+            to: sequence_group.sequence_element
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              actions:
+                - action: set_state
+                  target_element_ref: sliding_panel_group.sliding_panel
+                  state: visible
+                - action: set_state
+                  target_element_ref: scale_target_group.scale_target
+                  state: scaled
+
+      - id: reset_button
+        type: rectangle
+        appearance:
+          fill:
+            default: "#996633"
+            hover: "#AA7744"
+            active: "#885522"
+        text:
+          content: RESET ALL
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 5
+          anchor:
+            to: multi_action_group.multi_trigger_button
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              actions:
+                - action: set_state
+                  target_element_ref: sliding_panel_group.sliding_panel
+                  state: hidden
+                - action: set_state
+                  target_element_ref: scale_target_group.scale_target
+                  state: normal

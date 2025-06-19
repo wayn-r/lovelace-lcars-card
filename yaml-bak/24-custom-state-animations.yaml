@@ -1,0 +1,115 @@
+type: custom:lovelace-lcars-card
+card_title: Custom State Animations Example
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC5500"
+        text:
+          left_content: Custom State Animations
+          right_content: example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: controls
+    elements:
+      - id: alert_toggle
+        type: rectangle
+        appearance:
+          fill: "#FFAA00"
+        text:
+          content: ALERT
+          fill: "#000000"
+          fontFamily: Antonio
+        layout:
+          width: 80
+          height: 30
+          offsetY: 5
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: toggle_state
+              target_element_ref: anim_group.animated_rect
+              states:
+                - idle
+                - alert
+  - group_id: anim_group
+    elements:
+      - id: animated_rect
+        type: rectangle
+        appearance:
+          fill: "#AA3333"
+        text:
+          content: WATCH ME
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 140
+          height: 40
+          offsetY: 5
+          anchor:
+            to: controls.alert_toggle
+            element_point: topLeft
+            target_point: bottomLeft
+        state_management:
+          default_state: idle
+        animations:
+          custom_states:
+            - state: alert
+              animation:
+                type: fade
+                fade_params:
+                  opacity_start: 1
+                  opacity_end: 0.3
+                duration: 0.5
+                target_self: true
+            - state: alert
+              animation:
+                type: scale
+                scale_params:
+                  scale_start: 1
+                  scale_end: 1.2
+                  transform_origin: center center
+                duration: 0.5
+                target_elements_ref:
+                  - anim_group.remote_rect
+          on_hide:
+            type: slide
+            slide_params:
+              direction: left
+              distance: 120px
+              movement: out
+              opacity_start: 1
+              opacity_end: 0
+            duration: 0.5
+      - id: remote_rect
+        type: rectangle
+        appearance:
+          fill: "#4444AA"
+        text:
+          content: TARGET
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 80
+          height: 30
+          offsetX: 5
+          anchor:
+            to: anim_group.animated_rect
+            element_point: centerLeft
+            target_point: centerRight 

@@ -98,8 +98,19 @@ export class Button {
             return;
         }
         ev.stopPropagation();
-        if (buttonConfig.actions?.tap) {
-            this.executeActionDefinition(buttonConfig.actions.tap, ev.currentTarget as Element);
+
+        const tapConfig = buttonConfig.actions?.tap;
+        if (!tapConfig) return;
+
+        if (Array.isArray(tapConfig)) {
+            // New concise format: an array of Action objects
+            tapConfig.forEach((actionObj: any) => {
+                const unified = this.convertToUnifiedAction(actionObj);
+                this.executeUnifiedAction(unified, ev.currentTarget as Element);
+            });
+        } else {
+            // Legacy / object format handled by existing helper
+            this.executeActionDefinition(tapConfig, ev.currentTarget as Element);
         }
     }
 
@@ -173,11 +184,25 @@ export class Button {
             });
     }
 
+    /**
+     * @deprecated This method supports legacy action definition objects. It will be removed once
+     *             all configs migrate to the new unified Action format.
+     */
     private executeActionDefinition(actionDef: any, element?: Element): void {
         if (!this._hass) {
             console.error(`[${this._id}] No hass object available for action execution`);
             return;
         }
+
+        // Allow new direct-array format to pass through for backwards compatibility
+        if (Array.isArray(actionDef)) {
+            actionDef.forEach((singleAction: any) => {
+                const unified = this.convertToUnifiedAction(singleAction);
+                this.executeUnifiedAction(unified, element);
+            });
+            return;
+        }
+
         if (actionDef.actions && Array.isArray(actionDef.actions)) {
             actionDef.actions.forEach((singleAction: any) => {
                 const unified = this.convertToUnifiedAction(singleAction);

@@ -10,7 +10,7 @@ groups:
         text:
           left_content: Navigation Control panel
           right_content: example
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontSize: 18
           fontWeight: bold
           fontFamily: Antonio

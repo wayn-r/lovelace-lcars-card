@@ -1,0 +1,82 @@
+type: custom:lovelace-lcars-card
+card_title: Context-Aware Dynamic Button Example
+
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Context-Aware Dynamic Button
+          right_content: example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+
+  - group_id: "controls"
+    elements:
+      - id: "dynamic_button"
+        type: "rectangle"
+        appearance:
+          fill: "#9966CC"
+        text:
+          content: "SMART BUTTON"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 120
+          height: 45
+          anchor:
+            to: nav_header.main_header
+            element_point: "topLeft"
+            target_point: "bottomLeft"
+        button:
+          enabled: true
+
+  - group_id: "nav"
+    elements:
+      - id: "button_b"
+        type: "rectangle"
+        appearance:
+          fill: "#0099CC"
+        text:
+          content: "BUTTON B"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 100
+          height: 40
+          anchor:
+            to: "controls.dynamic_button"
+            element_point: "topLeft"
+            target_point: "topRight"
+  
+  - group_id: "group_a"
+    elements:
+      - id: "status_panel"
+        type: "rectangle"
+        appearance:
+          fill: "#333333"
+          stroke: "#9966CC"
+          strokeWidth: 1
+        text:
+          content: "Group A is currently visible\nClick smart button to hide"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+        layout:
+          width: 250
+          height: 60
+          anchor:
+            to: "controls.dynamic_button"
+            element_point: "topLeft"
+            target_point: "bottomLeft"

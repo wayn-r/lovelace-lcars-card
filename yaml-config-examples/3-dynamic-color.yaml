@@ -10,7 +10,7 @@ groups:
         text:
           left_content: Dynamic Color Configuration
           right_content: example
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontSize: 18
           fontWeight: bold
           fontFamily: Antonio
@@ -29,7 +29,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "Static Hex should render #FF9900"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -56,7 +56,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "for the rectangle fill and #000000"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -83,7 +83,7 @@ groups:
           fill: "#FF9900"
         text:
           content: for the text.
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -117,7 +117,7 @@ groups:
           fill: "#FF9900"
         text:
           content: Static RGB should render RGB [255, 153, 0]
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -147,7 +147,7 @@ groups:
           fill: "#FF9900"
         text:
           content: for the rectangle fill and RGB [0, 0, 0]
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -177,7 +177,7 @@ groups:
           fill: "#FF9900"
         text:
           content: for the text.
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -213,7 +213,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "Dynamic should render #FFFF00"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -240,7 +240,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "when on, #333333"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -267,7 +267,7 @@ groups:
           fill: "#FF9900"
         text:
           content: when off,
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -282,7 +282,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "#FF0000"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -309,7 +309,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "when unavailable, and #666666"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -336,7 +336,7 @@ groups:
           fill: "#FF9900"
         text:
           content: as default.
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -351,7 +351,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "Text should render #000000"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -377,8 +377,8 @@ groups:
         appearance:
           fill: "#FF9900"
         text:
-          content: "when on, #FFFFFF"
-          fill: "#FFFFFF"
+          content: "when on, #99CCFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -390,7 +390,7 @@ groups:
       - id: dynamic_text_off_expect
         type: rectangle
         appearance:
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
         layout:
           width: 15
           height: 15
@@ -405,7 +405,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "when off, and #CCCCCC"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -432,7 +432,7 @@ groups:
           fill: "#FF9900"
         text:
           content: as default.
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -457,7 +457,7 @@ groups:
             entity: light.kitchen_sink_light
             mapping:
               "on": "#000000"
-              "off": "#FFFFFF"
+              "off": "#99CCFF"
             default: "#CCCCCC"
           fontFamily: Antonio
         layout:
@@ -476,7 +476,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "Dynamic Interpolation should render #000000"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -503,7 +503,7 @@ groups:
           fill: "#FF9900"
         text:
           content: at brightness 0,
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -518,7 +518,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "#FF9900"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -545,7 +545,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "at brightness 128, #FFFF00"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -572,7 +572,7 @@ groups:
           fill: "#FF9900"
         text:
           content: at brightness 255,
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -587,7 +587,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "and #333333"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -613,8 +613,8 @@ groups:
         appearance:
           fill: "#FF9900"
         text:
-          content: "as default. Text should render #FFFFFF"
-          fill: "#FFFFFF"
+          content: "as default. Text should render #99CCFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -626,7 +626,7 @@ groups:
       - id: interp_text_0_expect
         type: rectangle
         appearance:
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
         layout:
           width: 15
           height: 15
@@ -641,7 +641,7 @@ groups:
           fill: "#FF9900"
         text:
           content: at brightness 0,
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -656,7 +656,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "#000000"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -682,8 +682,8 @@ groups:
         appearance:
           fill: "#FF9900"
         text:
-          content: "at brightness 255, and #FFFFFF"
-          fill: "#FFFFFF"
+          content: "at brightness 255, and #99CCFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -695,7 +695,7 @@ groups:
       - id: interp_text_default_expect
         type: rectangle
         appearance:
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
         layout:
           width: 15
           height: 15
@@ -710,7 +710,7 @@ groups:
           fill: "#FF9900"
         text:
           content: as default.
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -737,10 +737,10 @@ groups:
             entity: light.kitchen_sink_light
             attribute: brightness
             mapping:
-              "0": "#FFFFFF"
+              "0": "#99CCFF"
               "255": "#000000"
             interpolate: true
-            default: "#FFFFFF"
+            default: "#99CCFF"
           fontFamily: Antonio
         layout:
           width: 150
@@ -758,7 +758,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "Stateful should render #0099CC"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -785,7 +785,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "by default, #00CCFF"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -812,7 +812,7 @@ groups:
           fill: "#FF9900"
         text:
           content: when hovered,
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -827,7 +827,7 @@ groups:
           fill: "#FF9900"
         text:
           content: "and #0066AA"
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -854,7 +854,7 @@ groups:
           fill: "#FF9900"
         text:
           content: when active. Text should always render
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -868,8 +868,8 @@ groups:
         appearance:
           fill: "#FF9900"
         text:
-          content: "#FFFFFF"
-          fill: "#FFFFFF"
+          content: "#99CCFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -881,7 +881,7 @@ groups:
       - id: stateful_text_expect
         type: rectangle
         appearance:
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
         layout:
           width: 15
           height: 15
@@ -896,7 +896,7 @@ groups:
           fill: "#FF9900"
         text:
           content: in all states.
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           height: 30
@@ -914,7 +914,7 @@ groups:
             active: "#0066AA"
         text:
           content: kitchen sink toggle
-          fill: "#FFFFFF"
+          fill: "#99CCFF"
           fontFamily: Antonio
         layout:
           width: 150

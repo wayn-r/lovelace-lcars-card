@@ -1,0 +1,61 @@
+type: custom:lovelace-lcars-card
+card_title: On Load Animation Example
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: On Load
+          right_content: example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: fade_in_group
+    elements:
+      - id: fade_in_element
+        type: rectangle
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: ON LOAD
+          fill: "#000000"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+        animations:
+          on_load:
+            type: fade
+            fade_params:
+              opacity_start: 0
+              opacity_end: 1
+            duration: 3
+            ease: none
+      - id: fade_in_description
+        type: text
+        text:
+          content: This element should fade in on load over 3 seconds with no ease.
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          offsetX: 5
+          anchor:
+            to: fade_in_group.fade_in_element
+            element_point: centerLeft
+            target_point: centerRight 

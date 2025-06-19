@@ -1,0 +1,138 @@
+type: custom:lovelace-lcars-card
+card_title: Sequential Animation & Propagation Example
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Sequential Animation & Propagation
+          right_content: example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+
+  - group_id: sequence_group
+    elements:
+      - id: sequence_element
+        type: rectangle
+        appearance:
+          fill: "#CC3300"
+        text:
+          content: SEQUENCE
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 5
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+        state_management:
+          default_state: idle
+        animations:
+          on_load:
+            steps:
+              - index: 0
+                animations:
+                  - type: slide
+                    slide_params:
+                      direction: down
+                      distance: 20px
+                      movement: in
+                    duration: 0.5
+                  - type: fade
+                    fade_params:
+                      opacity_start: 0
+                      opacity_end: 1
+                    duration: 0.5
+                    ease: power3.out
+                    delay: 0.5
+              - index: 1
+                animations:
+                  - type: slide
+                    slide_params:
+                      direction: right
+                      distance: 20px
+                      movement: in
+                    duration: 0.5
+                    repeat: 2
+                    yoyo: true
+      - id: sequence_description
+        type: text
+        text:
+          content: This element should fade in, slide up, and scale up when it loads.
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          offsetX: 5
+          anchor:
+            to: sequence_group.sequence_element
+            element_point: centerLeft
+            target_point: centerRight
+
+  - group_id: propogated_group
+    elements:
+      - id: fade_in_element
+        type: rectangle
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: fade in
+          fill: "#000000"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 5
+          anchor:
+            to: sequence_group.sequence_element
+            element_point: topLeft
+            target_point: bottomLeft
+        animations:
+          on_load:
+            type: fade
+            fade_params:
+              opacity_start: 0
+              opacity_end: 1
+            duration: 2
+            ease: power3.out
+      - id: scale_element
+        type: rectangle
+        appearance:
+          fill:
+            default: "#669933"
+            hover: "#77AA44"
+            active: "#558822"
+        text:
+          content: scale
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 5
+          anchor:
+            to: propogated_group.fade_in_element
+            element_point: topLeft
+            target_point: bottomLeft
+        animations:
+          on_load:
+            type: scale
+            scale_params:
+              scale_start: 0
+              scale_end: 1
+            duration: 1
+            ease: power3.out

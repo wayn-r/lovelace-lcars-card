@@ -32,6 +32,24 @@ window.customCards.push({
   description: 'A LCARS themed card for Home Assistant',
 });
 
+// ---------------------------------------------------------------------------
+// Ensure Antonio font is loaded once for every environment (dev server, tests,
+// Home Assistant dashboards). Doing this at module-initialisation time means it
+// happens before any <lovelace-lcars-card> element renders text.
+// ---------------------------------------------------------------------------
+
+(() => {
+  if (typeof document === 'undefined') return;
+  const href = 'https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap';
+  const alreadyLoaded = document.head.querySelector(`link[href="${href}"]`);
+  if (!alreadyLoaded) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    document.head.appendChild(link);
+  }
+})();
+
 @customElement(CARD_TYPE)
 export class LcarsCard extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
