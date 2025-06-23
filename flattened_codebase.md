@@ -67,6 +67,7 @@ lovelace-lcars-card/
 │       ├── button.ts
 │       ├── color-resolver.ts
 │       ├── color.ts
+│       ├── config-validator.ts
 │       ├── font-manager.ts
 │       ├── fontfaceobserver.d.ts
 │       ├── fontmetrics.d.ts
@@ -83,53 +84,16 @@ lovelace-lcars-card/
 │       └── transform-propagator.ts
 ├── test-results/
 │   ├── .last-run.json
-│   ├── config-examples-1-basic-card-structure-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-25-endcap-text-anchors-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-26-chisel--ab0a8-chors-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-27-rectang-9982d-chors-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-28-elbow-text-anchors-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-3-dynamic-color-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-5-lcars-shape-elements-baseline-interactions-chromium/
-│   │   └── video.webm
 │   └── config-examples-6-complex--30648-ility-baseline-interactions-chromium/
+│       ├── 6-complex-actions-and-visibility-initial-actual.png
+│       ├── error-context.md
+│       ├── trace.zip
 │       └── video.webm
 ├── tests/
 │   └── e2e/
 │       ├── config-examples.spec.ts
 │       ├── config-examples.spec.ts-snapshots/
-│       │   ├── 1-basic-card-structure-initial-chromium-linux.png
-│       │   ├── 2-navigation-panel-initial-chromium-linux.png
-│       │   ├── 2-navigation-panel-nav-controls-basic-card-structure-button-active-chromium-linux.png
-│       │   ├── 2-navigation-panel-nav-controls-basic-card-structure-button-hover-chromium-linux.png
-│       │   ├── 25-endcap-text-anchors-initial-chromium-linux.png
-│       │   ├── 26-chisel-endcap-text-anchors-initial-chromium-linux.png
-│       │   ├── 27-rectangle-text-anchors-initial-chromium-linux.png
-│       │   ├── 28-elbow-text-anchors-initial-chromium-linux.png
-│       │   ├── 3-dynamic-color-initial-chromium-linux.png
-│       │   ├── 3-dynamic-color-stateful-description-stateful-test-active-chromium-linux.png
-│       │   ├── 3-dynamic-color-stateful-description-stateful-test-hover-chromium-linux.png
-│       │   ├── 3-dynamic-color-stateful-description-stateful-test-post-click-chromium-linux.png
-│       │   ├── 4-advanced-layout-and-positioning-initial-chromium-linux.png
-│       │   ├── 5-lcars-shape-elements-initial-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-initial-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-main-controls-menu-trigger-active-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-main-controls-menu-trigger-hover-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-main-controls-menu-trigger-post-click-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-menu-items-option-1-active-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-menu-items-option-1-hover-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-menu-items-option-1-post-click-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-initial-chromium-linux.png
-│       │   ├── 8-animations-initial-chromium-linux.png
-│       │   ├── 9-text-styling-initial-chromium-linux.png
-│       │   ├── 9-text-styling-text-examples-cutout-button-active-chromium-linux.png
-│       │   ├── 9-text-styling-text-examples-cutout-button-hover-chromium-linux.png
-│       │   └── 9-text-styling-text-examples-cutout-button-post-click-chromium-linux.png
+│       │   └── 6-complex-actions-and-visibility-initial-chromium-linux.png
 │       ├── interactive-state.spec.ts
 │       ├── test-harness.html
 │       └── test-helpers.ts
@@ -137,6 +101,7 @@ lovelace-lcars-card/
 ├── vite.config.ts
 ├── vitest.config.ts
 ├── yaml-bak/
+│   ├── 1-basic-card-structure.yaml
 │   ├── 10-complete-dashboard.yaml
 │   ├── 11-simple-state-group-for-navigation.yaml
 │   ├── 12-toggle-with-dependencies.yaml
@@ -153,6 +118,12 @@ lovelace-lcars-card/
 │   ├── 22-visibility-rules.yaml
 │   ├── 23-url-and-more-info-actions.yaml
 │   ├── 24-custom-state-animations.yaml
+│   ├── 25-endcap-text-anchors.yaml
+│   ├── 26-chisel-endcap-text-anchors.yaml
+│   ├── 27-rectangle-text-anchors.yaml
+│   ├── 28-elbow-text-anchors.yaml
+│   ├── 3-dynamic-color.yaml
+│   ├── 5-lcars-shape-elements.yaml
 │   ├── 7-button-actions-and-confirmations.yaml
 │   ├── 8-animations.yaml
 │   └── 9-text-styling.yaml
@@ -9702,6 +9673,7 @@ import { StoreProvider } from './core/store.js';
 import { transformPropagator } from './utils/transform-propagator.js';
 import FontFaceObserver from 'fontfaceobserver';
 import { FontManager } from './utils/font-manager.js';
+import { validateConfig, logValidationResult } from './utils/config-validator.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
 
@@ -9804,6 +9776,11 @@ export class LcarsCard extends LitElement {
     
     // Convert legacy configuration to new format if necessary
     const normalizedConfig = this._normalizeConfig(config);
+
+    // Run in-depth validation and log outcomes to console for developer visibility.
+    const validation = validateConfig(normalizedConfig);
+    logValidationResult(validation);
+
     this._config = normalizedConfig;
     this._lastConfig = config;
     
@@ -13594,6 +13571,212 @@ export class Color {
     
     return this._fallback;
   }
+}
+```
+
+## File: src/utils/config-validator.ts
+
+```typescript
+// New file implementing YAML configuration validation for LCARS card
+import { LcarsCardConfig, GroupConfig, ElementConfig, Action } from '../types.js';
+import { parseCardConfig } from '../parsers/schema.js';
+import { validateAction } from './action-helpers.js';
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+/**
+ * Validate a LCARS card configuration object.
+ *
+ * The validator performs several layers of checks:
+ * 1. Schema validation via Zod (structural + type safety).
+ * 2. Duplicate ID detection for groups and elements.
+ * 3. Reference validation for anchors, stretch targets, button actions, and visibility rules.
+ * 4. Action-specific validation (e.g. missing required properties).
+ *
+ * The function never throws – callers decide how to handle the result.
+ */
+export function validateConfig(config: unknown): ValidationResult {
+  const errors: string[] = [];
+
+  // ---------------------------------------------------------------------------
+  // 1. Zod schema validation (structure & primitive types)
+  // ---------------------------------------------------------------------------
+  try {
+    parseCardConfig(config);
+  } catch (err: any) {
+    const zodErrors = err?.errors as any[] | undefined;
+    if (Array.isArray(zodErrors)) {
+      zodErrors.forEach((e) => {
+        const friendlyPath = formatZodPath(e.path, config);
+        errors.push(`schema » ${friendlyPath} – ${e.message}`);
+      });
+    } else if (err instanceof Error) {
+      errors.push(`schema – ${err.message}`);
+    }
+  }
+
+  // Bail early if top-level groups are missing – subsequent checks rely on them.
+  const cfg = config as LcarsCardConfig & { groups?: GroupConfig[] };
+  if (!Array.isArray(cfg.groups)) {
+    errors.push('root.groups – required array is missing');
+    return { valid: errors.length === 0, errors };
+  }
+
+  // ---------------------------------------------------------------------------
+  // 2. Collect IDs for reference checks
+  // ---------------------------------------------------------------------------
+  const groupIds = new Set<string>();
+  const elementIds = new Set<string>();
+
+  cfg.groups.forEach((group) => {
+    if (groupIds.has(group.group_id)) {
+      errors.push(`duplicate group_id "${group.group_id}"`);
+    }
+    groupIds.add(group.group_id);
+
+    (group.elements || []).forEach((el) => {
+      const fullId = `${group.group_id}.${el.id}`;
+      if (elementIds.has(fullId)) {
+        errors.push(`duplicate element id "${fullId}"`);
+      }
+      elementIds.add(fullId);
+    });
+  });
+
+  // Helper for reference existence checks
+  const refExists = (ref: string | undefined): boolean =>
+    !!ref && (ref === 'container' || groupIds.has(ref) || elementIds.has(ref));
+
+  // ---------------------------------------------------------------------------
+  // 3. Deep validation per element
+  // ---------------------------------------------------------------------------
+  cfg.groups.forEach((group) => {
+    (group.elements || []).forEach((el) => {
+      const contextId = `${group.group_id}.${el.id}`;
+
+      // --- Layout.anchor ---------------------------------------------
+      const anchorTo = el.layout?.anchor?.to;
+      if (anchorTo && !refExists(anchorTo)) {
+        errors.push(`${contextId} layout.anchor.to → "${anchorTo}" does not match any element/group`);
+      }
+
+      // --- Layout.stretch --------------------------------------------
+      const stretchTargets: Array<{ id?: string; path: string }> = [];
+      if (el.layout?.stretch?.target1) {
+        stretchTargets.push({ id: el.layout.stretch.target1.id, path: 'layout.stretch.target1.id' });
+      }
+      if (el.layout?.stretch?.target2) {
+        stretchTargets.push({ id: el.layout.stretch.target2.id, path: 'layout.stretch.target2.id' });
+      }
+      stretchTargets.forEach(({ id, path }) => {
+        if (id && !refExists(id)) {
+          errors.push(`${contextId} ${path} → "${id}" does not match any element/group`);
+        }
+      });
+
+      // --- Button actions --------------------------------------------
+      if (el.button?.enabled && el.button.actions) {
+        Object.values(el.button.actions).forEach((acts: any) => {
+          if (!acts) return;
+          const flat: Action[] = Array.isArray(acts) ? acts : [acts];
+          flat.forEach((act) => {
+            // Validate required properties per action type
+            validateAction(act).forEach((msg) => errors.push(`${contextId} button.action – ${msg}`));
+
+            if (
+              (act.action === 'set_state' || act.action === 'toggle_state') &&
+              act.target_element_ref &&
+              !refExists(act.target_element_ref)
+            ) {
+              errors.push(`${contextId} button.action.target_element_ref → "${act.target_element_ref}" does not exist`);
+            }
+          });
+        });
+      }
+
+      // --- Visibility rules ------------------------------------------
+      const queue = [...(el.visibility_rules?.conditions || [])];
+      while (queue.length) {
+        const cond: any = queue.shift();
+        if (!cond) continue;
+        if (cond.type === 'state' && cond.target_id && !refExists(cond.target_id)) {
+          errors.push(`${contextId} visibility_rules.condition.target_id → "${cond.target_id}" does not exist`);
+        }
+        if (cond.type === 'group' && Array.isArray(cond.conditions)) {
+          queue.push(...cond.conditions);
+        }
+      }
+    });
+  });
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Log validation result to browser console in a developer-friendly format.
+ */
+export function logValidationResult(result: ValidationResult): void {
+  if (result.valid) {
+    // Using info so the output is less alarming but still visible in console.
+    console.info('[LCARS Config Validator] ✅ Configuration passed validation');
+    return;
+  }
+
+  console.groupCollapsed(
+    `%c[LCARS Config Validator] ❌ ${result.errors.length} issue${result.errors.length > 1 ? 's' : ''} found`,
+    'color: #ff5555; font-weight: bold;'
+  );
+  result.errors.forEach((msg) => console.error(`• ${msg}`));
+  console.groupEnd();
+}
+
+/**
+ * Convert a Zod error path array into a developer-friendly string by replacing
+ * numeric indices with the actual group_id / element id from the config.
+ */
+function formatZodPath(path: (string | number)[], cfg: any): string {
+  if (!path || path.length === 0) return '';
+
+  const parts: string[] = [];
+  let cursor: any = cfg;
+
+  for (let i = 0; i < path.length; i++) {
+    const seg = path[i];
+
+    // Handle groups[N]
+    if (seg === 'groups' && typeof path[i + 1] === 'number') {
+      const idx = path[i + 1] as number;
+      const group = Array.isArray(cursor?.groups) ? cursor.groups[idx] : undefined;
+      const name = group?.group_id ?? idx;
+      parts.push(`groups.${name}`);
+      cursor = group;
+      i++; // Skip index
+      continue;
+    }
+
+    // Handle elements[N]
+    if (seg === 'elements' && typeof path[i + 1] === 'number') {
+      const idx = path[i + 1] as number;
+      const element = Array.isArray(cursor?.elements) ? cursor.elements[idx] : undefined;
+      const name = element?.id ?? idx;
+      parts.push(`elements.${name}`);
+      cursor = element;
+      i++;
+      continue;
+    }
+
+    parts.push(String(seg));
+
+    // Advance cursor when seg is string property
+    if (typeof seg === 'string') {
+      cursor = cursor ? cursor[seg] : undefined;
+    }
+  }
+
+  return parts.join('.');
 }
 ```
 
@@ -17990,9 +18173,44 @@ export const transformPropagator = new TransformPropagator();
 
 ```json
 {
-  "status": "passed",
-  "failedTests": []
+  "status": "failed",
+  "failedTests": [
+    "10708c82281818d9902f-492fd25012982b977335"
+  ]
 }
+```
+
+## File: test-results/config-examples-6-complex--30648-ility-baseline-interactions-chromium/error-context.md
+
+```markdown
+# Page snapshot
+
+```yaml
+- complementary:
+  - button "Sidebar toggle"
+  - text: Home Assistant
+  - listbox:
+    - option "Overview":
+      - option "Overview"
+    - option "Dashboard 1" [selected]:
+      - option "Dashboard 1"
+    - option "Map":
+      - option "Map"
+    - option "To-do lists":
+      - option "To-do lists"
+    - option "Developer tools":
+      - option "Developer tools"
+    - option "Settings 2":
+      - option "Settings 2"
+  - option "Notifications"
+  - option "Profile":
+    - option "Developer"
+- text: LCARS
+- button "Entity search"
+- button "Edit dashboard"
+- img: No layout elements to render
+- img
+```
 ```
 
 ## File: tests/e2e/config-examples.spec.ts
@@ -18094,6 +18312,12 @@ for (const filePath of exampleFiles) {
       const raw = fs.readFileSync(filePath, 'utf-8');
       const configObj = yaml.load(raw);
 
+      // Set initial brightness to 0 for a consistent starting state.
+      await hass.callService('input_number', 'set_value', {
+        entity_id: 'input_number.kitchen_sink_brightness',
+        value: 0,
+      });
+
       // Use dark colour-scheme so screenshots have consistent dark background.
       const dashboard = await hass.Dashboard([configObj]);
       const url = await dashboard.link();
@@ -18106,7 +18330,7 @@ for (const filePath of exampleFiles) {
       // Give the card a brief moment to perform its second-pass layout after
       // the Antonio font resolves (see waitForFonts logic in card implementation).
       await page.evaluate(() => document.fonts.ready);
-      await page.waitForTimeout(1000);  // 250
+      await page.waitForTimeout(1000);
 
       // Baseline screenshot
       await expect(card).toHaveScreenshot(`${baseName}-initial.png`);
@@ -18125,11 +18349,12 @@ for (const filePath of exampleFiles) {
           continue;
         }
 
-        // Allow hover colour/state propagation to settle.
+        // --- Test Hover State ---
+        await btn.hover();
         await page.waitForTimeout(125);
         await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-hover.png`);
 
-        // Active (mouse down)
+        // --- Test Active State ---
         const box = await btn.boundingBox();
         if (box) {
           await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -18139,11 +18364,16 @@ for (const filePath of exampleFiles) {
           await page.mouse.up();
         }
 
-        // Click / tap – may trigger state change elsewhere
+        // --- Test Click Action & Post-Click State ---
         await btn.click();
-        await page.waitForTimeout(550); // allow animations & second-pass layout
+        // Allow state/animation propagation to settle and entity changes to propagate through HASS.
+        await page.waitForTimeout(1500);
+        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-post-click-on.png`);
 
-        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-post-click.png`);
+        // --- Test Second Click Action & Final State ---
+        await btn.click();
+        await page.waitForTimeout(1500);
+        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-post-click-off.png`);
       }
     });
   });
@@ -18449,7 +18679,7 @@ test.describe.skip('LCARS Card – interaction states', () => {
 //    background – the test pages will use Home Assistant's default styles.
 
 import { promises as fs } from 'fs';
-import { HomeAssistant } from 'hass-taste-test';
+import { HomeAssistant, PlaywrightBrowser } from 'hass-taste-test';
 
 // Prevent double-patching if this file is imported in multiple spec files.
 if (!(HomeAssistant as any)._lcarsPatched) {
@@ -18472,20 +18702,45 @@ if (!(HomeAssistant as any)._lcarsPatched) {
       '  kitchen_sink_light:',
       '    name: Kitchen Sink Light',
       '',
+      'input_number:',
+      '  kitchen_sink_brightness:',
+      '    name: Kitchen Sink Brightness',
+      '    min: 0',
+      '    max: 255',
+      '    initial: 122',
+      '    step: 1',
+      '',
       'light:',
       '  - platform: template',
       '    lights:',
       '      kitchen_sink_light:',
-      "        friendly_name: 'Kitchen Sink Light'",
-      "        value_template: '{{ states(\"input_boolean.kitchen_sink_light\") == \"on\" }}'",
+      '        friendly_name: "Kitchen Sink Light"',
+      '        value_template: \'{{ states("input_boolean.kitchen_sink_light") == "on" }}\'',
+      '        level_template: \'{{ states("input_number.kitchen_sink_brightness") | int }}\'',
       '        turn_on:',
-      '          service: input_boolean.turn_on',
-      '          target:',
-      '            entity_id: input_boolean.kitchen_sink_light',
+      '          - service: input_boolean.turn_on',
+      '            target:',
+      '              entity_id: input_boolean.kitchen_sink_light',
+      '          - service: input_number.set_value',
+      '            target:',
+      '              entity_id: input_number.kitchen_sink_brightness',
+      '            data:',
+      '              value: 122',
       '        turn_off:',
-      '          service: input_boolean.turn_off',
+      '          - service: input_boolean.turn_off',
+      '            target:',
+      '              entity_id: input_boolean.kitchen_sink_light',
+      '          - service: input_number.set_value',
+      '            target:',
+      '              entity_id: input_number.kitchen_sink_brightness',
+      '            data:',
+      '              value: 0',
+      '        set_level:',
+      '          service: input_number.set_value',
       '          target:',
-      '            entity_id: input_boolean.kitchen_sink_light',
+      '            entity_id: input_number.kitchen_sink_brightness',
+      '          data:',
+      '            value: "{{ brightness }}"',
     ];
 
     const contents = [...base, '', additionalCfg.trim(), '', ...demoEntities, ''].join('\n');
@@ -18512,6 +18767,61 @@ if (!(HomeAssistant as any)._lcarsPatched) {
         ],
       },
     });
+  };
+
+  // Monkey-patch the HomeAssistant class to provide a default config that includes
+  // our dependencies and a simple `kitchen_sink_light` that can be used
+  // across all test configurations.
+  const originalCreate = HomeAssistant.create;
+
+  HomeAssistant.create = async function (config: string, options: any): Promise<HomeAssistant<any>> {
+    const fullConfig =
+`input_boolean:
+  kitchen_sink_light:
+    name: Kitchen Sink Light
+
+input_number:
+  kitchen_sink_brightness:
+    name: Kitchen Sink Brightness
+    min: 0
+    max: 255
+    step: 1
+    initial: 0
+
+light:
+  - platform: template
+    lights:
+      kitchen_sink_light:
+        friendly_name: "Kitchen Sink Light"
+        value_template: '{{ states("input_boolean.kitchen_sink_light") == "on" }}'
+        level_template: '{{ states("input_number.kitchen_sink_brightness") | int }}'
+        turn_on:
+          - service: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.kitchen_sink_light
+          - service: input_number.set_value
+            target:
+              entity_id: input_number.kitchen_sink_brightness
+            data:
+              value: 122
+        turn_off:
+          - service: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.kitchen_sink_light
+          - service: input_number.set_value
+            target:
+              entity_id: input_number.kitchen_sink_brightness
+            data:
+              value: 0
+        set_level:
+          service: input_number.set_value
+          target:
+            entity_id: input_number.kitchen_sink_brightness
+          data:
+            value: "{{ brightness }}"
+` + config;
+
+    return originalCreate.call(this, fullConfig, options);
   };
 
   (HomeAssistant as any)._lcarsPatched = true;

@@ -4,11 +4,11 @@
 # Note: This configuration follows Home Assistant Lovelace UI standards
 # The 'type' property is handled by Lovelace, everything else is passed to the custom card's setConfig() method
 
-type: custom:lovelace-lcars-card # Required: <string> Handled by Lovelace to load the custom card.
+card_type: custom:lovelace-lcars-card # Required: <string> Handled by Lovelace to load the custom card.
 
 # === LCARS Card Configuration ===
 # All properties below are passed to the custom card's setConfig() method
-title: <string>                  # Optional: Card title for display in the UI.
+card_title: <string>                  # Optional: Card title for display in the UI.
 
 # === Core Card Structure ===
 groups: <array>                  # Required: Defines groups of elements. Elements MUST belong to a group.

@@ -94,6 +94,12 @@ for (const filePath of exampleFiles) {
       const raw = fs.readFileSync(filePath, 'utf-8');
       const configObj = yaml.load(raw);
 
+      // Set initial brightness to 0 for a consistent starting state.
+      await hass.callService('input_number', 'set_value', {
+        entity_id: 'input_number.kitchen_sink_brightness',
+        value: 0,
+      });
+
       // Use dark colour-scheme so screenshots have consistent dark background.
       const dashboard = await hass.Dashboard([configObj]);
       const url = await dashboard.link();
@@ -106,7 +112,7 @@ for (const filePath of exampleFiles) {
       // Give the card a brief moment to perform its second-pass layout after
       // the Antonio font resolves (see waitForFonts logic in card implementation).
       await page.evaluate(() => document.fonts.ready);
-      await page.waitForTimeout(1000);  // 250
+      await page.waitForTimeout(1000);
 
       // Baseline screenshot
       await expect(card).toHaveScreenshot(`${baseName}-initial.png`);
@@ -125,11 +131,12 @@ for (const filePath of exampleFiles) {
           continue;
         }
 
-        // Allow hover colour/state propagation to settle.
+        // --- Test Hover State ---
+        await btn.hover();
         await page.waitForTimeout(125);
         await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-hover.png`);
 
-        // Active (mouse down)
+        // --- Test Active State ---
         const box = await btn.boundingBox();
         if (box) {
           await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -139,11 +146,16 @@ for (const filePath of exampleFiles) {
           await page.mouse.up();
         }
 
-        // Click / tap – may trigger state change elsewhere
+        // --- Test Click Action & Post-Click State ---
         await btn.click();
-        await page.waitForTimeout(550); // allow animations & second-pass layout
+        // Allow state/animation propagation to settle and entity changes to propagate through HASS.
+        await page.waitForTimeout(1500);
+        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-post-click-on.png`);
 
-        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-post-click.png`);
+        // --- Test Second Click Action & Final State ---
+        await btn.click();
+        await page.waitForTimeout(1500);
+        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-post-click-off.png`);
       }
     });
   });

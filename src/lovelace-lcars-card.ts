@@ -18,6 +18,7 @@ import { StoreProvider } from './core/store.js';
 import { transformPropagator } from './utils/transform-propagator.js';
 import FontFaceObserver from 'fontfaceobserver';
 import { FontManager } from './utils/font-manager.js';
+import { validateConfig, logValidationResult } from './utils/config-validator.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
 
@@ -120,6 +121,11 @@ export class LcarsCard extends LitElement {
     
     // Convert legacy configuration to new format if necessary
     const normalizedConfig = this._normalizeConfig(config);
+
+    // Run in-depth validation and log outcomes to console for developer visibility.
+    const validation = validateConfig(normalizedConfig);
+    logValidationResult(validation);
+
     this._config = normalizedConfig;
     this._lastConfig = config;
     

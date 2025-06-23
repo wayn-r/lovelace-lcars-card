@@ -40,19 +40,17 @@ groups:
             target_point: bottomLeft
         button:
           enabled: true
-        visibility_triggers:
-          - action: show
-            trigger_source:
-              element_id_ref: self
-              event: hover
-            targets:
-              - type: group
-                id: menu_items
-              - type: group
-                id: details
-            hover_options:
-              mode: show_on_enter_hide_on_leave
-              hide_delay: 0
+          actions:
+            tap:
+              - action: toggle_state
+                target_element_ref: menu_items.option_1
+                states: [hidden, visible]
+              - action: toggle_state
+                target_element_ref: menu_items.option_2
+                states: [hidden, visible]
+              - action: toggle_state
+                target_element_ref: details.info_panel
+                states: [hidden, visible]
   - group_id: menu_items
     elements:
       - id: option_1
@@ -78,6 +76,8 @@ groups:
               service: homeassistant.toggle
               service_data:
                 entity_id: switch.main_systems
+        state_management:
+          default_state: hidden
       - id: option_2
         type: rectangle
         appearance:
@@ -93,6 +93,16 @@ groups:
             to: menu_items.option_1
             element_point: topLeft
             target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: call-service
+              service: homeassistant.toggle
+              service_data:
+                entity_id: switch.main_systems
+        state_management:
+          default_state: hidden
   - group_id: details
     elements:
       - id: info_panel
@@ -112,3 +122,5 @@ groups:
             to: nav_header.main_header
             element_point: topCenter
             target_point: bottomCenter
+        state_management:
+          default_state: hidden

@@ -6,7 +6,7 @@
 //    background – the test pages will use Home Assistant's default styles.
 
 import { promises as fs } from 'fs';
-import { HomeAssistant } from 'hass-taste-test';
+import { HomeAssistant, PlaywrightBrowser } from 'hass-taste-test';
 
 // Prevent double-patching if this file is imported in multiple spec files.
 if (!(HomeAssistant as any)._lcarsPatched) {
@@ -29,20 +29,45 @@ if (!(HomeAssistant as any)._lcarsPatched) {
       '  kitchen_sink_light:',
       '    name: Kitchen Sink Light',
       '',
+      'input_number:',
+      '  kitchen_sink_brightness:',
+      '    name: Kitchen Sink Brightness',
+      '    min: 0',
+      '    max: 255',
+      '    initial: 122',
+      '    step: 1',
+      '',
       'light:',
       '  - platform: template',
       '    lights:',
       '      kitchen_sink_light:',
-      "        friendly_name: 'Kitchen Sink Light'",
-      "        value_template: '{{ states(\"input_boolean.kitchen_sink_light\") == \"on\" }}'",
+      '        friendly_name: "Kitchen Sink Light"',
+      '        value_template: \'{{ states("input_boolean.kitchen_sink_light") == "on" }}\'',
+      '        level_template: \'{{ states("input_number.kitchen_sink_brightness") | int }}\'',
       '        turn_on:',
-      '          service: input_boolean.turn_on',
-      '          target:',
-      '            entity_id: input_boolean.kitchen_sink_light',
+      '          - service: input_boolean.turn_on',
+      '            target:',
+      '              entity_id: input_boolean.kitchen_sink_light',
+      '          - service: input_number.set_value',
+      '            target:',
+      '              entity_id: input_number.kitchen_sink_brightness',
+      '            data:',
+      '              value: 122',
       '        turn_off:',
-      '          service: input_boolean.turn_off',
+      '          - service: input_boolean.turn_off',
+      '            target:',
+      '              entity_id: input_boolean.kitchen_sink_light',
+      '          - service: input_number.set_value',
+      '            target:',
+      '              entity_id: input_number.kitchen_sink_brightness',
+      '            data:',
+      '              value: 0',
+      '        set_level:',
+      '          service: input_number.set_value',
       '          target:',
-      '            entity_id: input_boolean.kitchen_sink_light',
+      '            entity_id: input_number.kitchen_sink_brightness',
+      '          data:',
+      '            value: "{{ brightness }}"',
     ];
 
     const contents = [...base, '', additionalCfg.trim(), '', ...demoEntities, ''].join('\n');
@@ -69,6 +94,61 @@ if (!(HomeAssistant as any)._lcarsPatched) {
         ],
       },
     });
+  };
+
+  // Monkey-patch the HomeAssistant class to provide a default config that includes
+  // our dependencies and a simple `kitchen_sink_light` that can be used
+  // across all test configurations.
+  const originalCreate = HomeAssistant.create;
+
+  HomeAssistant.create = async function (config: string, options: any): Promise<HomeAssistant<any>> {
+    const fullConfig =
+`input_boolean:
+  kitchen_sink_light:
+    name: Kitchen Sink Light
+
+input_number:
+  kitchen_sink_brightness:
+    name: Kitchen Sink Brightness
+    min: 0
+    max: 255
+    step: 1
+    initial: 0
+
+light:
+  - platform: template
+    lights:
+      kitchen_sink_light:
+        friendly_name: "Kitchen Sink Light"
+        value_template: '{{ states("input_boolean.kitchen_sink_light") == "on" }}'
+        level_template: '{{ states("input_number.kitchen_sink_brightness") | int }}'
+        turn_on:
+          - service: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.kitchen_sink_light
+          - service: input_number.set_value
+            target:
+              entity_id: input_number.kitchen_sink_brightness
+            data:
+              value: 122
+        turn_off:
+          - service: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.kitchen_sink_light
+          - service: input_number.set_value
+            target:
+              entity_id: input_number.kitchen_sink_brightness
+            data:
+              value: 0
+        set_level:
+          service: input_number.set_value
+          target:
+            entity_id: input_number.kitchen_sink_brightness
+          data:
+            value: "{{ brightness }}"
+` + config;
+
+    return originalCreate.call(this, fullConfig, options);
   };
 
   (HomeAssistant as any)._lcarsPatched = true;
