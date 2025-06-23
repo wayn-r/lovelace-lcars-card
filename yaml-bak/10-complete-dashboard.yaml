@@ -111,7 +111,7 @@ groups:
           content: "SHIELDS"
           fill: "#FFFFFF"
           fontFamily: "Antonio"
-          elbow_text_position: "top"
+          elbow_text_position: "arm"
         layout:
           width: 120
           height: 80

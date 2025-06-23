@@ -324,13 +324,12 @@ groups:
           enabled: true
           actions:
             tap:
-              actions:
-                - action: set_state
-                  target_element_ref: sliding_panel_group.sliding_panel
-                  state: visible
-                - action: set_state
-                  target_element_ref: scale_target_group.scale_target
-                  state: scaled
+              - action: set_state
+                target_element_ref: sliding_panel_group.sliding_panel
+                state: visible
+              - action: set_state
+                target_element_ref: scale_target_group.scale_target
+                state: scaled
 
       - id: reset_button
         type: rectangle
@@ -355,10 +354,9 @@ groups:
           enabled: true
           actions:
             tap:
-              actions:
-                - action: set_state
-                  target_element_ref: sliding_panel_group.sliding_panel
-                  state: hidden
-                - action: set_state
-                  target_element_ref: scale_target_group.scale_target
-                  state: normal
+              - action: set_state
+                target_element_ref: sliding_panel_group.sliding_panel
+                state: hidden
+              - action: set_state
+                target_element_ref: scale_target_group.scale_target
+                state: normal

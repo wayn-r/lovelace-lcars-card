@@ -84,8 +84,7 @@ lovelace-lcars-card/
 │       └── transform-propagator.ts
 ├── test-results/
 │   ├── .last-run.json
-│   └── config-examples-7-button-a-76888-tions-baseline-interactions-chromium/
-│       ├── 7-button-actions-and-confirmations-initial-actual.png
+│   └── config-examples-8-animations-baseline-interactions-chromium/
 │       ├── error-context.md
 │       ├── trace.zip
 │       └── video.webm
@@ -93,7 +92,23 @@ lovelace-lcars-card/
 │   └── e2e/
 │       ├── config-examples.spec.ts
 │       ├── config-examples.spec.ts-snapshots/
-│       │   └── 7-button-actions-and-confirmations-initial-chromium-linux.png
+│       │   ├── 8-animations-initial-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-multi-trigger-button-active-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-multi-trigger-button-hover-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-multi-trigger-button-post-click-off-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-multi-trigger-button-post-click-on-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-reset-button-active-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-reset-button-hover-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-reset-button-post-click-off-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-reset-button-post-click-on-chromium-linux.png
+│       │   ├── 8-animations-scale-target-group-scale-trigger-button-active-chromium-linux.png
+│       │   ├── 8-animations-scale-target-group-scale-trigger-button-hover-chromium-linux.png
+│       │   ├── 8-animations-scale-target-group-scale-trigger-button-post-click-off-chromium-linux.png
+│       │   ├── 8-animations-scale-target-group-scale-trigger-button-post-click-on-chromium-linux.png
+│       │   ├── 8-animations-sliding-panel-group-sliding-panel-trigger-button-active-chromium-linux.png
+│       │   ├── 8-animations-sliding-panel-group-sliding-panel-trigger-button-hover-chromium-linux.png
+│       │   ├── 8-animations-sliding-panel-group-sliding-panel-trigger-button-post-click-off-chromium-linux.png
+│       │   └── 8-animations-sliding-panel-group-sliding-panel-trigger-button-post-click-on-chromium-linux.png
 │       ├── interactive-state.spec.ts
 │       ├── test-harness.html
 │       └── test-helpers.ts
@@ -125,6 +140,7 @@ lovelace-lcars-card/
 │   ├── 3-dynamic-color.yaml
 │   ├── 5-lcars-shape-elements.yaml
 │   ├── 6-complex-actions-and-visibility.yaml
+│   ├── 7-button-actions-and-confirmations.yaml
 │   ├── 8-animations.yaml
 │   └── 9-text-styling.yaml
 ├── yaml-config-definition.yaml
@@ -18208,12 +18224,12 @@ export const transformPropagator = new TransformPropagator();
 {
   "status": "failed",
   "failedTests": [
-    "10708c82281818d9902f-a2ed74fa629115ada809"
+    "10708c82281818d9902f-23a3c15363121be0d011"
   ]
 }
 ```
 
-## File: test-results/config-examples-7-button-a-76888-tions-baseline-interactions-chromium/error-context.md
+## File: test-results/config-examples-8-animations-baseline-interactions-chromium/error-context.md
 
 ```markdown
 # Page snapshot
@@ -18241,7 +18257,16 @@ export const transformPropagator = new TransformPropagator();
 - text: LCARS
 - button "Entity search"
 - button "Edit dashboard"
-- img: No layout elements to render
+- img:
+  - text: Animation Configuration example LOADING... This element should have a fade-in effect when it loads.
+  - button "sliding_panel_group.sliding_panel_trigger_button"
+  - text: SHOW PANEL This button should trigger a panel to slide in from the left..
+  - button "scale_target_group.scale_trigger_button"
+  - text: SCALE This button should toggle the scale of the "scale_target" element when pressed. SCALE TARGET SEQUENCE This element should fade in, slide up, and scale up when it loads.
+  - button "multi_action_group.multi_trigger_button"
+  - text: MULTI ACTION
+  - button "multi_action_group.reset_button"
+  - text: RESET ALL
 - img
 ```
 ```
