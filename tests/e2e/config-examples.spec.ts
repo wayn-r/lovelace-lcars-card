@@ -102,7 +102,11 @@ for (const filePath of exampleFiles) {
 
       const card = page.locator('lovelace-lcars-card').first();
       await card.locator('svg').waitFor();
+
+      // Give the card a brief moment to perform its second-pass layout after
+      // the Antonio font resolves (see waitForFonts logic in card implementation).
       await page.evaluate(() => document.fonts.ready);
+      await page.waitForTimeout(1000);  // 250
 
       // Baseline screenshot
       await expect(card).toHaveScreenshot(`${baseName}-initial.png`);
@@ -121,8 +125,8 @@ for (const filePath of exampleFiles) {
           continue;
         }
 
-        // Hover state
-        await btn.hover();
+        // Allow hover colour/state propagation to settle.
+        await page.waitForTimeout(125);
         await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-hover.png`);
 
         // Active (mouse down)
@@ -130,13 +134,14 @@ for (const filePath of exampleFiles) {
         if (box) {
           await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
           await page.mouse.down();
+          await page.waitForTimeout(125);
           await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-active.png`);
           await page.mouse.up();
         }
 
         // Click / tap – may trigger state change elsewhere
         await btn.click();
-        await page.waitForTimeout(450); // allow animations
+        await page.waitForTimeout(550); // allow animations & second-pass layout
 
         await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-post-click.png`);
       }

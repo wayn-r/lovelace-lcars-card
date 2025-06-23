@@ -1,0 +1,132 @@
+type: custom:lovelace-lcars-card
+card_title: Rectangle Text Anchors
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Rectangle Text Anchors
+          right_content: example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: middle
+    elements:
+      - id: rectangle
+        type: rectangle
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: MIDDLE
+          fill: "#000000"
+          fontFamily: Antonio
+        layout:
+          width: 180
+          height: 40
+          offsetY: 10
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: rounded_rectangle
+        type: rectangle
+        appearance:
+          fill: "#FF9900"
+          cornerRadius: 15
+        text:
+          content: MIDDLE
+          fill: "#000000"
+          fontFamily: Antonio
+        layout:
+          width: 180
+          height: 40
+          offsetX: 5
+          anchor:
+            to: middle.rectangle
+            element_point: topLeft
+            target_point: topRight
+  - group_id: start
+    elements:
+      - id: rectangle
+        type: rectangle
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: START
+          fill: "#000000"
+          fontFamily: Antonio
+          textAnchor: start
+        layout:
+          width: 180
+          height: 40
+          offsetY: 10
+          anchor:
+            to: middle.rectangle
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: rounded_rectangle
+        type: rectangle
+        appearance:
+          fill: "#FF9900"
+          cornerRadius: 15
+        text:
+          content: START
+          fill: "#000000"
+          fontFamily: Antonio
+          textAnchor: start
+        layout:
+          width: 180
+          height: 40
+          offsetX: 5
+          anchor:
+            to: start.rectangle
+            element_point: topLeft
+            target_point: topRight
+  - group_id: end
+    elements:
+      - id: rectangle
+        type: rectangle
+        appearance:
+          fill: "#FF9900"
+        text:
+          content: END
+          fill: "#000000"
+          fontFamily: Antonio
+          textAnchor: end
+        layout:
+          width: 180
+          height: 40
+          offsetY: 10
+          anchor:
+            to: start.rectangle
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: rounded_rectangle
+        type: rectangle
+        appearance:
+          fill: "#FF9900"
+          cornerRadius: 15
+        text:
+          content: END
+          fill: "#000000"
+          fontFamily: Antonio
+          textAnchor: end
+        layout:
+          width: 180
+          height: 40
+          offsetX: 5
+          anchor:
+            to: end.rectangle
+            element_point: topLeft
+            target_point: topRight

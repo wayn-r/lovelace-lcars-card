@@ -1,0 +1,268 @@
+type: custom:lovelace-lcars-card
+card_title: Elbow Text Anchors
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Elbow Text Anchors
+          right_content: example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: middle
+    elements:
+      - id: top_left
+        type: elbow
+        appearance:
+          fill: "#9966CC"
+          orientation: top-left
+          bodyWidth: 80
+          armHeight: 25
+        text:
+          content: TL
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          elbow_text_position: arm
+        layout:
+          width: 180
+          height: 80
+          offsetY: 5
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: bottom_left
+        type: elbow
+        appearance:
+          fill: "#66CC99"
+          orientation: bottom-left
+          bodyWidth: 80
+          armHeight: 25
+        text:
+          content: BL
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          elbow_text_position: body
+        layout:
+          width: 180
+          height: 90
+          anchor:
+            to: middle.top_left
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: bottom_right
+        type: elbow
+        appearance:
+          fill: "#9966CC"
+          orientation: bottom-right
+          bodyWidth: 80
+          armHeight: 25
+        text:
+          content: BR
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          elbow_text_position: arm
+        layout:
+          width: 180
+          height: 90
+          anchor:
+            to: middle.bottom_left
+            element_point: topLeft
+            target_point: topRight
+      - id: top_right
+        type: elbow
+        appearance:
+          fill: "#66CC99"
+          orientation: top-right
+          bodyWidth: 80
+          armHeight: 25
+        text:
+          content: TR
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          elbow_text_position: body
+        layout:
+          width: 180
+          height: 90
+          anchor:
+            to: middle.top_left
+            element_point: topLeft
+            target_point: topRight
+  - group_id: start
+    elements:
+      - id: top_left
+        type: elbow
+        appearance:
+          fill: "#9966CC"
+          orientation: top-left
+          bodyWidth: 80
+          armHeight: 25
+        text:
+          content: TL
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          elbow_text_position: arm
+          textAnchor: start
+        layout:
+          width: 180
+          height: 80
+          offsetY: 10
+          anchor:
+            to: middle.bottom_left
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: bottom_left
+        type: elbow
+        appearance:
+          fill: "#66CC99"
+          orientation: bottom-left
+          bodyWidth: 80
+          armHeight: 25
+        text:
+          content: BL
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          elbow_text_position: body
+          textAnchor: start
+        layout:
+          width: 180
+          height: 90
+          anchor:
+            to: start.top_left
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: bottom_right
+        type: elbow
+        appearance:
+          fill: "#9966CC"
+          orientation: bottom-right
+          bodyWidth: 80
+          armHeight: 25
+        text:
+          content: BR
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          elbow_text_position: arm
+          textAnchor: start
+        layout:
+          width: 180
+          height: 90
+          anchor:
+            to: start.bottom_left
+            element_point: topLeft
+            target_point: topRight
+      - id: top_right
+        type: elbow
+        appearance:
+          fill: "#66CC99"
+          orientation: top-right
+          bodyWidth: 80
+          armHeight: 25
+        text:
+          content: TR
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          elbow_text_position: body
+          textAnchor: start
+        layout:
+          width: 180
+          height: 90
+          anchor:
+            to: start.top_left
+            element_point: topLeft
+            target_point: topRight
+  - group_id: end
+    elements:
+      - id: top_left
+        type: elbow
+        appearance:
+          fill: "#9966CC"
+          orientation: top-left
+          bodyWidth: 80
+          armHeight: 25
+        text:
+          content: TL
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          elbow_text_position: arm
+          textAnchor: end
+        layout:
+          width: 180
+          height: 80
+          offsetY: 10
+          anchor:
+            to: start.bottom_left
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: bottom_left
+        type: elbow
+        appearance:
+          fill: "#66CC99"
+          orientation: bottom-left
+          bodyWidth: 80
+          armHeight: 25
+        text:
+          content: BL
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          elbow_text_position: body
+          textAnchor: end
+        layout:
+          width: 180
+          height: 90
+          anchor:
+            to: end.top_left
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: bottom_right
+        type: elbow
+        appearance:
+          fill: "#9966CC"
+          orientation: bottom-right
+          bodyWidth: 80
+          armHeight: 25
+        text:
+          content: BR
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          elbow_text_position: arm
+          textAnchor: end
+        layout:
+          width: 180
+          height: 90
+          anchor:
+            to: end.bottom_left
+            element_point: topLeft
+            target_point: topRight
+      - id: top_right
+        type: elbow
+        appearance:
+          fill: "#66CC99"
+          orientation: top-right
+          bodyWidth: 80
+          armHeight: 25
+        text:
+          content: TR
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          elbow_text_position: body
+          textAnchor: end
+        layout:
+          width: 180
+          height: 90
+          anchor:
+            to: end.top_left
+            element_point: topLeft
+            target_point: topRight

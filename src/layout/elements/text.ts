@@ -3,7 +3,11 @@ import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant, handleAction } from "custom-card-helpers";
 import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
-import { getFontMetrics, measureTextBBox, getSvgTextWidth, getTextWidth } from "../../utils/shapes.js";
+import { measureTextBBox } from "../../utils/shapes.js";
+import { FontManager } from "../../utils/font-manager.js";
+
+// Add CAP_HEIGHT_RATIO fallback from shapes.ts if it's not already accessible
+const CAP_HEIGHT_RATIO = 0.66; 
 
 export class TextElement extends LayoutElement {
     // Cache font metrics to maintain consistency across renders
@@ -19,7 +23,8 @@ export class TextElement extends LayoutElement {
      * Uses fontmetrics for precise measurement without DOM dependency.
      */
     calculateIntrinsicSize(container: SVGElement): void {
-      if (this.props.width && this.props.height) {
+      // If explicit width/height are provided, use them.
+      if (this.props.width && this.props.height && !this.props.fontSize) {
         this.intrinsicSize.width = this.props.width;
         this.intrinsicSize.height = this.props.height;
         this.intrinsicSize.calculated = true;
@@ -28,46 +33,36 @@ export class TextElement extends LayoutElement {
       
       const text = this.props.text || '';
       const fontFamily = this.props.fontFamily || 'Arial';
-      const fontSize = this.props.fontSize || 16;
       const fontWeight = this.props.fontWeight || 'normal';
-      
-      // Use fontmetrics for precise text measurement
-      const metrics = getFontMetrics({
+      let fontSize = this.props.fontSize || 16;
+
+      if (this.props.height && !this.props.fontSize) {
+          const metrics = FontManager.getFontMetrics(fontFamily, fontWeight as any);
+          if (metrics) {
+              // Use the font's actual capHeight for precision
+              const capHeightRatio = Math.abs(metrics.capHeight) || CAP_HEIGHT_RATIO;
+              fontSize = this.props.height / capHeightRatio;
+              this.props.fontSize = fontSize; // Persist for rendering
+        // Removed debug trace logs
+          } else {
+              // Fallback if metrics are not available
+              fontSize = this.props.height * 0.8; // A reasonable guess
+              this.props.fontSize = fontSize;
+        // Removed debug trace logs
+          }
+      }
+
+      // Now, measure width using the determined font size.
+      this.intrinsicSize.width = FontManager.measureTextWidth(text, {
         fontFamily,
         fontWeight,
         fontSize,
-        origin: 'baseline',
+        letterSpacing: this.props.letterSpacing as any,
+        textTransform: this.props.textTransform as any,
       });
-      
-      if (metrics) {
-        // Calculate width using fontmetrics and text content
-        this.intrinsicSize.width = getSvgTextWidth(
-          text, 
-          `${fontWeight} ${fontSize}px ${fontFamily}`,
-          this.props.letterSpacing || undefined,
-          this.props.textTransform || undefined
-        );
-        
-        // Calculate height using fontmetrics (more accurate than DOM bbox)
-        const normalizedHeight = (metrics.bottom - metrics.top) * fontSize;
-        this.intrinsicSize.height = normalizedHeight;
-        
-        // Cache metrics for consistent rendering
-        (this as any)._fontMetrics = metrics;
-        this._cachedMetrics = metrics;
-      } else {
-        // Fallback calculation if fontmetrics fails
-        console.warn(`FontMetrics failed for ${fontFamily}, using fallback calculation`);
-        
-        this.intrinsicSize.width = getSvgTextWidth(
-          text,
-          `${fontWeight} ${fontSize}px ${fontFamily}`,
-          this.props.letterSpacing || undefined,
-          this.props.textTransform || undefined
-        );
-        this.intrinsicSize.height = fontSize * 1.2; // Standard line height multiplier
-      }
-      
+
+      // Height is now based on the prop, not re-measured.
+      this.intrinsicSize.height = this.props.height || fontSize * 1.2;
       this.intrinsicSize.calculated = true;
     }
   
@@ -91,12 +86,7 @@ export class TextElement extends LayoutElement {
       // Use cached metrics first, then fall back to _fontMetrics (set during calculateIntrinsicSize), then fetch new metrics if needed
       let metrics: any = this._cachedMetrics || (this as any)._fontMetrics;
       if (!metrics && this.props.fontFamily) {
-        metrics = getFontMetrics({
-          fontFamily: this.props.fontFamily,
-          fontWeight: this.props.fontWeight || 'normal',
-          fontSize: this.props.fontSize || 16,
-          origin: 'baseline',
-        });
+        metrics = FontManager.getFontMetrics(this.props.fontFamily, this.props.fontWeight as any);
         
         // Cache metrics for consistent rendering across lifecycle
         if (metrics) {

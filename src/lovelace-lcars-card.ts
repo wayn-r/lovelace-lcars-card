@@ -1,23 +1,23 @@
-import { LitElement, html, css, SVGTemplateResult, TemplateResult, svg } from 'lit';
+import { LitElement, html, SVGTemplateResult, TemplateResult, svg } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardEditor } from 'custom-card-helpers';
-import { CARD_TYPE, CARD_NAME, DEFAULT_FONT_SIZE, DEFAULT_TITLE, DEFAULT_TEXT } from './constants';
+import { CARD_TYPE, CARD_NAME } from './constants';
 import { 
   LcarsCardConfig, 
-  GroupConfig, 
-  ElementConfig,
-  StateManagementConfig
 } from './types.js';
 import gsap from 'gsap';
 
+import './layout/widgets/index.js';
 import { LayoutEngine, Group } from './layout/engine.js';
 import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext } from './utils/animation.js';
 import { colorResolver } from './utils/color-resolver.js';
 import { stateManager } from './utils/state-manager.js';
-import { StateChangeEvent, StoreProvider } from './core/store.js';
+import { StoreProvider } from './core/store.js';
 import { transformPropagator } from './utils/transform-propagator.js';
+import FontFaceObserver from 'fontfaceobserver';
+import { FontManager } from './utils/font-manager.js';
 
 // Editor temporarily disabled - import './editor/lcars-card-editor.js';
 
@@ -50,6 +50,43 @@ window.customCards.push({
   }
 })();
 
+// Wait for Antonio (or any supplied families) to finish loading so that glyph
+// widths we measure with getComputedTextLength()/canvas are accurate on a cold
+// cache.  We keep it here because only this card needs it and it avoids another
+// tiny helper file.
+async function waitForFonts(fontFamilies: string[], timeout = 5000): Promise<void> {
+  const observers = fontFamilies.map((family) => new FontFaceObserver(family).load(null, timeout));
+  
+  console.log('[LCARS Card] Waiting for fonts', fontFamilies);
+  
+  // Wait for all targeted font faces to finish loading (success *or* failure)
+  await Promise.allSettled(observers);
+
+  // Additionally wait for the browser's Font Loading API to report ready –
+  // this guarantees that metrics like getBBox/getComputedTextLength will use
+  // the final glyph data rather than a fallback font.
+  if (typeof document !== 'undefined' && (document as any).fonts?.ready) {
+
+    console.log('[LCARS Card] Fonts ready');
+
+    try {
+      await (document as any).fonts.ready;
+
+      console.log('[LCARS Card] Fonts ready 2');
+      // log the font families that are loaded
+      const loadedFontFamilies = Array.from((document as any).fonts.values()).map((font: any) => font.family);
+      console.log('[LCARS Card] Fonts loaded', loadedFontFamilies);
+
+    } catch {
+      console.log('[LCARS Card] Fonts ready 3');
+      /* ignore */
+    }
+  }
+
+  // Ensure at least one rendering cycle passes so layout/metrics are updated.
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+}
+
 @customElement(CARD_TYPE)
 export class LcarsCard extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
@@ -57,6 +94,8 @@ export class LcarsCard extends LitElement {
   @state() private _layoutElementTemplates: SVGTemplateResult[] = [];
   @state() private _viewBox: string = '0 0 100 100';
   @state() private _calculatedHeight: number = 100;
+  @state() private _fontsLoaded = false;
+  @state() private _needsFontRecalc = false;
   
   private _layoutEngine: LayoutEngine = new LayoutEngine();
   private _resizeObserver?: ResizeObserver;
@@ -132,6 +171,24 @@ export class LcarsCard extends LitElement {
     
     // Use event-driven approach for initial layout calculation
     this._scheduleInitialLayout();
+
+    // Ensure our primary font is fully loaded before finalising metrics-based layout.
+    // This prevents incorrect intrinsic text sizing on a cache-less page load.
+    waitForFonts(['Antonio']).then(() => {
+      this._fontsLoaded = true;
+      // Clear cached font metrics so future intrinsic text calculations use the
+      // now-available glyph data instead of fallback metrics from the first pass.
+      FontManager.clearMetricsCache();
+
+      if (this._config && this._containerRect) {
+        // Re-run layout so TextElement intrinsic sizes are recalculated with
+        // correct font metrics now that the font is available.
+        this._performLayoutCalculation(this._containerRect);
+      } else {
+        // Mark for a post-font recalc once prerequisites (config & container) exist.
+        this._needsFontRecalc = true;
+      }
+    });
   }
 
   updated(changedProperties: Map<string | number | symbol, unknown>): void {
@@ -216,8 +273,14 @@ export class LcarsCard extends LitElement {
     
     const rect = container.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) {
-      this._containerRect = rect;
-      this._performLayoutCalculation(rect);
+      // If fonts are NOT ready yet delay the very first calculation until they are.
+      if (!this._fontsLoaded) {
+        this._containerRect = rect;
+        this._needsFontRecalc = true; // Flag so the waitForFonts handler performs the calc.
+      } else {
+        this._containerRect = rect;
+        this._performLayoutCalculation(rect);
+      }
     } else {
       // If still no dimensions, try again next frame
       requestAnimationFrame(() => {
@@ -722,6 +785,9 @@ export class LcarsCard extends LitElement {
     }
   }
 
+  /**
+   * Attach interactive listeners (hover, active) to all rendered elements.
+   */
   private _setupAllElementListeners(): void {
     this._layoutEngine.layoutGroups.forEach(group => {
       group.elements.forEach(element => {
@@ -731,7 +797,7 @@ export class LcarsCard extends LitElement {
   }
 
   /**
-   * Get shadow DOM element by ID for transform propagation
+   * Helper for utilities that need direct access to a rendered SVG element.
    */
   private _getShadowElement(id: string): Element | null {
     return this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;

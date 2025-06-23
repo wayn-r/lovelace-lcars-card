@@ -139,6 +139,7 @@ test.describe.skip('LCARS Card – interaction states', () => {
 
     // Ensure fonts loaded after the card has been initialised
     await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(250);
 
     await loadCustomConfig(page);
 
@@ -152,6 +153,7 @@ test.describe.skip('LCARS Card – interaction states', () => {
 
     // Hover state should update the fill.
     await buttonShape.hover();
+    await page.waitForTimeout(100);
     await expect(await buttonShape.getAttribute('fill')).toBe('#3388ff');
 
     // Active (mouse down) state – hold mouse down to keep the active fill visible.
@@ -159,6 +161,7 @@ test.describe.skip('LCARS Card – interaction states', () => {
     if (box) {
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
       await page.mouse.down();
+      await page.waitForTimeout(100);
       await expect(await buttonShape.getAttribute('fill')).toBe('#1144cc');
       await page.mouse.up();
     }
@@ -176,6 +179,7 @@ test.describe.skip('LCARS Card – interaction states', () => {
 
     // Ensure fonts loaded after the card has been initialised
     await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(250);
 
     await loadCustomConfig(page);
 
@@ -188,7 +192,7 @@ test.describe.skip('LCARS Card – interaction states', () => {
     await buttonShape.click();
 
     // Wait for the state change animation (~300ms) to complete.
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(600);
 
     // The target rectangle should now be in "highlight" state which we detect by opacity 1.
     const statusShape = card.locator('path[id="status_group.status_rect__shape"]');

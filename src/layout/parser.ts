@@ -7,7 +7,7 @@ import { TextElement } from './elements/text.js';
 import { EndcapElement } from './elements/endcap.js';
 import { ElbowElement } from './elements/elbow.js';
 import { ChiselEndcapElement } from './elements/chisel_endcap.js';
-import { TopHeaderElement } from './elements/top_header.js';
+import { expandWidget } from './widgets/registry.js';
 import { parseCardConfig, type ParsedConfig } from '../parsers/schema.js';
 import { ZodError } from 'zod';
 
@@ -99,30 +99,18 @@ export function parseConfig(config: unknown, hass?: HomeAssistant, requestUpdate
   }
 
   return validatedConfig.groups.map(groupConfig => {
-    const layoutElements: LayoutElement[] = groupConfig.elements.map(element => {
-      const fullId = `${groupConfig.group_id}.${element.id}`;
+    // Use flatMap to allow one config element to expand into multiple layout elements
+    const layoutElements: LayoutElement[] = groupConfig.elements.flatMap(elementConfig => {
+      const fullId = `${groupConfig.group_id}.${elementConfig.id}`;
+      const props = convertElementToProps(elementConfig);
+      const layoutConfig = convertLayoutToEngineFormat(elementConfig.layout);
       
-      // Convert element configuration to props format
-      const props = convertElementToProps(element);
-      
-      // Resolve "self" references in visibility triggers
-      if (props.visibility_triggers) {
-        props.visibility_triggers = props.visibility_triggers.map((trigger: any) => ({
-          ...trigger,
-          trigger_source: {
-            ...trigger.trigger_source,
-            element_id_ref: trigger.trigger_source.element_id_ref === 'self' 
-              ? fullId 
-              : trigger.trigger_source.element_id_ref
-          }
-        }));
-      }
-      
-      return createLayoutElement(
+      // createLayoutElements now returns an array
+      return createLayoutElements(
         fullId,
-        element.type,
+        elementConfig.type,
         props,
-        convertLayoutToEngineFormat(element.layout),
+        layoutConfig,
         hass,
         requestUpdateCallback,
         getShadowElement
@@ -243,7 +231,7 @@ function convertLayoutToEngineFormat(layout?: any): ConvertedLayoutConfig {
   return engineLayout;
 }
 
-function createLayoutElement(
+function createLayoutElements(
   id: string,
   type: string,
   props: ConvertedElementProps,
@@ -251,22 +239,27 @@ function createLayoutElement(
   hass?: HomeAssistant,
   requestUpdateCallback?: () => void,
   getShadowElement?: (id: string) => Element | null
-): LayoutElement {
+): LayoutElement[] {
+  // 1) Check if the type corresponds to a registered widget (compound element)
+  const widgetResult = expandWidget(type, id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+  if (widgetResult) {
+    return widgetResult;
+  }
+
+  // 2) Fallback to primitive element types
   switch (type.toLowerCase().trim()) {
     case 'text':
-      return new TextElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+      return [new TextElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
     case 'rectangle':
-      return new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+      return [new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
     case 'endcap':
-      return new EndcapElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+      return [new EndcapElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
     case 'elbow':
-      return new ElbowElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+      return [new ElbowElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
     case 'chisel-endcap':
-      return new ChiselEndcapElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
-    case 'top_header':
-      return new TopHeaderElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+      return [new ChiselEndcapElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
     default:
       console.warn(`LCARS Card Parser: Unknown element type "${type}". Defaulting to Rectangle.`);
-      return new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+      return [new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
   }
-} 
+}

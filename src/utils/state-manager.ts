@@ -31,9 +31,6 @@ export class StateManager {
     }
   }
 
-  /**
-   * Initialize an element's state management
-   */
   initializeElementState(
     elementId: string, 
     stateConfig?: ElementStateManagementConfig,
@@ -42,9 +39,6 @@ export class StateManager {
     this.store.initializeElementState(elementId, stateConfig, animationConfig);
   }
 
-  /**
-   * Set the animation context for triggering animations
-   */
   setAnimationContext(context: AnimationContext, elementsMap?: Map<string, LayoutElement>): void {
     this.animationContext = context;
     this.elementsMap = elementsMap;
@@ -55,9 +49,6 @@ export class StateManager {
     }
   }
 
-  /**
-   * Set an element's state
-   */
   setState(elementId: string, newState: string): void {
     // Auto-initialize if needed
     if (!this._ensureElementInitialized(elementId)) {
@@ -68,18 +59,12 @@ export class StateManager {
     this._handleStateChangeAnimations(elementId, newState);
   }
 
-  /**
-   * Get an element's current state
-   */
   getState(elementId: string): string | undefined {
     const state = this.store.getState();
     const elementState = state.elementStates.get(elementId);
     return elementState?.currentState;
   }
 
-  /**
-   * Toggle an element between states
-   */
   toggleState(elementId: string, states: string[]): boolean {
     // Auto-initialize if needed
     if (!this._ensureElementInitialized(elementId)) {
@@ -169,9 +154,6 @@ export class StateManager {
     }
   }
 
-  /**
-   * Execute an animation using the animation manager
-   */
   executeAnimation(elementId: string, animationDef: AnimationDefinition): void {
     if (!this.animationContext || !this.elementsMap) {
       console.warn(`[StateManager] No animation context available for ${elementId}`);
@@ -222,9 +204,6 @@ export class StateManager {
     return config;
   }
 
-  /**
-   * Trigger lifecycle animations (on_show, on_hide, on_load)
-   */
   triggerLifecycleAnimation(elementId: string, lifecycle: 'on_show' | 'on_hide' | 'on_load'): void {
     if (!this.animationContext || !this.elementsMap) {
       return;

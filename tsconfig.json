@@ -14,7 +14,7 @@
       "sourceMap": true, // Optional: Generate source maps for debugging
       "strictPropertyInitialization": false // Disable strict initialization checks for classes
     },
-    "include": ["src/**/*.ts"], // Which files to compile
+    "include": ["src/**/*.ts", "src/**/*.d.ts"], // Which files to compile
     "exclude": [
       "node_modules",
       "dist",

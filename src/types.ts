@@ -107,6 +107,8 @@ export interface TextConfig {
   dominantBaseline?: string;
   textTransform?: string;
   cutout?: boolean;
+  textWidth?: number;  // not implemented yet
+  textHeight?: number;  // not implemented yet
   elbow_text_position?: 'arm' | 'body'; // elbow specific
   
   // top_header specific

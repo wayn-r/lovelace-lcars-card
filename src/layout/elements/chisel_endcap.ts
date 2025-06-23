@@ -34,6 +34,7 @@ export class ChiselEndcapElement extends LayoutElement {
     }
   
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
+      // Removed debug trace log
       if (this.intrinsicSize.height === 0 && this.layoutConfig.anchorTo) {
         const anchorElement = elementsMap.get(this.layoutConfig.anchorTo);
         if (anchorElement) {

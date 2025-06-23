@@ -1,0 +1,132 @@
+type: custom:lovelace-lcars-card
+card_title: Endcap Text Anchors
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Endcap Text Anchors
+          right_content: example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: middle
+    elements:
+      - id: left
+        type: endcap
+        appearance:
+          fill: "#CC6600"
+          direction: left
+        text:
+          content: MIDDLE
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          offsetY: 10
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: right
+        type: endcap
+        appearance:
+          fill: "#0099CC"
+          direction: right
+        text:
+          content: MIDDLE
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+        layout:
+          width: 100
+          height: 40
+          anchor:
+            to: middle.left
+            element_point: topLeft
+            target_point: topRight
+  - group_id: start
+    elements:
+      - id: left
+        type: endcap
+        appearance:
+          fill: "#CC6600"
+          direction: left
+        text:
+          content: START
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          textAnchor: start
+        layout:
+          width: 100
+          height: 40
+          offsetY: 10
+          anchor:
+            to: middle.left
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: right
+        type: endcap
+        appearance:
+          fill: "#0099CC"
+          direction: right
+        text:
+          content: START
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          textAnchor: start
+        layout:
+          width: 100
+          height: 40
+          anchor:
+            to: start.left
+            element_point: topLeft
+            target_point: topRight
+  - group_id: end
+    elements:
+      - id: left
+        type: endcap
+        appearance:
+          fill: "#CC6600"
+          direction: left
+        text:
+          content: END
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          textAnchor: end
+        layout:
+          width: 100
+          height: 40
+          offsetY: 10
+          anchor:
+            to: start.left
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: right
+        type: endcap
+        appearance:
+          fill: "#0099CC"
+          direction: right
+        text:
+          content: END
+          fill: "#FFFFFF"
+          fontFamily: Antonio
+          textAnchor: end
+        layout:
+          width: 100
+          height: 40
+          anchor:
+            to: end.left
+            element_point: topLeft
+            target_point: topRight

@@ -1,5 +1,5 @@
-import { ColorValue, DynamicColorConfig, StatefulColorConfig, isDynamicColorConfig, isStatefulColorConfig } from '../types';
-import { AnimationContext, animationManager } from './animation';
+import { ColorValue, StatefulColorConfig, isDynamicColorConfig, isStatefulColorConfig } from '../types';
+import { AnimationContext } from './animation';
 import { colorResolver } from './color-resolver';
 
 // ============================================================================
