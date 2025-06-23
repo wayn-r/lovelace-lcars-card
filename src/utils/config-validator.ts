@@ -100,9 +100,23 @@ export function validateConfig(config: unknown): ValidationResult {
 
       // --- Button actions --------------------------------------------
       if (el.button?.enabled && el.button.actions) {
-        Object.values(el.button.actions).forEach((acts: any) => {
+        Object.entries(el.button.actions).forEach(([key, acts]: [string, any]) => {
           if (!acts) return;
-          const flat: Action[] = Array.isArray(acts) ? acts : [acts];
+
+          const flatten = (input: any): Action[] => {
+            if (Array.isArray(input)) return input;
+            if (typeof input === 'object' && input !== null) {
+              if (Array.isArray(input.actions)) {
+                return input.actions as Action[];
+              }
+              if (input.action) {
+                return [input as Action];
+              }
+            }
+            return [input as Action];
+          };
+
+          const flat: Action[] = flatten(acts);
           flat.forEach((act) => {
             // Validate required properties per action type
             validateAction(act).forEach((msg) => errors.push(`${contextId} button.action – ${msg}`));

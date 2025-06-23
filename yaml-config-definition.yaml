@@ -84,14 +84,12 @@ groups: <array>                  # Required: Defines groups of elements. Element
         button:                    # Optional: Configuration if this element should act as a button.
           enabled: <boolean>         # True if it's a button. Default: false.
           actions:                   # Defines actions for different types of interactions.
-            tap: <action_definition>   # Action for a standard click/tap. See action_definition below.
-            hold:                    # Optional: Action for a click-and-hold.
-              duration: <number>       # Optional (ms): Hold duration. Default: 500.
-              actions: <array>         # Required: Array of actions to execute simultaneously.
-              action: <string>         # Required: Type of action (same as action_definition).
-              # Either action or actions must be specified, but not both.
-              # ... other action_definition properties (service, entity, etc.)
-            double_tap: <action_definition>  # Optional: Action for a double-tap. See action_definition below.
+            tap: <action_definition | array_of_action_definitions>   # Standard click/tap. Provide either a single action object OR an array for multiple actions executed in sequence.
+            hold:                    # Optional: Actions for a click-and-hold gesture.
+              duration: <number>          # Optional (ms): Hold duration. Default: 500.
+              action: <action_definition> # Single action to execute after hold.
+              actions: <array>            # Array of actions to execute after hold. Provide either "action" or "actions", not both.
+            double_tap: <action_definition | array_of_action_definitions>  # Optional: Action(s) for a double-tap gesture.
 
         state_management: <state_management_config>  # Optional: Local state management for this element.
 

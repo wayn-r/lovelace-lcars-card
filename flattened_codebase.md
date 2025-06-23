@@ -84,8 +84,8 @@ lovelace-lcars-card/
 │       └── transform-propagator.ts
 ├── test-results/
 │   ├── .last-run.json
-│   └── config-examples-6-complex--30648-ility-baseline-interactions-chromium/
-│       ├── 6-complex-actions-and-visibility-initial-actual.png
+│   └── config-examples-7-button-a-76888-tions-baseline-interactions-chromium/
+│       ├── 7-button-actions-and-confirmations-initial-actual.png
 │       ├── error-context.md
 │       ├── trace.zip
 │       └── video.webm
@@ -93,7 +93,7 @@ lovelace-lcars-card/
 │   └── e2e/
 │       ├── config-examples.spec.ts
 │       ├── config-examples.spec.ts-snapshots/
-│       │   └── 6-complex-actions-and-visibility-initial-chromium-linux.png
+│       │   └── 7-button-actions-and-confirmations-initial-chromium-linux.png
 │       ├── interactive-state.spec.ts
 │       ├── test-harness.html
 │       └── test-helpers.ts
@@ -124,7 +124,7 @@ lovelace-lcars-card/
 │   ├── 28-elbow-text-anchors.yaml
 │   ├── 3-dynamic-color.yaml
 │   ├── 5-lcars-shape-elements.yaml
-│   ├── 7-button-actions-and-confirmations.yaml
+│   ├── 6-complex-actions-and-visibility.yaml
 │   ├── 8-animations.yaml
 │   └── 9-text-styling.yaml
 ├── yaml-config-definition.yaml
@@ -10592,12 +10592,31 @@ const actionSchema: z.ZodType<any> = z.object({
   ]).optional()
 });
 
+const multiActionSchema = z.union([actionSchema, z.array(actionSchema)]);
+
+// Hold can optionally include a duration plus either a single action or array of actions
+const holdActionSchema = z.union([
+  actionSchema,
+  z.array(actionSchema),
+  z.object({
+    duration: z.number().optional(),
+    action: actionSchema.optional(),
+    actions: z.array(actionSchema).optional(),
+  }).refine((val) => {
+    return (
+      (Array.isArray((val as any).actions) && (val as any).actions.length > 0) ||
+      (val as any).action !== undefined
+    );
+  }, { message: 'hold must specify "action" or "actions"' })
+]);
+
+// Update buttonSchema to use the new helpers
 const buttonSchema = z.object({
   enabled: z.boolean().optional(),
   actions: z.object({
-    tap: actionSchema.optional(),
-    hold: actionSchema.optional(),
-    double_tap: actionSchema.optional(),
+    tap: multiActionSchema.optional(),
+    hold: holdActionSchema.optional(),
+    double_tap: multiActionSchema.optional(),
   }).optional(),
 }).optional();
 
@@ -13679,9 +13698,23 @@ export function validateConfig(config: unknown): ValidationResult {
 
       // --- Button actions --------------------------------------------
       if (el.button?.enabled && el.button.actions) {
-        Object.values(el.button.actions).forEach((acts: any) => {
+        Object.entries(el.button.actions).forEach(([key, acts]: [string, any]) => {
           if (!acts) return;
-          const flat: Action[] = Array.isArray(acts) ? acts : [acts];
+
+          const flatten = (input: any): Action[] => {
+            if (Array.isArray(input)) return input;
+            if (typeof input === 'object' && input !== null) {
+              if (Array.isArray(input.actions)) {
+                return input.actions as Action[];
+              }
+              if (input.action) {
+                return [input as Action];
+              }
+            }
+            return [input as Action];
+          };
+
+          const flat: Action[] = flatten(acts);
           flat.forEach((act) => {
             // Validate required properties per action type
             validateAction(act).forEach((msg) => errors.push(`${contextId} button.action – ${msg}`));
@@ -18175,12 +18208,12 @@ export const transformPropagator = new TransformPropagator();
 {
   "status": "failed",
   "failedTests": [
-    "10708c82281818d9902f-492fd25012982b977335"
+    "10708c82281818d9902f-a2ed74fa629115ada809"
   ]
 }
 ```
 
-## File: test-results/config-examples-6-complex--30648-ility-baseline-interactions-chromium/error-context.md
+## File: test-results/config-examples-7-button-a-76888-tions-baseline-interactions-chromium/error-context.md
 
 ```markdown
 # Page snapshot

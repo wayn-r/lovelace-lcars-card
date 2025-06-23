@@ -121,12 +121,31 @@ const actionSchema: z.ZodType<any> = z.object({
   ]).optional()
 });
 
+const multiActionSchema = z.union([actionSchema, z.array(actionSchema)]);
+
+// Hold can optionally include a duration plus either a single action or array of actions
+const holdActionSchema = z.union([
+  actionSchema,
+  z.array(actionSchema),
+  z.object({
+    duration: z.number().optional(),
+    action: actionSchema.optional(),
+    actions: z.array(actionSchema).optional(),
+  }).refine((val) => {
+    return (
+      (Array.isArray((val as any).actions) && (val as any).actions.length > 0) ||
+      (val as any).action !== undefined
+    );
+  }, { message: 'hold must specify "action" or "actions"' })
+]);
+
+// Update buttonSchema to use the new helpers
 const buttonSchema = z.object({
   enabled: z.boolean().optional(),
   actions: z.object({
-    tap: actionSchema.optional(),
-    hold: actionSchema.optional(),
-    double_tap: actionSchema.optional(),
+    tap: multiActionSchema.optional(),
+    hold: holdActionSchema.optional(),
+    double_tap: multiActionSchema.optional(),
   }).optional(),
 }).optional();
 
