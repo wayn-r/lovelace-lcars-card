@@ -40,8 +40,7 @@ lovelace-lcars-card/
 │   │   │   │   ├── element.spec.ts
 │   │   │   │   ├── endcap.spec.ts
 │   │   │   │   ├── rectangle.spec.ts
-│   │   │   │   ├── text.spec.ts
-│   │   │   │   └── top_header.spec.ts
+│   │   │   │   └── text.spec.ts
 │   │   │   └── text.ts
 │   │   ├── engine.ts
 │   │   ├── parser.ts
@@ -51,6 +50,11 @@ lovelace-lcars-card/
 │   │   └── widgets/
 │   │       ├── index.ts
 │   │       ├── registry.ts
+│   │       ├── test/
+│   │       │   ├── index.spec.ts
+│   │       │   ├── registry.spec.ts
+│   │       │   ├── top_header.spec.ts
+│   │       │   └── widget.spec.ts
 │   │       ├── top_header.ts
 │   │       └── widget.ts
 │   ├── lovelace-lcars-card.ts
@@ -83,32 +87,11 @@ lovelace-lcars-card/
 │       │   └── transform-propagator.spec.ts
 │       └── transform-propagator.ts
 ├── test-results/
-│   ├── .last-run.json
-│   └── config-examples-8-animations-baseline-interactions-chromium/
-│       ├── error-context.md
-│       ├── trace.zip
-│       └── video.webm
+│   └── .last-run.json
 ├── tests/
 │   └── e2e/
 │       ├── config-examples.spec.ts
 │       ├── config-examples.spec.ts-snapshots/
-│       │   ├── 8-animations-initial-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-multi-trigger-button-active-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-multi-trigger-button-hover-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-multi-trigger-button-post-click-off-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-multi-trigger-button-post-click-on-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-reset-button-active-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-reset-button-hover-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-reset-button-post-click-off-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-reset-button-post-click-on-chromium-linux.png
-│       │   ├── 8-animations-scale-target-group-scale-trigger-button-active-chromium-linux.png
-│       │   ├── 8-animations-scale-target-group-scale-trigger-button-hover-chromium-linux.png
-│       │   ├── 8-animations-scale-target-group-scale-trigger-button-post-click-off-chromium-linux.png
-│       │   ├── 8-animations-scale-target-group-scale-trigger-button-post-click-on-chromium-linux.png
-│       │   ├── 8-animations-sliding-panel-group-sliding-panel-trigger-button-active-chromium-linux.png
-│       │   ├── 8-animations-sliding-panel-group-sliding-panel-trigger-button-hover-chromium-linux.png
-│       │   ├── 8-animations-sliding-panel-group-sliding-panel-trigger-button-post-click-off-chromium-linux.png
-│       │   └── 8-animations-sliding-panel-group-sliding-panel-trigger-button-post-click-on-chromium-linux.png
 │       ├── interactive-state.spec.ts
 │       ├── test-harness.html
 │       └── test-helpers.ts
@@ -6350,12 +6333,14 @@ vi.mock('../../../utils/button.js', () => {
   };
 });
 
-vi.mock('../../../utils/shapes.js', () => {
+vi.mock('../../../utils/font-manager.js', () => {
   return {
-    getFontMetrics: vi.fn(),
-    measureTextBBox: vi.fn(),
-    getSvgTextWidth: vi.fn(),
-    getTextWidth: vi.fn()
+    FontManager: {
+      getFontMetrics: vi.fn(),
+      measureTextWidth: vi.fn(),
+      ensureFontsLoaded: vi.fn().mockResolvedValue(undefined),
+      clearMetricsCache: vi.fn()
+    }
   };
 });
 
@@ -6364,7 +6349,7 @@ import { TextElement } from '../text';
 import { Button } from '../../../utils/button.js';
 import { svg, SVGTemplateResult } from 'lit';
 import { HomeAssistant } from 'custom-card-helpers';
-import * as shapes from '../../../utils/shapes.js';
+import { FontManager } from '../../../utils/font-manager.js';
 
 // Create a simple SVG renderer to test SVG templates
 function renderSvgTemplate(template: SVGTemplateResult): SVGElement {
@@ -6406,9 +6391,8 @@ describe('TextElement', () => {
     document.body.appendChild(mockSvgContainer);
 
     // Reset mock implementations
-    (shapes.getFontMetrics as any).mockReturnValue(null);
-    (shapes.measureTextBBox as any).mockReturnValue(null);
-    (shapes.getSvgTextWidth as any).mockReturnValue(0);
+    (FontManager.getFontMetrics as any).mockReturnValue(null);
+    (FontManager.measureTextWidth as any).mockReturnValue(0);
   });
 
   afterEach(() => {
@@ -6464,25 +6448,26 @@ describe('TextElement', () => {
     it('should calculate size using fontmetrics if available', () => {
       const props = {
         text: 'Test',
-        fontSize: 16,
+        height: 20, // Provide height without fontSize to trigger getFontMetrics call
         fontFamily: 'Arial'
       };
       textElement = new TextElement('txt-metrics', props);
 
-      (shapes.getFontMetrics as any).mockReturnValue({
+      (FontManager.getFontMetrics as any).mockReturnValue({
         top: -0.8,
         bottom: 0.2,
         ascent: -0.75,
         descent: 0.25,
+        capHeight: 0.7
       });
 
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
-      expect(shapes.getFontMetrics).toHaveBeenCalledWith(expect.objectContaining({ 
+      expect(FontManager.getFontMetrics).toHaveBeenCalledWith('Arial', 'normal');
+      expect(FontManager.measureTextWidth).toHaveBeenCalledWith('Test', expect.objectContaining({
         fontFamily: 'Arial',
-        fontSize: 16 
+        fontWeight: 'normal'
       }));
-      expect(shapes.getSvgTextWidth).toHaveBeenCalledWith('Test', 'normal 16px Arial', undefined, undefined);
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 
@@ -6494,11 +6479,15 @@ describe('TextElement', () => {
       };
       textElement = new TextElement('txt-fallback', props);
 
-      (shapes.getFontMetrics as any).mockReturnValue(null);
+      (FontManager.getFontMetrics as any).mockReturnValue(null);
 
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
-      expect(shapes.getSvgTextWidth).toHaveBeenCalledWith('Test', 'normal 20px Arial', undefined, undefined);
+      expect(FontManager.measureTextWidth).toHaveBeenCalledWith('Test', expect.objectContaining({
+        fontFamily: 'Arial',
+        fontSize: 20,
+        fontWeight: 'normal'
+      }));
       expect(textElement.intrinsicSize.height).toBe(24); // fontSize * 1.2
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
@@ -6513,14 +6502,20 @@ describe('TextElement', () => {
       };
       textElement = new TextElement('txt-spacing', props);
 
-      (shapes.getFontMetrics as any).mockReturnValue({
+      (FontManager.getFontMetrics as any).mockReturnValue({
         top: -0.8,
         bottom: 0.2,
       });
 
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
-      expect(shapes.getSvgTextWidth).toHaveBeenCalledWith('Test', 'normal 18px Arial', '2px', 'uppercase');
+      expect(FontManager.measureTextWidth).toHaveBeenCalledWith('Test', expect.objectContaining({
+        fontFamily: 'Arial',
+        fontSize: 18,
+        fontWeight: 'normal',
+        letterSpacing: '2px',
+        textTransform: 'uppercase'
+      }));
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 
@@ -6686,11 +6681,11 @@ describe('TextElement', () => {
       
       const textElem = renderSvgTemplate(result!);
       expect(parseFloat(textElem.getAttribute('y') || '0')).toBeCloseTo(15 + (-(-0.7) * 18)); // Uses _cachedMetrics.ascent
-      expect(shapes.getFontMetrics).not.toHaveBeenCalled();
+      expect(FontManager.getFontMetrics).not.toHaveBeenCalled();
     });
 
     it('should try to fetch new metrics if no cached or initial metrics, and fontFamily is present', () => {
-      (shapes.getFontMetrics as any).mockReturnValue({ 
+      (FontManager.getFontMetrics as any).mockReturnValue({ 
         ascent: -0.6, top: -0.6, bottom: 0, descent: 0, capHeight: 0, xHeight: 0, baseline: 0,
         fontFamily: 'TestFont', fontWeight: 'normal', fontSize: 15, tittle: 0
       });
@@ -6704,538 +6699,13 @@ describe('TextElement', () => {
       
       const textElem = renderSvgTemplate(result!);
 
-      expect(shapes.getFontMetrics).toHaveBeenCalledWith(expect.objectContaining({
-        fontFamily: 'TestFont',
-        fontSize: 15
-      }));
+      expect(FontManager.getFontMetrics).toHaveBeenCalledWith('TestFont', undefined);
       expect(parseFloat(textElem.getAttribute('y') || '0')).toBeCloseTo(8 + (-(-0.6) * 15));
       // Check that _cachedMetrics is now set
       expect((textElement as any)._cachedMetrics).toEqual({ 
         ascent: -0.6, top: -0.6, bottom: 0, descent: 0, capHeight: 0, xHeight: 0, baseline: 0,
         fontFamily: 'TestFont', fontWeight: 'normal', fontSize: 15, tittle: 0
       });
-    });
-  });
-});
-```
-
-## File: src/layout/elements/test/top_header.spec.ts
-
-```typescript
-// src/layout/elements/top_header.spec.ts
-
-import { describe, it, expect, vi, beforeEach, afterEach, MockInstance } from 'vitest';
-import { svg, SVGTemplateResult } from 'lit';
-import { HomeAssistant } from 'custom-card-helpers';
-
-// Set up all mocks first, before importing the module under test
-vi.mock('../../../utils/shapes', () => ({
-  getFontMetrics: vi.fn().mockReturnValue({ capHeight: 0.7, ascent: -0.75, top: -0.8, bottom: 0.2 }),
-  getSvgTextWidth: vi.fn().mockReturnValue(50),
-}));
-
-// Track mock instances
-let mockLeftEndcap: any;
-let mockRightEndcap: any;
-let mockLeftText: any;
-let mockRightText: any;
-let mockHeaderBar: any;
-
-// Create a reusable mock layout element
-const createMockElement = (id: string, type: string) => {
-  const mock = {
-    id,
-    props: {},
-    layoutConfig: {},
-    layout: { x: 0, y: 0, width: 0, height: 0, calculated: false },
-    intrinsicSize: { width: 0, height: 0, calculated: false },
-    hass: undefined,
-    requestUpdateCallback: undefined,
-    calculateIntrinsicSize: vi.fn(),
-    calculateLayout: vi.fn(function(this: any, elementsMap, containerRect) {
-      this.layout.width = this.intrinsicSize?.width || this.props?.width || 10;
-      this.layout.height = this.intrinsicSize?.height || this.props?.height || 10;
-      this.layout.x = this.layoutConfig?.offsetX || 0;
-      this.layout.y = this.layoutConfig?.offsetY || 0;
-      
-      // Handle anchoring
-      if (this.layoutConfig?.anchor?.anchorTo) {
-        const anchorTarget = elementsMap.get(this.layoutConfig.anchor.anchorTo);
-        if (anchorTarget?.layout.calculated) {
-          if (this.layoutConfig.anchor.anchorPoint === 'topLeft' && this.layoutConfig.anchor.targetAnchorPoint === 'topRight') {
-            this.layout.x = anchorTarget.layout.x + anchorTarget.layout.width;
-            this.layout.y = anchorTarget.layout.y;
-          } else if (this.layoutConfig.anchor.anchorPoint === 'topRight' && this.layoutConfig.anchor.targetAnchorPoint === 'topLeft') {
-            this.layout.x = anchorTarget.layout.x - this.layout.width;
-            this.layout.y = anchorTarget.layout.y;
-          }
-        }
-      }
-      this.layout.calculated = true;
-    }),
-    render: vi.fn(() => svg`<mock-element type="${type}" id="${id}" />`),
-    resetLayout: vi.fn(),
-  };
-  return mock;
-};
-
-// Mock the component classes
-vi.mock('../endcap', () => ({
-  EndcapElement: vi.fn().mockImplementation((id, props, layoutConfig, hass, cb) => {
-    const mock = createMockElement(id, 'endcap');
-    mock.props = props || {};
-    mock.layoutConfig = layoutConfig || {};
-    mock.hass = hass;
-    mock.requestUpdateCallback = cb;
-    
-    if (id.includes('left_endcap')) mockLeftEndcap = mock;
-    if (id.includes('right_endcap')) mockRightEndcap = mock;
-    
-    return mock;
-  })
-}));
-
-vi.mock('../text', () => ({
-  TextElement: vi.fn().mockImplementation((id, props, layoutConfig, hass, cb) => {
-    const mock = createMockElement(id, 'text');
-    mock.props = props || {};
-    mock.layoutConfig = layoutConfig || {};
-    mock.hass = hass;
-    mock.requestUpdateCallback = cb;
-    
-    if (id.includes('left_text')) mockLeftText = mock;
-    if (id.includes('right_text')) mockRightText = mock;
-    
-    return mock;
-  })
-}));
-
-vi.mock('../rectangle', () => ({
-  RectangleElement: vi.fn().mockImplementation((id, props, layoutConfig, hass, cb) => {
-    const mock = createMockElement(id, 'rectangle');
-    mock.props = props || {};
-    mock.layoutConfig = layoutConfig || {};
-    mock.hass = hass;
-    mock.requestUpdateCallback = cb;
-    
-    if (id.includes('header_bar')) mockHeaderBar = mock;
-    
-    return mock;
-  })
-}));
-
-// Now import the module under test
-import { TopHeaderElement } from '../top_header';
-import { LayoutElement } from '../element';
-import { EndcapElement } from '../endcap';
-import { TextElement } from '../text';
-import { RectangleElement } from '../rectangle';
-// Import directly from utils so we have access to the mocks
-import { getFontMetrics, getSvgTextWidth } from '../../../utils/shapes';
-
-// Now we can start the tests
-describe('TopHeaderElement', () => {
-  let topHeaderElement: TopHeaderElement;
-  const mockHass = {} as HomeAssistant;
-  const mockRequestUpdate = vi.fn();
-  let elementsMap: Map<string, LayoutElement>;
-  let containerRect: DOMRect;
-  let superCalculateLayoutSpy: MockInstance;
-
-  const TEXT_GAP = 5; // From TopHeaderElement
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    elementsMap = new Map<string, LayoutElement>();
-    containerRect = { x: 0, y: 0, width: 1000, height: 800, top: 0, left: 0, bottom: 800, right: 1000, toJSON: () => ({}) } as DOMRect;
-
-    // Spy on LayoutElement.prototype.calculateLayout
-    superCalculateLayoutSpy = vi.spyOn(LayoutElement.prototype, 'calculateLayout')
-      .mockImplementation(function(this: LayoutElement) {
-        // Simulate super.calculateLayout for the TopHeaderElement itself
-        this.layout.x = this.layoutConfig.offsetX || 0;
-        this.layout.y = (this.layoutConfig.offsetY || 0) + (this.props.offsetY || 0);
-        this.layout.width = this.intrinsicSize.width;
-        this.layout.height = this.intrinsicSize.height;
-        this.layout.calculated = true;
-      });
-
-    // Default mock implementations for utils
-    (getFontMetrics as any).mockReturnValue({ capHeight: 0.7, ascent: -0.75, top: -0.8, bottom: 0.2 });
-    (getSvgTextWidth as any).mockReturnValue(50);
-
-    // Create instance
-    topHeaderElement = new TopHeaderElement('th-test', {}, {}, mockHass, mockRequestUpdate);
-    
-    // Reset mock instances for clarity in tests that check calls
-    if (mockLeftEndcap) mockLeftEndcap.calculateLayout.mockClear();
-    if (mockRightEndcap) mockRightEndcap.calculateLayout.mockClear();
-    if (mockLeftText) mockLeftText.calculateLayout.mockClear();
-    if (mockRightText) mockRightText.calculateLayout.mockClear();
-    if (mockHeaderBar) mockHeaderBar.calculateLayout.mockClear();
-  });
-
-  afterEach(() => {
-    superCalculateLayoutSpy.mockRestore();
-  });
-
-  describe('Constructor and Initialization', () => {
-    it('should initialize with default values and create child elements', () => {
-      expect(topHeaderElement.id).toBe('th-test');
-      expect(topHeaderElement.props).toEqual({});
-      expect(topHeaderElement.layoutConfig).toEqual({});
-      expect(topHeaderElement.hass).toBe(mockHass);
-      expect(topHeaderElement.requestUpdateCallback).toBe(mockRequestUpdate);
-      expect(topHeaderElement.layout).toEqual({ x: 0, y: 0, width: 0, height: 0, calculated: false });
-
-      expect(EndcapElement).toHaveBeenCalledTimes(2);
-      expect(TextElement).toHaveBeenCalledTimes(2);
-      expect(RectangleElement).toHaveBeenCalledTimes(1);
-
-      expect(mockLeftEndcap).toBeDefined();
-      expect(mockLeftEndcap.id).toBe('th-test_left_endcap');
-      expect(mockLeftEndcap.props.direction).toBe('left');
-      expect(mockLeftEndcap.props.fill).toBe('#99CCFF'); // Default fill
-      expect(mockLeftEndcap.layoutConfig.anchor).toBeUndefined();
-
-      expect(mockRightEndcap).toBeDefined();
-      expect(mockRightEndcap.id).toBe('th-test_right_endcap');
-      expect(mockRightEndcap.props.direction).toBe('right');
-
-      expect(mockLeftText).toBeDefined();
-      expect(mockLeftText.id).toBe('th-test_left_text');
-      expect(mockLeftText.props.text).toBe('LEFT'); // Default text
-      expect(mockLeftText.layoutConfig.anchor).toBeUndefined();
-
-      expect(mockRightText).toBeDefined();
-      expect(mockRightText.id).toBe('th-test_right_text');
-      expect(mockRightText.props.text).toBe('RIGHT'); // Default text
-      expect(mockRightText.layoutConfig.anchor).toBeUndefined();
-
-      expect(mockHeaderBar).toBeDefined();
-      expect(mockHeaderBar.id).toBe('th-test_header_bar');
-      expect(mockHeaderBar.props.fill).toBe('#99CCFF');
-    });
-
-    it('should use props.fill for default color of children', () => {
-      const props = { fill: 'red', textColor: 'red' };
-      topHeaderElement = new TopHeaderElement('th-fill', props);
-      expect(mockLeftEndcap.props.fill).toBe('red');
-      expect(mockRightEndcap.props.fill).toBe('red');
-      expect(mockHeaderBar.props.fill).toBe('red');
-      // Text fill uses textColor from props if available
-      expect(mockLeftText.props.fill).toBe('red');
-    });
-
-    it('should use props for text content and font configuration', () => {
-      const props = {
-        leftContent: 'CustomLeft',
-        rightContent: 'CustomRight',
-        fontFamily: 'Roboto',
-        fontWeight: 'bold',
-        letterSpacing: '1px',
-        textTransform: 'lowercase',
-      };
-      topHeaderElement = new TopHeaderElement('th-text-props', props);
-      expect(mockLeftText.props.text).toBe('CustomLeft');
-      expect(mockLeftText.props.fontFamily).toBe('Roboto');
-      expect(mockLeftText.props.fontWeight).toBe('bold');
-      expect(mockLeftText.props.letterSpacing).toBe('1px');
-      expect(mockLeftText.props.textTransform).toBe('lowercase');
-
-      expect(mockRightText.props.text).toBe('CustomRight');
-      expect(mockRightText.props.fontFamily).toBe('Roboto');
-    });
-  });
-
-  describe('calculateIntrinsicSize', () => {
-    it('should set width and height from props if available', () => {
-      topHeaderElement = new TopHeaderElement('th-is1', { width: 200, height: 40 });
-      topHeaderElement.calculateIntrinsicSize(containerRect as unknown as SVGElement);
-      expect(topHeaderElement.intrinsicSize).toEqual({ width: 200, height: 40, calculated: true });
-    });
-
-    it('should set width and height from layoutConfig if props not available', () => {
-      topHeaderElement = new TopHeaderElement('th-is2', {}, { width: 250, height: 35 });
-      topHeaderElement.calculateIntrinsicSize(containerRect as unknown as SVGElement);
-      expect(topHeaderElement.intrinsicSize).toEqual({ width: 250, height: 35, calculated: true });
-    });
-
-    it('should default to width 300 and height 30 if not specified', () => {
-      topHeaderElement = new TopHeaderElement('th-is3');
-      topHeaderElement.calculateIntrinsicSize(containerRect as unknown as SVGElement);
-      expect(topHeaderElement.intrinsicSize).toEqual({ width: 300, height: 30, calculated: true });
-    });
-  });
-
-  describe('calculateLayout', () => {
-    beforeEach(() => {
-      // Set intrinsic size for the TopHeaderElement itself
-      topHeaderElement.intrinsicSize = { width: 500, height: 30, calculated: true };
-      // Mock children's intrinsic size calculation
-      mockLeftEndcap.calculateIntrinsicSize.mockImplementation(function(this: any){ this.intrinsicSize = {width: this.props.width, height: this.props.height, calculated: true}; });
-      mockRightEndcap.calculateIntrinsicSize.mockImplementation(function(this: any){ this.intrinsicSize = {width: this.props.width, height: this.props.height, calculated: true}; });
-    });
-
-    it('should call super.calculateLayout for itself first', () => {
-      topHeaderElement.calculateLayout(elementsMap, containerRect);
-      expect(superCalculateLayoutSpy).toHaveBeenCalledTimes(1);
-      expect(superCalculateLayoutSpy.mock.instances[0]).toBe(topHeaderElement); // Ensure it was called on the correct instance
-      expect(topHeaderElement.layout.calculated).toBe(true);
-    });
-
-    it('should register child elements to the elementsMap', () => {
-      topHeaderElement.calculateLayout(elementsMap, containerRect);
-      expect(elementsMap.get(mockLeftEndcap.id)).toBe(mockLeftEndcap);
-      expect(elementsMap.get(mockRightEndcap.id)).toBe(mockRightEndcap);
-      expect(elementsMap.get(mockLeftText.id)).toBe(mockLeftText);
-      expect(elementsMap.get(mockRightText.id)).toBe(mockRightText);
-      expect(elementsMap.get(mockHeaderBar.id)).toBe(mockHeaderBar);
-    });
-
-    it('should correctly configure and layout endcaps', () => {
-      topHeaderElement.intrinsicSize.height = 40; // TopHeader height
-      topHeaderElement.calculateLayout(elementsMap, containerRect);
-
-      const expectedEndcapWidth = 40 * 0.75; // 30
-      expect(mockLeftEndcap.props.height).toBe(40);
-      expect(mockLeftEndcap.props.width).toBe(expectedEndcapWidth);
-      expect(mockLeftEndcap.calculateIntrinsicSize).toHaveBeenCalled();
-      // No longer calling calculateLayout on child elements - positioning manually
-      expect(mockLeftEndcap.layout.calculated).toBe(true);
-      expect(mockLeftEndcap.layout.width).toBe(expectedEndcapWidth);
-      expect(mockLeftEndcap.layout.height).toBe(40);
-
-      expect(mockRightEndcap.props.height).toBe(40);
-      expect(mockRightEndcap.props.width).toBe(expectedEndcapWidth);
-      expect(mockRightEndcap.calculateIntrinsicSize).toHaveBeenCalled();
-      // No longer calling calculateLayout on child elements - positioning manually
-      expect(mockRightEndcap.layout.calculated).toBe(true);
-      expect(mockRightEndcap.layout.width).toBe(expectedEndcapWidth);
-      expect(mockRightEndcap.layout.height).toBe(40);
-    });
-
-    it('should calculate font size and configure text elements', () => {
-      (getFontMetrics as any).mockReturnValue({ capHeight: 0.7 });
-      topHeaderElement.intrinsicSize.height = 30; // TopHeader height
-      
-      // Set text properties before the test
-      topHeaderElement.props.leftContent = "TestL";
-      topHeaderElement.props.rightContent = "TestR";
-      mockLeftText.props.text = "TestL";
-      mockRightText.props.text = "TestR";
-      
-      (getSvgTextWidth as any).mockImplementation((text: string) => text.length * 10); // TestL = 50, TestR = 50
-
-      // For this test, mock the implementation of configureTextElement
-      vi.spyOn(topHeaderElement as any, 'configureTextElement').mockImplementation((...args: any[]) => {
-        const [textElement, fontSize] = args;
-        textElement.props.fontSize = fontSize; // Set fontSize without the negative sign
-        // Don't change the text, which should already be set
-        textElement.intrinsicSize = { 
-          width: textElement.props.text.length * 10, 
-          height: fontSize, 
-          calculated: true 
-        };
-      });
-
-      topHeaderElement.calculateLayout(elementsMap, containerRect);
-
-      const expectedFontSize = 30 / 0.7; // height / capHeight_ratio (~42.86)
-      
-      // Use Math.abs to compare absolute values, since the implementation might be using a negative fontSize
-      expect(Math.abs(mockLeftText.props.fontSize)).toBeCloseTo(expectedFontSize);
-      expect(mockLeftText.props.text).toBe("TestL");
-      // No longer calling calculateLayout on child elements - positioning manually
-      expect(mockLeftText.layout.calculated).toBe(true);
-
-      expect(Math.abs(mockRightText.props.fontSize)).toBeCloseTo(expectedFontSize);
-      expect(mockRightText.layout.calculated).toBe(true);
-    });
-
-    it('should adjust text positions using textGap (with metrics)', () => {
-      (getFontMetrics as any).mockReturnValue({ capHeight: 0.7, ascent: -0.7, top: -0.8 }); // Ascent needed for y-pos
-      topHeaderElement.intrinsicSize.height = 30;
-      
-      // Simulate children's layout results after their calculateLayout is called
-      mockLeftEndcap.layout = { x: 0, y: 0, width: 22.5, height: 30, calculated: true };
-      mockRightEndcap.layout = { x: 477.5, y: 0, width: 22.5, height: 30, calculated: true };
-
-      // Text elements initial anchored position (mocked child calculateLayout would set this)
-      // Then TopHeaderElement's logic adjusts .x and .y based on metrics.
-      mockLeftText.layout = { x: 22.5, y: 0, width: 50, height: 30 / 0.7, calculated: true };
-      mockRightText.layout = { x: 427.5, y: 0, width: 50, height: 30 / 0.7, calculated: true }; // Manually set to 477.5 - 50
-
-      // Mock layoutTextWithMetrics to directly update layout values
-      vi.spyOn(topHeaderElement as any, 'layoutTextWithMetrics').mockImplementation((...args: any[]) => {
-        // Extract what we need from args
-        const y = args[2];
-        const offsetY = args[3];
-        
-        // Update the layout values directly
-        const baselineY = y + offsetY;
-        mockLeftText.layout.y = baselineY;
-        mockLeftText.layout.x += TEXT_GAP;
-
-        mockRightText.layout.y = baselineY;
-        mockRightText.layout.x -= TEXT_GAP;
-      });
-
-      topHeaderElement.calculateLayout(elementsMap, containerRect);
-
-      const expectedBaselineY = 0 + 0; // topHeader.layout.y + props.offsetY
-      
-      expect(mockLeftText.layout.x).toBeCloseTo(22.5 + TEXT_GAP); // initial X + gap
-      expect(mockLeftText.layout.y).toBeCloseTo(expectedBaselineY); // Should be set by layoutTextWithMetrics
-
-      expect(mockRightText.layout.x).toBeCloseTo(427.5 - TEXT_GAP); // initial X - gap
-      expect(mockRightText.layout.y).toBeCloseTo(expectedBaselineY);
-    });
-
-
-    it('should layout header bar correctly based on text element positions', () => {
-        topHeaderElement.intrinsicSize.height = 30;
-        topHeaderElement.layout.y = 10; // TopHeader's own y
-        topHeaderElement.props.offsetY = 5;  // Internal offset
-
-        // Simulate text elements already laid out
-        mockLeftText.layout = { x: 30, y: 15, width: 50, height: 30, calculated: true };
-        mockRightText.layout = { x: 400, y: 15, width: 60, height: 30, calculated: true };
-
-        // Mock layoutHeaderBar to set expected values directly
-        vi.spyOn(topHeaderElement as any, 'layoutHeaderBar').mockImplementation((...args: any[]) => {
-          const [height, offsetY] = args;
-          const expectedHeaderBarX = mockLeftText.layout.x + mockLeftText.layout.width + TEXT_GAP; // 30 + 50 + 5 = 85
-          const expectedHeaderBarY = topHeaderElement.layout.y + offsetY; // 10 + 5 = 15
-          const expectedHeaderBarWidth = mockRightText.layout.x - (mockLeftText.layout.x + mockLeftText.layout.width) - (TEXT_GAP * 2);
-          // 400 - (30 + 50) - (5 * 2) = 400 - 80 - 10 = 310
-
-          mockHeaderBar.props.height = height;
-          mockHeaderBar.layout.x = expectedHeaderBarX;
-          mockHeaderBar.layout.y = expectedHeaderBarY;
-          mockHeaderBar.layout.width = expectedHeaderBarWidth;
-          mockHeaderBar.layout.height = height;
-          mockHeaderBar.layout.calculated = true;
-          mockHeaderBar.intrinsicSize.width = expectedHeaderBarWidth;
-          mockHeaderBar.intrinsicSize.height = height;
-        });
-
-        topHeaderElement.calculateLayout(elementsMap, containerRect);
-
-        const expectedHeaderBarX = mockLeftText.layout.x + mockLeftText.layout.width + TEXT_GAP; // 30 + 50 + 5 = 85
-        const expectedHeaderBarY = topHeaderElement.layout.y + (topHeaderElement.props.offsetY || 0); // 10 + 5 = 15
-        const expectedHeaderBarWidth = mockRightText.layout.x - (mockLeftText.layout.x + mockLeftText.layout.width) - (TEXT_GAP * 2);
-        // 400 - (30 + 50) - (5 * 2) = 400 - 80 - 10 = 310
-
-        expect(mockHeaderBar.props.height).toBe(30);
-        expect(mockHeaderBar.layout.x).toBeCloseTo(expectedHeaderBarX);
-        expect(mockHeaderBar.layout.y).toBeCloseTo(expectedHeaderBarY);
-        expect(mockHeaderBar.layout.width).toBeCloseTo(expectedHeaderBarWidth);
-        expect(mockHeaderBar.layout.height).toBe(30);
-        expect(mockHeaderBar.layout.calculated).toBe(true);
-        expect(mockHeaderBar.intrinsicSize.width).toBeCloseTo(expectedHeaderBarWidth);
-        expect(mockHeaderBar.intrinsicSize.height).toBe(30);
-    });
-
-    it('should handle case where font metrics are not available', () => {
-        (getFontMetrics as any).mockReturnValue(null);
-        topHeaderElement.intrinsicSize.height = 30;
-        
-        // Simulate children's layout results
-        mockLeftEndcap.layout = { x: 0, y: 0, width: 22.5, height: 30, calculated: true };
-        mockRightEndcap.layout = { x: 477.5, y: 0, width: 22.5, height: 30, calculated: true };
-        
-        // Text initial positions
-        mockLeftText.layout = { x: 22.5, y: 0, width: 50, height: 30, calculated: true };
-        mockRightText.layout = { x: 477.5 - 50, y: 0, width: 50, height: 30, calculated: true };
-
-        // Mock layoutTextWithoutMetrics
-        vi.spyOn(topHeaderElement as any, 'layoutTextWithoutMetrics').mockImplementation((...args: any[]) => {
-          const [fontSize, fontConfig, x, y, offsetY, height] = args;
-          
-          mockLeftText.props.fontSize = fontSize;
-          mockRightText.props.fontSize = fontSize;
-
-          // Set text y position to bottom of the header
-          const bottomY = y + offsetY + height;
-          mockLeftText.layout.y = bottomY;
-          mockRightText.layout.y = bottomY;
-
-          // Adjust x positions
-          mockLeftText.layout.x += TEXT_GAP;
-          mockRightText.layout.x -= TEXT_GAP;
-        });
-
-        topHeaderElement.calculateLayout(elementsMap, containerRect);
-
-        const expectedFontSize = 30; // Fallback: height
-        expect(mockLeftText.props.fontSize).toBe(expectedFontSize);
-        
-        // y for text without metrics = bottomY = topHeader.layout.y + props.offsetY + topHeader.layout.height
-        const expectedBottomY = 0 + 0 + 30; // 30
-        expect(mockLeftText.layout.y).toBeCloseTo(expectedBottomY);
-        expect(mockRightText.layout.y).toBeCloseTo(expectedBottomY);
-    });
-
-    it('should use cached font metrics on subsequent calls', () => {
-        topHeaderElement.intrinsicSize.height = 30;
-        topHeaderElement.calculateLayout(elementsMap, containerRect); // First call, should call getFontMetrics
-        expect(getFontMetrics).toHaveBeenCalledTimes(1);
-
-        // Clear call count for the next assertion
-        (getFontMetrics as any).mockClear();
-        topHeaderElement.calculateLayout(elementsMap, containerRect); // Second call
-        expect(getFontMetrics).not.toHaveBeenCalled(); // Should use cached metrics
-    });
-  });
-
-  describe('render', () => {
-    it('should return null if layout.calculated is false', () => {
-      topHeaderElement.layout.calculated = false;
-      expect(topHeaderElement.render()).toBeNull();
-    });
-
-    it('should call render on all child elements if layout is calculated', () => {
-      topHeaderElement.layout.calculated = true;
-      topHeaderElement.render();
-
-      expect(mockLeftEndcap.render).toHaveBeenCalledTimes(1);
-      expect(mockRightEndcap.render).toHaveBeenCalledTimes(1);
-      expect(mockHeaderBar.render).toHaveBeenCalledTimes(1);
-      expect(mockLeftText.render).toHaveBeenCalledTimes(1);
-      expect(mockRightText.render).toHaveBeenCalledTimes(1);
-    });
-
-    it('should produce a combined SVG output from child renders', () => {
-      // Create a minimal test by directly testing renderShape instead of render
-      const testElement = new TopHeaderElement('th-render-test', {}, {}, mockHass, mockRequestUpdate);
-      testElement.layout = { x: 0, y: 0, width: 300, height: 30, calculated: true };
-      
-      // Mock the child elements' render methods to return simple SVG
-      vi.spyOn((testElement as any).leftEndcap, 'render').mockReturnValue(svg`<rect id="left-endcap" />`);
-      vi.spyOn((testElement as any).rightEndcap, 'render').mockReturnValue(svg`<rect id="right-endcap" />`);
-      vi.spyOn((testElement as any).headerBar, 'render').mockReturnValue(svg`<rect id="header-bar" />`);
-      vi.spyOn((testElement as any).leftText, 'render').mockReturnValue(svg`<text id="left-text">Left</text>`);
-      vi.spyOn((testElement as any).rightText, 'render').mockReturnValue(svg`<text id="right-text">Right</text>`);
-
-      // Test renderShape directly to bypass any complexity in the base render method
-      const shapeResult = testElement.renderShape();
-      expect(shapeResult).toBeTruthy();
-      
-      // Verify all child render methods were called
-      expect((testElement as any).leftEndcap.render).toHaveBeenCalled();
-      expect((testElement as any).rightEndcap.render).toHaveBeenCalled();
-      expect((testElement as any).headerBar.render).toHaveBeenCalled();
-      expect((testElement as any).leftText.render).toHaveBeenCalled();
-      expect((testElement as any).rightText.render).toHaveBeenCalled();
-      
-      // Check that the shape result contains the expected child content
-      const shapeString = shapeResult!.values.map(v => (v as any)?.strings?.join('') || String(v)).join('');
-      expect(shapeString).toContain('id="left-endcap"');
-      expect(shapeString).toContain('id="right-endcap"');
-      expect(shapeString).toContain('id="header-bar"');
-      expect(shapeString).toContain('id="left-text"');
-      expect(shapeString).toContain('id="right-text"');
     });
   });
 });
@@ -8982,15 +8452,12 @@ const mockRectangleElementConstructor = vi.hoisted(() => vi.fn());
 const mockEndcapElementConstructor = vi.hoisted(() => vi.fn());
 const mockElbowElementConstructor = vi.hoisted(() => vi.fn());
 const mockChiselEndcapElementConstructor = vi.hoisted(() => vi.fn());
-const mockTopHeaderElementConstructor = vi.hoisted(() => vi.fn());
-
 // Mock imports
 vi.mock('../elements/text', () => ({ TextElement: mockTextElementConstructor }));
 vi.mock('../elements/rectangle', () => ({ RectangleElement: mockRectangleElementConstructor }));
 vi.mock('../elements/endcap', () => ({ EndcapElement: mockEndcapElementConstructor }));
 vi.mock('../elements/elbow', () => ({ ElbowElement: mockElbowElementConstructor }));
 vi.mock('../elements/chisel_endcap', () => ({ ChiselEndcapElement: mockChiselEndcapElementConstructor }));
-vi.mock('../elements/top_header', () => ({ TopHeaderElement: mockTopHeaderElementConstructor }));
 
 // Import after mock setup
 import { HomeAssistant } from 'custom-card-helpers';
@@ -9004,7 +8471,6 @@ import { RectangleElement } from '../elements/rectangle';
 import { EndcapElement } from '../elements/endcap';
 import { ElbowElement } from '../elements/elbow';
 import { ChiselEndcapElement } from '../elements/chisel_endcap';
-import { TopHeaderElement } from '../elements/top_header';
 
 describe('parseConfig', () => {
   let mockHass: HomeAssistant;
@@ -9510,6 +8976,1031 @@ export function expandWidget(
   if (!factory) return null;
   return factory(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
 }
+```
+
+## File: src/layout/widgets/test/index.spec.ts
+
+```typescript
+import { describe, it, expect, beforeEach } from 'vitest';
+import { expandWidget } from '../registry.js';
+
+describe('Widget Index', () => {
+  beforeEach(async () => {
+    // Clear any existing registrations for clean tests
+    const registryModule = await import('../registry.js');
+    (registryModule as any).registry?.clear?.();
+  });
+
+  describe('Module loading and registration', () => {
+    it('should register top_header widget when index is imported', async () => {
+      // Import the index file which should trigger widget registration
+      await import('../index.js');
+      
+      // Verify the widget was registered by trying to expand it
+      const result = expandWidget('top_header', 'test-header');
+      
+      expect(result).not.toBeNull();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result!.length).toBeGreaterThan(0);
+    });
+
+    it('should register widgets with case-insensitive lookup after index import', async () => {
+      await import('../index.js');
+      
+      const lowerResult = expandWidget('top_header', 'test-lower');
+      const upperResult = expandWidget('TOP_HEADER', 'test-upper');
+      const mixedResult = expandWidget('Top_Header', 'test-mixed');
+      
+      expect(lowerResult).not.toBeNull();
+      expect(upperResult).not.toBeNull();
+      expect(mixedResult).not.toBeNull();
+      
+      expect(lowerResult!.length).toBeGreaterThan(0);
+      expect(upperResult!.length).toBeGreaterThan(0);
+      expect(mixedResult!.length).toBeGreaterThan(0);
+    });
+
+    it('should handle multiple imports of index without issues', async () => {
+      // Import multiple times to ensure no side effects
+      await import('../index.js');
+      await import('../index.js');
+      await import('../index.js');
+      
+      const result = expandWidget('top_header', 'multi-import-test');
+      
+      expect(result).not.toBeNull();
+      expect(result!.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Widget availability after index import', () => {
+    it('should make all registered widgets available for expansion', async () => {
+      await import('../index.js');
+      
+      // Test that known widgets are available
+      const topHeaderResult = expandWidget('top_header', 'availability-test');
+      
+      expect(topHeaderResult).not.toBeNull();
+      expect(Array.isArray(topHeaderResult)).toBe(true);
+    });
+
+    it('should maintain widget functionality after index import', async () => {
+      await import('../index.js');
+      
+      const result = expandWidget('top_header', 'functionality-test', { 
+        fill: '#FF0000',
+        height: 40 
+      });
+      
+      expect(result).not.toBeNull();
+      expect(result!.length).toBe(6); // TopHeaderWidget should return 6 elements
+      
+      // Verify the widget actually processes the props
+      const elements = result!;
+      expect(elements[0].id).toBe('functionality-test'); // bounds element gets the main ID
+    });
+  });
+});
+```
+
+## File: src/layout/widgets/test/registry.spec.ts
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { registerWidget, expandWidget, WidgetFactory } from '../registry.js';
+import { LayoutElement } from '../../elements/element.js';
+import { RectangleElement } from '../../elements/rectangle.js';
+import { HomeAssistant } from 'custom-card-helpers';
+
+describe('Widget Registry', () => {
+  let mockHass: HomeAssistant;
+  let mockRequestUpdate: () => void;
+  let mockGetShadowElement: (id: string) => Element | null;
+  let mockFactory: WidgetFactory;
+  let mockElement: LayoutElement;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    
+    mockHass = {} as HomeAssistant;
+    mockRequestUpdate = vi.fn();
+    mockGetShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+    
+    mockElement = new RectangleElement('mock-element');
+    mockFactory = vi.fn().mockReturnValue([mockElement]);
+    
+    // Clear registry between tests by accessing the internal registry
+    // This is a bit hacky but necessary for isolated tests
+    const registryModule = await import('../registry.js');
+    (registryModule as any).registry?.clear?.();
+  });
+
+  describe('registerWidget', () => {
+    it('should register a widget factory with lowercase type', () => {
+      registerWidget('TestWidget', mockFactory);
+      
+      const result = expandWidget('testwidget', 'test-id');
+      expect(result).toEqual([mockElement]);
+      expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined);
+    });
+
+    it('should register widget factory with case-insensitive type', () => {
+      registerWidget('MixedCaseWidget', mockFactory);
+      
+      const resultLower = expandWidget('mixedcasewidget', 'test-1');
+      const resultMixed = expandWidget('MixedCaseWidget', 'test-2');
+      const resultUpper = expandWidget('MIXEDCASEWIDGET', 'test-3');
+      
+      expect(resultLower).toEqual([mockElement]);
+      expect(resultMixed).toEqual([mockElement]);
+      expect(resultUpper).toEqual([mockElement]);
+      expect(mockFactory).toHaveBeenCalledTimes(3);
+    });
+
+    it('should trim whitespace from widget type during registration', () => {
+      registerWidget('  spacedWidget  ', mockFactory);
+      
+      const result = expandWidget('spacedwidget', 'test-id');
+      expect(result).toEqual([mockElement]);
+      expect(mockFactory).toHaveBeenCalled();
+    });
+
+    it('should override existing widget registration', () => {
+      const firstElement = new RectangleElement('first');
+      const secondElement = new RectangleElement('second');
+      const firstFactory = vi.fn().mockReturnValue([firstElement]);
+      const secondFactory = vi.fn().mockReturnValue([secondElement]);
+      
+      registerWidget('overrideWidget', firstFactory);
+      registerWidget('overrideWidget', secondFactory);
+      
+      const result = expandWidget('overridewidget', 'test-id');
+      expect(result).toEqual([secondElement]);
+      expect(secondFactory).toHaveBeenCalled();
+      expect(firstFactory).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('expandWidget', () => {
+    beforeEach(() => {
+      registerWidget('registeredWidget', mockFactory);
+    });
+
+    it('should return null for unregistered widget type', () => {
+      const result = expandWidget('unknownWidget', 'test-id');
+      expect(result).toBeNull();
+      expect(mockFactory).not.toHaveBeenCalled();
+    });
+
+    it('should expand widget with minimal parameters', () => {
+      const result = expandWidget('registeredWidget', 'test-id');
+      
+      expect(result).toEqual([mockElement]);
+      expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined);
+    });
+
+    it('should expand widget with all parameters', () => {
+      const props = { customProp: 'value' };
+      const layoutConfig = { offsetX: 10 };
+      
+      const result = expandWidget(
+        'registeredWidget', 
+        'test-id', 
+        props, 
+        layoutConfig, 
+        mockHass, 
+        mockRequestUpdate, 
+        mockGetShadowElement
+      );
+      
+      expect(result).toEqual([mockElement]);
+      expect(mockFactory).toHaveBeenCalledWith(
+        'test-id', 
+        props, 
+        layoutConfig, 
+        mockHass, 
+        mockRequestUpdate, 
+        mockGetShadowElement
+      );
+    });
+
+    it('should handle factory returning multiple elements', () => {
+      const element1 = new RectangleElement('element1');
+      const element2 = new RectangleElement('element2');
+      const multiElementFactory = vi.fn().mockReturnValue([element1, element2]);
+      
+      registerWidget('multiWidget', multiElementFactory);
+      
+      const result = expandWidget('multiWidget', 'test-id');
+      expect(result).toEqual([element1, element2]);
+      expect(multiElementFactory).toHaveBeenCalled();
+    });
+
+    it('should handle factory returning empty array', () => {
+      const emptyFactory = vi.fn().mockReturnValue([]);
+      registerWidget('emptyWidget', emptyFactory);
+      
+      const result = expandWidget('emptyWidget', 'test-id');
+      expect(result).toEqual([]);
+      expect(emptyFactory).toHaveBeenCalled();
+    });
+
+    it('should trim whitespace from widget type during expansion', () => {
+      const result = expandWidget('  registeredWidget  ', 'test-id');
+      
+      expect(result).toEqual([mockElement]);
+      expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined);
+    });
+
+    it('should use case-insensitive lookup for expansion', () => {
+      const resultLower = expandWidget('registeredwidget', 'test-1');
+      const resultMixed = expandWidget('RegisteredWidget', 'test-2');
+      const resultUpper = expandWidget('REGISTEREDWIDGET', 'test-3');
+      
+      expect(resultLower).toEqual([mockElement]);
+      expect(resultMixed).toEqual([mockElement]);
+      expect(resultUpper).toEqual([mockElement]);
+      expect(mockFactory).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe('WidgetFactory type compliance', () => {
+    it('should accept factory with correct signature', () => {
+      const validFactory: WidgetFactory = (id, props, layoutConfig, hass, callback, getShadow) => {
+        return [new RectangleElement(id)];
+      };
+      
+      expect(() => registerWidget('validFactory', validFactory)).not.toThrow();
+    });
+
+    it('should work with factory using optional parameters', () => {
+      const optionalParamFactory: WidgetFactory = (id) => {
+        return [new RectangleElement(id)];
+      };
+      
+      expect(() => registerWidget('optionalFactory', optionalParamFactory)).not.toThrow();
+      
+      const result = expandWidget('optionalFactory', 'test-id');
+      expect(result).toHaveLength(1);
+      expect(result![0]).toBeInstanceOf(RectangleElement);
+    });
+  });
+
+  describe('integration scenarios', () => {
+    it('should support widget factory that creates complex widget hierarchies', () => {
+      const complexFactory: WidgetFactory = (id, props, layoutConfig) => {
+        const container = new RectangleElement(`${id}_container`, props, layoutConfig);
+        const child1 = new RectangleElement(`${id}_child1`);
+        const child2 = new RectangleElement(`${id}_child2`);
+        return [container, child1, child2];
+      };
+      
+      registerWidget('complexWidget', complexFactory);
+      
+      const result = expandWidget('complexWidget', 'complex-test', { width: 100 }, { offsetX: 5 });
+      
+      expect(result).toHaveLength(3);
+      expect(result![0].id).toBe('complex-test_container');
+      expect(result![1].id).toBe('complex-test_child1');
+      expect(result![2].id).toBe('complex-test_child2');
+    });
+
+    it('should handle widget factory that accesses all provided parameters', () => {
+      const parameterAccessFactory: WidgetFactory = (id, props, layoutConfig, hass, callback, getShadow) => {
+        const element = new RectangleElement(id, props, layoutConfig, hass, callback, getShadow);
+        return [element];
+      };
+      
+      registerWidget('parameterWidget', parameterAccessFactory);
+      
+      const result = expandWidget(
+        'parameterWidget',
+        'param-test',
+        { fill: 'red' },
+        { width: 50 },
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+      
+      expect(result).toHaveLength(1);
+      expect(result![0].id).toBe('param-test');
+      expect(result![0].props).toEqual({ fill: 'red' });
+      expect(result![0].layoutConfig).toEqual({ width: 50 });
+      expect(result![0].hass).toBe(mockHass);
+      expect(result![0].requestUpdateCallback).toBe(mockRequestUpdate);
+    });
+  });
+});
+```
+
+## File: src/layout/widgets/test/top_header.spec.ts
+
+```typescript
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { TopHeaderWidget } from '../top_header.js';
+import { RectangleElement } from '../../elements/rectangle.js';
+import { EndcapElement } from '../../elements/endcap.js';
+import { TextElement } from '../../elements/text.js';
+import { LayoutElementProps, LayoutConfigOptions } from '../../engine.js';
+import { HomeAssistant } from 'custom-card-helpers';
+
+describe('TopHeaderWidget', () => {
+  let widget: TopHeaderWidget;
+  let mockHass: HomeAssistant;
+  let mockRequestUpdate: () => void;
+  let mockGetShadowElement: (id: string) => Element | null;
+
+  beforeEach(() => {
+    mockHass = {} as HomeAssistant;
+    mockRequestUpdate = vi.fn();
+    mockGetShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+  });
+
+  describe('Constructor', () => {
+    it('should initialize as a Widget subclass', () => {
+      widget = new TopHeaderWidget('header-test');
+      
+      expect(widget).toBeInstanceOf(TopHeaderWidget);
+      expect(typeof widget.expand).toBe('function');
+    });
+
+    it('should accept all constructor parameters', () => {
+      const props: LayoutElementProps = { fill: '#FF0000', height: 40 };
+      const layoutConfig: LayoutConfigOptions = { offsetX: 10 };
+      
+      widget = new TopHeaderWidget(
+        'full-header',
+        props,
+        layoutConfig,
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+      
+      expect(widget).toBeDefined();
+    });
+  });
+
+  describe('expand method', () => {
+    describe('Basic expansion structure', () => {
+      it('should return exactly 6 elements in correct order', () => {
+        widget = new TopHeaderWidget('basic-header');
+        const elements = widget.expand();
+        
+        expect(elements).toHaveLength(6);
+        
+        // Verify order: bounds, headerBar, leftEndcap, rightEndcap, leftText, rightText
+        expect(elements[0]).toBeInstanceOf(RectangleElement); // bounds
+        expect(elements[1]).toBeInstanceOf(RectangleElement); // headerBar
+        expect(elements[2]).toBeInstanceOf(EndcapElement);    // leftEndcap
+        expect(elements[3]).toBeInstanceOf(EndcapElement);    // rightEndcap
+        expect(elements[4]).toBeInstanceOf(TextElement);      // leftText
+        expect(elements[5]).toBeInstanceOf(TextElement);      // rightText
+      });
+
+      it('should create bounds rectangle with public ID', () => {
+        widget = new TopHeaderWidget('bounds-test');
+        const elements = widget.expand();
+        const bounds = elements[0] as RectangleElement;
+        
+        expect(bounds.id).toBe('bounds-test');
+        expect(bounds.props.fill).toBe('none');
+        expect(bounds.props.stroke).toBe('none');
+      });
+
+      it('should create left and right endcaps with correct IDs and directions', () => {
+        widget = new TopHeaderWidget('endcap-test');
+        const elements = widget.expand();
+        const leftEndcap = elements[2] as EndcapElement;
+        const rightEndcap = elements[3] as EndcapElement;
+        
+        expect(leftEndcap.id).toBe('endcap-test_left_endcap');
+        expect(leftEndcap.props.direction).toBe('left');
+        
+        expect(rightEndcap.id).toBe('endcap-test_right_endcap');
+        expect(rightEndcap.props.direction).toBe('right');
+      });
+
+      it('should create left and right text elements with correct IDs', () => {
+        widget = new TopHeaderWidget('text-test');
+        const elements = widget.expand();
+        const leftText = elements[4] as TextElement;
+        const rightText = elements[5] as TextElement;
+        
+        expect(leftText.id).toBe('text-test_left_text');
+        expect(rightText.id).toBe('text-test_right_text');
+      });
+
+      it('should create header bar with correct ID and stretching', () => {
+        widget = new TopHeaderWidget('bar-test');
+        const elements = widget.expand();
+        const headerBar = elements[1] as RectangleElement;
+        
+        expect(headerBar.id).toBe('bar-test_header_bar');
+        expect(headerBar.layoutConfig.stretch).toBeDefined();
+      });
+    });
+
+    describe('Default property handling', () => {
+      it('should use default fill color when not specified', () => {
+        widget = new TopHeaderWidget('default-fill');
+        const elements = widget.expand();
+        const leftEndcap = elements[2] as EndcapElement;
+        const rightEndcap = elements[3] as EndcapElement;
+        const headerBar = elements[1] as RectangleElement;
+        
+        expect(leftEndcap.props.fill).toBe('#99CCFF');
+        expect(rightEndcap.props.fill).toBe('#99CCFF');
+        expect(headerBar.props.fill).toBe('#99CCFF');
+      });
+
+      it('should use default height of 30 when not specified', () => {
+        widget = new TopHeaderWidget('default-height');
+        const elements = widget.expand();
+        const leftEndcap = elements[2] as EndcapElement;
+        const rightEndcap = elements[3] as EndcapElement;
+        const headerBar = elements[1] as RectangleElement;
+        
+        expect(leftEndcap.props.height).toBe(30);
+        expect(rightEndcap.props.height).toBe(30);
+        expect(headerBar.props.height).toBe(30);
+      });
+
+      it('should calculate endcap width as 75% of height by default', () => {
+        widget = new TopHeaderWidget('endcap-width');
+        const elements = widget.expand();
+        const leftEndcap = elements[2] as EndcapElement;
+        const rightEndcap = elements[3] as EndcapElement;
+        
+        // Default height is 30, so endcap width should be 30 * 0.75 = 22.5
+        expect(leftEndcap.props.width).toBe(22.5);
+        expect(rightEndcap.props.width).toBe(22.5);
+      });
+
+      it('should use default text content when not specified', () => {
+        widget = new TopHeaderWidget('default-text');
+        const elements = widget.expand();
+        const leftText = elements[4] as TextElement;
+        const rightText = elements[5] as TextElement;
+        
+        expect(leftText.props.text).toBe('LEFT');
+        expect(rightText.props.text).toBe('RIGHT');
+      });
+
+      it('should use default text styling', () => {
+        widget = new TopHeaderWidget('default-styling');
+        const elements = widget.expand();
+        const leftText = elements[4] as TextElement;
+        const rightText = elements[5] as TextElement;
+        
+        expect(leftText.props.fill).toBe('#FFFFFF');
+        expect(leftText.props.fontFamily).toBe('Antonio');
+        expect(leftText.props.fontWeight).toBe('normal');
+        expect(leftText.props.letterSpacing).toBe('normal');
+        expect(leftText.props.textTransform).toBe('uppercase');
+        
+        expect(rightText.props.textAnchor).toBe('end'); // Right text should be right-aligned
+      });
+    });
+
+    describe('Custom property handling', () => {
+      it('should use custom fill color when specified', () => {
+        const props: LayoutElementProps = { fill: '#FF0000' };
+        widget = new TopHeaderWidget('custom-fill', props);
+        const elements = widget.expand();
+        const leftEndcap = elements[2] as EndcapElement;
+        const rightEndcap = elements[3] as EndcapElement;
+        const headerBar = elements[1] as RectangleElement;
+        
+        expect(leftEndcap.props.fill).toBe('#FF0000');
+        expect(rightEndcap.props.fill).toBe('#FF0000');
+        expect(headerBar.props.fill).toBe('#FF0000');
+      });
+
+      it('should use custom height from props over layoutConfig', () => {
+        const props: LayoutElementProps = { height: 50 };
+        const layoutConfig: LayoutConfigOptions = { height: 40 };
+        widget = new TopHeaderWidget('custom-height-props', props, layoutConfig);
+        const elements = widget.expand();
+        const leftEndcap = elements[2] as EndcapElement;
+        
+        expect(leftEndcap.props.height).toBe(50);
+        expect(leftEndcap.props.width).toBe(37.5); // 50 * 0.75
+      });
+
+      it('should use height from layoutConfig when not in props', () => {
+        const layoutConfig: LayoutConfigOptions = { height: 60 };
+        widget = new TopHeaderWidget('custom-height-layout', {}, layoutConfig);
+        const elements = widget.expand();
+        const leftEndcap = elements[2] as EndcapElement;
+        
+        expect(leftEndcap.props.height).toBe(60);
+        expect(leftEndcap.props.width).toBe(45); // 60 * 0.75
+      });
+
+      it('should use custom text content when specified', () => {
+        const props: LayoutElementProps = { 
+          leftContent: 'CUSTOM LEFT',
+          rightContent: 'CUSTOM RIGHT'
+        };
+        widget = new TopHeaderWidget('custom-content', props);
+        const elements = widget.expand();
+        const leftText = elements[4] as TextElement;
+        const rightText = elements[5] as TextElement;
+        
+        expect(leftText.props.text).toBe('CUSTOM LEFT');
+        expect(rightText.props.text).toBe('CUSTOM RIGHT');
+      });
+
+      it('should use custom text styling when specified', () => {
+        const props: LayoutElementProps = {
+          textColor: '#00FF00',
+          fontFamily: 'Helvetica',
+          fontWeight: 'bold',
+          letterSpacing: '2px',
+          textTransform: 'lowercase'
+        };
+        widget = new TopHeaderWidget('custom-text-style', props);
+        const elements = widget.expand();
+        const leftText = elements[4] as TextElement;
+        const rightText = elements[5] as TextElement;
+        
+        expect(leftText.props.fill).toBe('#00FF00');
+        expect(leftText.props.fontFamily).toBe('Helvetica');
+        expect(leftText.props.fontWeight).toBe('bold');
+        expect(leftText.props.letterSpacing).toBe('2px');
+        expect(leftText.props.textTransform).toBe('lowercase');
+        
+        expect(rightText.props.fill).toBe('#00FF00');
+        expect(rightText.props.fontFamily).toBe('Helvetica');
+      });
+    });
+
+    describe('Layout configuration', () => {
+      it('should configure left endcap anchoring to bounds', () => {
+        widget = new TopHeaderWidget('anchor-test');
+        const elements = widget.expand();
+        const bounds = elements[0] as RectangleElement;
+        const leftEndcap = elements[2] as EndcapElement;
+        
+        expect(leftEndcap.layoutConfig.anchor).toEqual({
+          anchorTo: bounds.id,
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topLeft'
+        });
+      });
+
+      it('should configure right endcap anchoring to bounds', () => {
+        widget = new TopHeaderWidget('anchor-test-right');
+        const elements = widget.expand();
+        const bounds = elements[0] as RectangleElement;
+        const rightEndcap = elements[3] as EndcapElement;
+        
+        expect(rightEndcap.layoutConfig.anchor).toEqual({
+          anchorTo: bounds.id,
+          anchorPoint: 'topRight',
+          targetAnchorPoint: 'topRight'
+        });
+      });
+
+      it('should configure left text anchoring with gap offset', () => {
+        widget = new TopHeaderWidget('text-anchor-left');
+        const elements = widget.expand();
+        const leftEndcap = elements[2] as EndcapElement;
+        const leftText = elements[4] as TextElement;
+        
+        expect(leftText.layoutConfig.anchor).toEqual({
+          anchorTo: leftEndcap.id,
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topRight'
+        });
+        expect(leftText.layoutConfig.offsetX).toBe(5); // TEXT_GAP
+      });
+
+      it('should configure right text anchoring with negative gap offset', () => {
+        widget = new TopHeaderWidget('text-anchor-right');
+        const elements = widget.expand();
+        const rightEndcap = elements[3] as EndcapElement;
+        const rightText = elements[5] as TextElement;
+        
+        expect(rightText.layoutConfig.anchor).toEqual({
+          anchorTo: rightEndcap.id,
+          anchorPoint: 'topRight',
+          targetAnchorPoint: 'topLeft'
+        });
+        expect(rightText.layoutConfig.offsetX).toBe(-5); // -TEXT_GAP
+      });
+
+      it('should configure header bar stretching between text elements', () => {
+        widget = new TopHeaderWidget('stretch-test');
+        const elements = widget.expand();
+        const leftText = elements[4] as TextElement;
+        const rightText = elements[5] as TextElement;
+        const headerBar = elements[1] as RectangleElement;
+        
+        expect(headerBar.layoutConfig.anchor).toEqual({
+          anchorTo: leftText.id,
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topRight'
+        });
+        expect(headerBar.layoutConfig.offsetX).toBe(5); // TEXT_GAP
+        
+        expect(headerBar.layoutConfig.stretch).toEqual({
+          stretchTo1: rightText.id,
+          targetStretchAnchorPoint1: 'left',
+          stretchPadding1: -5 // -TEXT_GAP
+        });
+      });
+
+      it('should preserve external layout config on bounds element', () => {
+        const layoutConfig: LayoutConfigOptions = { 
+          offsetX: 25,
+          offsetY: 15,
+          anchor: { anchorTo: 'external-element' }
+        };
+        widget = new TopHeaderWidget('external-layout', {}, layoutConfig);
+        const elements = widget.expand();
+        const bounds = elements[0] as RectangleElement;
+        
+        expect(bounds.layoutConfig).toBe(layoutConfig);
+      });
+    });
+
+    describe('Parameter propagation', () => {
+      it('should pass all constructor parameters to elements', () => {
+        const props: LayoutElementProps = { customProp: 'test' };
+        const layoutConfig: LayoutConfigOptions = { offsetX: 10 };
+        
+        widget = new TopHeaderWidget(
+          'param-prop',
+          props,
+          layoutConfig,
+          mockHass,
+          mockRequestUpdate,
+          mockGetShadowElement
+        );
+        
+        const elements = widget.expand();
+        
+        // Check that all elements (except bounds which gets the external layoutConfig) 
+        // receive the proper constructor parameters
+        elements.forEach((element, index) => {
+          expect(element.hass).toBe(mockHass);
+          expect(element.requestUpdateCallback).toBe(mockRequestUpdate);
+          
+          // The bounds element (index 0) gets the external layoutConfig,
+          // other elements get their own internal layout configs
+          if (index === 0) {
+            expect(element.layoutConfig).toBe(layoutConfig);
+          } else {
+            expect(element.layoutConfig).not.toBe(layoutConfig);
+          }
+        });
+      });
+    });
+
+    describe('Integration scenarios', () => {
+      it('should create a complete header widget with all elements properly configured', () => {
+        const props: LayoutElementProps = {
+          fill: '#0066CC',
+          height: 35,
+          leftContent: 'NAVIGATION',
+          rightContent: 'STATUS',
+          textColor: '#FFFFFF',
+          fontFamily: 'Arial'
+        };
+        
+        widget = new TopHeaderWidget('complete-header', props);
+        const elements = widget.expand();
+        
+        // Verify complete structure
+        expect(elements).toHaveLength(6);
+        
+        const bounds = elements[0] as RectangleElement;
+        const headerBar = elements[1] as RectangleElement;
+        const leftEndcap = elements[2] as EndcapElement;
+        const rightEndcap = elements[3] as EndcapElement;
+        const leftText = elements[4] as TextElement;
+        const rightText = elements[5] as TextElement;
+        
+        // Verify styling consistency
+        expect(leftEndcap.props.fill).toBe('#0066CC');
+        expect(rightEndcap.props.fill).toBe('#0066CC');
+        expect(headerBar.props.fill).toBe('#0066CC');
+        
+        // Verify sizing consistency
+        expect(leftEndcap.props.height).toBe(35);
+        expect(rightEndcap.props.height).toBe(35);
+        expect(headerBar.props.height).toBe(35);
+        expect(leftEndcap.props.width).toBe(26.25); // 35 * 0.75
+        
+        // Verify content
+        expect(leftText.props.text).toBe('NAVIGATION');
+        expect(rightText.props.text).toBe('STATUS');
+        expect(leftText.props.fontFamily).toBe('Arial');
+        expect(rightText.props.fontFamily).toBe('Arial');
+      });
+
+      it('should handle minimal configuration gracefully', () => {
+        widget = new TopHeaderWidget('minimal');
+        const elements = widget.expand();
+        
+        expect(elements).toHaveLength(6);
+        expect(() => elements.forEach(el => el.id)).not.toThrow();
+        
+        // Should use all defaults without error
+        const leftText = elements[4] as TextElement;
+        const rightText = elements[5] as TextElement;
+        expect(leftText.props.text).toBe('LEFT');
+        expect(rightText.props.text).toBe('RIGHT');
+      });
+    });
+  });
+});
+```
+
+## File: src/layout/widgets/test/widget.spec.ts
+
+```typescript
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { Widget } from '../widget.js';
+import { LayoutElement } from '../../elements/element.js';
+import { RectangleElement } from '../../elements/rectangle.js';
+import { LayoutElementProps, LayoutConfigOptions } from '../../engine.js';
+import { HomeAssistant } from 'custom-card-helpers';
+
+class MockWidget extends Widget {
+  public expand(): LayoutElement[] {
+    return [new RectangleElement(this.id, this.props, this.layoutConfig, this.hass, this.requestUpdateCallback, this.getShadowElement)];
+  }
+
+  // Expose protected properties for testing
+  public getProtectedId(): string {
+    return this.id;
+  }
+
+  public getProtectedProps(): LayoutElementProps {
+    return this.props;
+  }
+
+  public getProtectedLayoutConfig(): LayoutConfigOptions {
+    return this.layoutConfig;
+  }
+
+  public getProtectedHass(): HomeAssistant | undefined {
+    return this.hass;
+  }
+
+  public getProtectedRequestUpdateCallback(): (() => void) | undefined {
+    return this.requestUpdateCallback;
+  }
+
+  public getProtectedGetShadowElement(): ((id: string) => Element | null) | undefined {
+    return this.getShadowElement;
+  }
+}
+
+describe('Widget', () => {
+  let mockHass: HomeAssistant;
+  let mockRequestUpdate: () => void;
+  let mockGetShadowElement: (id: string) => Element | null;
+  let widget: MockWidget;
+
+  beforeEach(() => {
+    mockHass = {} as HomeAssistant;
+    mockRequestUpdate = vi.fn();
+    mockGetShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+  });
+
+  describe('Constructor', () => {
+    it('should initialize with minimal parameters', () => {
+      widget = new MockWidget('test-widget');
+
+      expect(widget.getProtectedId()).toBe('test-widget');
+      expect(widget.getProtectedProps()).toEqual({});
+      expect(widget.getProtectedLayoutConfig()).toEqual({});
+      expect(widget.getProtectedHass()).toBeUndefined();
+      expect(widget.getProtectedRequestUpdateCallback()).toBeUndefined();
+      expect(widget.getProtectedGetShadowElement()).toBeUndefined();
+    });
+
+    it('should initialize with all parameters', () => {
+      const props: LayoutElementProps = { width: 100, height: 50 };
+      const layoutConfig: LayoutConfigOptions = { offsetX: 10, offsetY: 20 };
+
+      widget = new MockWidget(
+        'full-widget',
+        props,
+        layoutConfig,
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      expect(widget.getProtectedId()).toBe('full-widget');
+      expect(widget.getProtectedProps()).toBe(props);
+      expect(widget.getProtectedLayoutConfig()).toBe(layoutConfig);
+      expect(widget.getProtectedHass()).toBe(mockHass);
+      expect(widget.getProtectedRequestUpdateCallback()).toBe(mockRequestUpdate);
+      expect(widget.getProtectedGetShadowElement()).toBe(mockGetShadowElement);
+    });
+
+    it('should handle undefined optional parameters explicitly', () => {
+      widget = new MockWidget('undefined-widget', undefined, undefined, undefined, undefined, undefined);
+
+      expect(widget.getProtectedId()).toBe('undefined-widget');
+      expect(widget.getProtectedProps()).toEqual({});
+      expect(widget.getProtectedLayoutConfig()).toEqual({});
+      expect(widget.getProtectedHass()).toBeUndefined();
+      expect(widget.getProtectedRequestUpdateCallback()).toBeUndefined();
+      expect(widget.getProtectedGetShadowElement()).toBeUndefined();
+    });
+
+    it('should handle partial parameter initialization', () => {
+      const props: LayoutElementProps = { fill: 'red' };
+
+      widget = new MockWidget('partial-widget', props);
+
+      expect(widget.getProtectedId()).toBe('partial-widget');
+      expect(widget.getProtectedProps()).toBe(props);
+      expect(widget.getProtectedLayoutConfig()).toEqual({});
+      expect(widget.getProtectedHass()).toBeUndefined();
+      expect(widget.getProtectedRequestUpdateCallback()).toBeUndefined();
+      expect(widget.getProtectedGetShadowElement()).toBeUndefined();
+    });
+  });
+
+  describe('Abstract expand method', () => {
+    it('should require concrete implementation of expand method', () => {
+      widget = new MockWidget('test-expand');
+      const result = widget.expand();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toBeInstanceOf(RectangleElement);
+      expect(result[0].id).toBe('test-expand');
+    });
+
+    it('should pass all constructor parameters to expanded elements', () => {
+      const props: LayoutElementProps = { width: 200, fill: 'blue' };
+      const layoutConfig: LayoutConfigOptions = { anchor: { anchorTo: 'container' } };
+
+      widget = new MockWidget(
+        'param-test',
+        props,
+        layoutConfig,
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const result = widget.expand();
+      const element = result[0];
+
+      expect(element.props).toBe(props);
+      expect(element.layoutConfig).toBe(layoutConfig);
+      expect(element.hass).toBe(mockHass);
+      expect(element.requestUpdateCallback).toBe(mockRequestUpdate);
+    });
+  });
+
+  describe('Widget architecture compliance', () => {
+    it('should not be a LayoutElement itself', () => {
+      widget = new MockWidget('architecture-test');
+
+      expect(widget).not.toBeInstanceOf(LayoutElement);
+      expect(widget).toBeInstanceOf(Widget);
+    });
+
+    it('should produce LayoutElements through expand method', () => {
+      widget = new MockWidget('element-production');
+      const result = widget.expand();
+
+      expect(Array.isArray(result)).toBe(true);
+      result.forEach(element => {
+        expect(element).toBeInstanceOf(LayoutElement);
+      });
+    });
+
+    it('should maintain consistent interface for all parameters', () => {
+      // Test that all constructor parameters match LayoutElement constructor signature
+      const props: LayoutElementProps = { stroke: 'black', strokeWidth: 2 };
+      const layoutConfig: LayoutConfigOptions = { offsetY: 15 };
+
+      widget = new MockWidget(
+        'interface-test',
+        props,
+        layoutConfig,
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const result = widget.expand();
+      const element = result[0] as RectangleElement;
+
+      // Verify the element received the same parameters that could be passed to any LayoutElement
+      expect(element.id).toBe('interface-test');
+      expect(element.props).toBe(props);
+      expect(element.layoutConfig).toBe(layoutConfig);
+      expect(element.hass).toBe(mockHass);
+      expect(element.requestUpdateCallback).toBe(mockRequestUpdate);
+    });
+  });
+
+  describe('Widget type verification', () => {
+    it('should enforce abstract expand method through TypeScript', () => {
+      // This test ensures the abstract method contract is working
+      // The MockWidget implementation satisfies the abstract requirement
+      widget = new MockWidget('type-test');
+      
+      expect(typeof widget.expand).toBe('function');
+      expect(widget.expand()).toHaveLength(1);
+    });
+
+    it('should support widgets that return multiple elements', () => {
+      class MultiElementWidget extends Widget {
+        public expand(): LayoutElement[] {
+          return [
+            new RectangleElement(`${this.id}_1`),
+            new RectangleElement(`${this.id}_2`),
+            new RectangleElement(`${this.id}_3`)
+          ];
+        }
+      }
+
+      const multiWidget = new MultiElementWidget('multi-test');
+      const result = multiWidget.expand();
+
+      expect(result).toHaveLength(3);
+      expect(result[0].id).toBe('multi-test_1');
+      expect(result[1].id).toBe('multi-test_2');
+      expect(result[2].id).toBe('multi-test_3');
+    });
+
+    it('should support widgets that return empty arrays', () => {
+      class EmptyWidget extends Widget {
+        public expand(): LayoutElement[] {
+          return [];
+        }
+      }
+
+      const emptyWidget = new EmptyWidget('empty-test');
+      const result = emptyWidget.expand();
+
+      expect(result).toEqual([]);
+      expect(Array.isArray(result)).toBe(true);
+    });
+  });
+
+  describe('Parameter propagation scenarios', () => {
+    it('should handle complex props objects', () => {
+      const complexProps: LayoutElementProps = {
+        width: 300,
+        height: 150,
+        fill: 'rgba(255, 0, 0, 0.5)',
+        stroke: '#000000',
+        strokeWidth: 3,
+        rx: 10,
+        button: {
+          enabled: true,
+          actions: {
+            tap: { action: 'toggle', entity: 'light.test' }
+          }
+        }
+      };
+
+      widget = new MockWidget('complex-props', complexProps);
+      const result = widget.expand();
+
+      expect(result[0].props).toBe(complexProps);
+      expect(result[0].props.button?.enabled).toBe(true);
+    });
+
+    it('should handle complex layout config objects', () => {
+      const complexLayoutConfig: LayoutConfigOptions = {
+        anchor: {
+          anchorTo: 'other-element',
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'bottomRight'
+        },
+        stretch: {
+          stretchTo1: 'container',
+          targetStretchAnchorPoint1: 'right'
+        },
+        offsetX: 25,
+        offsetY: -10
+      };
+
+      widget = new MockWidget('complex-layout', {}, complexLayoutConfig);
+      const result = widget.expand();
+
+      expect(result[0].layoutConfig).toBe(complexLayoutConfig);
+      expect(result[0].layoutConfig.anchor?.anchorTo).toBe('other-element');
+      expect(result[0].layoutConfig.stretch?.stretchTo1).toBe('container');
+    });
+  });
+});
 ```
 
 ## File: src/layout/widgets/top_header.ts
@@ -11752,15 +12243,9 @@ export function validateAction(action: Action): string[] {
 
 ```typescript
 import { HomeAssistant } from 'custom-card-helpers';
-import { gsap } from 'gsap';
-import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../types';
-import { Color } from './color.js';
+import gsap from 'gsap';
 import { transformPropagator, AnimationSyncData } from './transform-propagator.js';
-import { colorResolver } from './color-resolver.js';
 
-/**
- * Animation context containing element-specific data and callbacks
- */
 export interface AnimationContext {
   elementId: string;
   getShadowElement?: (id: string) => Element | null;
@@ -11768,10 +12253,7 @@ export interface AnimationContext {
   requestUpdateCallback?: () => void;
 }
 
-/**
- * Pure animation configuration for creating timelines
- */
-export interface PureAnimationConfig {
+export interface AnimationConfig {
   type: 'scale' | 'slide' | 'fade' | 'custom_gsap';
   duration?: number;
   ease?: string;
@@ -11800,37 +12282,16 @@ export interface PureAnimationConfig {
   };
 }
 
-/**
- * Result of creating a pure animation timeline
- */
 export interface AnimationTimelineResult {
   timeline: gsap.core.Timeline;
   affectsPositioning: boolean;
   syncData: AnimationSyncData;
 }
 
-/**
- * Animation state tracking for element animation management
- */
-export interface ElementAnimationState {
-  lastKnownEntityStates: Map<string, any>;
-}
-
-/**
- * Purified Animation manager responsible for creating pure, idempotent animation timelines
- * Color transitions are handled by ColorResolver, not here
- */
 export class AnimationManager {
-  // Minimal caching using WeakMaps for performance only
-  private positioningEffectsCache = new WeakMap<PureAnimationConfig, boolean>();
-  
-  // Animation state tracking - minimal state for element animation management
-  private elementAnimationStates = new Map<string, ElementAnimationState>();
+  private positioningEffectsCache = new WeakMap<AnimationConfig, boolean>();
+  private elementAnimationStates = new Map<string, { lastKnownEntityStates: Map<string, any> }>();
 
-  /**
-   * Initialize animation tracking for an element
-   * This sets up the minimal state needed for animation management
-   */
   initializeElementAnimationTracking(elementId: string): void {
     if (!this.elementAnimationStates.has(elementId)) {
       this.elementAnimationStates.set(elementId, {
@@ -11839,23 +12300,14 @@ export class AnimationManager {
     }
   }
 
-  /**
-   * Get animation state for an element
-   */
-  getElementAnimationState(elementId: string): ElementAnimationState | undefined {
+  getElementAnimationState(elementId: string): { lastKnownEntityStates: Map<string, any> } | undefined {
     return this.elementAnimationStates.get(elementId);
   }
 
-  /**
-   * Clean up all animation tracking for element
-   */
   cleanupElementAnimationTracking(elementId: string): void {
     this.elementAnimationStates.delete(elementId);
   }
 
-  /**
-   * Animate element property using GSAP
-   */
   animateElementProperty(
     elementId: string,
     property: string,
@@ -11875,75 +12327,12 @@ export class AnimationManager {
     });
   }
 
-  /**
-   * Normalize color for comparison (utility method)
-   */
-  private normalizeColorForComparison(color: string): string {
-    if (!color) return '';
-    
-    // Trim and lowercase
-    color = color.trim().toLowerCase();
-    
-    // Handle rgb() and rgba() formats
-    const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
-    if (rgbMatch) {
-      const r = parseInt(rgbMatch[1]).toString(16).padStart(2, '0');
-      const g = parseInt(rgbMatch[2]).toString(16).padStart(2, '0');
-      const b = parseInt(rgbMatch[3]).toString(16).padStart(2, '0');
-      return `#${r}${g}${b}`;
-    }
-    
-    // Handle hex colors without #
-    if (/^[0-9a-f]{6}$/i.test(color)) {
-      return `#${color}`;
-    }
-    
-    // Return as-is (already hex or named color)
-    return color;
-  }
-
-  /**
-   * Check if animation affects element positioning and requires propagation
-   */
-  private _animationAffectsPositioning(animation: PureAnimationConfig): boolean {
-    // Check cache first
-    if (this.positioningEffectsCache.has(animation)) {
-      return this.positioningEffectsCache.get(animation)!;
-    }
-
-    let affects = false;
-    switch (animation.type) {
-      case 'scale':
-      case 'slide':
-        affects = true;
-        break;
-      case 'custom_gsap':
-        const customVars = animation.custom_gsap_params || {};
-        affects = customVars.scale !== undefined || 
-                 customVars.x !== undefined || 
-                 customVars.y !== undefined ||
-                 customVars.rotation !== undefined;
-        break;
-      default:
-        affects = false;
-    }
-
-    // Cache result
-    this.positioningEffectsCache.set(animation, affects);
-    return affects;
-  }
-
-  /**
-   * Create a pure, idempotent animation timeline
-   * This is the core purified method that replaces executeTransformableAnimation
-   */
   createAnimationTimeline(
     elementId: string,
-    animationConfig: PureAnimationConfig,
+    animationConfig: AnimationConfig,
     targetElement: Element,
     gsapInstance: typeof gsap = gsap
   ): AnimationTimelineResult {
-    // Create new timeline - pure and idempotent
     const timeline = gsapInstance.timeline();
     
     const { type, duration = 0.5, ease = 'power2.out', delay, repeat, yoyo } = animationConfig;
@@ -11964,36 +12353,31 @@ export class AnimationManager {
     if (repeat !== undefined) animationProps.repeat = repeat;
     if (yoyo !== undefined) animationProps.yoyo = yoyo;
 
-    // Build animation based on type - all pure operations
     switch (type) {
       case 'scale':
-        this._buildScaleAnimation(animationConfig, targetElement, timeline, animationProps);
+        this.buildScaleAnimation(animationConfig, targetElement, timeline, animationProps);
         break;
       case 'slide':
-        this._buildSlideAnimation(animationConfig, targetElement, timeline, animationProps);
+        this.buildSlideAnimation(animationConfig, targetElement, timeline, animationProps);
         break;
       case 'fade':
-        this._buildFadeAnimation(animationConfig, targetElement, timeline, animationProps);
+        this.buildFadeAnimation(animationConfig, targetElement, timeline, animationProps);
         break;
       case 'custom_gsap':
-        this._buildCustomGsapAnimation(animationConfig, targetElement, timeline, animationProps);
+        this.buildCustomGsapAnimation(animationConfig, targetElement, timeline, animationProps);
         break;
     }
 
     return {
       timeline,
-      affectsPositioning: this._animationAffectsPositioning(animationConfig),
+      affectsPositioning: this.animationEffectsPositioning(animationConfig),
       syncData
     };
   }
 
-  /**
-   * Execute an animation with propagation support
-   * This replaces the old executeTransformableAnimation but uses the pure timeline creation
-   */
   executeAnimation(
     elementId: string,
-    animationConfig: PureAnimationConfig,
+    animationConfig: AnimationConfig,
     context: AnimationContext,
     gsapInstance: typeof gsap = gsap
   ): AnimationTimelineResult | null {
@@ -12003,14 +12387,12 @@ export class AnimationManager {
       return null;
     }
 
-    // Create pure timeline
     const result = this.createAnimationTimeline(elementId, animationConfig, targetElement, gsapInstance);
     
-    // Handle propagation if needed
     if (result.affectsPositioning) {
       transformPropagator.processAnimationWithPropagation(
         elementId,
-        animationConfig as any, // Cast for compatibility
+        animationConfig as any,
         result.syncData
       );
     }
@@ -12018,10 +12400,96 @@ export class AnimationManager {
     return result;
   }
 
+  executeAnimationSequence(
+    elementId: string,
+    sequenceDef: any,
+    context: AnimationContext,
+    gsapInstance: typeof gsap = gsap
+  ): void {
+    const sequence = AnimationSequence.createFromDefinition(elementId, sequenceDef, context, this);
+    sequence.run();
+  }
 
+  stopAllAnimationsForElement(elementId: string): void {
+    gsap.killTweensOf(`[id="${elementId}"]`);
+  }
 
-  private _buildScaleAnimation(
-    config: PureAnimationConfig,
+  collectAnimationStates(
+    elementIds: string[],
+    getShadowElement: (id: string) => Element | null
+  ): Map<string, any> {
+    const states = new Map();
+    
+    for (const elementId of elementIds) {
+      const state = this.elementAnimationStates.get(elementId);
+      if (state) {
+        const element = getShadowElement(elementId);
+        if (element) {
+          states.set(elementId, {
+            state,
+            element
+          });
+        }
+      }
+    }
+    
+    return states;
+  }
+
+  restoreAnimationStates(
+    animationStates: Map<string, any>,
+    context: AnimationContext,
+    onComplete: () => void
+  ): void {
+    if (animationStates.size === 0) {
+      onComplete();
+      return;
+    }
+
+    let completedCount = 0;
+    const totalCount = animationStates.size;
+
+    for (const [elementId, data] of animationStates) {
+      const element = context.getShadowElement?.(elementId);
+      if (element && data.state.targetFillColor) {
+        element.setAttribute('fill', data.state.targetFillColor);
+      }
+      
+      completedCount++;
+      if (completedCount === totalCount) {
+        onComplete();
+      }
+    }
+  }
+
+  animationEffectsPositioning(config: AnimationConfig): boolean {
+    if (this.positioningEffectsCache.has(config)) {
+      return this.positioningEffectsCache.get(config)!;
+    }
+
+    let hasPositioningEffects = false;
+
+    switch (config.type) {
+      case 'scale':
+      case 'slide':
+        hasPositioningEffects = true;
+        break;
+      case 'fade':
+        hasPositioningEffects = false;
+        break;
+      case 'custom_gsap':
+        hasPositioningEffects = true;
+        break;
+      default:
+        hasPositioningEffects = false;
+    }
+
+    this.positioningEffectsCache.set(config, hasPositioningEffects);
+    return hasPositioningEffects;
+  }
+
+  private buildScaleAnimation(
+    config: AnimationConfig,
     targetElement: Element,
     timeline: gsap.core.Timeline,
     animationProps: any
@@ -12041,15 +12509,15 @@ export class AnimationManager {
     timeline.to(targetElement, animationProps);
   }
 
-  private _buildSlideAnimation(
-    config: PureAnimationConfig,
+  private buildSlideAnimation(
+    config: AnimationConfig,
     targetElement: Element,
     timeline: gsap.core.Timeline,
     animationProps: any
   ): void {
     const { slide_params } = config;
     if (slide_params) {
-      const distance = this._parseDistanceValue(slide_params.distance || '0', targetElement);
+      const distance = DistanceParser.parse(slide_params.distance || '0', targetElement);
       const movement = slide_params.movement;
 
       let calculatedX = 0;
@@ -12079,7 +12547,6 @@ export class AnimationManager {
         if (calculatedX !== 0) animationProps.x = calculatedX;
         if (calculatedY !== 0) animationProps.y = calculatedY;
       } else {
-        // Infer behavior from opacity settings
         const isShowingAnimation = slide_params.opacity_start === 0 && slide_params.opacity_end === 1;
         const isHidingAnimation = slide_params.opacity_start === 1 && slide_params.opacity_end === 0;
         
@@ -12102,7 +12569,6 @@ export class AnimationManager {
         }
       }
 
-      // Handle opacity settings
       if (slide_params.opacity_start !== undefined) {
         initialSetProps.opacity = slide_params.opacity_start;
         needsInitialSet = true;
@@ -12121,8 +12587,8 @@ export class AnimationManager {
     timeline.to(targetElement, animationProps);
   }
 
-  private _buildFadeAnimation(
-    config: PureAnimationConfig,
+  private buildFadeAnimation(
+    config: AnimationConfig,
     targetElement: Element,
     timeline: gsap.core.Timeline,
     animationProps: any
@@ -12138,8 +12604,8 @@ export class AnimationManager {
     timeline.to(targetElement, animationProps);
   }
 
-  private _buildCustomGsapAnimation(
-    config: PureAnimationConfig,
+  private buildCustomGsapAnimation(
+    config: AnimationConfig,
     targetElement: Element,
     timeline: gsap.core.Timeline,
     animationProps: any
@@ -12150,467 +12616,133 @@ export class AnimationManager {
     }
     timeline.to(targetElement, animationProps);
   }
+}
 
-  private _parseDistanceValue(distanceStr: string, element?: Element): number {
-    if (!distanceStr) return 0;
+export class DistanceParser {
+  static parse(
+    distance: string,
+    context?: Element | { layout: { width: number; height: number } }
+  ): number {
+    if (!distance) return 0;
     
-    if (distanceStr.endsWith('%')) {
-      const percentage = parseFloat(distanceStr);
-      return percentage; // Return raw percentage for now
-    } else if (distanceStr.endsWith('px')) {
-      return parseFloat(distanceStr);
+    const numericValue = parseFloat(distance);
+    
+    if (distance.endsWith('%')) {
+      if (context && 'layout' in context) {
+        const maxDimension = Math.max(context.layout.width, context.layout.height);
+        return (numericValue / 100) * maxDimension;
+      } else {
+        return numericValue;
+      }
+    } else if (distance.endsWith('px')) {
+      return numericValue;
     } else {
-      return parseFloat(distanceStr) || 0;
+      return numericValue || 0;
     }
-  }
-
-  /**
-   * Clear minimal caches
-   */
-  clearCaches(): void {
-    // WeakMaps clear themselves when references are removed
-    // No manual clearing needed for WeakMaps
-  }
-
-  /**
-   * Clean up method for compatibility
-   */
-  cleanup(): void {
-    this.clearCaches();
-  }
-
-  /**
-   * Clear tracked entities for a specific element
-   */
-  clearTrackedEntitiesForElement(elementId: string): void {
-    const state = this.elementAnimationStates.get(elementId);
-    if (state && state.lastKnownEntityStates) {
-      state.lastKnownEntityStates.clear();
-    }
-  }
-
-  /**
-   * Stop all animations for a specific element
-   */
-  stopAllAnimationsForElement(elementId: string): void {
-    const state = this.elementAnimationStates.get(elementId);
-    if (state) {
-      // Stop any GSAP animations
-      if (this.getShadowElement) {
-        const element = this.getShadowElement(elementId);
-        if (element) {
-          gsap.killTweensOf(element);
-        }
-      }
-      
-      // Animation state flags removed - no longer needed
-    }
-  }
-
-  private getShadowElement?: (id: string) => Element | null;
-
-  /**
-   * Extract dynamic color from entity state
-   */
-  private extractDynamicColorFromEntityState(
-    elementId: string,
-    dynamicConfig: any,
-    hass: HomeAssistant
-  ): string | undefined {
-    const entity = hass.states[dynamicConfig.entity];
-    if (!entity) {
-      return dynamicConfig.default || undefined;
-    }
-
-    const value = dynamicConfig.attribute 
-      ? entity.attributes[dynamicConfig.attribute]
-      : entity.state;
-
-    // Track entity for change detection
-    const state = this.elementAnimationStates.get(elementId);
-    if (state && state.lastKnownEntityStates) {
-      state.lastKnownEntityStates.set(dynamicConfig.entity, {
-        state: entity.state,
-        attributes: { ...entity.attributes }
-      });
-    }
-
-    if (dynamicConfig.interpolate && typeof value === 'number') {
-      return this.interpolateColorFromNumericValue(value, dynamicConfig);
-    }
-
-    return dynamicConfig.mapping[value] || dynamicConfig.default;
-  }
-
-  /**
-   * Interpolate color from numeric value
-   */
-  private interpolateColorFromNumericValue(
-    value: number,
-    dynamicConfig: any
-  ): string | undefined {
-    const numericKeys = Object.keys(dynamicConfig.mapping)
-      .map(k => parseFloat(k))
-      .filter(k => !isNaN(k))
-      .sort((a, b) => a - b);
-
-    if (numericKeys.length === 0) {
-      return dynamicConfig.default;
-    }
-
-    if (numericKeys.length === 1) {
-      return dynamicConfig.mapping[numericKeys[0]];
-    }
-
-    // Handle values below/above range
-    if (value <= numericKeys[0]) {
-      return dynamicConfig.mapping[numericKeys[0]];
-    }
-    if (value >= numericKeys[numericKeys.length - 1]) {
-      return dynamicConfig.mapping[numericKeys[numericKeys.length - 1]];
-    }
-
-    // Find interpolation range
-    let lowerKey = numericKeys[0];
-    let upperKey = numericKeys[numericKeys.length - 1];
-    
-    for (let i = 0; i < numericKeys.length - 1; i++) {
-      if (value >= numericKeys[i] && value <= numericKeys[i + 1]) {
-        lowerKey = numericKeys[i];
-        upperKey = numericKeys[i + 1];
-        break;
-      }
-    }
-
-    // Interpolate colors
-    const lowerColor = this.parseColor(dynamicConfig.mapping[lowerKey]);
-    const upperColor = this.parseColor(dynamicConfig.mapping[upperKey]);
-    
-    if (!lowerColor || !upperColor) {
-      return dynamicConfig.default;
-    }
-
-    const factor = (value - lowerKey) / (upperKey - lowerKey);
-    return this.interpolateColors(lowerColor, upperColor, factor);
-  }
-
-  /**
-   * Parse color string to RGB values
-   */
-  private parseColor(colorStr: string): [number, number, number] | null {
-    if (!colorStr) return null;
-    
-    // Handle hex colors
-    if (colorStr.startsWith('#')) {
-      const hex = colorStr.replace('#', '');
-      const expanded = hex.length === 3 
-        ? hex.split('').map(c => c + c).join('')
-        : hex;
-      
-      if (expanded.length === 6) {
-        return [
-          parseInt(expanded.slice(0, 2), 16),
-          parseInt(expanded.slice(2, 4), 16),
-          parseInt(expanded.slice(4, 6), 16)
-        ];
-      }
-    }
-    
-    // Handle rgb() colors
-    const rgbMatch = colorStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-    if (rgbMatch) {
-      return [
-        parseInt(rgbMatch[1]),
-        parseInt(rgbMatch[2]),
-        parseInt(rgbMatch[3])
-      ];
-    }
-    
-    // Handle named colors (basic set)
-    const namedColors: { [key: string]: [number, number, number] } = {
-      'red': [255, 0, 0],
-      'green': [0, 255, 0],
-      'blue': [0, 0, 255],
-      'white': [255, 255, 255],
-      'black': [0, 0, 0]
-    };
-    
-    return namedColors[colorStr.toLowerCase()] || null;
-  }
-
-  /**
-   * Interpolate between two RGB colors
-   */
-  private interpolateColors(
-    color1: [number, number, number],
-    color2: [number, number, number],
-    factor: number
-  ): string {
-    const r = Math.round(color1[0] + (color2[0] - color1[0]) * factor);
-    const g = Math.round(color1[1] + (color2[1] - color1[1]) * factor);
-    const b = Math.round(color1[2] + (color2[2] - color1[2]) * factor);
-    
-    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-  }
-
-  /**
-   * Collect animation states for restore
-   */
-  collectAnimationStates(
-    elementIds: string[],
-    getShadowElement: (id: string) => Element | null
-  ): Map<string, any> {
-    const states = new Map();
-    
-    for (const elementId of elementIds) {
-      const state = this.elementAnimationStates.get(elementId);
-      if (state) {
-        const element = getShadowElement(elementId);
-        if (element) {
-          states.set(elementId, {
-            state,
-            element
-          });
-        }
-      }
-    }
-    
-    return states;
-  }
-
-  /**
-   * Restore animation states
-   */
-  restoreAnimationStates(
-    animationStates: Map<string, any>,
-    context: AnimationContext,
-    onComplete: () => void
-  ): void {
-    if (animationStates.size === 0) {
-      onComplete();
-      return;
-    }
-
-    let completedCount = 0;
-    const totalCount = animationStates.size;
-
-    for (const [elementId, data] of animationStates) {
-      const element = context.getShadowElement?.(elementId);
-      if (element && data.state.targetFillColor) {
-        element.setAttribute('fill', data.state.targetFillColor);
-      }
-      
-      completedCount++;
-      if (completedCount === totalCount) {
-        onComplete();
-      }
-    }
-  }
-
-  /**
-   * Find element with retry logic
-   */
-  private findElementWithRetryLogic(
-    elementId: string,
-    getShadowElement: (id: string) => Element | null,
-    maxRetries: number = 1
-  ): Element | null {
-    for (let i = 0; i <= maxRetries; i++) {
-      const element = getShadowElement(elementId);
-      if (element) {
-        return element;
-      }
-      // In real implementation, would add small delay
-    }
-    return null;
-  }
-
-  // Private helper methods for timeline creation
-  
-  private _createScaleAnimation(
-    timeline: gsap.core.Timeline,
-    config: PureAnimationConfig,
-    duration: number
-  ): gsap.core.Timeline {
-    const params = config.scale_params || {};
-    const scaleStart = params.scale_start || 1;
-    const scaleEnd = params.scale_end || 1;
-    const transformOrigin = params.transform_origin || 'center center';
-
-    timeline.to({}, {
-      duration: duration / 1000,
-      scaleX: scaleEnd,
-      scaleY: scaleEnd,
-      transformOrigin: transformOrigin
-    });
-
-    return timeline;
-  }
-
-  private _createSlideAnimation(
-    timeline: gsap.core.Timeline,
-    config: PureAnimationConfig,
-    duration: number
-  ): gsap.core.Timeline {
-    const params = config.slide_params || {};
-    const direction = params.direction || 'up';
-    const distance = parseFloat(params.distance || '100');
-    
-    let x = 0, y = 0;
-    switch (direction) {
-      case 'up': y = -distance; break;
-      case 'down': y = distance; break;
-      case 'left': x = -distance; break;
-      case 'right': x = distance; break;
-    }
-
-    timeline.to({}, {
-      duration: duration / 1000,
-      x: x,
-      y: y,
-      opacity: params.opacity_end || 1
-    });
-
-    return timeline;
-  }
-
-  private _createFadeAnimation(
-    timeline: gsap.core.Timeline,
-    config: PureAnimationConfig,
-    duration: number
-  ): gsap.core.Timeline {
-    const params = config.fade_params || {};
-    const opacityStart = params.opacity_start || 1;
-    const opacityEnd = params.opacity_end || 0;
-
-    timeline.to({}, {
-      duration: duration / 1000,
-      opacity: opacityEnd
-    });
-
-    return timeline;
-  }
-
-  private _createCustomGsapAnimation(
-    timeline: gsap.core.Timeline,
-    config: PureAnimationConfig,
-    duration: number
-  ): gsap.core.Timeline {
-    const params = config.custom_gsap_params || {};
-
-    timeline.to({}, {
-      duration: duration / 1000,
-      ...params
-    });
-
-    return timeline;
-  }
-
-  private _getAnimationProperties(config: PureAnimationConfig): any {
-    switch (config.type) {
-      case 'scale':
-        const scaleParams = config.scale_params || {};
-        return {
-          scaleX: scaleParams.scale_end || 1,
-          scaleY: scaleParams.scale_end || 1,
-          transformOrigin: scaleParams.transform_origin || 'center center'
-        };
-      case 'slide':
-        const slideParams = config.slide_params || {};
-        const direction = slideParams.direction || 'up';
-        const distance = parseFloat(slideParams.distance || '100');
-        
-        let x = 0, y = 0;
-        switch (direction) {
-          case 'up': y = -distance; break;
-          case 'down': y = distance; break;
-          case 'left': x = -distance; break;
-          case 'right': x = distance; break;
-        }
-        
-        return {
-          x: x,
-          y: y,
-          opacity: slideParams.opacity_end || 1
-        };
-      case 'fade':
-        const fadeParams = config.fade_params || {};
-        return {
-          opacity: fadeParams.opacity_end || 0
-        };
-      case 'custom_gsap':
-        return config.custom_gsap_params || {};
-      default:
-        return {};
-    }
-  }
-
-  /**
-   * Check if an animation config has positioning effects that would require transform propagation
-   */
-  doesAnimationEffectPositioning(config: PureAnimationConfig): boolean {
-    // Use WeakMap cache for performance
-    if (this.positioningEffectsCache.has(config)) {
-      return this.positioningEffectsCache.get(config)!;
-    }
-
-    let hasPositioningEffects = false;
-
-    switch (config.type) {
-      case 'scale':
-        // Scale animations affect positioning of anchored elements
-        hasPositioningEffects = true;
-        break;
-      case 'slide':
-        // Slide animations change element position
-        hasPositioningEffects = true;
-        break;
-      case 'fade':
-        // Fade animations don't affect positioning
-        hasPositioningEffects = false;
-        break;
-      case 'custom_gsap':
-        // Custom GSAP could affect positioning - assume yes for safety
-        hasPositioningEffects = true;
-        break;
-      default:
-        hasPositioningEffects = false;
-    }
-
-    this.positioningEffectsCache.set(config, hasPositioningEffects);
-    return hasPositioningEffects;
   }
 }
 
-/**
- * Parse distance value for animations
- */
-export function parseDistanceValue(
-  distance: string,
-  element?: { layout: { width: number; height: number } }
-): number {
-  if (!distance) return 0;
-  
-  if (distance.endsWith('%')) {
-    const percentage = parseFloat(distance);
-    if (element) {
-      // Use the larger dimension for percentage calculations
-      const maxDimension = Math.max(element.layout.width, element.layout.height);
-      return (percentage / 100) * maxDimension;
-    } else {
-      // Fallback: assume 100px as reference for percentage calculations
-      return percentage;
-    }
-  } else if (distance.endsWith('px')) {
-    return parseFloat(distance);
-  } else {
-    // Assume pixels if no unit specified
-    return parseFloat(distance) || 0;
-  }
-}
-
-// Export singleton instance
 export const animationManager = new AnimationManager();
+
+export class Animation {
+  readonly elementId: string;
+  readonly config: AnimationConfig;
+  private readonly manager: AnimationManager;
+
+  constructor(elementId: string, config: AnimationConfig, manager: AnimationManager) {
+    this.elementId = elementId;
+    this.config = { ...config };
+    this.manager = manager;
+  }
+
+  execute(
+    context: AnimationContext,
+    extraDelay: number = 0,
+    gsapInstance: typeof gsap = gsap
+  ): AnimationTimelineResult | null {
+    const cfg: AnimationConfig = { ...this.config };
+    if (extraDelay) {
+      cfg.delay = (cfg.delay ?? 0) + extraDelay;
+    }
+    return this.manager.executeAnimation(this.elementId, cfg, context, gsapInstance);
+  }
+
+  getRuntime(): number {
+    const duration = this.config.duration ?? 500;
+    const repeat = typeof this.config.repeat === 'number' && this.config.repeat > 0 ? this.config.repeat : 0;
+    const delay = this.config.delay ?? 0;
+    return delay + duration * (repeat + 1);
+  }
+}
+
+export class AnimationSequence {
+  private readonly elementId: string;
+  private readonly animations: Array<{ anim: Animation; groupIndex: number }> = [];
+  private readonly context: AnimationContext;
+  private readonly manager: AnimationManager;
+
+  constructor(
+    elementId: string,
+    context: AnimationContext,
+    manager: AnimationManager
+  ) {
+    this.elementId = elementId;
+    this.context = context;
+    this.manager = manager;
+  }
+
+  add(animation: Animation, groupIndex: number = 0): this {
+    this.animations.push({ anim: animation, groupIndex });
+    return this;
+  }
+
+  run(): void {
+    const grouped = new Map<number, Animation[]>();
+    for (const { anim, groupIndex } of this.animations) {
+      if (!grouped.has(groupIndex)) grouped.set(groupIndex, []);
+      grouped.get(groupIndex)!.push(anim);
+    }
+
+    const sortedIndices = Array.from(grouped.keys()).sort((a, b) => a - b);
+    let cumulativeDelay = 0;
+
+    for (const idx of sortedIndices) {
+      const group = grouped.get(idx)!;
+      let maxRuntimeInGroup = 0;
+
+      for (const anim of group) {
+        anim.execute(this.context, cumulativeDelay);
+        const runtime = anim.getRuntime();
+        if (runtime > maxRuntimeInGroup) maxRuntimeInGroup = runtime;
+      }
+
+      cumulativeDelay += maxRuntimeInGroup;
+    }
+  }
+
+  static createFromDefinition(
+    elementId: string,
+    sequenceDef: any,
+    context: AnimationContext,
+    manager: AnimationManager
+  ): AnimationSequence {
+    const sequence = new AnimationSequence(elementId, context, manager);
+
+    if (!sequenceDef || !Array.isArray(sequenceDef.steps)) return sequence;
+
+    sequenceDef.steps.forEach((step: any) => {
+      if (!step) return;
+      const idx: number = Number(step.index) || 0;
+      const animations = Array.isArray(step.animations) ? step.animations : [];
+      animations.forEach((animCfg: any) => {
+        const pure: AnimationConfig = { ...animCfg } as AnimationConfig;
+        sequence.add(new Animation(elementId, pure, manager), idx);
+      });
+    });
+
+    return sequence;
+  }
+}
 ```
 
 ## File: src/utils/button.ts
@@ -14658,18 +14790,18 @@ export class StateManager {
     }
 
     // Convert to pure animation config and execute
-    const pureConfig = this._convertToPureAnimationConfig(animationDef);
-    if (pureConfig) {
-      animationManager.executeAnimation(elementId, pureConfig, this.animationContext, gsap);
+    const animationConfig = this.convertToAnimationConfig(animationDef);
+    if (animationConfig) {
+      animationManager.executeAnimation(elementId, animationConfig, this.animationContext, gsap);
     }
   }
 
-  private _convertToPureAnimationConfig(animationDef: any): import('./animation.js').PureAnimationConfig | null {
+  private convertToAnimationConfig(animationDef: any): import('./animation.js').AnimationConfig | null {
     if (!animationDef || !animationDef.type) {
       return null;
     }
 
-    const config: import('./animation.js').PureAnimationConfig = {
+    const config: import('./animation.js').AnimationConfig = {
       type: animationDef.type,
       duration: animationDef.duration || 500,
       ease: animationDef.ease || 'power2.out',
@@ -14701,11 +14833,17 @@ export class StateManager {
     }
 
     const element = this.elementsMap.get(elementId);
-    const animationDef = element?.props?.animations?.[lifecycle];
-    
-    if (animationDef) {
-      this.executeAnimation(elementId, animationDef);
+    const animationDef: any = element?.props?.animations?.[lifecycle];
+    if (!animationDef) return;
+
+    // Handle multi-step animation sequences via AnimationManager helper
+    if (animationDef.steps && Array.isArray(animationDef.steps)) {
+      animationManager.executeAnimationSequence(elementId, animationDef, this.animationContext as any, gsap);
+      return;
     }
+
+    // Fallback to single animation definition
+    this.executeAnimation(elementId, animationDef);
   }
 
   // Visibility management now uses regular state ('hidden'/'visible')
@@ -14769,7 +14907,7 @@ export const stateManager = new StateManager();
 ```typescript
 /// <reference types="vitest" />
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AnimationManager, AnimationContext, PureAnimationConfig } from '../animation';
+import { AnimationManager, AnimationContext, AnimationConfig } from '../animation';
 import { HomeAssistant } from 'custom-card-helpers';
 
 // Mock gsap
@@ -14828,7 +14966,7 @@ describe('AnimationManager - Pure Animation API', () => {
 
   describe('pure animation creation', () => {
     it('should create animation timeline for scale animation', () => {
-      const config: PureAnimationConfig = {
+      const config: AnimationConfig = {
         type: 'scale',
         duration: 1000,
         scale_params: {
@@ -14846,7 +14984,7 @@ describe('AnimationManager - Pure Animation API', () => {
     });
 
     it('should create animation timeline for fade animation', () => {
-      const config: PureAnimationConfig = {
+      const config: AnimationConfig = {
         type: 'fade',
         duration: 500,
         fade_params: {
@@ -14866,7 +15004,7 @@ describe('AnimationManager - Pure Animation API', () => {
 
   describe('animation execution', () => {
     it('should execute animation when element is found', () => {
-      const config: PureAnimationConfig = {
+      const config: AnimationConfig = {
         type: 'fade',
         duration: 300,
         fade_params: {
@@ -14882,7 +15020,7 @@ describe('AnimationManager - Pure Animation API', () => {
     });
 
     it('should return null when element is not found', () => {
-      const config: PureAnimationConfig = {
+      const config: AnimationConfig = {
         type: 'fade',
         duration: 300,
       };
@@ -14900,18 +15038,18 @@ describe('AnimationManager - Pure Animation API', () => {
 
   describe('positioning effects detection', () => {
     it('should detect positioning effects for scale animations', () => {
-      const config: PureAnimationConfig = { type: 'scale' };
-      expect(manager.doesAnimationEffectPositioning(config)).toBe(true);
+      const config: AnimationConfig = { type: 'scale' };
+      expect(manager.animationEffectsPositioning(config)).toBe(true);
     });
 
     it('should detect positioning effects for slide animations', () => {
-      const config: PureAnimationConfig = { type: 'slide' };
-      expect(manager.doesAnimationEffectPositioning(config)).toBe(true);
+      const config: AnimationConfig = { type: 'slide' };
+      expect(manager.animationEffectsPositioning(config)).toBe(true);
     });
 
     it('should not detect positioning effects for fade animations', () => {
-      const config: PureAnimationConfig = { type: 'fade' };
-      expect(manager.doesAnimationEffectPositioning(config)).toBe(false);
+      const config: AnimationConfig = { type: 'fade' };
+      expect(manager.animationEffectsPositioning(config)).toBe(false);
     });
   });
 });
@@ -15030,18 +15168,21 @@ describe('Button', () => {
       const props = {
         button: {
           enabled: true,
-          action_config: {
-            type: 'toggle',
-            entity: 'light.test',
-            confirmation: true
+          actions: {
+            tap: {
+              action: 'toggle',
+              entity: 'light.test',
+              confirmation: true
+            }
           }
         }
       };
       
       const button = new Button('test-button', props, mockHass, mockRequestUpdate);
       
-      // Simulate button click
-      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      // Simulate button click by calling handleClick directly
+      const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
+      (button as any).handleClick(mockEvent);
       
       expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(1);
       expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
@@ -15061,8 +15202,8 @@ describe('Button', () => {
       const props = {
         button: {
           enabled: true,
-          action_config: {
-            actions: [
+          actions: {
+            tap: [
               {
                 action: 'toggle',
                 entity: 'light.living_room'
@@ -15079,8 +15220,9 @@ describe('Button', () => {
       
       const button = new Button('test-button', props, mockHass, mockRequestUpdate);
       
-      // Simulate button click
-      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      // Simulate button click by calling handleClick directly
+      const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
+      (button as any).handleClick(mockEvent);
       
       expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(2);
       expect(executeUnifiedActionSpy).toHaveBeenNthCalledWith(1, 
@@ -15107,8 +15249,8 @@ describe('Button', () => {
       const props = {
         button: {
           enabled: true,
-          action_config: {
-            actions: [
+          actions: {
+            tap: [
               {
                 action: 'set-state',
                 target_element_ref: 'group.element',
@@ -15121,8 +15263,9 @@ describe('Button', () => {
       
       const button = new Button('test-button', props, mockHass, mockRequestUpdate);
       
-      // Simulate button click
-      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      // Simulate button click by calling handleClick directly
+      const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
+      (button as any).handleClick(mockEvent);
       
       expect(convertToUnifiedActionSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -15140,17 +15283,20 @@ describe('Button', () => {
       const props = {
         button: {
           enabled: true,
-          action_config: {
-            type: 'toggle'
-            // entity intentionally missing
+          actions: {
+            tap: {
+              action: 'toggle'
+              // entity intentionally missing
+            }
           }
         }
       };
       
       const button = new Button('test-button', props, mockHass, mockRequestUpdate);
       
-      // Simulate button click
-      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      // Simulate button click by calling handleClick directly
+      const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
+      (button as any).handleClick(mockEvent);
       
       expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -18222,53 +18368,9 @@ export const transformPropagator = new TransformPropagator();
 
 ```json
 {
-  "status": "failed",
-  "failedTests": [
-    "10708c82281818d9902f-23a3c15363121be0d011"
-  ]
+  "status": "passed",
+  "failedTests": []
 }
-```
-
-## File: test-results/config-examples-8-animations-baseline-interactions-chromium/error-context.md
-
-```markdown
-# Page snapshot
-
-```yaml
-- complementary:
-  - button "Sidebar toggle"
-  - text: Home Assistant
-  - listbox:
-    - option "Overview":
-      - option "Overview"
-    - option "Dashboard 1" [selected]:
-      - option "Dashboard 1"
-    - option "Map":
-      - option "Map"
-    - option "To-do lists":
-      - option "To-do lists"
-    - option "Developer tools":
-      - option "Developer tools"
-    - option "Settings 2":
-      - option "Settings 2"
-  - option "Notifications"
-  - option "Profile":
-    - option "Developer"
-- text: LCARS
-- button "Entity search"
-- button "Edit dashboard"
-- img:
-  - text: Animation Configuration example LOADING... This element should have a fade-in effect when it loads.
-  - button "sliding_panel_group.sliding_panel_trigger_button"
-  - text: SHOW PANEL This button should trigger a panel to slide in from the left..
-  - button "scale_target_group.scale_trigger_button"
-  - text: SCALE This button should toggle the scale of the "scale_target" element when pressed. SCALE TARGET SEQUENCE This element should fade in, slide up, and scale up when it loads.
-  - button "multi_action_group.multi_trigger_button"
-  - text: MULTI ACTION
-  - button "multi_action_group.reset_button"
-  - text: RESET ALL
-- img
-```
 ```
 
 ## File: tests/e2e/config-examples.spec.ts
@@ -18979,7 +19081,7 @@ export default defineConfig({
       '@src/': new URL('./src/', import.meta.url).pathname,
     },
     include: ['src/**/*.spec.ts', 'src/**/*.test.ts'],
-    exclude: ['tests/e2e/**', 'node_modules/**', 'src/utils/test/**', 'src/layout/elements/test/**'],
+    exclude: ['tests/e2e/**', 'node_modules/**'],
     coverage: { // Optional: for code coverage
       provider: 'v8', // or 'istanbul'
       reporter: ['text', 'json', 'html'],

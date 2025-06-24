@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AnimationManager, AnimationContext, PureAnimationConfig } from '../animation';
+import { AnimationManager, AnimationContext, AnimationConfig } from '../animation';
 import { HomeAssistant } from 'custom-card-helpers';
 
 // Mock gsap
@@ -59,7 +59,7 @@ describe('AnimationManager - Pure Animation API', () => {
 
   describe('pure animation creation', () => {
     it('should create animation timeline for scale animation', () => {
-      const config: PureAnimationConfig = {
+      const config: AnimationConfig = {
         type: 'scale',
         duration: 1000,
         scale_params: {
@@ -77,7 +77,7 @@ describe('AnimationManager - Pure Animation API', () => {
     });
 
     it('should create animation timeline for fade animation', () => {
-      const config: PureAnimationConfig = {
+      const config: AnimationConfig = {
         type: 'fade',
         duration: 500,
         fade_params: {
@@ -97,7 +97,7 @@ describe('AnimationManager - Pure Animation API', () => {
 
   describe('animation execution', () => {
     it('should execute animation when element is found', () => {
-      const config: PureAnimationConfig = {
+      const config: AnimationConfig = {
         type: 'fade',
         duration: 300,
         fade_params: {
@@ -113,7 +113,7 @@ describe('AnimationManager - Pure Animation API', () => {
     });
 
     it('should return null when element is not found', () => {
-      const config: PureAnimationConfig = {
+      const config: AnimationConfig = {
         type: 'fade',
         duration: 300,
       };
@@ -131,18 +131,18 @@ describe('AnimationManager - Pure Animation API', () => {
 
   describe('positioning effects detection', () => {
     it('should detect positioning effects for scale animations', () => {
-      const config: PureAnimationConfig = { type: 'scale' };
-      expect(manager.doesAnimationEffectPositioning(config)).toBe(true);
+      const config: AnimationConfig = { type: 'scale' };
+      expect(manager.animationEffectsPositioning(config)).toBe(true);
     });
 
     it('should detect positioning effects for slide animations', () => {
-      const config: PureAnimationConfig = { type: 'slide' };
-      expect(manager.doesAnimationEffectPositioning(config)).toBe(true);
+      const config: AnimationConfig = { type: 'slide' };
+      expect(manager.animationEffectsPositioning(config)).toBe(true);
     });
 
     it('should not detect positioning effects for fade animations', () => {
-      const config: PureAnimationConfig = { type: 'fade' };
-      expect(manager.doesAnimationEffectPositioning(config)).toBe(false);
+      const config: AnimationConfig = { type: 'fade' };
+      expect(manager.animationEffectsPositioning(config)).toBe(false);
     });
   });
 }); 

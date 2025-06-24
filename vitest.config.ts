@@ -9,7 +9,7 @@ export default defineConfig({
       '@src/': new URL('./src/', import.meta.url).pathname,
     },
     include: ['src/**/*.spec.ts', 'src/**/*.test.ts'],
-    exclude: ['tests/e2e/**', 'node_modules/**', 'src/utils/test/**', 'src/layout/elements/test/**'],
+    exclude: ['tests/e2e/**', 'node_modules/**'],
     coverage: { // Optional: for code coverage
       provider: 'v8', // or 'istanbul'
       reporter: ['text', 'json', 'html'],

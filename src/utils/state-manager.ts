@@ -167,18 +167,18 @@ export class StateManager {
     }
 
     // Convert to pure animation config and execute
-    const pureConfig = this._convertToPureAnimationConfig(animationDef);
-    if (pureConfig) {
-      animationManager.executeAnimation(elementId, pureConfig, this.animationContext, gsap);
+    const animationConfig = this.convertToAnimationConfig(animationDef);
+    if (animationConfig) {
+      animationManager.executeAnimation(elementId, animationConfig, this.animationContext, gsap);
     }
   }
 
-  private _convertToPureAnimationConfig(animationDef: any): import('./animation.js').PureAnimationConfig | null {
+  private convertToAnimationConfig(animationDef: any): import('./animation.js').AnimationConfig | null {
     if (!animationDef || !animationDef.type) {
       return null;
     }
 
-    const config: import('./animation.js').PureAnimationConfig = {
+    const config: import('./animation.js').AnimationConfig = {
       type: animationDef.type,
       duration: animationDef.duration || 500,
       ease: animationDef.ease || 'power2.out',
@@ -210,11 +210,17 @@ export class StateManager {
     }
 
     const element = this.elementsMap.get(elementId);
-    const animationDef = element?.props?.animations?.[lifecycle];
-    
-    if (animationDef) {
-      this.executeAnimation(elementId, animationDef);
+    const animationDef: any = element?.props?.animations?.[lifecycle];
+    if (!animationDef) return;
+
+    // Handle multi-step animation sequences via AnimationManager helper
+    if (animationDef.steps && Array.isArray(animationDef.steps)) {
+      animationManager.executeAnimationSequence(elementId, animationDef, this.animationContext as any, gsap);
+      return;
     }
+
+    // Fallback to single animation definition
+    this.executeAnimation(elementId, animationDef);
   }
 
   // Visibility management now uses regular state ('hidden'/'visible')
