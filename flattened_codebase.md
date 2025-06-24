@@ -18832,7 +18832,6 @@ export const transformPropagator = new TransformPropagator();
 ## File: tests/e2e/config-examples.spec.ts
 
 ```typescript
-// @ts-nocheck
 import { test, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
@@ -18841,10 +18840,6 @@ import { HomeAssistant, PlaywrightBrowser } from 'hass-taste-test';
 import { AnimationTimingCalculator, TestWaitHelper, AnimationTimingInfo } from './test-helpers';
 import './test-helpers';
 
-// ----------------------------------------------------------------------------
-// Setup helpers
-// ----------------------------------------------------------------------------
-
 const EXAMPLES_DIR = path.resolve(process.cwd(), 'yaml-config-examples');
 
 const exampleFiles = fs
@@ -18852,14 +18847,9 @@ const exampleFiles = fs
   .filter((f) => f.endsWith('.yaml'))
   .map((f) => path.join(EXAMPLES_DIR, f));
 
-let hass: any;
+let hass: HomeAssistant<any>;
 
 test.beforeAll(async () => {
-  // We pass an *empty* string here because our test-helpers monkey-patch
-  // already writes a minimal configuration (frontend, http, plus a template
-  // light called kitchen_sink_light). Keeping this blank avoids duplicate YAML
-  // keys like `light:`.
-
   hass = await HomeAssistant.create('', {
     browser: new PlaywrightBrowser('chromium'),
   });
@@ -18872,73 +18862,96 @@ test.afterAll(async () => {
   if (hass) await hass.close();
 });
 
-// ----------------------------------------------------------------------------
-// Utility – YAML inspection for interactive metadata
-// ----------------------------------------------------------------------------
-
-type ButtonMeta = {
-  fullId: string; // group_id.element_id
-  targetElementRefs: string[]; // derived from actions
+type ButtonMetadata = {
+  fullId: string;
+  targetElementRefs: string[];
 };
 
-function analyseYamlForInteractions(yamlObj: any): ButtonMeta[] {
-  const buttons: ButtonMeta[] = [];
+type ButtonActionConfig = {
+  target_element_ref?: string;
+};
 
-  if (!yamlObj?.groups) return buttons;
+type ElementConfig = {
+  id: string;
+  button?: {
+    enabled: boolean;
+    actions?: {
+      tap?: ButtonActionConfig | ButtonActionConfig[];
+      hold?: ButtonActionConfig | ButtonActionConfig[];
+      double_tap?: ButtonActionConfig | ButtonActionConfig[];
+    };
+  };
+};
 
-  for (const group of yamlObj.groups) {
-    const groupId = group.group_id;
-    if (!group.elements) continue;
+type GroupConfig = {
+  group_id: string;
+  elements: ElementConfig[];
+};
 
-    for (const el of group.elements) {
-      if (el?.button?.enabled) {
-        const fullId = `${groupId}.${el.id}`;
-        const targetRefs: string[] = [];
+type YamlConfig = {
+  groups: GroupConfig[];
+};
 
-        const actionContainers = [] as any[];
-        if (el.button.actions?.tap) actionContainers.push(el.button.actions.tap);
-        if (el.button.actions?.hold) actionContainers.push(el.button.actions.hold);
-        if (el.button.actions?.double_tap) actionContainers.push(el.button.actions.double_tap);
+class YamlInteractionAnalyzer {
+  static analyzeForInteractions(yamlObj: Record<string, unknown>): ButtonMetadata[] {
+    const buttons: ButtonMetadata[] = [];
+    const config = yamlObj as YamlConfig;
 
-        actionContainers.flat().forEach((action: any) => {
-          if (typeof action !== 'object') return;
-          const unified = Array.isArray(action) ? action : [action];
-          unified.forEach((a) => {
-            if (a.target_element_ref) targetRefs.push(a.target_element_ref);
-          });
-        });
+    if (!config?.groups || !Array.isArray(config.groups)) return buttons;
 
-        buttons.push({ fullId, targetElementRefs: targetRefs });
+    for (const group of config.groups) {
+      if (!group.elements || !Array.isArray(group.elements)) continue;
+
+      for (const element of group.elements) {
+        if (element?.button?.enabled) {
+          const fullId = `${group.group_id}.${element.id}`;
+          const targetRefs = this.extractTargetReferences(element);
+          buttons.push({ fullId, targetElementRefs: targetRefs });
+        }
       }
     }
+
+    return buttons;
   }
 
-  return buttons;
+  private static extractTargetReferences(element: ElementConfig): string[] {
+    const targetRefs: string[] = [];
+    const actions = element.button?.actions;
+    
+    if (!actions) return targetRefs;
+
+    const actionContainers = [actions.tap, actions.hold, actions.double_tap].filter(Boolean);
+
+    for (const actionContainer of actionContainers) {
+      const actionsArray = Array.isArray(actionContainer) ? actionContainer : [actionContainer];
+      
+      for (const action of actionsArray) {
+        if (action?.target_element_ref) {
+          targetRefs.push(action.target_element_ref);
+        }
+      }
+    }
+
+    return targetRefs;
+  }
 }
 
-// ----------------------------------------------------------------------------
-// Dynamic per-yaml tests
-// ----------------------------------------------------------------------------
-
 for (const filePath of exampleFiles) {
-  const fileName = path.basename(filePath); // e.g. 3-dynamic-color.yaml
-  const baseName = path.parse(fileName).name; // e.g. 3-dynamic-color
+  const fileName = path.basename(filePath);
+  const baseName = path.parse(fileName).name;
 
   test.describe(`${baseName}`, () => {
     test(`baseline & interactions`, async ({ page }) => {
       const raw = fs.readFileSync(filePath, 'utf-8');
-      const configObj = yaml.load(raw);
+      const configObj = yaml.load(raw) as Record<string, unknown>;
 
-      // Analyze animation timing for this configuration
       const timingInfo: AnimationTimingInfo = AnimationTimingCalculator.analyzeConfigurationTiming(configObj);
 
-      // Set initial brightness to 0 for a consistent starting state.
       await hass.callService('input_number', 'set_value', {
         entity_id: 'input_number.kitchen_sink_brightness',
         value: 0,
       });
 
-      // Use dark colour-scheme so screenshots have consistent dark background.
       const dashboard = await hass.Dashboard([configObj]);
       const url = await dashboard.link();
 
@@ -18947,19 +18960,14 @@ for (const filePath of exampleFiles) {
       const card = page.locator('lovelace-lcars-card').first();
       await card.locator('svg').waitFor();
 
-      // Give the card a brief moment to perform its second-pass layout after
-      // the Antonio font resolves (see waitForFonts logic in card implementation).
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(1000);
 
-      // Wait for any on_load animations to complete before taking baseline screenshot
       await TestWaitHelper.waitForAnimations(page, timingInfo);
 
-      // Step 0: Initial baseline screenshot
       await expect(card).toHaveScreenshot(`${baseName}-00-initial.png`);
 
-      // Analyse YAML for interactive buttons
-      const buttons = analyseYamlForInteractions(configObj);
+      const buttons = YamlInteractionAnalyzer.analyzeForInteractions(configObj);
 
       let stepIndex = 1;
 
@@ -18967,27 +18975,22 @@ for (const filePath of exampleFiles) {
         const shapeSelector = `path[id="${button.fullId}__shape"]`;
         const btn = card.locator(shapeSelector);
 
-        // If button shape not in DOM, skip this interaction
         try {
           await btn.waitFor({ state: 'attached', timeout: 5000 });
         } catch {
           continue;
         }
 
-        // Enhanced click sequence with proper mouse states
-        // This will increment stepIndex internally for each screenshot
         stepIndex = await TestWaitHelper.performClickSequence(page, btn, card, baseName, button.fullId, stepIndex);
         
-        // Wait for any state change animations on target elements
         for (const targetRef of button.targetElementRefs) {
           await TestWaitHelper.waitForStateChangeAnimations(page, configObj, targetRef);
         }
         
-        // Final state after animations complete
         const paddedStepIndex = stepIndex.toString().padStart(2, '0');
         await expect(card).toHaveScreenshot(`${baseName}-${paddedStepIndex}-${button.fullId}-final-state.png`);
 
-        stepIndex += 1; // Increment for the final state screenshot
+        stepIndex += 1;
       }
     });
   });
@@ -19002,16 +19005,13 @@ for (const filePath of exampleFiles) {
   <head>
     <meta charset="UTF-8" />
     <title>LCARS Card Test Harness</title>
-    <!-- Load Antonio font for consistent rendering -->
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap" rel="stylesheet" />
-    <!-- Import the card via Vite dev server. -->
     <script type="module" src="/src/lovelace-lcars-card.ts"></script>
     <style>
       html, body {
         margin: 0;
         padding: 0;
       }
-      /* Give the card a predictable size for screenshot stability */
       lovelace-lcars-card {
         width: 600px;
         height: 200px;
@@ -19023,8 +19023,6 @@ for (const filePath of exampleFiles) {
     <lovelace-lcars-card id="test-card"></lovelace-lcars-card>
 
     <script type="module">
-      // Minimal mock of the Home Assistant object used by the card.
-      // Extend as needed when new features rely on more properties.
       const hassMock = {
         states: {},
         themes: {},
@@ -19033,7 +19031,6 @@ for (const filePath of exampleFiles) {
       };
 
       const card = document.getElementById('test-card');
-      // Very small config – keeps the SVG predictable while still exercising core functionality.
       const testConfig = {
         type: 'lovelace-lcars-card',
         groups: [
@@ -19064,7 +19061,6 @@ for (const filePath of exampleFiles) {
         ],
       };
 
-      // Wire up configuration & hass mock.
       card.setConfig(testConfig);
       card.hass = hassMock;
     </script>
@@ -19075,34 +19071,21 @@ for (const filePath of exampleFiles) {
 ## File: tests/e2e/test-helpers.ts
 
 ```typescript
-// Helpers to modify hass-taste-test behaviour for our e2e suite.
-// 1) Create a *very* minimal Home Assistant configuration so startup is fast
-//    and only the integrations/entities the LCARS examples need are loaded.
-// 2) Force each generated Lovelace view into panel-mode so the LCARS card can
-//    use the full width in our screenshots. We no longer override the theme or
-//    background – the test pages will use Home Assistant's default styles.
 
 import { promises as fs } from 'fs';
 import { HomeAssistant, PlaywrightBrowser } from 'hass-taste-test';
 import { expect } from '@playwright/test';
 
-// Prevent double-patching if this file is imported in multiple spec files.
-if (!(HomeAssistant as any)._lcarsPatched) {
-  //--------------------------------------------------------------------------
-  // 1. Patch writeYAMLConfiguration → strip `default_config:` and add only the
-  //    integrations we explicitly need.
-  //--------------------------------------------------------------------------
-  (HomeAssistant.prototype as any).writeYAMLConfiguration = async function (additionalCfg: string) {
-    // Core services so Lovelace & HTTP work.
-    const base = [
+  if (!(HomeAssistant as any)._lcarsPatched) {
+      (HomeAssistant.prototype as any).writeYAMLConfiguration = async function (additionalCfg: string) {
+      const base = [
       'frontend:',
       'http:',
       `  server_host: ${this.options.host}`,
       `  server_port: ${this.chosenPort}`,
-    ];
+          ];
 
-    // Lightweight "demo" entities the example dashboards rely on.
-    const demoEntities = [
+      const demoEntities = [
       'input_boolean:',
       '  kitchen_sink_light:',
       '    name: Kitchen Sink Light',
@@ -19150,13 +19133,9 @@ if (!(HomeAssistant as any)._lcarsPatched) {
 
     const contents = [...base, '', additionalCfg.trim(), '', ...demoEntities, ''].join('\n');
     await fs.writeFile(this.path_confFile(), contents);
-  };
+      };
 
-  //--------------------------------------------------------------------------
-  // 2. Patch setDashboardView → save dashboards in *panel* mode so the LCARS
-  //    card always occupies the full browser width.
-  //--------------------------------------------------------------------------
-  (HomeAssistant.prototype as any).setDashboardView = async function (dashboardPath: string, cards: any[]) {
+    (HomeAssistant.prototype as any).setDashboardView = async function (dashboardPath: string, cards: unknown[]) {
     await this.ws.sendMessagePromise({
       type: 'lovelace/config/save',
       url_path: dashboardPath,
@@ -19172,14 +19151,11 @@ if (!(HomeAssistant as any)._lcarsPatched) {
         ],
       },
     });
-  };
+      };
 
-  // Monkey-patch the HomeAssistant class to provide a default config that includes
-  // our dependencies and a simple `kitchen_sink_light` that can be used
-  // across all test configurations.
-  const originalCreate = HomeAssistant.create;
+    const originalCreate = HomeAssistant.create;
 
-  HomeAssistant.create = async function (config: string, options: any): Promise<HomeAssistant<any>> {
+  HomeAssistant.create = async function (config: string, options: unknown): Promise<HomeAssistant<any>> {
     const fullConfig =
 `input_boolean:
   kitchen_sink_light:
@@ -19230,44 +19206,59 @@ light:
   };
 
   (HomeAssistant as any)._lcarsPatched = true;
-}
-
-// ============================================================================
-// Animation Timing Utilities for Proper Test Synchronization
-// ============================================================================
+  }
 
 export interface AnimationTimingInfo {
   totalDuration: number;
   hasAnimations: boolean;
   hasSequences: boolean;
-  elementAnimations: Map<string, number>; // elementId -> max duration for that element
+  elementAnimations: Map<string, number>;
 }
 
+type AnimationConfig = {
+  duration?: number;
+  delay?: number;
+  repeat?: number;
+};
+
+type SequenceConfig = {
+  steps?: Array<{
+    index: number;
+    animations: AnimationConfig[];
+  }>;
+};
+
+type ElementConfig = {
+  id?: string;
+  animations?: {
+    on_load?: AnimationConfig | SequenceConfig;
+    on_state_change?: AnimationConfig[];
+    [key: string]: unknown;
+  };
+};
+
+type YamlConfig = {
+  groups?: Array<{
+    group_id: string;
+    elements?: ElementConfig[];
+  }>;
+};
+
 export class AnimationTimingCalculator {
-  /**
-   * Calculate duration for a single animation using the same formula as Animation.getRuntime()
-   * Formula: delay + duration * (repeat + 1)
-   */
-  static calculateAnimationDuration(animationConfig: any): number {
+  static calculateAnimationDuration(animationConfig: AnimationConfig): number {
     if (!animationConfig) return 0;
     
-    // The Animation.getRuntime() method expects duration in milliseconds and uses default 500ms
-    // In YAML configs, values like duration: 2 or duration: 0.5 represent seconds, so convert to ms
-    // But values like duration: 500 or duration: 1500 are already in milliseconds
     const rawDuration = animationConfig.duration;
     let duration: number;
     
     if (typeof rawDuration === 'number') {
-      // If value is less than 10, treat it as seconds and convert to milliseconds
-      // If value is 10 or greater, treat it as milliseconds
       duration = rawDuration < 10 ? rawDuration * 1000 : rawDuration;
     } else {
-      duration = 500; // Default 500ms as per Animation.getRuntime()
+      duration = 500;
     }
     
     const repeat = typeof animationConfig.repeat === 'number' && animationConfig.repeat > 0 ? animationConfig.repeat : 0;
     
-    // Same logic for delay
     const rawDelay = animationConfig.delay;
     let delay: number;
     
@@ -19277,21 +19268,15 @@ export class AnimationTimingCalculator {
       delay = 0;
     }
     
-    // Use same formula as Animation.getRuntime(): delay + duration * (repeat + 1)
     return delay + duration * (repeat + 1);
   }
 
-  /**
-   * Calculate total duration for an animation sequence
-   * Sequences run steps sequentially, with parallel animations within each step
-   */
-  static calculateSequenceDuration(sequenceConfig: any): number {
+  static calculateSequenceDuration(sequenceConfig: SequenceConfig): number {
     if (!sequenceConfig?.steps || !Array.isArray(sequenceConfig.steps)) {
       return 0;
     }
 
-    // Group animations by step index and calculate sequential timing
-    const stepMap = new Map<number, any[]>();
+    const stepMap = new Map<number, AnimationConfig[]>();
     
     for (const step of sequenceConfig.steps) {
       if (!step || typeof step.index !== 'number') continue;
@@ -19305,51 +19290,41 @@ export class AnimationTimingCalculator {
       }
     }
 
-    // Calculate duration for each step (steps run sequentially)
     let totalDuration = 0;
     const sortedIndices = Array.from(stepMap.keys()).sort((a, b) => a - b);
     
     for (const index of sortedIndices) {
       const animations = stepMap.get(index)!;
       
-      // Within a step, animations run in parallel, so we take the maximum duration
       let stepMaxDuration = 0;
       for (const anim of animations) {
         const animDuration = this.calculateAnimationDuration(anim);
         stepMaxDuration = Math.max(stepMaxDuration, animDuration);
       }
       
-      // Steps run sequentially, so add to total
       totalDuration += stepMaxDuration;
     }
 
     return totalDuration;
   }
 
-  /**
-   * Analyze all animations for a single element and return the maximum duration
-   */
-  static analyzeElementAnimations(elementConfig: any, elementId: string): number {
+  static analyzeElementAnimations(elementConfig: ElementConfig, elementId: string): number {
     if (!elementConfig?.animations) return 0;
 
     let maxDuration = 0;
 
-    // Check on_load animations
     if (elementConfig.animations.on_load) {
       const onLoadConfig = elementConfig.animations.on_load;
       
-      if (onLoadConfig.steps) {
-        // This is a sequence
+      if ('steps' in onLoadConfig && onLoadConfig.steps) {
         const sequenceDuration = this.calculateSequenceDuration(onLoadConfig);
         maxDuration = Math.max(maxDuration, sequenceDuration);
       } else {
-        // This is a single animation
-        const animDuration = this.calculateAnimationDuration(onLoadConfig);
+        const animDuration = this.calculateAnimationDuration(onLoadConfig as AnimationConfig);
         maxDuration = Math.max(maxDuration, animDuration);
       }
     }
 
-    // Check state change animations
     if (Array.isArray(elementConfig.animations.on_state_change)) {
       for (const stateAnim of elementConfig.animations.on_state_change) {
         const animDuration = this.calculateAnimationDuration(stateAnim);
@@ -19357,16 +19332,13 @@ export class AnimationTimingCalculator {
       }
     }
 
-    // Check other animation types (on_show, on_hide, etc.)
     for (const [key, value] of Object.entries(elementConfig.animations)) {
       if (key !== 'on_load' && key !== 'on_state_change' && value) {
-        if (typeof value === 'object' && (value as any).steps) {
-          // Sequence animation
-          const sequenceDuration = this.calculateSequenceDuration(value);
+        if (typeof value === 'object' && 'steps' in value && Array.isArray((value as any).steps)) {
+          const sequenceDuration = this.calculateSequenceDuration(value as SequenceConfig);
           maxDuration = Math.max(maxDuration, sequenceDuration);
         } else if (typeof value === 'object') {
-          // Single animation
-          const animDuration = this.calculateAnimationDuration(value);
+          const animDuration = this.calculateAnimationDuration(value as AnimationConfig);
           maxDuration = Math.max(maxDuration, animDuration);
         }
       }
@@ -19375,7 +19347,7 @@ export class AnimationTimingCalculator {
     return maxDuration;
   }
 
-  static analyzeConfigurationTiming(yamlConfig: any): AnimationTimingInfo {
+  static analyzeConfigurationTiming(yamlConfig: YamlConfig): AnimationTimingInfo {
     const result: AnimationTimingInfo = {
       totalDuration: 0,
       hasAnimations: false,
@@ -19399,15 +19371,14 @@ export class AnimationTimingCalculator {
           result.totalDuration = Math.max(result.totalDuration, elementDuration);
           result.hasAnimations = true;
           
-          if (element.animations?.on_load?.steps) {
+          if (element.animations?.on_load && 'steps' in element.animations.on_load) {
             result.hasSequences = true;
           }
         }
       }
     }
 
-    // Cap maximum duration to prevent excessively long waits
-    const MAX_ANIMATION_WAIT = 10000; // 10 seconds max
+    const MAX_ANIMATION_WAIT = 10000;
     if (result.totalDuration > MAX_ANIMATION_WAIT) {
       console.warn(`Animation duration ${result.totalDuration}ms exceeds maximum, capping at ${MAX_ANIMATION_WAIT}ms`);
       result.totalDuration = MAX_ANIMATION_WAIT;
@@ -19416,10 +19387,7 @@ export class AnimationTimingCalculator {
     return result;
   }
 
-  /**
-   * Calculate timing info with debug logging for troubleshooting
-   */
-  static analyzeConfigurationTimingWithDebug(yamlConfig: any, enableLogging: boolean = false): AnimationTimingInfo {
+  static analyzeConfigurationTimingWithDebug(yamlConfig: YamlConfig, enableLogging: boolean = false): AnimationTimingInfo {
     const result = this.analyzeConfigurationTiming(yamlConfig);
     
     if (enableLogging) {
@@ -19438,37 +19406,25 @@ export class AnimationTimingCalculator {
 }
 
 export class TestWaitHelper {
-  /**
-   * Wait for animations to complete based on configuration analysis
-   * Includes the required 0.5s buffer after animations complete
-   */
   static async waitForAnimations(
     page: any, 
     timingInfo: AnimationTimingInfo, 
-    bufferMs: number = 500  // Required 0.5s buffer after animations complete
+    bufferMs: number = 500
   ): Promise<void> {
     if (!timingInfo.hasAnimations) {
-      // No animations, just a brief wait for any rendering to settle
       await page.waitForTimeout(100);
       return;
     }
 
-    // Calculate wait time: animation duration + required 0.5s buffer
     const waitTime = Math.ceil(timingInfo.totalDuration) + bufferMs;
-    
-    // Wait for the calculated duration plus buffer
     await page.waitForTimeout(waitTime);
   }
 
-  /**
-   * Wait for state change animations triggered by interactions
-   * Includes the required 0.5s buffer after animations complete
-   */
   static async waitForStateChangeAnimations(
     page: any,
     yamlConfig: any,
     targetElementId: string,
-    bufferMs: number = 500  // Required 0.5s buffer after animations complete
+    bufferMs: number = 500
   ): Promise<void> {
     if (!yamlConfig?.groups) {
       await page.waitForTimeout(100);
@@ -19493,101 +19449,68 @@ export class TestWaitHelper {
     }
 
     if (maxStateChangeDuration > 0) {
-      // Cap maximum duration to prevent timeouts
-      const MAX_STATE_CHANGE_WAIT = 5000; // 5 seconds max
+      const MAX_STATE_CHANGE_WAIT = 5000;
       if (maxStateChangeDuration > MAX_STATE_CHANGE_WAIT) {
         maxStateChangeDuration = MAX_STATE_CHANGE_WAIT;
-      }
-      
-      // Calculate wait time: animation duration + required 0.5s buffer
-      const waitTime = Math.ceil(maxStateChangeDuration) + bufferMs;
+              }
+        
+        const waitTime = Math.ceil(maxStateChangeDuration) + bufferMs;
       await page.waitForTimeout(waitTime);
-    } else {
-      // Default wait for any potential animations not detected
-      await page.waitForTimeout(400);
-    }
+          } else {
+        await page.waitForTimeout(400);
+      }
   }
 
-  /**
-   * Enhanced wait for interactions that considers both hover/active state timing and subsequent animations
-   */
   static async waitForInteractionEffects(
     page: any,
     interactionType: 'hover' | 'active' | 'click',
-    baseWaitMs: number = 250  // Base wait for CSS transitions and immediate visual feedback
+    baseWaitMs: number = 250
   ): Promise<void> {
-    // Base wait for CSS transitions and immediate visual feedback
     await page.waitForTimeout(baseWaitMs);
     
-    // Additional waits based on interaction type
     if (interactionType === 'hover') {
-      // Extra time for shadow DOM re-render and color updates to stabilize
       await page.waitForTimeout(200);
     } else if (interactionType === 'active') {
-      // Active states need time for mouse down visual feedback
       await page.waitForTimeout(100);
     } else if (interactionType === 'click') {
-      // Extra time for action processing and state changes
       await page.waitForTimeout(350);
     }
     
-    // Additional stabilization wait for all interactions
     await page.waitForTimeout(50);
   }
 
-  /**
-   * Wait specifically for GSAP timeline completion with extra buffer
-   * Includes the required 0.5s buffer after animations complete
-   */
   static async waitForGSAPTimelines(
     page: any,
     estimatedDuration: number,
-    bufferMs: number = 500  // Required 0.5s buffer after animations complete
+    bufferMs: number = 500
   ): Promise<void> {
-    // Cap maximum duration to prevent timeouts
-    const MAX_GSAP_WAIT = 5000; // 5 seconds max
+    const MAX_GSAP_WAIT = 5000;
     const cappedDuration = Math.min(estimatedDuration, MAX_GSAP_WAIT);
     
-    // Calculate wait time: animation duration + required 0.5s buffer
     const waitTime = Math.ceil(cappedDuration) + bufferMs;
     await page.waitForTimeout(waitTime);
   }
 
-  /**
-   * Ensure shadow DOM stability after interactive state changes
-   * This is particularly important for hover states where shadow DOM re-rendering can vary
-   */
   static async ensureShadowDOMStability(
     page: any,
     cardLocator: any,
     retries: number = 3
   ): Promise<void> {
-    // Wait for shadow DOM to be stable
     for (let i = 0; i < retries; i++) {
       try {
-        // Check if the card's shadow DOM is accessible and stable
         await cardLocator.locator('svg').waitFor({ state: 'attached', timeout: 1000 });
-        
-        // Additional wait for any pending updates to settle
         await page.waitForTimeout(100);
-        
-        // Verify stability by checking if SVG is still attached
         await cardLocator.locator('svg').waitFor({ state: 'attached', timeout: 500 });
-        
-        break; // Success
+        break;
       } catch (error) {
         if (i === retries - 1) {
-          throw error; // Last retry failed
+          throw error;
         }
-        await page.waitForTimeout(100); // Brief wait before retry
+        await page.waitForTimeout(100);
       }
     }
   }
 
-  /**
-   * Enhanced click interaction with proper mouse down/up states for better visual testing
-   * Returns the updated step index after taking all screenshots
-   */
   static async performClickSequence(
     page: any,
     buttonLocator: any,
@@ -19602,36 +19525,32 @@ export class TestWaitHelper {
     const centerX = box.x + box.width / 2;
     const centerY = box.y + box.height / 2;
 
-    // Step N: Mouse hover state
     let currentStep = stepIndex;
     await buttonLocator.hover();
     await this.waitForInteractionEffects(page, 'hover');
     await this.ensureShadowDOMStability(page, cardLocator);
-    await page.waitForTimeout(50); // Brief stabilization
+    await page.waitForTimeout(50);
     
     const paddedCurrentStep = currentStep.toString().padStart(2, '0');
     await expect(cardLocator).toHaveScreenshot(`${baseName}-${paddedCurrentStep}-${buttonFullId}-mouse-hover.png`);
     currentStep++;
 
-    // Step N+1: Mouse down (active) state
     await page.mouse.move(centerX, centerY);
     await page.mouse.down();
     await this.waitForInteractionEffects(page, 'active');
     await this.ensureShadowDOMStability(page, cardLocator);
-    await page.waitForTimeout(50); // Brief stabilization for active state capture
+    await page.waitForTimeout(50);
     
     const paddedActiveStep = currentStep.toString().padStart(2, '0');
     await expect(cardLocator).toHaveScreenshot(`${baseName}-${paddedActiveStep}-${buttonFullId}-mouse-click.png`);
     currentStep++;
 
-    // Step N+2: Mouse up (complete click)
     await page.mouse.up();
     await this.waitForInteractionEffects(page, 'click');
     await this.ensureShadowDOMStability(page, cardLocator);
     
-    // Step N+3: Mouse away (return to normal state)
-    await page.mouse.move(centerX + 100, centerY + 100); // Move mouse away from element
-    await page.waitForTimeout(200); // Wait for hover state to clear
+    await page.mouse.move(centerX + 100, centerY + 100);
+    await page.waitForTimeout(200);
     await this.ensureShadowDOMStability(page, cardLocator);
     
     const paddedAwayStep = currentStep.toString().padStart(2, '0');

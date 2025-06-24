@@ -3,16 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <title>LCARS Card Test Harness</title>
-    <!-- Load Antonio font for consistent rendering -->
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap" rel="stylesheet" />
-    <!-- Import the card via Vite dev server. -->
     <script type="module" src="/src/lovelace-lcars-card.ts"></script>
     <style>
       html, body {
         margin: 0;
         padding: 0;
       }
-      /* Give the card a predictable size for screenshot stability */
       lovelace-lcars-card {
         width: 600px;
         height: 200px;
@@ -24,8 +21,6 @@
     <lovelace-lcars-card id="test-card"></lovelace-lcars-card>
 
     <script type="module">
-      // Minimal mock of the Home Assistant object used by the card.
-      // Extend as needed when new features rely on more properties.
       const hassMock = {
         states: {},
         themes: {},
@@ -34,7 +29,6 @@
       };
 
       const card = document.getElementById('test-card');
-      // Very small config – keeps the SVG predictable while still exercising core functionality.
       const testConfig = {
         type: 'lovelace-lcars-card',
         groups: [
@@ -65,7 +59,6 @@
         ],
       };
 
-      // Wire up configuration & hass mock.
       card.setConfig(testConfig);
       card.hass = hassMock;
     </script>
