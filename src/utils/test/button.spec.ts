@@ -108,18 +108,21 @@ describe('Button', () => {
       const props = {
         button: {
           enabled: true,
-          action_config: {
-            type: 'toggle',
-            entity: 'light.test',
-            confirmation: true
+          actions: {
+            tap: {
+              action: 'toggle',
+              entity: 'light.test',
+              confirmation: true
+            }
           }
         }
       };
       
       const button = new Button('test-button', props, mockHass, mockRequestUpdate);
       
-      // Simulate button click
-      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      // Simulate button click by calling handleClick directly
+      const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
+      (button as any).handleClick(mockEvent);
       
       expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(1);
       expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
@@ -139,8 +142,8 @@ describe('Button', () => {
       const props = {
         button: {
           enabled: true,
-          action_config: {
-            actions: [
+          actions: {
+            tap: [
               {
                 action: 'toggle',
                 entity: 'light.living_room'
@@ -157,8 +160,9 @@ describe('Button', () => {
       
       const button = new Button('test-button', props, mockHass, mockRequestUpdate);
       
-      // Simulate button click
-      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      // Simulate button click by calling handleClick directly
+      const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
+      (button as any).handleClick(mockEvent);
       
       expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(2);
       expect(executeUnifiedActionSpy).toHaveBeenNthCalledWith(1, 
@@ -185,8 +189,8 @@ describe('Button', () => {
       const props = {
         button: {
           enabled: true,
-          action_config: {
-            actions: [
+          actions: {
+            tap: [
               {
                 action: 'set-state',
                 target_element_ref: 'group.element',
@@ -199,8 +203,9 @@ describe('Button', () => {
       
       const button = new Button('test-button', props, mockHass, mockRequestUpdate);
       
-      // Simulate button click
-      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      // Simulate button click by calling handleClick directly
+      const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
+      (button as any).handleClick(mockEvent);
       
       expect(convertToUnifiedActionSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -218,17 +223,20 @@ describe('Button', () => {
       const props = {
         button: {
           enabled: true,
-          action_config: {
-            type: 'toggle'
-            // entity intentionally missing
+          actions: {
+            tap: {
+              action: 'toggle'
+              // entity intentionally missing
+            }
           }
         }
       };
       
       const button = new Button('test-button', props, mockHass, mockRequestUpdate);
       
-      // Simulate button click
-      (button as any).executeButtonAction(props.button, document.createElement('div'));
+      // Simulate button click by calling handleClick directly
+      const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
+      (button as any).handleClick(mockEvent);
       
       expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
         expect.objectContaining({

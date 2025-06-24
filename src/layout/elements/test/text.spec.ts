@@ -18,12 +18,14 @@ vi.mock('../../../utils/button.js', () => {
   };
 });
 
-vi.mock('../../../utils/shapes.js', () => {
+vi.mock('../../../utils/font-manager.js', () => {
   return {
-    getFontMetrics: vi.fn(),
-    measureTextBBox: vi.fn(),
-    getSvgTextWidth: vi.fn(),
-    getTextWidth: vi.fn()
+    FontManager: {
+      getFontMetrics: vi.fn(),
+      measureTextWidth: vi.fn(),
+      ensureFontsLoaded: vi.fn().mockResolvedValue(undefined),
+      clearMetricsCache: vi.fn()
+    }
   };
 });
 
@@ -32,7 +34,7 @@ import { TextElement } from '../text';
 import { Button } from '../../../utils/button.js';
 import { svg, SVGTemplateResult } from 'lit';
 import { HomeAssistant } from 'custom-card-helpers';
-import * as shapes from '../../../utils/shapes.js';
+import { FontManager } from '../../../utils/font-manager.js';
 
 // Create a simple SVG renderer to test SVG templates
 function renderSvgTemplate(template: SVGTemplateResult): SVGElement {
@@ -74,9 +76,8 @@ describe('TextElement', () => {
     document.body.appendChild(mockSvgContainer);
 
     // Reset mock implementations
-    (shapes.getFontMetrics as any).mockReturnValue(null);
-    (shapes.measureTextBBox as any).mockReturnValue(null);
-    (shapes.getSvgTextWidth as any).mockReturnValue(0);
+    (FontManager.getFontMetrics as any).mockReturnValue(null);
+    (FontManager.measureTextWidth as any).mockReturnValue(0);
   });
 
   afterEach(() => {
@@ -132,25 +133,26 @@ describe('TextElement', () => {
     it('should calculate size using fontmetrics if available', () => {
       const props = {
         text: 'Test',
-        fontSize: 16,
+        height: 20, // Provide height without fontSize to trigger getFontMetrics call
         fontFamily: 'Arial'
       };
       textElement = new TextElement('txt-metrics', props);
 
-      (shapes.getFontMetrics as any).mockReturnValue({
+      (FontManager.getFontMetrics as any).mockReturnValue({
         top: -0.8,
         bottom: 0.2,
         ascent: -0.75,
         descent: 0.25,
+        capHeight: 0.7
       });
 
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
-      expect(shapes.getFontMetrics).toHaveBeenCalledWith(expect.objectContaining({ 
+      expect(FontManager.getFontMetrics).toHaveBeenCalledWith('Arial', 'normal');
+      expect(FontManager.measureTextWidth).toHaveBeenCalledWith('Test', expect.objectContaining({
         fontFamily: 'Arial',
-        fontSize: 16 
+        fontWeight: 'normal'
       }));
-      expect(shapes.getSvgTextWidth).toHaveBeenCalledWith('Test', 'normal 16px Arial', undefined, undefined);
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 
@@ -162,11 +164,15 @@ describe('TextElement', () => {
       };
       textElement = new TextElement('txt-fallback', props);
 
-      (shapes.getFontMetrics as any).mockReturnValue(null);
+      (FontManager.getFontMetrics as any).mockReturnValue(null);
 
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
-      expect(shapes.getSvgTextWidth).toHaveBeenCalledWith('Test', 'normal 20px Arial', undefined, undefined);
+      expect(FontManager.measureTextWidth).toHaveBeenCalledWith('Test', expect.objectContaining({
+        fontFamily: 'Arial',
+        fontSize: 20,
+        fontWeight: 'normal'
+      }));
       expect(textElement.intrinsicSize.height).toBe(24); // fontSize * 1.2
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
@@ -181,14 +187,20 @@ describe('TextElement', () => {
       };
       textElement = new TextElement('txt-spacing', props);
 
-      (shapes.getFontMetrics as any).mockReturnValue({
+      (FontManager.getFontMetrics as any).mockReturnValue({
         top: -0.8,
         bottom: 0.2,
       });
 
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
-      expect(shapes.getSvgTextWidth).toHaveBeenCalledWith('Test', 'normal 18px Arial', '2px', 'uppercase');
+      expect(FontManager.measureTextWidth).toHaveBeenCalledWith('Test', expect.objectContaining({
+        fontFamily: 'Arial',
+        fontSize: 18,
+        fontWeight: 'normal',
+        letterSpacing: '2px',
+        textTransform: 'uppercase'
+      }));
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 
@@ -354,11 +366,11 @@ describe('TextElement', () => {
       
       const textElem = renderSvgTemplate(result!);
       expect(parseFloat(textElem.getAttribute('y') || '0')).toBeCloseTo(15 + (-(-0.7) * 18)); // Uses _cachedMetrics.ascent
-      expect(shapes.getFontMetrics).not.toHaveBeenCalled();
+      expect(FontManager.getFontMetrics).not.toHaveBeenCalled();
     });
 
     it('should try to fetch new metrics if no cached or initial metrics, and fontFamily is present', () => {
-      (shapes.getFontMetrics as any).mockReturnValue({ 
+      (FontManager.getFontMetrics as any).mockReturnValue({ 
         ascent: -0.6, top: -0.6, bottom: 0, descent: 0, capHeight: 0, xHeight: 0, baseline: 0,
         fontFamily: 'TestFont', fontWeight: 'normal', fontSize: 15, tittle: 0
       });
@@ -372,10 +384,7 @@ describe('TextElement', () => {
       
       const textElem = renderSvgTemplate(result!);
 
-      expect(shapes.getFontMetrics).toHaveBeenCalledWith(expect.objectContaining({
-        fontFamily: 'TestFont',
-        fontSize: 15
-      }));
+      expect(FontManager.getFontMetrics).toHaveBeenCalledWith('TestFont', undefined);
       expect(parseFloat(textElem.getAttribute('y') || '0')).toBeCloseTo(8 + (-(-0.6) * 15));
       // Check that _cachedMetrics is now set
       expect((textElement as any)._cachedMetrics).toEqual({ 

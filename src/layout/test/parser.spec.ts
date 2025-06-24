@@ -8,15 +8,12 @@ const mockRectangleElementConstructor = vi.hoisted(() => vi.fn());
 const mockEndcapElementConstructor = vi.hoisted(() => vi.fn());
 const mockElbowElementConstructor = vi.hoisted(() => vi.fn());
 const mockChiselEndcapElementConstructor = vi.hoisted(() => vi.fn());
-const mockTopHeaderElementConstructor = vi.hoisted(() => vi.fn());
-
 // Mock imports
 vi.mock('../elements/text', () => ({ TextElement: mockTextElementConstructor }));
 vi.mock('../elements/rectangle', () => ({ RectangleElement: mockRectangleElementConstructor }));
 vi.mock('../elements/endcap', () => ({ EndcapElement: mockEndcapElementConstructor }));
 vi.mock('../elements/elbow', () => ({ ElbowElement: mockElbowElementConstructor }));
 vi.mock('../elements/chisel_endcap', () => ({ ChiselEndcapElement: mockChiselEndcapElementConstructor }));
-vi.mock('../elements/top_header', () => ({ TopHeaderElement: mockTopHeaderElementConstructor }));
 
 // Import after mock setup
 import { HomeAssistant } from 'custom-card-helpers';
@@ -30,7 +27,6 @@ import { RectangleElement } from '../elements/rectangle';
 import { EndcapElement } from '../elements/endcap';
 import { ElbowElement } from '../elements/elbow';
 import { ChiselEndcapElement } from '../elements/chisel_endcap';
-import { TopHeaderElement } from '../elements/top_header';
 
 describe('parseConfig', () => {
   let mockHass: HomeAssistant;
