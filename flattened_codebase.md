@@ -88,13 +88,42 @@ lovelace-lcars-card/
 │       └── transform-propagator.ts
 ├── test-results/
 │   ├── .last-run.json
-│   └── config-examples-18-sequent-66b25-ation-baseline-interactions-chromium/
+│   ├── config-examples-18-sequent-66b25-ation-baseline-interactions-chromium/
+│   │   ├── 18-sequential-animation-and-propogation-initial-actual.png
+│   │   ├── 18-sequential-animation-and-propogation-initial-diff.png
+│   │   ├── 18-sequential-animation-and-propogation-initial-expected.png
+│   │   ├── error-context.md
+│   │   ├── trace.zip
+│   │   └── video.webm
+│   └── config-examples-8-animations-baseline-interactions-chromium/
+│       ├── 8-animations-sliding-panel-0cec4-l-trigger-button-active-actual.png
+│       ├── 8-animations-sliding-panel-0cec4-l-trigger-button-active-diff.png
+│       ├── 8-animations-sliding-panel-0cec4-l-trigger-button-active-expected.png
+│       ├── error-context.md
+│       ├── trace.zip
 │       └── video.webm
 ├── tests/
 │   └── e2e/
 │       ├── config-examples.spec.ts
 │       ├── config-examples.spec.ts-snapshots/
-│       │   └── 18-sequential-animation-and-propogation-initial-chromium-linux.png
+│       │   ├── 18-sequential-animation-and-propogation-initial-chromium-linux.png
+│       │   ├── 8-animations-initial-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-multi-trigger-button-active-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-multi-trigger-button-hover-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-multi-trigger-button-post-click-off-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-multi-trigger-button-post-click-on-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-reset-button-active-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-reset-button-hover-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-reset-button-post-click-off-chromium-linux.png
+│       │   ├── 8-animations-multi-action-group-reset-button-post-click-on-chromium-linux.png
+│       │   ├── 8-animations-scale-target-group-scale-trigger-button-active-chromium-linux.png
+│       │   ├── 8-animations-scale-target-group-scale-trigger-button-hover-chromium-linux.png
+│       │   ├── 8-animations-scale-target-group-scale-trigger-button-post-click-off-chromium-linux.png
+│       │   ├── 8-animations-scale-target-group-scale-trigger-button-post-click-on-chromium-linux.png
+│       │   ├── 8-animations-sliding-panel-group-sliding-panel-trigger-button-active-chromium-linux.png
+│       │   ├── 8-animations-sliding-panel-group-sliding-panel-trigger-button-hover-chromium-linux.png
+│       │   ├── 8-animations-sliding-panel-group-sliding-panel-trigger-button-post-click-off-chromium-linux.png
+│       │   └── 8-animations-sliding-panel-group-sliding-panel-trigger-button-post-click-on-chromium-linux.png
 │       ├── interactive-state.spec.ts
 │       ├── test-harness.html
 │       └── test-helpers.ts
@@ -126,7 +155,6 @@ lovelace-lcars-card/
 │   ├── 5-lcars-shape-elements.yaml
 │   ├── 6-complex-actions-and-visibility.yaml
 │   ├── 7-button-actions-and-confirmations.yaml
-│   ├── 8-animations.yaml
 │   └── 9-text-styling.yaml
 ├── yaml-config-definition.yaml
 └── yaml-config-examples/
@@ -12372,7 +12400,7 @@ export class AnimationManager {
 
     return {
       timeline,
-      affectsPositioning: this.animationEffectsPositioning(animationConfig),
+      affectsPositioning: this.hasPositioningEffects(animationConfig),
       syncData
     };
   }
@@ -12464,7 +12492,7 @@ export class AnimationManager {
     }
   }
 
-  animationEffectsPositioning(config: AnimationConfig): boolean {
+  hasPositioningEffects(config: AnimationConfig): boolean {
     if (this.positioningEffectsCache.has(config)) {
       return this.positioningEffectsCache.get(config)!;
     }
@@ -12707,16 +12735,13 @@ export class AnimationSequence {
 
     const sortedIndices = Array.from(grouped.keys()).sort((a, b) => a - b);
     
-    // Check if any animations in the sequence affect positioning - if so, use transform propagation
     const hasPositioningEffects = this.animations.some(({ anim }) => 
-      this.manager.animationEffectsPositioning(anim.config)
+      this.manager.hasPositioningEffects(anim.config)
     );
 
     if (hasPositioningEffects) {
-      // Use transform propagation for sequences with positioning effects
       this.runWithTransformPropagation(grouped, sortedIndices);
     } else {
-      // Use simple sequential execution for non-positioning sequences
       this.runSimpleSequence(grouped, sortedIndices);
     }
   }
@@ -12725,7 +12750,6 @@ export class AnimationSequence {
     grouped: Map<number, Animation[]>,
     sortedIndices: number[]
   ): void {
-    // Convert the AnimationSequence structure to match what TransformPropagator expects
     const sequenceDefinition = {
       steps: sortedIndices.map(idx => ({
         index: idx,
@@ -12733,7 +12757,6 @@ export class AnimationSequence {
       }))
     };
 
-    // Create base sync data from the first animation
     const firstAnimation = grouped.get(sortedIndices[0])![0];
     const baseSyncData = {
       duration: firstAnimation.config.duration || 500,
@@ -12741,7 +12764,6 @@ export class AnimationSequence {
       delay: firstAnimation.config.delay
     };
 
-    // Use TransformPropagator for proper sequence handling with positioning
     import('./transform-propagator.js').then(({ transformPropagator }) => {
       transformPropagator.processAnimationSequenceWithPropagation(
         this.elementId,
@@ -12749,6 +12771,25 @@ export class AnimationSequence {
         baseSyncData
       );
     });
+
+    let cumulativeDelay = 0;
+
+    for (const idx of sortedIndices) {
+      const group = grouped.get(idx)!;
+
+      let maxRuntimeInGroup = 0;
+
+      for (const anim of group) {
+        if (!this.manager.hasPositioningEffects(anim.config)) {
+          anim.execute(this.context, cumulativeDelay);
+        }
+
+        const runtime = anim.getRuntime();
+        if (runtime > maxRuntimeInGroup) maxRuntimeInGroup = runtime;
+      }
+
+      cumulativeDelay += maxRuntimeInGroup;
+    }
   }
 
   private runSimpleSequence(
@@ -14744,7 +14785,17 @@ export class StateManager {
     if (!this._ensureElementInitialized(elementId)) {
       return false;
     }
-    return this.store.toggleState(elementId, states);
+    const toggled = this.store.toggleState(elementId, states);
+
+    // If toggle succeeded, trigger any matching state-change animations
+    if (toggled) {
+      const newState = this.getState(elementId);
+      if (newState) {
+        this._handleStateChangeAnimations(elementId, newState);
+      }
+    }
+
+    return toggled;
   }
 
   /**
@@ -15090,17 +15141,17 @@ describe('AnimationManager - Pure Animation API', () => {
   describe('positioning effects detection', () => {
     it('should detect positioning effects for scale animations', () => {
       const config: AnimationConfig = { type: 'scale' };
-      expect(manager.animationEffectsPositioning(config)).toBe(true);
+      expect(manager.hasPositioningEffects(config)).toBe(true);
     });
 
     it('should detect positioning effects for slide animations', () => {
       const config: AnimationConfig = { type: 'slide' };
-      expect(manager.animationEffectsPositioning(config)).toBe(true);
+      expect(manager.hasPositioningEffects(config)).toBe(true);
     });
 
     it('should not detect positioning effects for fade animations', () => {
       const config: AnimationConfig = { type: 'fade' };
-      expect(manager.animationEffectsPositioning(config)).toBe(false);
+      expect(manager.hasPositioningEffects(config)).toBe(false);
     });
   });
 });
@@ -18454,9 +18505,87 @@ export const transformPropagator = new TransformPropagator();
 
 ```json
 {
-  "status": "passed",
-  "failedTests": []
+  "status": "failed",
+  "failedTests": [
+    "10708c82281818d9902f-aa096a296e74407190cb",
+    "10708c82281818d9902f-23a3c15363121be0d011"
+  ]
 }
+```
+
+## File: test-results/config-examples-18-sequent-66b25-ation-baseline-interactions-chromium/error-context.md
+
+```markdown
+# Page snapshot
+
+```yaml
+- complementary:
+  - button "Sidebar toggle"
+  - text: Home Assistant
+  - listbox:
+    - option "Overview":
+      - option "Overview"
+    - option "Dashboard 1" [selected]:
+      - option "Dashboard 1"
+    - option "Map":
+      - option "Map"
+    - option "To-do lists":
+      - option "To-do lists"
+    - option "Developer tools":
+      - option "Developer tools"
+    - option "Settings 2":
+      - option "Settings 2"
+  - option "Notifications"
+  - option "Profile":
+    - option "Developer"
+- text: LCARS
+- button "Entity search"
+- button "Edit dashboard"
+- img: Sequential Animation & Propagation example SEQUENCE This element should fade in, slide up, and scale up when it loads. fade in scale
+- img
+```
+```
+
+## File: test-results/config-examples-8-animations-baseline-interactions-chromium/error-context.md
+
+```markdown
+# Page snapshot
+
+```yaml
+- complementary:
+  - button "Sidebar toggle"
+  - text: Home Assistant
+  - listbox:
+    - option "Overview":
+      - option "Overview"
+    - option "Dashboard 1" [selected]:
+      - option "Dashboard 1"
+    - option "Map":
+      - option "Map"
+    - option "To-do lists":
+      - option "To-do lists"
+    - option "Developer tools":
+      - option "Developer tools"
+    - option "Settings 2":
+      - option "Settings 2"
+  - option "Notifications"
+  - option "Profile":
+    - option "Developer"
+- text: LCARS
+- button "Entity search"
+- button "Edit dashboard"
+- img:
+  - text: Animation Configuration example LOADING... This element should have a fade-in effect when it loads.
+  - button "sliding_panel_group.sliding_panel_trigger_button"
+  - text: SHOW PANEL This button should trigger a panel to slide in from the left..
+  - button "scale_target_group.scale_trigger_button"
+  - text: SCALE This button should toggle the scale of the "scale_target" element when pressed. SCALE TARGET SEQUENCE This element should fade in, slide up, and scale up when it loads.
+  - button "multi_action_group.multi_trigger_button"
+  - text: MULTI ACTION
+  - button "multi_action_group.reset_button"
+  - text: RESET ALL
+- img
+```
 ```
 
 ## File: tests/e2e/config-examples.spec.ts

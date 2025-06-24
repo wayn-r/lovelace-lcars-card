@@ -70,7 +70,17 @@ export class StateManager {
     if (!this._ensureElementInitialized(elementId)) {
       return false;
     }
-    return this.store.toggleState(elementId, states);
+    const toggled = this.store.toggleState(elementId, states);
+
+    // If toggle succeeded, trigger any matching state-change animations
+    if (toggled) {
+      const newState = this.getState(elementId);
+      if (newState) {
+        this._handleStateChangeAnimations(elementId, newState);
+      }
+    }
+
+    return toggled;
   }
 
   /**

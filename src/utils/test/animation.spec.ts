@@ -132,17 +132,17 @@ describe('AnimationManager - Pure Animation API', () => {
   describe('positioning effects detection', () => {
     it('should detect positioning effects for scale animations', () => {
       const config: AnimationConfig = { type: 'scale' };
-      expect(manager.animationEffectsPositioning(config)).toBe(true);
+      expect(manager.hasPositioningEffects(config)).toBe(true);
     });
 
     it('should detect positioning effects for slide animations', () => {
       const config: AnimationConfig = { type: 'slide' };
-      expect(manager.animationEffectsPositioning(config)).toBe(true);
+      expect(manager.hasPositioningEffects(config)).toBe(true);
     });
 
     it('should not detect positioning effects for fade animations', () => {
       const config: AnimationConfig = { type: 'fade' };
-      expect(manager.animationEffectsPositioning(config)).toBe(false);
+      expect(manager.hasPositioningEffects(config)).toBe(false);
     });
   });
 }); 

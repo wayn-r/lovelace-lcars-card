@@ -126,7 +126,7 @@ export class AnimationManager {
 
     return {
       timeline,
-      affectsPositioning: this.animationEffectsPositioning(animationConfig),
+      affectsPositioning: this.hasPositioningEffects(animationConfig),
       syncData
     };
   }
@@ -218,7 +218,7 @@ export class AnimationManager {
     }
   }
 
-  animationEffectsPositioning(config: AnimationConfig): boolean {
+  hasPositioningEffects(config: AnimationConfig): boolean {
     if (this.positioningEffectsCache.has(config)) {
       return this.positioningEffectsCache.get(config)!;
     }
@@ -461,16 +461,13 @@ export class AnimationSequence {
 
     const sortedIndices = Array.from(grouped.keys()).sort((a, b) => a - b);
     
-    // Check if any animations in the sequence affect positioning - if so, use transform propagation
     const hasPositioningEffects = this.animations.some(({ anim }) => 
-      this.manager.animationEffectsPositioning(anim.config)
+      this.manager.hasPositioningEffects(anim.config)
     );
 
     if (hasPositioningEffects) {
-      // Use transform propagation for sequences with positioning effects
       this.runWithTransformPropagation(grouped, sortedIndices);
     } else {
-      // Use simple sequential execution for non-positioning sequences
       this.runSimpleSequence(grouped, sortedIndices);
     }
   }
@@ -479,7 +476,6 @@ export class AnimationSequence {
     grouped: Map<number, Animation[]>,
     sortedIndices: number[]
   ): void {
-    // Convert the AnimationSequence structure to match what TransformPropagator expects
     const sequenceDefinition = {
       steps: sortedIndices.map(idx => ({
         index: idx,
@@ -487,7 +483,6 @@ export class AnimationSequence {
       }))
     };
 
-    // Create base sync data from the first animation
     const firstAnimation = grouped.get(sortedIndices[0])![0];
     const baseSyncData = {
       duration: firstAnimation.config.duration || 500,
@@ -495,7 +490,6 @@ export class AnimationSequence {
       delay: firstAnimation.config.delay
     };
 
-    // Use TransformPropagator for proper sequence handling with positioning
     import('./transform-propagator.js').then(({ transformPropagator }) => {
       transformPropagator.processAnimationSequenceWithPropagation(
         this.elementId,
@@ -503,6 +497,25 @@ export class AnimationSequence {
         baseSyncData
       );
     });
+
+    let cumulativeDelay = 0;
+
+    for (const idx of sortedIndices) {
+      const group = grouped.get(idx)!;
+
+      let maxRuntimeInGroup = 0;
+
+      for (const anim of group) {
+        if (!this.manager.hasPositioningEffects(anim.config)) {
+          anim.execute(this.context, cumulativeDelay);
+        }
+
+        const runtime = anim.getRuntime();
+        if (runtime > maxRuntimeInGroup) maxRuntimeInGroup = runtime;
+      }
+
+      cumulativeDelay += maxRuntimeInGroup;
+    }
   }
 
   private runSimpleSequence(
