@@ -1,7 +1,6 @@
 # LCARS-Card Refactor Roadmap
 
 *Each checkbox can be marked ✓ when the step is complete.*
-*With each step and change, add and commit the changes to the current repo.*
 
 ---
 

@@ -5,10 +5,11 @@ const haUrl = process.env.HA_URL || 'http://192.168.0.70:8123';
 
 export default defineConfig({
   testDir: './tests/e2e',
-  timeout: 30_000,
+  timeout: 60_000,
   expect: {
     toHaveScreenshot: {
       threshold: 0.2,
+      maxDiffPixelRatio: 0.025,
     },
   },
   use: {

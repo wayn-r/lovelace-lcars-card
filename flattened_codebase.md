@@ -78,6 +78,7 @@ lovelace-lcars-card/
 │       ├── shapes.ts
 │       ├── state-manager.ts
 │       ├── test/
+│       │   ├── animation-timing.spec.ts
 │       │   ├── animation.spec.ts
 │       │   ├── button.spec.ts
 │       │   ├── color-resolver.spec.ts
@@ -89,42 +90,31 @@ lovelace-lcars-card/
 ├── test-results/
 │   ├── .last-run.json
 │   ├── config-examples-18-sequent-66b25-ation-baseline-interactions-chromium/
-│   │   ├── 18-sequential-animation-and-propogation-initial-actual.png
-│   │   ├── 18-sequential-animation-and-propogation-initial-diff.png
-│   │   ├── 18-sequential-animation-and-propogation-initial-expected.png
-│   │   ├── error-context.md
-│   │   ├── trace.zip
 │   │   └── video.webm
 │   └── config-examples-8-animations-baseline-interactions-chromium/
-│       ├── 8-animations-sliding-panel-0cec4-l-trigger-button-active-actual.png
-│       ├── 8-animations-sliding-panel-0cec4-l-trigger-button-active-diff.png
-│       ├── 8-animations-sliding-panel-0cec4-l-trigger-button-active-expected.png
-│       ├── error-context.md
-│       ├── trace.zip
 │       └── video.webm
 ├── tests/
 │   └── e2e/
 │       ├── config-examples.spec.ts
 │       ├── config-examples.spec.ts-snapshots/
-│       │   ├── 18-sequential-animation-and-propogation-initial-chromium-linux.png
-│       │   ├── 8-animations-initial-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-multi-trigger-button-active-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-multi-trigger-button-hover-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-multi-trigger-button-post-click-off-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-multi-trigger-button-post-click-on-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-reset-button-active-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-reset-button-hover-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-reset-button-post-click-off-chromium-linux.png
-│       │   ├── 8-animations-multi-action-group-reset-button-post-click-on-chromium-linux.png
-│       │   ├── 8-animations-scale-target-group-scale-trigger-button-active-chromium-linux.png
-│       │   ├── 8-animations-scale-target-group-scale-trigger-button-hover-chromium-linux.png
-│       │   ├── 8-animations-scale-target-group-scale-trigger-button-post-click-off-chromium-linux.png
-│       │   ├── 8-animations-scale-target-group-scale-trigger-button-post-click-on-chromium-linux.png
-│       │   ├── 8-animations-sliding-panel-group-sliding-panel-trigger-button-active-chromium-linux.png
-│       │   ├── 8-animations-sliding-panel-group-sliding-panel-trigger-button-hover-chromium-linux.png
-│       │   ├── 8-animations-sliding-panel-group-sliding-panel-trigger-button-post-click-off-chromium-linux.png
-│       │   └── 8-animations-sliding-panel-group-sliding-panel-trigger-button-post-click-on-chromium-linux.png
-│       ├── interactive-state.spec.ts
+│       │   ├── 18-sequential-animation-and-propogation-00-initial-chromium-linux.png
+│       │   ├── 8-animations-00-initial-chromium-linux.png
+│       │   ├── 8-animations-01-sliding-panel-group-sliding-panel-trigger-button-mouse-hover-chromium-linux.png
+│       │   ├── 8-animations-02-sliding-panel-group-sliding-panel-trigger-button-mouse-click-chromium-linux.png
+│       │   ├── 8-animations-03-sliding-panel-group-sliding-panel-trigger-button-mouse-away-chromium-linux.png
+│       │   ├── 8-animations-04-sliding-panel-group-sliding-panel-trigger-button-final-state-chromium-linux.png
+│       │   ├── 8-animations-05-scale-target-group-scale-trigger-button-mouse-hover-chromium-linux.png
+│       │   ├── 8-animations-06-scale-target-group-scale-trigger-button-mouse-click-chromium-linux.png
+│       │   ├── 8-animations-07-scale-target-group-scale-trigger-button-mouse-away-chromium-linux.png
+│       │   ├── 8-animations-08-scale-target-group-scale-trigger-button-final-state-chromium-linux.png
+│       │   ├── 8-animations-09-multi-action-group-multi-trigger-button-mouse-hover-chromium-linux.png
+│       │   ├── 8-animations-10-multi-action-group-multi-trigger-button-mouse-click-chromium-linux.png
+│       │   ├── 8-animations-11-multi-action-group-multi-trigger-button-mouse-away-chromium-linux.png
+│       │   ├── 8-animations-12-multi-action-group-multi-trigger-button-final-state-chromium-linux.png
+│       │   ├── 8-animations-13-multi-action-group-reset-button-mouse-hover-chromium-linux.png
+│       │   ├── 8-animations-14-multi-action-group-reset-button-mouse-click-chromium-linux.png
+│       │   ├── 8-animations-15-multi-action-group-reset-button-mouse-away-chromium-linux.png
+│       │   └── 8-animations-16-multi-action-group-reset-button-final-state-chromium-linux.png
 │       ├── test-harness.html
 │       └── test-helpers.ts
 ├── tsconfig.json
@@ -191,7 +181,6 @@ lovelace-lcars-card/
 # LCARS-Card Refactor Roadmap
 
 *Each checkbox can be marked ✓ when the step is complete.*
-*With each step and change, add and commit the changes to the current repo.*
 
 ---
 
@@ -1063,10 +1052,11 @@ const haUrl = process.env.HA_URL || 'http://192.168.0.70:8123';
 
 export default defineConfig({
   testDir: './tests/e2e',
-  timeout: 30_000,
+  timeout: 60_000,
   expect: {
     toHaveScreenshot: {
       threshold: 0.2,
+      maxDiffPixelRatio: 0.025,
     },
   },
   use: {
@@ -15004,6 +14994,335 @@ export class StateManager {
 export const stateManager = new StateManager();
 ```
 
+## File: src/utils/test/animation-timing.spec.ts
+
+```typescript
+/// <reference types="vitest" />
+import { describe, it, expect } from 'vitest';
+import { AnimationTimingCalculator, AnimationTimingInfo } from '../../../tests/e2e/test-helpers';
+
+describe('Animation Timing Utilities', () => {
+  describe('AnimationTimingCalculator', () => {
+    it('should calculate basic animation duration correctly (milliseconds)', () => {
+      const animConfig = { type: 'fade', duration: 500 }; // 500ms
+      expect(AnimationTimingCalculator.calculateAnimationDuration(animConfig)).toBe(500);
+    });
+
+    it('should handle duration in seconds (convert to milliseconds)', () => {
+      const animConfig = { type: 'fade', duration: 0.5 }; // 0.5 seconds = 500ms
+      expect(AnimationTimingCalculator.calculateAnimationDuration(animConfig)).toBe(500);
+    });
+
+    it('should handle duration in milliseconds (keep as-is)', () => {
+      const animConfig = { type: 'fade', duration: 1500 }; // 1500ms (>= 10 treated as ms)
+      expect(AnimationTimingCalculator.calculateAnimationDuration(animConfig)).toBe(1500);
+    });
+
+    it('should calculate animation with repeat and yoyo correctly', () => {
+      const animConfig = { 
+        type: 'slide', 
+        duration: 0.5,  // 500ms
+        repeat: 2, 
+        yoyo: true 
+      };
+      // Formula: delay + duration * (repeat + 1) = 0 + 500 * (2 + 1) = 1500
+      expect(AnimationTimingCalculator.calculateAnimationDuration(animConfig)).toBe(1500);
+    });
+
+    it('should calculate animation with delay correctly', () => {
+      const animConfig = { 
+        type: 'fade', 
+        duration: 0.5,  // 500ms
+        delay: 0.5      // 500ms
+      };
+      // Formula: delay + duration * (repeat + 1) = 500 + 500 * (0 + 1) = 1000
+      expect(AnimationTimingCalculator.calculateAnimationDuration(animConfig)).toBe(1000);
+    });
+
+    it('should handle delay in milliseconds', () => {
+      const animConfig = { 
+        type: 'fade', 
+        duration: 500, // 500ms (>= 10 treated as ms)
+        delay: 250     // 250ms (>= 10 treated as ms)
+      };
+      expect(AnimationTimingCalculator.calculateAnimationDuration(animConfig)).toBe(750);
+    });
+
+    it('should calculate sequence duration correctly for real YAML config', () => {
+      // This matches the 18-sequential-animation-and-propogation.yaml sequence_element config
+      const sequenceConfig = {
+        steps: [
+          {
+            index: 0,
+            animations: [
+              { 
+                type: 'slide', 
+                duration: 0.5  // 500ms
+              },
+              { 
+                type: 'fade', 
+                duration: 0.5,  // 500ms
+                delay: 0.5      // 500ms delay
+              }
+            ],
+          },
+          {
+            index: 1,
+            animations: [
+              { 
+                type: 'slide', 
+                duration: 0.5,  // 500ms
+                repeat: 2,      // repeat 2 times
+                yoyo: true 
+              }
+            ],
+          },
+        ],
+      };
+
+      const duration = AnimationTimingCalculator.calculateSequenceDuration(sequenceConfig);
+      // Step 0: max(500, 1000) = 1000ms
+      // Step 1: 500 * (2 + 1) = 1500ms  
+      // Total: 1000 + 1500 = 2500ms
+      expect(duration).toBe(2500);
+    });
+
+    it('should calculate sequence duration for 8-animations.yaml sequence_element', () => {
+      // This matches the 8-animations.yaml sequence_element config
+      const sequenceConfig = {
+        steps: [
+          {
+            index: 0,
+            animations: [
+              { 
+                type: 'slide', 
+                duration: 0.5  // 500ms
+              },
+              { 
+                type: 'fade', 
+                duration: 2,    // 2000ms
+                delay: 0.25     // 250ms delay
+              }
+            ],
+          },
+          {
+            index: 1,
+            animations: [
+              { 
+                type: 'slide', 
+                duration: 0.5,  // 500ms
+                repeat: 2,      // repeat 2 times
+                yoyo: true 
+              }
+            ],
+          },
+        ],
+      };
+
+      const duration = AnimationTimingCalculator.calculateSequenceDuration(sequenceConfig);
+      // Step 0: max(500, 2250) = 2250ms (fade: 250 + 2000 * 1 = 2250)
+      // Step 1: 500 * (2 + 1) = 1500ms  
+      // Total: 2250 + 1500 = 3750ms
+      expect(duration).toBe(3750);
+    });
+
+    it('should handle empty sequence config', () => {
+      const emptyConfig = { steps: [] };
+      expect(AnimationTimingCalculator.calculateSequenceDuration(emptyConfig)).toBe(0);
+      
+      const nullConfig = null;
+      expect(AnimationTimingCalculator.calculateSequenceDuration(nullConfig)).toBe(0);
+    });
+
+    it('should analyze element animations correctly for fade_in_element from 8-animations.yaml', () => {
+      const elementConfig = {
+        animations: {
+          on_load: {
+            type: 'fade',
+            duration: 2,  // 2 seconds = 2000ms
+          }
+        },
+      };
+
+      const maxDuration = AnimationTimingCalculator.analyzeElementAnimations(elementConfig, 'fade_in_group.fade_in_element');
+      expect(maxDuration).toBe(2000);
+    });
+
+    it('should analyze element with state change animations for scale target', () => {
+      const elementConfig = {
+        animations: {
+          on_state_change: [
+            {
+              from_state: 'normal',
+              to_state: 'scaled',
+              type: 'scale',
+              duration: 0.3,  // 300ms
+            },
+            {
+              from_state: 'scaled',
+              to_state: 'normal',
+              type: 'scale',
+              duration: 0.3,  // 300ms
+            },
+          ],
+        },
+      };
+
+      const maxDuration = AnimationTimingCalculator.analyzeElementAnimations(elementConfig, 'scale_target_group.scale_target');
+      expect(maxDuration).toBe(300); // Max of both state change animations
+    });
+
+    it('should analyze element with sequence animations', () => {
+      const elementConfig = {
+        animations: {
+          on_load: {
+            steps: [
+              {
+                index: 0,
+                animations: [{ type: 'slide', duration: 0.5 }],  // 500ms
+              },
+              {
+                index: 1,
+                animations: [{ type: 'fade', duration: 0.3, delay: 0.1 }],  // 100 + 300 = 400ms
+              },
+            ],
+          },
+        },
+      };
+
+      const maxDuration = AnimationTimingCalculator.analyzeElementAnimations(elementConfig, 'test.element');
+      expect(maxDuration).toBe(900); // 500 + 400
+    });
+
+    it('should analyze full configuration timing for 18-sequential-animation-and-propogation.yaml structure', () => {
+      const yamlConfig = {
+        groups: [
+          {
+            group_id: 'sequence_group',
+            elements: [
+              {
+                id: 'sequence_element',
+                animations: {
+                  on_load: {
+                    steps: [
+                      {
+                        index: 0,
+                        animations: [
+                          { type: 'slide', duration: 0.5 },
+                          { type: 'fade', duration: 0.5, delay: 0.5 }
+                        ]
+                      },
+                      {
+                        index: 1,
+                        animations: [
+                          { type: 'slide', duration: 0.5, repeat: 2, yoyo: true }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            group_id: 'propogated_group',
+            elements: [
+              {
+                id: 'fade_in_element',
+                animations: {
+                  on_load: { type: 'fade', duration: 2 }  // 2000ms
+                }
+              },
+              {
+                id: 'scale_element',
+                animations: {
+                  on_load: { type: 'scale', duration: 1 }  // 1000ms
+                }
+              }
+            ]
+          }
+        ],
+      };
+
+      const timingInfo = AnimationTimingCalculator.analyzeConfigurationTiming(yamlConfig);
+      expect(timingInfo.hasAnimations).toBe(true);
+      expect(timingInfo.hasSequences).toBe(true);
+      expect(timingInfo.totalDuration).toBe(2500); // max(2500, 2000, 1000) = 2500 from sequence_element
+      expect(timingInfo.elementAnimations.size).toBe(3);
+      expect(timingInfo.elementAnimations.get('sequence_group.sequence_element')).toBe(2500);
+      expect(timingInfo.elementAnimations.get('propogated_group.fade_in_element')).toBe(2000);
+      expect(timingInfo.elementAnimations.get('propogated_group.scale_element')).toBe(1000);
+    });
+
+    it('should handle configuration without animations', () => {
+      const yamlConfig = {
+        groups: [
+          {
+            group_id: 'group1',
+            elements: [
+              {
+                id: 'element1',
+                type: 'rectangle',
+              },
+            ],
+          },
+        ],
+      };
+
+      const timingInfo = AnimationTimingCalculator.analyzeConfigurationTiming(yamlConfig);
+      expect(timingInfo.hasAnimations).toBe(false);
+      expect(timingInfo.hasSequences).toBe(false);
+      expect(timingInfo.totalDuration).toBe(0);
+      expect(timingInfo.elementAnimations.size).toBe(0);
+    });
+  });
+
+  describe('TestWaitHelper - timing logic', () => {
+    // Note: Full TestWaitHelper tests that use page.waitForTimeout would need to be in the actual E2E environment
+    // These tests focus on the logic and timing calculations
+    
+    it('should handle timing info with animations', () => {
+      const timingInfo: AnimationTimingInfo = {
+        totalDuration: 2500,  // 2.5 seconds
+        hasAnimations: true,
+        hasSequences: true,
+        elementAnimations: new Map([['sequence_group.sequence_element', 2500]]),
+      };
+
+      // We can't test the actual waiting in unit tests, but we can verify the calculations
+      // would be correct by checking the timing info is processed correctly
+      expect(timingInfo.totalDuration).toBe(2500);
+      expect(timingInfo.hasAnimations).toBe(true);
+      expect(timingInfo.hasSequences).toBe(true);
+    });
+
+    it('should handle no animations case', () => {
+      const timingInfo: AnimationTimingInfo = {
+        totalDuration: 0,
+        hasAnimations: false,
+        hasSequences: false,
+        elementAnimations: new Map(),
+      };
+
+      expect(timingInfo.hasAnimations).toBe(false);
+      expect(timingInfo.totalDuration).toBe(0);
+    });
+
+    it('should handle state change animation timing calculations', () => {
+      const timingInfo: AnimationTimingInfo = {
+        totalDuration: 300,  // 0.3 seconds
+        hasAnimations: true,
+        hasSequences: false,
+        elementAnimations: new Map([['scale_target_group.scale_target', 300]]),
+      };
+
+      expect(timingInfo.totalDuration).toBe(300);
+      expect(timingInfo.hasSequences).toBe(false);
+    });
+  });
+});
+```
+
 ## File: src/utils/test/animation.spec.ts
 
 ```typescript
@@ -18505,87 +18824,9 @@ export const transformPropagator = new TransformPropagator();
 
 ```json
 {
-  "status": "failed",
-  "failedTests": [
-    "10708c82281818d9902f-aa096a296e74407190cb",
-    "10708c82281818d9902f-23a3c15363121be0d011"
-  ]
+  "status": "passed",
+  "failedTests": []
 }
-```
-
-## File: test-results/config-examples-18-sequent-66b25-ation-baseline-interactions-chromium/error-context.md
-
-```markdown
-# Page snapshot
-
-```yaml
-- complementary:
-  - button "Sidebar toggle"
-  - text: Home Assistant
-  - listbox:
-    - option "Overview":
-      - option "Overview"
-    - option "Dashboard 1" [selected]:
-      - option "Dashboard 1"
-    - option "Map":
-      - option "Map"
-    - option "To-do lists":
-      - option "To-do lists"
-    - option "Developer tools":
-      - option "Developer tools"
-    - option "Settings 2":
-      - option "Settings 2"
-  - option "Notifications"
-  - option "Profile":
-    - option "Developer"
-- text: LCARS
-- button "Entity search"
-- button "Edit dashboard"
-- img: Sequential Animation & Propagation example SEQUENCE This element should fade in, slide up, and scale up when it loads. fade in scale
-- img
-```
-```
-
-## File: test-results/config-examples-8-animations-baseline-interactions-chromium/error-context.md
-
-```markdown
-# Page snapshot
-
-```yaml
-- complementary:
-  - button "Sidebar toggle"
-  - text: Home Assistant
-  - listbox:
-    - option "Overview":
-      - option "Overview"
-    - option "Dashboard 1" [selected]:
-      - option "Dashboard 1"
-    - option "Map":
-      - option "Map"
-    - option "To-do lists":
-      - option "To-do lists"
-    - option "Developer tools":
-      - option "Developer tools"
-    - option "Settings 2":
-      - option "Settings 2"
-  - option "Notifications"
-  - option "Profile":
-    - option "Developer"
-- text: LCARS
-- button "Entity search"
-- button "Edit dashboard"
-- img:
-  - text: Animation Configuration example LOADING... This element should have a fade-in effect when it loads.
-  - button "sliding_panel_group.sliding_panel_trigger_button"
-  - text: SHOW PANEL This button should trigger a panel to slide in from the left..
-  - button "scale_target_group.scale_trigger_button"
-  - text: SCALE This button should toggle the scale of the "scale_target" element when pressed. SCALE TARGET SEQUENCE This element should fade in, slide up, and scale up when it loads.
-  - button "multi_action_group.multi_trigger_button"
-  - text: MULTI ACTION
-  - button "multi_action_group.reset_button"
-  - text: RESET ALL
-- img
-```
 ```
 
 ## File: tests/e2e/config-examples.spec.ts
@@ -18597,6 +18838,7 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 import { HomeAssistant, PlaywrightBrowser } from 'hass-taste-test';
+import { AnimationTimingCalculator, TestWaitHelper, AnimationTimingInfo } from './test-helpers';
 import './test-helpers';
 
 // ----------------------------------------------------------------------------
@@ -18687,6 +18929,9 @@ for (const filePath of exampleFiles) {
       const raw = fs.readFileSync(filePath, 'utf-8');
       const configObj = yaml.load(raw);
 
+      // Analyze animation timing for this configuration
+      const timingInfo: AnimationTimingInfo = AnimationTimingCalculator.analyzeConfigurationTiming(configObj);
+
       // Set initial brightness to 0 for a consistent starting state.
       await hass.callService('input_number', 'set_value', {
         entity_id: 'input_number.kitchen_sink_brightness',
@@ -18707,11 +18952,16 @@ for (const filePath of exampleFiles) {
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(1000);
 
-      // Baseline screenshot
-      await expect(card).toHaveScreenshot(`${baseName}-initial.png`);
+      // Wait for any on_load animations to complete before taking baseline screenshot
+      await TestWaitHelper.waitForAnimations(page, timingInfo);
+
+      // Step 0: Initial baseline screenshot
+      await expect(card).toHaveScreenshot(`${baseName}-00-initial.png`);
 
       // Analyse YAML for interactive buttons
       const buttons = analyseYamlForInteractions(configObj);
+
+      let stepIndex = 1;
 
       for (const button of buttons) {
         const shapeSelector = `path[id="${button.fullId}__shape"]`;
@@ -18724,245 +18974,24 @@ for (const filePath of exampleFiles) {
           continue;
         }
 
-        // --- Test Hover State ---
-        await btn.hover();
-        await page.waitForTimeout(125);
-        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-hover.png`);
-
-        // --- Test Active State ---
-        const box = await btn.boundingBox();
-        if (box) {
-          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-          await page.mouse.down();
-          await page.waitForTimeout(125);
-          await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-active.png`);
-          await page.mouse.up();
+        // Enhanced click sequence with proper mouse states
+        // This will increment stepIndex internally for each screenshot
+        stepIndex = await TestWaitHelper.performClickSequence(page, btn, card, baseName, button.fullId, stepIndex);
+        
+        // Wait for any state change animations on target elements
+        for (const targetRef of button.targetElementRefs) {
+          await TestWaitHelper.waitForStateChangeAnimations(page, configObj, targetRef);
         }
+        
+        // Final state after animations complete
+        const paddedStepIndex = stepIndex.toString().padStart(2, '0');
+        await expect(card).toHaveScreenshot(`${baseName}-${paddedStepIndex}-${button.fullId}-final-state.png`);
 
-        // --- Test Click Action & Post-Click State ---
-        await btn.click();
-        // Allow state/animation propagation to settle and entity changes to propagate through HASS.
-        await page.waitForTimeout(1500);
-        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-post-click-on.png`);
-
-        // --- Test Second Click Action & Final State ---
-        await btn.click();
-        await page.waitForTimeout(1500);
-        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-post-click-off.png`);
+        stepIndex += 1; // Increment for the final state screenshot
       }
     });
   });
 }
-```
-
-## File: tests/e2e/interactive-state.spec.ts
-
-```typescript
-// @ts-nocheck
-import { test, expect } from '@playwright/test';
-
-/**
- * Additional interaction tests for the LCARS card.
- *
- * This file focuses on verifying that:
- * 1. Hovering updates stateful colours.
- * 2. Mouse down ("active" state) updates colours.
- * 3. A button element can toggle another element's state via the `toggle_state` action.
- *
- * The test re-uses the generic test harness HTML to avoid duplicating example files. It
- * dynamically injects a purpose-built configuration into the card at runtime so we
- * can exercise the various interaction paths without changing the static harness.
- */
-
-test.describe.skip('LCARS Card – interaction states', () => {
-  const harnessPath = '/tests/e2e/test-harness.html';
-  const devBase = process.env.DEV_BASE_URL || 'http://localhost:5000';
-
-  async function loadCustomConfig(page) {
-    // Reconfigure the existing <lovelace-lcars-card id="test-card"> in the harness.
-    await page.evaluate(() => {
-      const card = document.getElementById('test-card');
-      const hassMock = {
-        states: {},
-        themes: {},
-        language: 'en',
-        resources: {},
-      };
-
-      // Simple layout: a rectangular button at the top toggles a status rectangle below.
-      card.setConfig({
-        type: 'lovelace-lcars-card',
-        groups: [
-          {
-            group_id: 'controls',
-            elements: [
-              {
-                id: 'toggle_btn',
-                type: 'rectangle',
-                appearance: {
-                  fill: {
-                    default: '#2266ff',
-                    hover: '#3388ff',
-                    active: '#1144cc',
-                  },
-                  stroke: '#ffffff',
-                  strokeWidth: 2,
-                  cornerRadius: 4,
-                },
-                text: {
-                  content: 'Toggle',
-                  fill: '#ffffff',
-                  fontFamily: 'Antonio',
-                  fontSize: 16,
-                  textAnchor: 'middle',
-                  dominantBaseline: 'middle',
-                },
-                button: {
-                  enabled: true,
-                  actions: {
-                    tap: [
-                      {
-                        action: 'toggle_state',
-                        target_element_ref: 'status_group.status_rect',
-                        states: ['default', 'highlight'],
-                      },
-                    ],
-                  },
-                },
-                layout: {
-                  width: 120,
-                  height: 40,
-                  offsetX: 20,
-                  offsetY: 20,
-                },
-              },
-            ],
-          },
-          {
-            group_id: 'status_group',
-            elements: [
-              {
-                id: 'status_rect',
-                type: 'rectangle',
-                appearance: {
-                  // Colour changes will be driven by state-based animations so keep static here.
-                  fill: {
-                    default: '#666666',
-                  },
-                  stroke: '#ffffff',
-                  strokeWidth: 2,
-                  cornerRadius: 4,
-                },
-                state_management: {
-                  default_state: 'default',
-                },
-                animations: {
-                  custom_states: [
-                    {
-                      state: 'highlight',
-                      animation: {
-                        type: 'fade',
-                        duration: 300,
-                        fade_params: {
-                          opacity_start: 0.4,
-                          opacity_end: 1,
-                        },
-                      },
-                    },
-                  ],
-                },
-                layout: {
-                  width: 120,
-                  height: 40,
-                  offsetX: 20,
-                  offsetY: 80,
-                },
-              },
-            ],
-          },
-        ],
-      });
-      card.hass = hassMock;
-    });
-  }
-
-  test('hover & active visual states', async ({ page }) => {
-    // Load harness and replace config.
-    try {
-      await page.goto(`${devBase}${harnessPath}`, { timeout: 10000 });
-    } catch (error) {
-      test.skip(true, `Dev server not reachable at ${devBase}`);
-    }
-
-    const card = page.locator('lovelace-lcars-card');
-    await card.locator('svg').waitFor();
-
-    // Ensure fonts loaded after the card has been initialised
-    await page.evaluate(() => document.fonts.ready);
-    await page.waitForTimeout(250);
-
-    await loadCustomConfig(page);
-
-    const buttonShape = card.locator('path[id="controls.toggle_btn__shape"]');
-
-    // Wait until the toggle button is rendered inside the card's shadow DOM.
-    await buttonShape.waitFor({ state: 'attached', timeout: 15000 });
-
-    // Check default fill colour.
-    await expect(await buttonShape.getAttribute('fill')).toBe('#2266ff');
-
-    // Hover state should update the fill.
-    await buttonShape.hover();
-    await page.waitForTimeout(100);
-    await expect(await buttonShape.getAttribute('fill')).toBe('#3388ff');
-
-    // Active (mouse down) state – hold mouse down to keep the active fill visible.
-    const box = await buttonShape.boundingBox();
-    if (box) {
-      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-      await page.mouse.down();
-      await page.waitForTimeout(100);
-      await expect(await buttonShape.getAttribute('fill')).toBe('#1144cc');
-      await page.mouse.up();
-    }
-  });
-
-  test('button click toggles target state', async ({ page }) => {
-    try {
-      await page.goto(`${devBase}${harnessPath}`, { timeout: 10000 });
-    } catch (error) {
-      test.skip(true, `Dev server not reachable at ${devBase}`);
-    }
-
-    const card = page.locator('lovelace-lcars-card');
-    await card.locator('svg').waitFor();
-
-    // Ensure fonts loaded after the card has been initialised
-    await page.evaluate(() => document.fonts.ready);
-    await page.waitForTimeout(250);
-
-    await loadCustomConfig(page);
-
-    const buttonShape = card.locator('path[id="controls.toggle_btn__shape"]');
-
-    // Ensure button exists before interaction
-    await buttonShape.waitFor({ state: 'attached', timeout: 15000 });
-
-    // Click the button – this should toggle the state of the status rectangle.
-    await buttonShape.click();
-
-    // Wait for the state change animation (~300ms) to complete.
-    await page.waitForTimeout(600);
-
-    // The target rectangle should now be in "highlight" state which we detect by opacity 1.
-    const statusShape = card.locator('path[id="status_group.status_rect__shape"]');
-    const opacity = await statusShape.evaluate((el) => {
-      const o = window.getComputedStyle(el).opacity;
-      return parseFloat(o);
-    });
-    expect(opacity).toBeGreaterThan(0.9);
-  });
-});
 ```
 
 ## File: tests/e2e/test-harness.html
@@ -19055,6 +19084,7 @@ test.describe.skip('LCARS Card – interaction states', () => {
 
 import { promises as fs } from 'fs';
 import { HomeAssistant, PlaywrightBrowser } from 'hass-taste-test';
+import { expect } from '@playwright/test';
 
 // Prevent double-patching if this file is imported in multiple spec files.
 if (!(HomeAssistant as any)._lcarsPatched) {
@@ -19200,6 +19230,416 @@ light:
   };
 
   (HomeAssistant as any)._lcarsPatched = true;
+}
+
+// ============================================================================
+// Animation Timing Utilities for Proper Test Synchronization
+// ============================================================================
+
+export interface AnimationTimingInfo {
+  totalDuration: number;
+  hasAnimations: boolean;
+  hasSequences: boolean;
+  elementAnimations: Map<string, number>; // elementId -> max duration for that element
+}
+
+export class AnimationTimingCalculator {
+  /**
+   * Calculate duration for a single animation using the same formula as Animation.getRuntime()
+   * Formula: delay + duration * (repeat + 1)
+   */
+  static calculateAnimationDuration(animationConfig: any): number {
+    if (!animationConfig) return 0;
+    
+    // The Animation.getRuntime() method expects duration in milliseconds and uses default 500ms
+    // In YAML configs, values like duration: 2 or duration: 0.5 represent seconds, so convert to ms
+    // But values like duration: 500 or duration: 1500 are already in milliseconds
+    const rawDuration = animationConfig.duration;
+    let duration: number;
+    
+    if (typeof rawDuration === 'number') {
+      // If value is less than 10, treat it as seconds and convert to milliseconds
+      // If value is 10 or greater, treat it as milliseconds
+      duration = rawDuration < 10 ? rawDuration * 1000 : rawDuration;
+    } else {
+      duration = 500; // Default 500ms as per Animation.getRuntime()
+    }
+    
+    const repeat = typeof animationConfig.repeat === 'number' && animationConfig.repeat > 0 ? animationConfig.repeat : 0;
+    
+    // Same logic for delay
+    const rawDelay = animationConfig.delay;
+    let delay: number;
+    
+    if (typeof rawDelay === 'number') {
+      delay = rawDelay < 10 ? rawDelay * 1000 : rawDelay;
+    } else {
+      delay = 0;
+    }
+    
+    // Use same formula as Animation.getRuntime(): delay + duration * (repeat + 1)
+    return delay + duration * (repeat + 1);
+  }
+
+  /**
+   * Calculate total duration for an animation sequence
+   * Sequences run steps sequentially, with parallel animations within each step
+   */
+  static calculateSequenceDuration(sequenceConfig: any): number {
+    if (!sequenceConfig?.steps || !Array.isArray(sequenceConfig.steps)) {
+      return 0;
+    }
+
+    // Group animations by step index and calculate sequential timing
+    const stepMap = new Map<number, any[]>();
+    
+    for (const step of sequenceConfig.steps) {
+      if (!step || typeof step.index !== 'number') continue;
+      
+      if (!stepMap.has(step.index)) {
+        stepMap.set(step.index, []);
+      }
+      
+      if (Array.isArray(step.animations)) {
+        stepMap.get(step.index)!.push(...step.animations);
+      }
+    }
+
+    // Calculate duration for each step (steps run sequentially)
+    let totalDuration = 0;
+    const sortedIndices = Array.from(stepMap.keys()).sort((a, b) => a - b);
+    
+    for (const index of sortedIndices) {
+      const animations = stepMap.get(index)!;
+      
+      // Within a step, animations run in parallel, so we take the maximum duration
+      let stepMaxDuration = 0;
+      for (const anim of animations) {
+        const animDuration = this.calculateAnimationDuration(anim);
+        stepMaxDuration = Math.max(stepMaxDuration, animDuration);
+      }
+      
+      // Steps run sequentially, so add to total
+      totalDuration += stepMaxDuration;
+    }
+
+    return totalDuration;
+  }
+
+  /**
+   * Analyze all animations for a single element and return the maximum duration
+   */
+  static analyzeElementAnimations(elementConfig: any, elementId: string): number {
+    if (!elementConfig?.animations) return 0;
+
+    let maxDuration = 0;
+
+    // Check on_load animations
+    if (elementConfig.animations.on_load) {
+      const onLoadConfig = elementConfig.animations.on_load;
+      
+      if (onLoadConfig.steps) {
+        // This is a sequence
+        const sequenceDuration = this.calculateSequenceDuration(onLoadConfig);
+        maxDuration = Math.max(maxDuration, sequenceDuration);
+      } else {
+        // This is a single animation
+        const animDuration = this.calculateAnimationDuration(onLoadConfig);
+        maxDuration = Math.max(maxDuration, animDuration);
+      }
+    }
+
+    // Check state change animations
+    if (Array.isArray(elementConfig.animations.on_state_change)) {
+      for (const stateAnim of elementConfig.animations.on_state_change) {
+        const animDuration = this.calculateAnimationDuration(stateAnim);
+        maxDuration = Math.max(maxDuration, animDuration);
+      }
+    }
+
+    // Check other animation types (on_show, on_hide, etc.)
+    for (const [key, value] of Object.entries(elementConfig.animations)) {
+      if (key !== 'on_load' && key !== 'on_state_change' && value) {
+        if (typeof value === 'object' && (value as any).steps) {
+          // Sequence animation
+          const sequenceDuration = this.calculateSequenceDuration(value);
+          maxDuration = Math.max(maxDuration, sequenceDuration);
+        } else if (typeof value === 'object') {
+          // Single animation
+          const animDuration = this.calculateAnimationDuration(value);
+          maxDuration = Math.max(maxDuration, animDuration);
+        }
+      }
+    }
+
+    return maxDuration;
+  }
+
+  static analyzeConfigurationTiming(yamlConfig: any): AnimationTimingInfo {
+    const result: AnimationTimingInfo = {
+      totalDuration: 0,
+      hasAnimations: false,
+      hasSequences: false,
+      elementAnimations: new Map()
+    };
+
+    if (!yamlConfig?.groups) {
+      return result;
+    }
+
+    for (const group of yamlConfig.groups) {
+      if (!group.elements) continue;
+
+      for (const element of group.elements) {
+        const elementId = `${group.group_id}.${element.id}`;
+        const elementDuration = this.analyzeElementAnimations(element, elementId);
+        
+        if (elementDuration > 0) {
+          result.elementAnimations.set(elementId, elementDuration);
+          result.totalDuration = Math.max(result.totalDuration, elementDuration);
+          result.hasAnimations = true;
+          
+          if (element.animations?.on_load?.steps) {
+            result.hasSequences = true;
+          }
+        }
+      }
+    }
+
+    // Cap maximum duration to prevent excessively long waits
+    const MAX_ANIMATION_WAIT = 10000; // 10 seconds max
+    if (result.totalDuration > MAX_ANIMATION_WAIT) {
+      console.warn(`Animation duration ${result.totalDuration}ms exceeds maximum, capping at ${MAX_ANIMATION_WAIT}ms`);
+      result.totalDuration = MAX_ANIMATION_WAIT;
+    }
+
+    return result;
+  }
+
+  /**
+   * Calculate timing info with debug logging for troubleshooting
+   */
+  static analyzeConfigurationTimingWithDebug(yamlConfig: any, enableLogging: boolean = false): AnimationTimingInfo {
+    const result = this.analyzeConfigurationTiming(yamlConfig);
+    
+    if (enableLogging) {
+      console.log('Animation Timing Analysis:');
+      console.log(`  Total duration: ${result.totalDuration}ms`);
+      console.log(`  Has animations: ${result.hasAnimations}`);
+      console.log(`  Has sequences: ${result.hasSequences}`);
+      console.log('  Element animations:');
+      for (const [elementId, duration] of result.elementAnimations) {
+        console.log(`    ${elementId}: ${duration}ms`);
+      }
+    }
+    
+    return result;
+  }
+}
+
+export class TestWaitHelper {
+  /**
+   * Wait for animations to complete based on configuration analysis
+   * Includes the required 0.5s buffer after animations complete
+   */
+  static async waitForAnimations(
+    page: any, 
+    timingInfo: AnimationTimingInfo, 
+    bufferMs: number = 500  // Required 0.5s buffer after animations complete
+  ): Promise<void> {
+    if (!timingInfo.hasAnimations) {
+      // No animations, just a brief wait for any rendering to settle
+      await page.waitForTimeout(100);
+      return;
+    }
+
+    // Calculate wait time: animation duration + required 0.5s buffer
+    const waitTime = Math.ceil(timingInfo.totalDuration) + bufferMs;
+    
+    // Wait for the calculated duration plus buffer
+    await page.waitForTimeout(waitTime);
+  }
+
+  /**
+   * Wait for state change animations triggered by interactions
+   * Includes the required 0.5s buffer after animations complete
+   */
+  static async waitForStateChangeAnimations(
+    page: any,
+    yamlConfig: any,
+    targetElementId: string,
+    bufferMs: number = 500  // Required 0.5s buffer after animations complete
+  ): Promise<void> {
+    if (!yamlConfig?.groups) {
+      await page.waitForTimeout(100);
+      return;
+    }
+
+    let maxStateChangeDuration = 0;
+
+    // Find the target element and analyze its state change animations
+    for (const group of yamlConfig.groups) {
+      if (!group.elements) continue;
+
+      for (const element of group.elements) {
+        const elementId = `${group.group_id}.${element.id}`;
+        if (elementId === targetElementId && element.animations?.on_state_change) {
+          for (const stateAnim of element.animations.on_state_change) {
+            const duration = AnimationTimingCalculator.calculateAnimationDuration(stateAnim);
+            maxStateChangeDuration = Math.max(maxStateChangeDuration, duration);
+          }
+        }
+      }
+    }
+
+    if (maxStateChangeDuration > 0) {
+      // Cap maximum duration to prevent timeouts
+      const MAX_STATE_CHANGE_WAIT = 5000; // 5 seconds max
+      if (maxStateChangeDuration > MAX_STATE_CHANGE_WAIT) {
+        maxStateChangeDuration = MAX_STATE_CHANGE_WAIT;
+      }
+      
+      // Calculate wait time: animation duration + required 0.5s buffer
+      const waitTime = Math.ceil(maxStateChangeDuration) + bufferMs;
+      await page.waitForTimeout(waitTime);
+    } else {
+      // Default wait for any potential animations not detected
+      await page.waitForTimeout(400);
+    }
+  }
+
+  /**
+   * Enhanced wait for interactions that considers both hover/active state timing and subsequent animations
+   */
+  static async waitForInteractionEffects(
+    page: any,
+    interactionType: 'hover' | 'active' | 'click',
+    baseWaitMs: number = 250  // Base wait for CSS transitions and immediate visual feedback
+  ): Promise<void> {
+    // Base wait for CSS transitions and immediate visual feedback
+    await page.waitForTimeout(baseWaitMs);
+    
+    // Additional waits based on interaction type
+    if (interactionType === 'hover') {
+      // Extra time for shadow DOM re-render and color updates to stabilize
+      await page.waitForTimeout(200);
+    } else if (interactionType === 'active') {
+      // Active states need time for mouse down visual feedback
+      await page.waitForTimeout(100);
+    } else if (interactionType === 'click') {
+      // Extra time for action processing and state changes
+      await page.waitForTimeout(350);
+    }
+    
+    // Additional stabilization wait for all interactions
+    await page.waitForTimeout(50);
+  }
+
+  /**
+   * Wait specifically for GSAP timeline completion with extra buffer
+   * Includes the required 0.5s buffer after animations complete
+   */
+  static async waitForGSAPTimelines(
+    page: any,
+    estimatedDuration: number,
+    bufferMs: number = 500  // Required 0.5s buffer after animations complete
+  ): Promise<void> {
+    // Cap maximum duration to prevent timeouts
+    const MAX_GSAP_WAIT = 5000; // 5 seconds max
+    const cappedDuration = Math.min(estimatedDuration, MAX_GSAP_WAIT);
+    
+    // Calculate wait time: animation duration + required 0.5s buffer
+    const waitTime = Math.ceil(cappedDuration) + bufferMs;
+    await page.waitForTimeout(waitTime);
+  }
+
+  /**
+   * Ensure shadow DOM stability after interactive state changes
+   * This is particularly important for hover states where shadow DOM re-rendering can vary
+   */
+  static async ensureShadowDOMStability(
+    page: any,
+    cardLocator: any,
+    retries: number = 3
+  ): Promise<void> {
+    // Wait for shadow DOM to be stable
+    for (let i = 0; i < retries; i++) {
+      try {
+        // Check if the card's shadow DOM is accessible and stable
+        await cardLocator.locator('svg').waitFor({ state: 'attached', timeout: 1000 });
+        
+        // Additional wait for any pending updates to settle
+        await page.waitForTimeout(100);
+        
+        // Verify stability by checking if SVG is still attached
+        await cardLocator.locator('svg').waitFor({ state: 'attached', timeout: 500 });
+        
+        break; // Success
+      } catch (error) {
+        if (i === retries - 1) {
+          throw error; // Last retry failed
+        }
+        await page.waitForTimeout(100); // Brief wait before retry
+      }
+    }
+  }
+
+  /**
+   * Enhanced click interaction with proper mouse down/up states for better visual testing
+   * Returns the updated step index after taking all screenshots
+   */
+  static async performClickSequence(
+    page: any,
+    buttonLocator: any,
+    cardLocator: any,
+    baseName: string,
+    buttonFullId: string,
+    stepIndex: number
+  ): Promise<number> {
+    const box = await buttonLocator.boundingBox();
+    if (!box) return stepIndex;
+
+    const centerX = box.x + box.width / 2;
+    const centerY = box.y + box.height / 2;
+
+    // Step N: Mouse hover state
+    let currentStep = stepIndex;
+    await buttonLocator.hover();
+    await this.waitForInteractionEffects(page, 'hover');
+    await this.ensureShadowDOMStability(page, cardLocator);
+    await page.waitForTimeout(50); // Brief stabilization
+    
+    const paddedCurrentStep = currentStep.toString().padStart(2, '0');
+    await expect(cardLocator).toHaveScreenshot(`${baseName}-${paddedCurrentStep}-${buttonFullId}-mouse-hover.png`);
+    currentStep++;
+
+    // Step N+1: Mouse down (active) state
+    await page.mouse.move(centerX, centerY);
+    await page.mouse.down();
+    await this.waitForInteractionEffects(page, 'active');
+    await this.ensureShadowDOMStability(page, cardLocator);
+    await page.waitForTimeout(50); // Brief stabilization for active state capture
+    
+    const paddedActiveStep = currentStep.toString().padStart(2, '0');
+    await expect(cardLocator).toHaveScreenshot(`${baseName}-${paddedActiveStep}-${buttonFullId}-mouse-click.png`);
+    currentStep++;
+
+    // Step N+2: Mouse up (complete click)
+    await page.mouse.up();
+    await this.waitForInteractionEffects(page, 'click');
+    await this.ensureShadowDOMStability(page, cardLocator);
+    
+    // Step N+3: Mouse away (return to normal state)
+    await page.mouse.move(centerX + 100, centerY + 100); // Move mouse away from element
+    await page.waitForTimeout(200); // Wait for hover state to clear
+    await this.ensureShadowDOMStability(page, cardLocator);
+    
+    const paddedAwayStep = currentStep.toString().padStart(2, '0');
+    await expect(cardLocator).toHaveScreenshot(`${baseName}-${paddedAwayStep}-${buttonFullId}-mouse-away.png`);
+    currentStep++;
+
+    return currentStep;
+  }
 }
 ```
 

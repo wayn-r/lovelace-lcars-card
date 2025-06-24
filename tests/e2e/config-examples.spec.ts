@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 import { HomeAssistant, PlaywrightBrowser } from 'hass-taste-test';
+import { AnimationTimingCalculator, TestWaitHelper, AnimationTimingInfo } from './test-helpers';
 import './test-helpers';
 
 // ----------------------------------------------------------------------------
@@ -94,6 +95,9 @@ for (const filePath of exampleFiles) {
       const raw = fs.readFileSync(filePath, 'utf-8');
       const configObj = yaml.load(raw);
 
+      // Analyze animation timing for this configuration
+      const timingInfo: AnimationTimingInfo = AnimationTimingCalculator.analyzeConfigurationTiming(configObj);
+
       // Set initial brightness to 0 for a consistent starting state.
       await hass.callService('input_number', 'set_value', {
         entity_id: 'input_number.kitchen_sink_brightness',
@@ -114,11 +118,16 @@ for (const filePath of exampleFiles) {
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(1000);
 
-      // Baseline screenshot
-      await expect(card).toHaveScreenshot(`${baseName}-initial.png`);
+      // Wait for any on_load animations to complete before taking baseline screenshot
+      await TestWaitHelper.waitForAnimations(page, timingInfo);
+
+      // Step 0: Initial baseline screenshot
+      await expect(card).toHaveScreenshot(`${baseName}-00-initial.png`);
 
       // Analyse YAML for interactive buttons
       const buttons = analyseYamlForInteractions(configObj);
+
+      let stepIndex = 1;
 
       for (const button of buttons) {
         const shapeSelector = `path[id="${button.fullId}__shape"]`;
@@ -131,31 +140,20 @@ for (const filePath of exampleFiles) {
           continue;
         }
 
-        // --- Test Hover State ---
-        await btn.hover();
-        await page.waitForTimeout(125);
-        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-hover.png`);
-
-        // --- Test Active State ---
-        const box = await btn.boundingBox();
-        if (box) {
-          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-          await page.mouse.down();
-          await page.waitForTimeout(125);
-          await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-active.png`);
-          await page.mouse.up();
+        // Enhanced click sequence with proper mouse states
+        // This will increment stepIndex internally for each screenshot
+        stepIndex = await TestWaitHelper.performClickSequence(page, btn, card, baseName, button.fullId, stepIndex);
+        
+        // Wait for any state change animations on target elements
+        for (const targetRef of button.targetElementRefs) {
+          await TestWaitHelper.waitForStateChangeAnimations(page, configObj, targetRef);
         }
+        
+        // Final state after animations complete
+        const paddedStepIndex = stepIndex.toString().padStart(2, '0');
+        await expect(card).toHaveScreenshot(`${baseName}-${paddedStepIndex}-${button.fullId}-final-state.png`);
 
-        // --- Test Click Action & Post-Click State ---
-        await btn.click();
-        // Allow state/animation propagation to settle and entity changes to propagate through HASS.
-        await page.waitForTimeout(1500);
-        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-post-click-on.png`);
-
-        // --- Test Second Click Action & Final State ---
-        await btn.click();
-        await page.waitForTimeout(1500);
-        await expect(card).toHaveScreenshot(`${baseName}-${button.fullId}-post-click-off.png`);
+        stepIndex += 1; // Increment for the final state screenshot
       }
     });
   });
