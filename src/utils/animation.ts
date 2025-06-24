@@ -460,6 +460,55 @@ export class AnimationSequence {
     }
 
     const sortedIndices = Array.from(grouped.keys()).sort((a, b) => a - b);
+    
+    // Check if any animations in the sequence affect positioning - if so, use transform propagation
+    const hasPositioningEffects = this.animations.some(({ anim }) => 
+      this.manager.animationEffectsPositioning(anim.config)
+    );
+
+    if (hasPositioningEffects) {
+      // Use transform propagation for sequences with positioning effects
+      this.runWithTransformPropagation(grouped, sortedIndices);
+    } else {
+      // Use simple sequential execution for non-positioning sequences
+      this.runSimpleSequence(grouped, sortedIndices);
+    }
+  }
+
+  private runWithTransformPropagation(
+    grouped: Map<number, Animation[]>,
+    sortedIndices: number[]
+  ): void {
+    // Convert the AnimationSequence structure to match what TransformPropagator expects
+    const sequenceDefinition = {
+      steps: sortedIndices.map(idx => ({
+        index: idx,
+        animations: grouped.get(idx)!.map(anim => anim.config)
+      }))
+    };
+
+    // Create base sync data from the first animation
+    const firstAnimation = grouped.get(sortedIndices[0])![0];
+    const baseSyncData = {
+      duration: firstAnimation.config.duration || 500,
+      ease: firstAnimation.config.ease || 'power2.out',
+      delay: firstAnimation.config.delay
+    };
+
+    // Use TransformPropagator for proper sequence handling with positioning
+    import('./transform-propagator.js').then(({ transformPropagator }) => {
+      transformPropagator.processAnimationSequenceWithPropagation(
+        this.elementId,
+        sequenceDefinition,
+        baseSyncData
+      );
+    });
+  }
+
+  private runSimpleSequence(
+    grouped: Map<number, Animation[]>,
+    sortedIndices: number[]
+  ): void {
     let cumulativeDelay = 0;
 
     for (const idx of sortedIndices) {

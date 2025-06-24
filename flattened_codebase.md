@@ -87,11 +87,14 @@ lovelace-lcars-card/
 │       │   └── transform-propagator.spec.ts
 │       └── transform-propagator.ts
 ├── test-results/
-│   └── .last-run.json
+│   ├── .last-run.json
+│   └── config-examples-18-sequent-66b25-ation-baseline-interactions-chromium/
+│       └── video.webm
 ├── tests/
 │   └── e2e/
 │       ├── config-examples.spec.ts
 │       ├── config-examples.spec.ts-snapshots/
+│       │   └── 18-sequential-animation-and-propogation-initial-chromium-linux.png
 │       ├── interactive-state.spec.ts
 │       ├── test-harness.html
 │       └── test-helpers.ts
@@ -108,7 +111,6 @@ lovelace-lcars-card/
 │   ├── 15-hass-integration-with-state-management.yaml
 │   ├── 16-anchoring.yaml
 │   ├── 17-stretching.yaml
-│   ├── 18-sequential-animation-and-propogation.yaml
 │   ├── 19-onLoad-animation.yaml
 │   ├── 2-navigation-panel.yaml
 │   ├── 20-onShowHide-animation.yaml
@@ -12704,6 +12706,55 @@ export class AnimationSequence {
     }
 
     const sortedIndices = Array.from(grouped.keys()).sort((a, b) => a - b);
+    
+    // Check if any animations in the sequence affect positioning - if so, use transform propagation
+    const hasPositioningEffects = this.animations.some(({ anim }) => 
+      this.manager.animationEffectsPositioning(anim.config)
+    );
+
+    if (hasPositioningEffects) {
+      // Use transform propagation for sequences with positioning effects
+      this.runWithTransformPropagation(grouped, sortedIndices);
+    } else {
+      // Use simple sequential execution for non-positioning sequences
+      this.runSimpleSequence(grouped, sortedIndices);
+    }
+  }
+
+  private runWithTransformPropagation(
+    grouped: Map<number, Animation[]>,
+    sortedIndices: number[]
+  ): void {
+    // Convert the AnimationSequence structure to match what TransformPropagator expects
+    const sequenceDefinition = {
+      steps: sortedIndices.map(idx => ({
+        index: idx,
+        animations: grouped.get(idx)!.map(anim => anim.config)
+      }))
+    };
+
+    // Create base sync data from the first animation
+    const firstAnimation = grouped.get(sortedIndices[0])![0];
+    const baseSyncData = {
+      duration: firstAnimation.config.duration || 500,
+      ease: firstAnimation.config.ease || 'power2.out',
+      delay: firstAnimation.config.delay
+    };
+
+    // Use TransformPropagator for proper sequence handling with positioning
+    import('./transform-propagator.js').then(({ transformPropagator }) => {
+      transformPropagator.processAnimationSequenceWithPropagation(
+        this.elementId,
+        sequenceDefinition,
+        baseSyncData
+      );
+    });
+  }
+
+  private runSimpleSequence(
+    grouped: Map<number, Animation[]>,
+    sortedIndices: number[]
+  ): void {
     let cumulativeDelay = 0;
 
     for (const idx of sortedIndices) {
@@ -17459,6 +17510,7 @@ export class TransformPropagator {
     // 1. Pre-calculate overall initial offset for the entire sequence from "in" movements
     let sequenceOverallInitialX = 0;
     let sequenceOverallInitialY = 0;
+    
     for (const stepGroup of sortedStepGroups) {
       if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
         for (const animation of stepGroup.animations) {
@@ -17474,18 +17526,23 @@ export class TransformPropagator {
       }
     }
 
-    // 2. Initialize current visual starting point for the sequence
+    // 2. Apply initial positioning immediately if there's a cumulative offset
+    if (sequenceOverallInitialX !== 0 || sequenceOverallInitialY !== 0) {
+      this._applyInitialSequencePositioning(
+        primaryElementId, 
+        sequenceOverallInitialX, 
+        sequenceOverallInitialY, 
+        affectedElements
+      );
+    }
+
+    // 3. Process each step group in sequence
+    let cumulativeDelay = baseSyncData.delay || 0;
     let currentVisualX = sequenceOverallInitialX;
     let currentVisualY = sequenceOverallInitialY;
 
-    let cumulativeDelay = baseSyncData.delay || 0; // Start with base delay if any
-
     for (const stepGroup of sortedStepGroups) {
       if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
-        // Process all animations in this step group
-        // For positioning effects, we need to track the cumulative effect across all animations in the group
-        let groupInitialX = currentVisualX;
-        let groupInitialY = currentVisualY;
         let maxGroupDuration = 0;
 
         // Calculate the longest duration in this group to know when to start the next index
@@ -17494,10 +17551,11 @@ export class TransformPropagator {
           maxGroupDuration = Math.max(maxGroupDuration, animationDuration);
         }
 
+        // Process all animations in this step group
         for (const animation of stepGroup.animations) {
           // Create sync data for this animation, incorporating the current animation's own delay
           const animationSyncData: AnimationSyncData = {
-            duration: animation.duration,
+            duration: animation.duration || baseSyncData.duration,
             ease: animation.ease || baseSyncData.ease,
             delay: cumulativeDelay + (animation.delay || 0),
             repeat: animation.repeat,
@@ -17513,34 +17571,26 @@ export class TransformPropagator {
               const actualAnimationEffect = { ...baseEffect }; // Copy base effect
 
               if (actualAnimationEffect.type === 'translate') {
-                // Set the 'from' part of fromTo to the current visual position
-                actualAnimationEffect.initialOffsetX = groupInitialX;
-                actualAnimationEffect.initialOffsetY = groupInitialY;
+                // For sequences, the element starts at the current visual position
+                // and animates by the travel distance specified in the animation
+                actualAnimationEffect.initialOffsetX = currentVisualX;
+                actualAnimationEffect.initialOffsetY = currentVisualY;
                 
-                // translateX/Y from baseEffect are the travel for *this* animation.
-                // _applyTransform will calculate 'to' as initialOffset + travel.
-
-                // Update currentVisualX/Y for positioning effects (these affect the final position)
+                // Update the visual position for the next step
                 currentVisualX += baseEffect.translateX || 0;
                 currentVisualY += baseEffect.translateY || 0;
-              } else {
-                // For non-translate effects, or if they need different sequence handling:
-                // If scale/rotate also need to start from a sequence-aware accumulated state,
-                // similar logic for initialScaleX/Y etc. might be needed here.
-                // For now, pass them through, assuming their initial state is handled by gsap.to or is absolute.
               }
               effectsForAnimationAndPropagation.push(actualAnimationEffect);
             }
 
-            // Directly apply the calculated animation effects to the primary element for this animation
+            // Apply the animation to the primary element
             for (const effectToApply of effectsForAnimationAndPropagation) {
               this._applyTransform(primaryElementId, effectToApply, animationSyncData);
             }
 
-            // Apply self-compensation using the modified effects for fluid animation
+            // Apply self-compensation and propagation to dependent elements
             const animationSelfCompensation = this._applySelfCompensation(primaryElementId, effectsForAnimationAndPropagation, animationSyncData);
 
-            // Apply compensating transforms to dependent elements using modified effects
             if (affectedElements.length > 0) {
               this._applyCompensatingTransforms(
                 primaryElementId,
@@ -17557,13 +17607,49 @@ export class TransformPropagator {
           }
         }
 
-        // Update cumulative delay for the next step group's base delay point
-        // Use the maximum duration from this group to ensure next index waits for all animations
+        // Update cumulative delay for the next step group
         cumulativeDelay += maxGroupDuration;
       }
     }
 
     console.log(`[TransformPropagator] Processed animation sequence for ${primaryElementId} with ${sortedStepGroups.length} step groups. Initial offset: (${sequenceOverallInitialX}, ${sequenceOverallInitialY}). Final visual endpoint: (${currentVisualX}, ${currentVisualY}). Affected dependents: ${affectedElements.length}`);
+  }
+
+  /**
+   * Apply initial positioning for animation sequences to set all elements to their starting positions
+   */
+  private _applyInitialSequencePositioning(
+    primaryElementId: string,
+    initialX: number,
+    initialY: number,
+    affectedElements: ElementDependency[]
+  ): void {
+    if (!this.getShadowElement) return;
+
+    // Import GSAP dynamically
+    import('gsap').then(({ gsap }) => {
+      // Immediately set the primary element to its initial position
+      const primaryElement = this.getShadowElement!(primaryElementId);
+      if (primaryElement) {
+        gsap.set(primaryElement, {
+          x: initialX,
+          y: initialY
+        });
+      }
+
+      // Apply the same initial offset to all dependent elements
+      for (const dependency of affectedElements) {
+        const dependentElement = this.getShadowElement!(dependency.dependentElementId);
+        if (dependentElement) {
+          gsap.set(dependentElement, {
+            x: initialX,
+            y: initialY
+          });
+        }
+      }
+    }).catch(error => {
+      console.error(`[TransformPropagator] Error applying initial sequence positioning:`, error);
+    });
   }
 
   /**
