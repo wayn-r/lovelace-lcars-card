@@ -2,7 +2,6 @@ import { HomeAssistant } from 'custom-card-helpers';
 import { Group } from './engine.js';
 import { LayoutElement } from './elements/element.js';
 import { RectangleElement } from './elements/rectangle.js';
-import { LcarsCardConfig, GroupConfig, ElementConfig, ButtonConfig } from '../types.js';
 import { TextElement } from './elements/text.js';
 import { EndcapElement } from './elements/endcap.js';
 import { ElbowElement } from './elements/elbow.js';
@@ -11,21 +10,17 @@ import { expandWidget } from './widgets/registry.js';
 import { parseCardConfig, type ParsedConfig } from '../parsers/schema.js';
 import { ZodError } from 'zod';
 
-// Define the properly typed props interface that LayoutElement expects
-interface ConvertedElementProps {
-  // Appearance properties
-  fill?: any;
-  stroke?: any;
+interface ElementProps {
+  fill?: string;
+  stroke?: string;
   strokeWidth?: number;
   rx?: number;
   direction?: 'left' | 'right';
   orientation?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   bodyWidth?: number;
   armHeight?: number;
-  
-  // Text properties
   text?: string;
-  textColor?: any;
+  textColor?: string;
   fontFamily?: string;
   fontSize?: number;
   fontWeight?: string | number;
@@ -36,26 +31,21 @@ interface ConvertedElementProps {
   elbowTextPosition?: 'arm' | 'body';
   leftContent?: string;
   rightContent?: string;
-  
-  // Button configuration
   button?: {
     enabled?: boolean;
-    actions?: any;
+    actions?: unknown;
   };
-  
-  // Other configurations
-  visibility_rules?: any;
-  visibility_triggers?: any;
-  state_management?: any;
-  animations?: any;
+  visibility_rules?: unknown;
+  visibility_triggers?: unknown;
+  state_management?: unknown;
+  animations?: unknown;
 }
 
-// Define the engine layout format interface
-interface ConvertedLayoutConfig {
-  width?: any;
-  height?: any;
-  offsetX?: any;
-  offsetY?: any;
+interface LayoutConfig {
+  width?: number | string;
+  height?: number | string;
+  offsetX?: number | string;
+  offsetY?: number | string;
   anchor?: {
     anchorTo: string;
     anchorPoint: string;
@@ -71,195 +61,200 @@ interface ConvertedLayoutConfig {
   };
 }
 
-export function parseConfig(config: unknown, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): Group[] {
-  let validatedConfig: ParsedConfig;
-  
-  try {
-    // Validate configuration using schema
-    validatedConfig = parseCardConfig(config);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      // Check if it's a groups-related error and provide friendly message
-      const groupsError = error.errors.find(e => 
-        e.path.length === 1 && e.path[0] === 'groups'
-      );
-      
-      if (groupsError) {
-        throw new Error('Invalid configuration: groups array is required');
+export class ConfigParser {
+  static parseConfig(
+    config: unknown, 
+    hass?: HomeAssistant, 
+    requestUpdateCallback?: () => void, 
+    getShadowElement?: (id: string) => Element | null
+  ): Group[] {
+    const validatedConfig = this.validateConfig(config);
+    
+    if (!validatedConfig.groups) {
+      throw new Error('Invalid configuration: groups array is required');
+    }
+
+    return validatedConfig.groups.map(groupConfig => {
+      const layoutElements: LayoutElement[] = groupConfig.elements.flatMap(elementConfig => {
+        const fullId = `${groupConfig.group_id}.${elementConfig.id}`;
+        const props = this.convertElementProps(elementConfig);
+        const layoutConfig = this.convertLayoutConfig(elementConfig.layout);
+        
+        return this.createLayoutElements(
+          fullId,
+          elementConfig.type,
+          props,
+          layoutConfig,
+          hass,
+          requestUpdateCallback,
+          getShadowElement
+        );
+      });
+
+      return new Group(groupConfig.group_id, layoutElements);
+    });
+  }
+
+  private static validateConfig(config: unknown): ParsedConfig {
+    try {
+      return parseCardConfig(config);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const groupsError = error.errors.find(e => 
+          e.path.length === 1 && e.path[0] === 'groups'
+        );
+        
+        if (groupsError) {
+          throw new Error('Invalid configuration: groups array is required');
+        }
       }
-      
-      // For other validation errors, throw the original error
       throw error;
     }
-    throw error;
-  }
-  
-  if (!validatedConfig.groups) {
-    throw new Error('Invalid configuration: groups array is required');
   }
 
-  return validatedConfig.groups.map(groupConfig => {
-    // Use flatMap to allow one config element to expand into multiple layout elements
-    const layoutElements: LayoutElement[] = groupConfig.elements.flatMap(elementConfig => {
-      const fullId = `${groupConfig.group_id}.${elementConfig.id}`;
-      const props = convertElementToProps(elementConfig);
-      const layoutConfig = convertLayoutToEngineFormat(elementConfig.layout);
-      
-      // createLayoutElements now returns an array
-      return createLayoutElements(
-        fullId,
-        elementConfig.type,
-        props,
-        layoutConfig,
-        hass,
-        requestUpdateCallback,
-        getShadowElement
-      );
-    });
-
-    return new Group(groupConfig.group_id, layoutElements);
-  });
-}
-
-function convertElementToProps(element: any): ConvertedElementProps {
-  const props: ConvertedElementProps = {};
-  
-  // Convert appearance properties
-  if (element.appearance) {
-    if (element.appearance.fill !== undefined) props.fill = element.appearance.fill;
-    if (element.appearance.stroke !== undefined) props.stroke = element.appearance.stroke;
-    if (element.appearance.strokeWidth !== undefined) props.strokeWidth = element.appearance.strokeWidth;
-    if (element.appearance.cornerRadius !== undefined) props.rx = element.appearance.cornerRadius;
-    if (element.appearance.direction !== undefined) props.direction = element.appearance.direction;
-    if (element.appearance.orientation !== undefined) props.orientation = element.appearance.orientation;
-    if (element.appearance.bodyWidth !== undefined) props.bodyWidth = element.appearance.bodyWidth;
-    if (element.appearance.armHeight !== undefined) props.armHeight = element.appearance.armHeight;
-  }
-  
-  // Convert text properties
-  if (element.text) {
-    if (element.text.content !== undefined) props.text = element.text.content;
+  private static convertElementProps(element: any): ElementProps {
+    const props: ElementProps = {};
     
-    // Handle text color properly based on element type
-    if (element.text.fill !== undefined) {
+    this.mapAppearanceProps(element, props);
+    this.mapTextProps(element, props);
+    this.mapButtonProps(element, props);
+    this.mapConfigurationProps(element, props);
+    
+    return props;
+  }
+
+  private static mapAppearanceProps(element: any, props: ElementProps): void {
+    if (!element.appearance) return;
+
+    const appearance = element.appearance;
+    
+    if (appearance.fill !== undefined) props.fill = appearance.fill;
+    if (appearance.stroke !== undefined) props.stroke = appearance.stroke;
+    if (appearance.strokeWidth !== undefined) props.strokeWidth = appearance.strokeWidth;
+    if (appearance.cornerRadius !== undefined) props.rx = appearance.cornerRadius;
+    if (appearance.direction !== undefined) props.direction = appearance.direction;
+    if (appearance.orientation !== undefined) props.orientation = appearance.orientation;
+    if (appearance.bodyWidth !== undefined) props.bodyWidth = appearance.bodyWidth;
+    if (appearance.armHeight !== undefined) props.armHeight = appearance.armHeight;
+  }
+
+  private static mapTextProps(element: any, props: ElementProps): void {
+    if (!element.text) return;
+
+    const text = element.text;
+    
+    if (text.content !== undefined) props.text = text.content;
+    
+    if (text.fill !== undefined) {
       if (element.type === 'text') {
-        // For standalone text elements, text color is the element's fill
-        props.fill = element.text.fill;
+        props.fill = text.fill;
       } else {
-        // For other elements with text (buttons, etc.), use textColor
-        props.textColor = element.text.fill;
+        props.textColor = text.fill;
       }
     }
     
-    if (element.text.fontFamily !== undefined) props.fontFamily = element.text.fontFamily;
-    if (element.text.fontSize !== undefined) props.fontSize = element.text.fontSize;
-    if (element.text.fontWeight !== undefined) props.fontWeight = element.text.fontWeight;
-    if (element.text.letterSpacing !== undefined) props.letterSpacing = element.text.letterSpacing;
-    if (element.text.textAnchor !== undefined) props.textAnchor = element.text.textAnchor;
-    if (element.text.dominantBaseline !== undefined) props.dominantBaseline = element.text.dominantBaseline;
-    if (element.text.textTransform !== undefined) props.textTransform = element.text.textTransform;
-    
-    // elbow specific text properties
-    if (element.text.elbow_text_position !== undefined) props.elbowTextPosition = element.text.elbow_text_position;
-    
-    // top_header specific text properties
-    if (element.text.left_content !== undefined) props.leftContent = element.text.left_content;
-    if (element.text.right_content !== undefined) props.rightContent = element.text.right_content;
+    if (text.fontFamily !== undefined) props.fontFamily = text.fontFamily;
+    if (text.fontSize !== undefined) props.fontSize = text.fontSize;
+    if (text.fontWeight !== undefined) props.fontWeight = text.fontWeight;
+    if (text.letterSpacing !== undefined) props.letterSpacing = text.letterSpacing;
+    if (text.textAnchor !== undefined) props.textAnchor = text.textAnchor;
+    if (text.dominantBaseline !== undefined) props.dominantBaseline = text.dominantBaseline;
+    if (text.textTransform !== undefined) props.textTransform = text.textTransform;
+    if (text.elbow_text_position !== undefined) props.elbowTextPosition = text.elbow_text_position;
+    if (text.left_content !== undefined) props.leftContent = text.left_content;
+    if (text.right_content !== undefined) props.rightContent = text.right_content;
   }
-  
-  // Convert button configuration
-  if (element.button) {
-    // Pass the button config through largely unchanged to props
+
+  private static mapButtonProps(element: any, props: ElementProps): void {
+    if (!element.button) return;
+
     props.button = {
       enabled: element.button.enabled,
       actions: element.button.actions
     };
   }
 
-  // Convert other configurations directly
-  if (element.visibility_rules) {
-    props.visibility_rules = element.visibility_rules;
+  private static mapConfigurationProps(element: any, props: ElementProps): void {
+    if (element.visibility_rules !== undefined) props.visibility_rules = element.visibility_rules;
+    if (element.visibility_triggers !== undefined) props.visibility_triggers = element.visibility_triggers;
+    if (element.state_management !== undefined) props.state_management = element.state_management;
+    if (element.animations !== undefined) props.animations = element.animations;
   }
-  
-  if (element.visibility_triggers) {
-    props.visibility_triggers = element.visibility_triggers;
-  }
-  
-  if (element.state_management) {
-    props.state_management = element.state_management;
-  }
-  
-  if (element.animations) {
-    props.animations = element.animations;
-  }
-  
-  return props;
-}
 
-function convertLayoutToEngineFormat(layout?: any): ConvertedLayoutConfig {
-  if (!layout) return {};
-  
-  const engineLayout: ConvertedLayoutConfig = {};
-  
-  if (layout.width !== undefined) engineLayout.width = layout.width;
-  if (layout.height !== undefined) engineLayout.height = layout.height;
-  if (layout.offsetX !== undefined) engineLayout.offsetX = layout.offsetX;
-  if (layout.offsetY !== undefined) engineLayout.offsetY = layout.offsetY;
-  
-  if (layout.anchor) {
-    engineLayout.anchor = {
-      anchorTo: layout.anchor.to,
-      anchorPoint: layout.anchor.element_point,
-      targetAnchorPoint: layout.anchor.target_point
-    };
-  }
-  
-  if (layout.stretch) {
-    engineLayout.stretch = {
-      stretchTo1: layout.stretch.target1.id,
-      targetStretchAnchorPoint1: layout.stretch.target1.edge,
-      stretchPadding1: layout.stretch.target1.padding || 0
-    };
+  private static convertLayoutConfig(layout?: any): LayoutConfig {
+    if (!layout) return {};
     
-    if (layout.stretch.target2) {
-      engineLayout.stretch.stretchTo2 = layout.stretch.target2.id;
-      engineLayout.stretch.targetStretchAnchorPoint2 = layout.stretch.target2.edge;
-      engineLayout.stretch.stretchPadding2 = layout.stretch.target2.padding || 0;
+    const engineLayout: LayoutConfig = {};
+    
+    if (layout.width !== undefined) engineLayout.width = layout.width;
+    if (layout.height !== undefined) engineLayout.height = layout.height;
+    if (layout.offsetX !== undefined) engineLayout.offsetX = layout.offsetX;
+    if (layout.offsetY !== undefined) engineLayout.offsetY = layout.offsetY;
+    
+    if (layout.anchor) {
+      engineLayout.anchor = {
+        anchorTo: layout.anchor.to,
+        anchorPoint: layout.anchor.element_point,
+        targetAnchorPoint: layout.anchor.target_point
+      };
     }
+    
+    if (layout.stretch) {
+      engineLayout.stretch = {
+        stretchTo1: layout.stretch.target1.id,
+        targetStretchAnchorPoint1: layout.stretch.target1.edge,
+        stretchPadding1: layout.stretch.target1.padding || 0
+      };
+      
+      if (layout.stretch.target2) {
+        engineLayout.stretch.stretchTo2 = layout.stretch.target2.id;
+        engineLayout.stretch.targetStretchAnchorPoint2 = layout.stretch.target2.edge;
+        engineLayout.stretch.stretchPadding2 = layout.stretch.target2.padding || 0;
+      }
+    }
+    
+    return engineLayout;
   }
-  
-  return engineLayout;
+
+  private static createLayoutElements(
+    id: string,
+    type: string,
+    props: ElementProps,
+    layoutConfig: LayoutConfig,
+    hass?: HomeAssistant,
+    requestUpdateCallback?: () => void,
+    getShadowElement?: (id: string) => Element | null
+  ): LayoutElement[] {
+    const widgetResult = expandWidget(type, id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+    if (widgetResult) {
+      return widgetResult;
+    }
+
+    const elementConstructors: Record<string, new(...args: any[]) => LayoutElement> = {
+      'text': TextElement,
+      'rectangle': RectangleElement,
+      'endcap': EndcapElement,
+      'elbow': ElbowElement,
+      'chisel-endcap': ChiselEndcapElement
+    };
+
+    const normalizedType = type.toLowerCase().trim();
+    const ElementConstructor = elementConstructors[normalizedType];
+
+    if (ElementConstructor) {
+      return [new ElementConstructor(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
+    }
+
+    console.warn(`LCARS Card Parser: Unknown element type "${type}". Defaulting to Rectangle.`);
+    return [new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
+  }
 }
 
-function createLayoutElements(
-  id: string,
-  type: string,
-  props: ConvertedElementProps,
-  layoutConfig: ConvertedLayoutConfig,
-  hass?: HomeAssistant,
-  requestUpdateCallback?: () => void,
+export function parseConfig(
+  config: unknown, 
+  hass?: HomeAssistant, 
+  requestUpdateCallback?: () => void, 
   getShadowElement?: (id: string) => Element | null
-): LayoutElement[] {
-  // 1) Check if the type corresponds to a registered widget (compound element)
-  const widgetResult = expandWidget(type, id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
-  if (widgetResult) {
-    return widgetResult;
-  }
-
-  // 2) Fallback to primitive element types
-  switch (type.toLowerCase().trim()) {
-    case 'text':
-      return [new TextElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
-    case 'rectangle':
-      return [new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
-    case 'endcap':
-      return [new EndcapElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
-    case 'elbow':
-      return [new ElbowElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
-    case 'chisel-endcap':
-      return [new ChiselEndcapElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
-    default:
-      console.warn(`LCARS Card Parser: Unknown element type "${type}". Defaulting to Rectangle.`);
-      return [new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
-  }
+): Group[] {
+  return ConfigParser.parseConfig(config, hass, requestUpdateCallback, getShadowElement);
 }

@@ -10,3 +10,7 @@ flattened_codebase.md
 git_history_diff.md
 test-results.xml
 notepads/
+
+/test-results/
+/tests/e2e/config-examples.spec.ts-snapshots/
+/.claude/

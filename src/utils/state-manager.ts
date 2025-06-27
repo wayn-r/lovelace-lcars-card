@@ -1,20 +1,13 @@
-import { AnimationDefinition, AnimationSequence, ElementStateManagementConfig } from '../types.js';
-import { animationManager, AnimationContext } from './animation.js';
-import { HomeAssistant } from 'custom-card-helpers';
+import { AnimationDefinition, ElementStateManagementConfig, AnimationSequence, StateChangeAnimationConfig } from '../types.js';
+import { animationManager, AnimationContext, DistanceParser } from './animation.js';
 import { LayoutElement } from '../layout/elements/element.js';
-import { transformPropagator, AnimationSyncData } from './transform-propagator.js';
+import { Group } from '../layout/engine.js';
+import { transformPropagator } from './transform-propagator.js';
 import gsap from 'gsap';
-import { ReactiveStore, StoreProvider, StateChangeEvent, ElementState } from '../core/store.js';
+import { ReactiveStore, StoreProvider, StateChangeEvent } from '../core/store.js';
 
-// Legacy type aliases for backward compatibility
 export type StateChangeCallback = (event: StateChangeEvent) => void;
 
-/**
- * StateManager - Now a thin adapter over ReactiveStore
- * 
- * This maintains the existing API while delegating to the new reactive store implementation.
- * This allows existing code to continue working during the transition period.
- */
 export class StateManager {
   private store: ReactiveStore;
   private elementsMap?: Map<string, LayoutElement>;
@@ -23,7 +16,6 @@ export class StateManager {
   constructor(requestUpdateCallback?: () => void) {
     this.store = StoreProvider.getStore();
     
-    // Bridge store state changes to legacy callback format
     if (requestUpdateCallback) {
       this.store.subscribe(() => {
         requestUpdateCallback();
@@ -43,20 +35,29 @@ export class StateManager {
     this.animationContext = context;
     this.elementsMap = elementsMap;
     
-    // Initialize transform propagator with current layout state
+    if (elementsMap) {
+      animationManager.setElementsMap(elementsMap);
+    }
+    
     if (elementsMap && context.getShadowElement) {
       transformPropagator.initialize(elementsMap, context.getShadowElement);
     }
   }
 
   setState(elementId: string, newState: string): void {
-    // Auto-initialize if needed
-    if (!this._ensureElementInitialized(elementId)) {
+    if (!this.ensureElementInitialized(elementId)) {
       console.warn(`[StateManager] Cannot set state for uninitialized element: ${elementId}`);
       return;
     }
+    
+    const currentState = this.getState(elementId);
+    if (currentState === newState) {
+      console.debug(`[StateManager] State '${newState}' is already current for ${elementId}, skipping animation`);
+      return;
+    }
+    
     this.store.setState(elementId, newState);
-    this._handleStateChangeAnimations(elementId, newState);
+    this.handleStateChangeAnimations(elementId, newState);
   }
 
   getState(elementId: string): string | undefined {
@@ -66,41 +67,32 @@ export class StateManager {
   }
 
   toggleState(elementId: string, states: string[]): boolean {
-    // Auto-initialize if needed
-    if (!this._ensureElementInitialized(elementId)) {
+    if (!this.ensureElementInitialized(elementId)) {
       return false;
     }
     const toggled = this.store.toggleState(elementId, states);
 
-    // If toggle succeeded, trigger any matching state-change animations
     if (toggled) {
       const newState = this.getState(elementId);
       if (newState) {
-        this._handleStateChangeAnimations(elementId, newState);
+        this.handleStateChangeAnimations(elementId, newState);
       }
     }
 
     return toggled;
   }
 
-  /**
-   * Subscribe to state change events
-   */
   onStateChange(callback: StateChangeCallback): () => void {
     return this.store.onStateChange(callback);
   }
 
-  /**
-   * Auto-initialize element for state management if not already initialized
-   */
-  private _ensureElementInitialized(elementId: string): boolean {
-    if (this._isElementInitialized(elementId)) {
+  private ensureElementInitialized(elementId: string): boolean {
+    if (this.elementIsInitialized(elementId)) {
       return true;
     }
 
     console.log(`[StateManager] Auto-initializing ${elementId} for state management`);
     
-    // Try to find element in layout to get its configuration
     const element = this.elementsMap?.get(elementId);
     if (element) {
       const stateConfig = element.props?.state_management;
@@ -112,7 +104,6 @@ export class StateManager {
       }
     }
     
-    // Fallback: For tests and uninitialized elements, only initialize if element can be found in layout
     if (this.elementsMap?.has(elementId)) {
       this.initializeElementState(elementId, { default_state: 'default' });
       return true;
@@ -122,10 +113,7 @@ export class StateManager {
     return false;
   }
 
-  /**
-   * Check if element is initialized for state management
-   */
-  private _isElementInitialized(elementId: string): boolean {
+  private elementIsInitialized(elementId: string): boolean {
     const state = this.store.getState();
     const isInitialized = state.elementStates.has(elementId);
     
@@ -136,10 +124,7 @@ export class StateManager {
     return isInitialized;
   }
 
-  /**
-   * Handle animations triggered by state changes
-   */
-  private _handleStateChangeAnimations(elementId: string, newState: string): void {
+  private handleStateChangeAnimations(elementId: string, newState: string): void {
     if (!this.animationContext || !this.elementsMap) {
       return;
     }
@@ -154,17 +139,90 @@ export class StateManager {
     const elementState = storeState.elementStates.get(elementId);
     const fromState = elementState?.previousState || 'default';
 
-    // Find matching state change animation
     const matchingAnimation = stateChangeAnimations.find((anim: any) => 
       anim.from_state === fromState && anim.to_state === newState
     );
 
     if (matchingAnimation) {
-      this.executeAnimation(elementId, matchingAnimation);
+      const activeTimelines = animationManager.getActiveTimelines(elementId);
+      
+      if (activeTimelines && activeTimelines.length > 0) {
+        const currentAnimation = activeTimelines[activeTimelines.length - 1];
+        
+        const isReverseTransition = this.isReverseTransition(
+          currentAnimation.animationConfig,
+          matchingAnimation,
+          fromState,
+          newState
+        );
+        
+        if (isReverseTransition && !currentAnimation.isReversed) {
+          console.log(`[StateManager] Reversing existing animation for ${elementId} (${fromState} -> ${newState})`);
+          animationManager.reverseAnimation(elementId);
+          return;
+        } else {
+          console.log(`[StateManager] Stopping existing animation and starting new one for ${elementId} (${fromState} -> ${newState})`);
+          
+          const targetElement = this.animationContext.getShadowElement?.(elementId);
+          if (targetElement) {
+            const currentOpacity = parseFloat(gsap.getProperty(targetElement, "opacity") as string);
+            const currentX = parseFloat(gsap.getProperty(targetElement, "x") as string);
+            const currentY = parseFloat(gsap.getProperty(targetElement, "y") as string);
+            const initialValues = { opacity: currentOpacity, x: currentX, y: currentY };
+            animationManager.stopAllAnimationsForElement(elementId);
+            gsap.set(targetElement, { opacity: currentOpacity, x: currentX, y: currentY });
+            this.executeAnimation(elementId, matchingAnimation, initialValues);
+          } else {
+            animationManager.stopAllAnimationsForElement(elementId);
+            this.executeAnimation(elementId, matchingAnimation);
+          }
+        }
+      } else {
+        this.executeAnimation(elementId, matchingAnimation);
+      }
     }
   }
 
-  executeAnimation(elementId: string, animationDef: AnimationDefinition): void {
+  private isReverseTransition(
+    currentConfig: import('./animation.js').AnimationConfig,
+    newAnimationDef: AnimationDefinition,
+    fromState: string,
+    toState: string
+  ): boolean {
+    if (currentConfig.type !== newAnimationDef.type) {
+      return false;
+    }
+
+    if (currentConfig.type === 'scale' && newAnimationDef.type === 'scale') {
+      const currentScaleStart = currentConfig.scale_params?.scale_start;
+      const currentScaleEnd = currentConfig.scale_params?.scale_end;
+      const newScaleStart = newAnimationDef.scale_params?.scale_start;
+      const newScaleEnd = newAnimationDef.scale_params?.scale_end;
+      
+      return (currentScaleEnd === newScaleStart && currentScaleStart === newScaleEnd);
+    }
+    
+    if (currentConfig.type === 'slide' && newAnimationDef.type === 'slide') {
+      const currentMovement = currentConfig.slide_params?.movement;
+      const newMovement = newAnimationDef.slide_params?.movement;
+      
+      return (currentMovement === 'in' && newMovement === 'out') || 
+             (currentMovement === 'out' && newMovement === 'in');
+    }
+    
+    if (currentConfig.type === 'fade' && newAnimationDef.type === 'fade') {
+      const currentOpacityStart = currentConfig.fade_params?.opacity_start;
+      const currentOpacityEnd = currentConfig.fade_params?.opacity_end;
+      const newOpacityStart = newAnimationDef.fade_params?.opacity_start;
+      const newOpacityEnd = newAnimationDef.fade_params?.opacity_end;
+      
+      return (currentOpacityEnd === newOpacityStart && currentOpacityStart === newOpacityEnd);
+    }
+    
+    return false;
+  }
+
+  executeAnimation(elementId: string, animationDef: AnimationDefinition, initialValues?: { opacity?: number; x?: number; y?: number; }): void {
     if (!this.animationContext || !this.elementsMap) {
       console.warn(`[StateManager] No animation context available for ${elementId}`);
       return;
@@ -176,14 +234,13 @@ export class StateManager {
       return;
     }
 
-    // Convert to pure animation config and execute
     const animationConfig = this.convertToAnimationConfig(animationDef);
     if (animationConfig) {
-      animationManager.executeAnimation(elementId, animationConfig, this.animationContext, gsap);
+      animationManager.executeAnimation(elementId, animationConfig, this.animationContext, gsap, initialValues);
     }
   }
 
-  private convertToAnimationConfig(animationDef: any): import('./animation.js').AnimationConfig | null {
+  private convertToAnimationConfig(animationDef: AnimationDefinition): import('./animation.js').AnimationConfig | null {
     if (!animationDef || !animationDef.type) {
       return null;
     }
@@ -197,7 +254,6 @@ export class StateManager {
       yoyo: animationDef.yoyo
     };
 
-    // Copy type-specific parameters
     if (animationDef.scale_params) {
       config.scale_params = animationDef.scale_params;
     }
@@ -207,8 +263,8 @@ export class StateManager {
     if (animationDef.fade_params) {
       config.fade_params = animationDef.fade_params;
     }
-    if (animationDef.custom_gsap_params) {
-      config.custom_gsap_params = animationDef.custom_gsap_params;
+    if (animationDef.custom_gsap_vars) {
+      config.custom_gsap_params = animationDef.custom_gsap_vars;
     }
 
     return config;
@@ -220,20 +276,114 @@ export class StateManager {
     }
 
     const element = this.elementsMap.get(elementId);
-    const animationDef: any = element?.props?.animations?.[lifecycle];
+    const animationDef: AnimationDefinition | AnimationSequence | undefined = element?.props?.animations?.[lifecycle];
     if (!animationDef) return;
 
-    // Handle multi-step animation sequences via AnimationManager helper
-    if (animationDef.steps && Array.isArray(animationDef.steps)) {
-      animationManager.executeAnimationSequence(elementId, animationDef, this.animationContext as any, gsap);
+    if ('steps' in animationDef) {
+      animationManager.executeAnimationSequence(elementId, animationDef, this.animationContext, gsap);
       return;
     }
 
-    // Fallback to single animation definition
     this.executeAnimation(elementId, animationDef);
   }
 
-  // Visibility management now uses regular state ('hidden'/'visible')
+  setInitialAnimationStates(groups: Group[]): void {
+    if (!this.animationContext?.getShadowElement) {
+      return;
+    }
+
+    groups.forEach(group => {
+      group.elements.forEach(element => {
+        this.setElementInitialState(element);
+      });
+    });
+  }
+
+  private setElementInitialState(element: LayoutElement): void {
+    if (!this.animationContext?.getShadowElement) {
+      return;
+    }
+
+    const targetElement = this.animationContext.getShadowElement(element.id);
+    if (!targetElement) {
+      return;
+    }
+
+    const animations = element.props?.animations;
+    if (!animations) {
+      return;
+    }
+
+    if (animations.on_load) {
+      this.applyInitialAnimationState(targetElement, animations.on_load);
+    }
+
+    if (animations.on_state_change && Array.isArray(animations.on_state_change)) {
+      const currentState = this.getState(element.id) || 'default';
+      
+      const incomingAnimation = animations.on_state_change.find((anim: StateChangeAnimationConfig) => 
+        anim.to_state === currentState
+      );
+      
+      if (incomingAnimation) {
+        this.applyFinalAnimationState(targetElement, incomingAnimation);
+      }
+    }
+  }
+
+  private applyInitialAnimationState(targetElement: Element, animationDef: AnimationDefinition): void {
+    const initialProps: { [key: string]: any } = {};
+
+    if (animationDef.type === 'fade' && animationDef.fade_params?.opacity_start !== undefined) {
+      initialProps.opacity = animationDef.fade_params.opacity_start;
+    }
+
+    if (animationDef.type === 'scale' && animationDef.scale_params?.scale_start !== undefined) {
+      initialProps.scale = animationDef.scale_params.scale_start;
+    }
+
+    if (animationDef.type === 'slide' && animationDef.slide_params) {
+      const slideParams = animationDef.slide_params;
+      if (slideParams.opacity_start !== undefined) {
+        initialProps.opacity = slideParams.opacity_start;
+      }
+      
+      if (slideParams.movement === 'in') {
+        const distance = DistanceParser.parse(slideParams.distance || '0');
+        switch (slideParams.direction) {
+          case 'left': initialProps.x = distance; break;
+          case 'right': initialProps.x = -distance; break;
+          case 'up': initialProps.y = distance; break;
+          case 'down': initialProps.y = -distance; break;
+        }
+      }
+    }
+
+    if (Object.keys(initialProps).length > 0) {
+      gsap.set(targetElement, initialProps);
+    }
+  }
+
+  private applyFinalAnimationState(targetElement: Element, animationDef: AnimationDefinition): void {
+    const finalProps: { [key: string]: any } = {};
+
+    if (animationDef.type === 'fade' && animationDef.fade_params?.opacity_end !== undefined) {
+      finalProps.opacity = animationDef.fade_params.opacity_end;
+    }
+
+    if (animationDef.type === 'scale' && animationDef.scale_params?.scale_end !== undefined) {
+      finalProps.scale = animationDef.scale_params.scale_end;
+    }
+
+    if (animationDef.type === 'slide' && animationDef.slide_params?.opacity_end !== undefined) {
+      finalProps.opacity = animationDef.slide_params.opacity_end;
+    }
+
+    if (Object.keys(finalProps).length > 0) {
+      gsap.set(targetElement, finalProps);
+    }
+  }
+
   setElementVisibility(elementId: string, visible: boolean, animated: boolean = false): void {
     const targetState = visible ? 'visible' : 'hidden';
     this.setState(elementId, targetState);
@@ -247,16 +397,10 @@ export class StateManager {
     this.store.cleanup();
   }
 
-  /**
-   * Clear all state (legacy method)
-   */
   clearAll(): void {
     this.cleanup();
   }
 
-  /**
-   * Execute a set_state action using the unified Action interface
-   */
   executeSetStateAction(action: import('../types.js').Action): void {
     const targetElementRef = action.target_element_ref;
     const state = action.state;
@@ -269,9 +413,6 @@ export class StateManager {
     this.setState(targetElementRef, state);
   }
 
-  /**
-   * Execute a toggle_state action using the unified Action interface
-   */
   executeToggleStateAction(action: import('../types.js').Action): void {
     const targetElementRef = action.target_element_ref;
     const states = action.states;
@@ -283,7 +424,28 @@ export class StateManager {
     
     this.toggleState(targetElementRef, states);
   }
+
+  reverseAnimation(elementId: string): boolean {
+    if (!this.animationContext) {
+      console.warn(`[StateManager] No animation context available for reversing animation on ${elementId}`);
+      return false;
+    }
+
+    return animationManager.reverseAnimation(elementId);
+  }
+
+  reverseAllAnimations(elementId: string): void {
+    if (!this.animationContext) {
+      console.warn(`[StateManager] No animation context available for reversing animations on ${elementId}`);
+      return;
+    }
+
+    animationManager.reverseAllAnimations(elementId);
+  }
+
+  stopAnimations(elementId: string): void {
+    animationManager.stopAllAnimationsForElement(elementId);
+  }
 }
 
-// Maintain singleton for backward compatibility, but now using the store
 export const stateManager = new StateManager(); 

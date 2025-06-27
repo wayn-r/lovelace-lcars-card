@@ -1,6 +1,10 @@
 import { HomeAssistant } from 'custom-card-helpers';
 import gsap from 'gsap';
-import { transformPropagator, AnimationSyncData } from './transform-propagator.js';
+import { transformPropagator, AnimationSyncData, TransformPropagator } from './transform-propagator.js';
+import { GSDevTools } from 'gsap/GSDevTools';
+import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
+import { CustomEase } from 'gsap/CustomEase';
+import { AnimationSequence as AnimationSequenceDefinition } from '../types.js';
 
 export interface AnimationContext {
   elementId: string;
@@ -16,7 +20,6 @@ export interface AnimationConfig {
   delay?: number;
   repeat?: number;
   yoyo?: boolean;
-  // Type-specific parameters
   scale_params?: {
     scale_start?: number;
     scale_end?: number;
@@ -44,15 +47,38 @@ export interface AnimationTimelineResult {
   syncData: AnimationSyncData;
 }
 
+export interface ReversibleTimeline {
+  timeline: gsap.core.Timeline;
+  elementId: string;
+  animationConfig: AnimationConfig;
+  isReversed: boolean;
+  transformOrigin?: string;
+}
+
 export class AnimationManager {
   private positioningEffectsCache = new WeakMap<AnimationConfig, boolean>();
   private elementAnimationStates = new Map<string, { lastKnownEntityStates: Map<string, any> }>();
+  private activeTimelines = new Map<string, ReversibleTimeline[]>();
+  private elementsMap?: Map<string, import('../layout/elements/element.js').LayoutElement>;
+
+  private static isGsapInitialized = false;
+
+  static initializeGsap(): void {
+    if (!AnimationManager.isGsapInitialized) {
+      gsap.registerPlugin(GSDevTools, MotionPathPlugin, CustomEase);
+      AnimationManager.isGsapInitialized = true;
+    }
+  }
 
   initializeElementAnimationTracking(elementId: string): void {
     if (!this.elementAnimationStates.has(elementId)) {
       this.elementAnimationStates.set(elementId, {
         lastKnownEntityStates: new Map()
       });
+    }
+    
+    if (!this.activeTimelines.has(elementId)) {
+      this.activeTimelines.set(elementId, []);
     }
   }
 
@@ -62,6 +88,14 @@ export class AnimationManager {
 
   cleanupElementAnimationTracking(elementId: string): void {
     this.elementAnimationStates.delete(elementId);
+    
+    const timelines = this.activeTimelines.get(elementId);
+    if (timelines) {
+      for (const reversibleTimeline of timelines) {
+        reversibleTimeline.timeline.kill();
+      }
+    }
+    this.activeTimelines.delete(elementId);
   }
 
   animateElementProperty(
@@ -76,20 +110,35 @@ export class AnimationManager {
     const element = getShadowElement(elementId);
     if (!element) return;
     
-    gsap.to(element, {
+    const timeline = gsap.timeline();
+    timeline.to(element, {
       [property]: value,
       duration: duration,
       ease: 'power2.out'
     });
+    
+    this.storeTimeline(elementId, timeline, {
+      type: 'custom_gsap',
+      duration,
+      custom_gsap_params: { [property]: value }
+    } as AnimationConfig);
   }
 
   createAnimationTimeline(
     elementId: string,
     animationConfig: AnimationConfig,
     targetElement: Element,
-    gsapInstance: typeof gsap = gsap
+    gsapInstance: typeof gsap = gsap,
+    initialValues?: { opacity?: number; x?: number; y?: number; }
   ): AnimationTimelineResult {
-    const timeline = gsapInstance.timeline();
+    const timeline = gsapInstance.timeline({
+      onComplete: () => {
+        this.removeTimeline(elementId, timeline);
+      },
+      onReverseComplete: () => {
+        this.removeTimeline(elementId, timeline);
+      }
+    });
     
     const { type, duration = 0.5, ease = 'power2.out', delay, repeat, yoyo } = animationConfig;
     
@@ -101,7 +150,7 @@ export class AnimationManager {
       yoyo
     };
 
-    const animationProps: any = {
+    const animationProps: gsap.TweenVars = {
       duration,
       ease,
     };
@@ -109,15 +158,17 @@ export class AnimationManager {
     if (repeat !== undefined) animationProps.repeat = repeat;
     if (yoyo !== undefined) animationProps.yoyo = yoyo;
 
+    this.captureInitialState(targetElement, timeline, animationConfig);
+
     switch (type) {
       case 'scale':
-        this.buildScaleAnimation(animationConfig, targetElement, timeline, animationProps);
+        this.buildScaleAnimation(animationConfig, targetElement, timeline, animationProps, elementId);
         break;
       case 'slide':
-        this.buildSlideAnimation(animationConfig, targetElement, timeline, animationProps);
+        this.buildSlideAnimation(animationConfig, targetElement, timeline, animationProps, initialValues);
         break;
       case 'fade':
-        this.buildFadeAnimation(animationConfig, targetElement, timeline, animationProps);
+        this.buildFadeAnimation(animationConfig, targetElement, timeline, animationProps, initialValues);
         break;
       case 'custom_gsap':
         this.buildCustomGsapAnimation(animationConfig, targetElement, timeline, animationProps);
@@ -126,7 +177,7 @@ export class AnimationManager {
 
     return {
       timeline,
-      affectsPositioning: this.hasPositioningEffects(animationConfig),
+      affectsPositioning: this.animationEffectsPositioning(animationConfig),
       syncData
     };
   }
@@ -135,7 +186,8 @@ export class AnimationManager {
     elementId: string,
     animationConfig: AnimationConfig,
     context: AnimationContext,
-    gsapInstance: typeof gsap = gsap
+    gsapInstance: typeof gsap = gsap,
+    initialValues?: { opacity?: number; x?: number; y?: number; }
   ): AnimationTimelineResult | null {
     const targetElement = context.getShadowElement?.(elementId);
     if (!targetElement) {
@@ -143,7 +195,13 @@ export class AnimationManager {
       return null;
     }
 
-    const result = this.createAnimationTimeline(elementId, animationConfig, targetElement, gsapInstance);
+    const result = this.createAnimationTimeline(elementId, animationConfig, targetElement, gsapInstance, initialValues);
+    
+    this.storeTimeline(
+      elementId,
+      result.timeline,
+      animationConfig
+    );
     
     if (result.affectsPositioning) {
       transformPropagator.processAnimationWithPropagation(
@@ -153,12 +211,18 @@ export class AnimationManager {
       );
     }
 
+    if (animationConfig.delay) {
+      result.timeline.delay(animationConfig.delay);
+    }
+    
+    result.timeline.play();
+
     return result;
   }
 
   executeAnimationSequence(
     elementId: string,
-    sequenceDef: any,
+    sequenceDef: AnimationSequenceDefinition,
     context: AnimationContext,
     gsapInstance: typeof gsap = gsap
   ): void {
@@ -167,7 +231,68 @@ export class AnimationManager {
   }
 
   stopAllAnimationsForElement(elementId: string): void {
+    const timelines = this.activeTimelines.get(elementId);
+    if (timelines) {
+      for (const reversibleTimeline of timelines) {
+        reversibleTimeline.timeline.kill();
+      }
+      timelines.length = 0;
+    }
     gsap.killTweensOf(`[id="${elementId}"]`);
+    
+    transformPropagator.stopAnimationPropagation(elementId);
+  }
+
+  reverseAnimation(elementId: string, animationIndex?: number): boolean {
+    const timelines = this.activeTimelines.get(elementId);
+    if (!timelines || timelines.length === 0) {
+      console.warn(`[AnimationManager] No active animations found for element: ${elementId}`);
+      return false;
+    }
+
+    let targetTimeline: ReversibleTimeline;
+    
+    if (animationIndex !== undefined && animationIndex < timelines.length) {
+      targetTimeline = timelines[animationIndex];
+    } else {
+      targetTimeline = timelines[timelines.length - 1];
+    }
+    
+    if (!targetTimeline) {
+      console.warn(`[AnimationManager] No timeline found at index ${animationIndex} for element: ${elementId}`);
+      return false;
+    }
+
+    if (!targetTimeline.isReversed) {
+      targetTimeline.timeline.reverse();
+      targetTimeline.isReversed = true;
+      
+      transformPropagator.reverseAnimationPropagation(elementId, targetTimeline.animationConfig as any);
+    } else {
+      targetTimeline.timeline.play();
+      targetTimeline.isReversed = false;
+    }
+    
+    return true;
+  }
+
+  reverseAllAnimations(elementId: string): void {
+    const timelines = this.activeTimelines.get(elementId);
+    if (!timelines || timelines.length === 0) {
+      console.warn(`[AnimationManager] No active animations found for element: ${elementId}`);
+      return;
+    }
+
+    for (const reversibleTimeline of timelines) {
+      if (!reversibleTimeline.isReversed) {
+        reversibleTimeline.timeline.reverse();
+        reversibleTimeline.isReversed = true;
+      }
+    }
+  }
+
+  getActiveTimelines(elementId: string): ReversibleTimeline[] | undefined {
+    return this.activeTimelines.get(elementId);
   }
 
   collectAnimationStates(
@@ -218,153 +343,260 @@ export class AnimationManager {
     }
   }
 
-  hasPositioningEffects(config: AnimationConfig): boolean {
+  animationEffectsPositioning(config: AnimationConfig): boolean {
     if (this.positioningEffectsCache.has(config)) {
       return this.positioningEffectsCache.get(config)!;
     }
 
-    let hasPositioningEffects = false;
+    let affectsPositioning = false;
 
     switch (config.type) {
       case 'scale':
       case 'slide':
-        hasPositioningEffects = true;
+        affectsPositioning = true;
         break;
       case 'fade':
-        hasPositioningEffects = false;
+        affectsPositioning = false;
         break;
       case 'custom_gsap':
-        hasPositioningEffects = true;
+        affectsPositioning = true;
         break;
       default:
-        hasPositioningEffects = false;
+        affectsPositioning = false;
     }
 
-    this.positioningEffectsCache.set(config, hasPositioningEffects);
-    return hasPositioningEffects;
+    this.positioningEffectsCache.set(config, affectsPositioning);
+    return affectsPositioning;
+  }
+
+  setElementsMap(elementsMap: Map<string, import('../layout/elements/element.js').LayoutElement>): void {
+    this.elementsMap = elementsMap;
+  }
+
+  private storeTimeline(
+    elementId: string,
+    timeline: gsap.core.Timeline,
+    animationConfig: AnimationConfig
+  ): void {
+    this.initializeElementAnimationTracking(elementId);
+    
+    const timelines = this.activeTimelines.get(elementId)!;
+    
+    let transformOrigin: string | undefined;
+    if (animationConfig.type === 'scale' && animationConfig.scale_params) {
+      transformOrigin = animationConfig.scale_params.transform_origin || this.getOptimalTransformOrigin(elementId);
+    }
+    
+    const reversibleTimeline: ReversibleTimeline = {
+      timeline,
+      elementId,
+      animationConfig,
+      isReversed: false,
+      transformOrigin
+    };
+    
+    timelines.push(reversibleTimeline);
+  }
+
+  private removeTimeline(elementId: string, timeline: gsap.core.Timeline): void {
+    const timelines = this.activeTimelines.get(elementId);
+    if (timelines) {
+      const index = timelines.findIndex(rt => rt.timeline === timeline);
+      if (index !== -1) {
+        timelines.splice(index, 1);
+      }
+    }
+  }
+
+  private captureInitialState(
+    targetElement: Element,
+    timeline: gsap.core.Timeline,
+    animationConfig: AnimationConfig
+  ): void {
+    const initialProps: gsap.TweenVars = {};
+
+    if (animationConfig.type === 'slide' && animationConfig.slide_params) {
+      const slideParams = animationConfig.slide_params;
+      const distance = DistanceParser.parse(slideParams.distance || '0', targetElement);
+
+      if (slideParams.movement === 'in') {
+        if (slideParams.direction === 'left') initialProps.x = distance;
+        else if (slideParams.direction === 'right') initialProps.x = -distance;
+        else if (slideParams.direction === 'up') initialProps.y = distance;
+        else if (slideParams.direction === 'down') initialProps.y = -distance;
+      }
+    }
+
+    timeline.set(targetElement, Object.keys(initialProps).length > 0 ? initialProps : {}, 0);
   }
 
   private buildScaleAnimation(
     config: AnimationConfig,
     targetElement: Element,
     timeline: gsap.core.Timeline,
-    animationProps: any
+    animationProps: gsap.TweenVars,
+    elementId: string
   ): void {
     const { scale_params } = config;
     if (scale_params) {
+      let transformOrigin = scale_params.transform_origin;
+      
+      if (!transformOrigin) {
+        transformOrigin = this.getOptimalTransformOrigin(elementId);
+      }
+      
       if (scale_params.scale_start !== undefined) {
-        const initialScaleProps = {
+        const initialScaleProps: gsap.TweenVars = {
           scale: scale_params.scale_start,
-          transformOrigin: scale_params.transform_origin || 'center center'
+          transformOrigin: transformOrigin
         };
         timeline.set(targetElement, initialScaleProps);
       }
       animationProps.scale = scale_params.scale_end !== undefined ? scale_params.scale_end : 1;
-      animationProps.transformOrigin = scale_params.transform_origin || 'center center';
+      animationProps.transformOrigin = transformOrigin;
     }
     timeline.to(targetElement, animationProps);
+  }
+
+  private getOptimalTransformOrigin(elementId: string): string {
+    if (!this.elementsMap) {
+      return 'center center';
+    }
+
+    const element = this.elementsMap.get(elementId);
+    if (!element?.layoutConfig?.anchor) {
+      return 'center center';
+    }
+
+    const anchorConfig = element.layoutConfig.anchor;
+    
+    if (anchorConfig.anchorTo && anchorConfig.anchorTo !== 'container') {
+      const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
+      return this.anchorPointToTransformOriginString(anchorPoint);
+    }
+
+    return 'center center';
+  }
+
+  private anchorPointToTransformOriginString(anchorPoint: string): string {
+    switch (anchorPoint) {
+      case 'topLeft': return 'left top';
+      case 'topCenter': return 'center top';
+      case 'topRight': return 'right top';
+      case 'centerLeft': return 'left center';
+      case 'center': return 'center center';
+      case 'centerRight': return 'right center';
+      case 'bottomLeft': return 'left bottom';
+      case 'bottomCenter': return 'center bottom';
+      case 'bottomRight': return 'right bottom';
+      default: return 'center center';
+    }
   }
 
   private buildSlideAnimation(
     config: AnimationConfig,
     targetElement: Element,
     timeline: gsap.core.Timeline,
-    animationProps: any
+    animationProps: gsap.TweenVars,
+    initialValues?: { opacity?: number; x?: number; y?: number; }
   ): void {
     const { slide_params } = config;
-    if (slide_params) {
-      const distance = DistanceParser.parse(slide_params.distance || '0', targetElement);
-      const movement = slide_params.movement;
-
-      let calculatedX = 0;
-      let calculatedY = 0;
-
-      switch (slide_params.direction) {
-        case 'left': calculatedX = -distance; break;
-        case 'right': calculatedX = distance; break;
-        case 'up': calculatedY = -distance; break;
-        case 'down': calculatedY = distance; break;
-      }
-
-      const initialSetProps: any = {};
-      let needsInitialSet = false;
-
-      if (movement === 'in') {
-        if (slide_params.direction === 'left' || slide_params.direction === 'right') {
-          initialSetProps.x = (slide_params.direction === 'left') ? distance : -distance;
-          animationProps.x = 0;
-        }
-        if (slide_params.direction === 'up' || slide_params.direction === 'down') {
-          initialSetProps.y = (slide_params.direction === 'up') ? distance : -distance;
-          animationProps.y = 0;
-        }
-        needsInitialSet = true;
-      } else if (movement === 'out') {
-        if (calculatedX !== 0) animationProps.x = calculatedX;
-        if (calculatedY !== 0) animationProps.y = calculatedY;
-      } else {
-        const isShowingAnimation = slide_params.opacity_start === 0 && slide_params.opacity_end === 1;
-        const isHidingAnimation = slide_params.opacity_start === 1 && slide_params.opacity_end === 0;
-        
-        if (isShowingAnimation) {
-          if (slide_params.direction === 'left' || slide_params.direction === 'right') {
-            initialSetProps.x = (slide_params.direction === 'left') ? distance : -distance;
-            animationProps.x = 0;
-          }
-          if (slide_params.direction === 'up' || slide_params.direction === 'down') {
-            initialSetProps.y = (slide_params.direction === 'up') ? distance : -distance;
-            animationProps.y = 0;
-          }
-          needsInitialSet = true;
-        } else if (isHidingAnimation) {
-          if (calculatedX !== 0) animationProps.x = calculatedX;
-          if (calculatedY !== 0) animationProps.y = calculatedY;
-        } else {
-          if (calculatedX !== 0) animationProps.x = calculatedX;
-          if (calculatedY !== 0) animationProps.y = calculatedY;
-        }
-      }
-
-      if (slide_params.opacity_start !== undefined) {
-        initialSetProps.opacity = slide_params.opacity_start;
-        needsInitialSet = true;
-      }
-
-      if (needsInitialSet && Object.keys(initialSetProps).length > 0) {
-        timeline.set(targetElement, initialSetProps);
-      }
-      
-      if (slide_params.opacity_end !== undefined) {
-        animationProps.opacity = slide_params.opacity_end;
-      } else if (slide_params.opacity_start !== undefined) {
-        animationProps.opacity = 1;
-      }
+    if (!slide_params) {
+      timeline.add(gsap.to(targetElement, animationProps));
+      return;
     }
-    timeline.to(targetElement, animationProps);
+
+    const distance = DistanceParser.parse(slide_params.distance || '0', targetElement);
+    const movement = slide_params.movement;
+
+    let calculatedX = 0;
+    let calculatedY = 0;
+
+    switch (slide_params.direction) {
+      case 'left': calculatedX = -distance; break;
+      case 'right': calculatedX = distance; break;
+      case 'up': calculatedY = -distance; break;
+      case 'down': calculatedY = distance; break;
+    }
+
+    const initialTweenVars: gsap.TweenVars = {};
+    const finalTweenVars: gsap.TweenVars = { ...animationProps };
+
+    let useFromTo = false;
+
+    const startX = initialValues?.x !== undefined ? initialValues.x : 
+      ((movement === 'in' && (slide_params.direction === 'left' || slide_params.direction === 'right')) ? 
+        ((slide_params.direction === 'left') ? distance : -distance) : undefined);
+    const startY = initialValues?.y !== undefined ? initialValues.y : 
+      ((movement === 'in' && (slide_params.direction === 'up' || slide_params.direction === 'down')) ? 
+        ((slide_params.direction === 'up') ? distance : -distance) : undefined);
+
+    if (startX !== undefined) {
+      initialTweenVars.x = startX;
+      finalTweenVars.x = 0;
+      useFromTo = true;
+    }
+    if (startY !== undefined) {
+      initialTweenVars.y = startY;
+      finalTweenVars.y = 0;
+      useFromTo = true;
+    }
+
+    if (!useFromTo && (movement === 'out' || movement === undefined)) {
+      if (calculatedX !== 0) finalTweenVars.x = calculatedX;
+      if (calculatedY !== 0) finalTweenVars.y = calculatedY;
+    }
+
+    const startOpacity = initialValues?.opacity !== undefined ? initialValues.opacity : slide_params.opacity_start;
+
+    if (startOpacity !== undefined) {
+      initialTweenVars.opacity = startOpacity;
+      useFromTo = true;
+    }
+    if (slide_params.opacity_end !== undefined) {
+      finalTweenVars.opacity = slide_params.opacity_end;
+    } else if (slide_params.opacity_start !== undefined) {
+      finalTweenVars.opacity = 1;
+    }
+
+    timeline.add(useFromTo ? 
+      gsap.fromTo(targetElement, initialTweenVars, finalTweenVars) :
+      gsap.to(targetElement, finalTweenVars)
+    );
   }
 
   private buildFadeAnimation(
     config: AnimationConfig,
     targetElement: Element,
     timeline: gsap.core.Timeline,
-    animationProps: any
+    animationProps: gsap.TweenVars,
+    initialValues?: { opacity?: number; x?: number; y?: number; }
   ): void {
     const { fade_params } = config;
-    if (fade_params) {
-      if (fade_params.opacity_start !== undefined) {
-        const initialFadeProps = { opacity: fade_params.opacity_start };
-        timeline.set(targetElement, initialFadeProps);
-      }
-      animationProps.opacity = fade_params.opacity_end !== undefined ? fade_params.opacity_end : 1;
+    if (!fade_params || fade_params.opacity_start === undefined) {
+      timeline.add(gsap.to(targetElement, animationProps));
+      return;
     }
-    timeline.to(targetElement, animationProps);
+
+    const startOpacity = initialValues?.opacity !== undefined ? initialValues.opacity : fade_params.opacity_start;
+
+    if (startOpacity !== undefined) {
+      const initialFadeProps: gsap.TweenVars = { opacity: startOpacity };
+      timeline.add(gsap.fromTo(targetElement, initialFadeProps, { 
+        opacity: fade_params.opacity_end !== undefined ? fade_params.opacity_end : 1, 
+        ...animationProps 
+      }));
+    } else {
+      animationProps.opacity = fade_params.opacity_end !== undefined ? fade_params.opacity_end : 1;
+      timeline.add(gsap.to(targetElement, animationProps));
+    }
   }
 
   private buildCustomGsapAnimation(
     config: AnimationConfig,
     targetElement: Element,
     timeline: gsap.core.Timeline,
-    animationProps: any
+    animationProps: gsap.TweenVars
   ): void {
     const { custom_gsap_params } = config;
     if (custom_gsap_params) {
@@ -461,11 +693,11 @@ export class AnimationSequence {
 
     const sortedIndices = Array.from(grouped.keys()).sort((a, b) => a - b);
     
-    const hasPositioningEffects = this.animations.some(({ anim }) => 
-      this.manager.hasPositioningEffects(anim.config)
+    const affectsPositioning = this.animations.some(({ anim }) => 
+      this.manager.animationEffectsPositioning(anim.config)
     );
 
-    if (hasPositioningEffects) {
+    if (affectsPositioning) {
       this.runWithTransformPropagation(grouped, sortedIndices);
     } else {
       this.runSimpleSequence(grouped, sortedIndices);
@@ -502,11 +734,10 @@ export class AnimationSequence {
 
     for (const idx of sortedIndices) {
       const group = grouped.get(idx)!;
-
       let maxRuntimeInGroup = 0;
 
       for (const anim of group) {
-        if (!this.manager.hasPositioningEffects(anim.config)) {
+        if (!this.manager.animationEffectsPositioning(anim.config)) {
           anim.execute(this.context, cumulativeDelay);
         }
 
@@ -540,19 +771,18 @@ export class AnimationSequence {
 
   static createFromDefinition(
     elementId: string,
-    sequenceDef: any,
+    sequenceDef: AnimationSequenceDefinition,
     context: AnimationContext,
     manager: AnimationManager
   ): AnimationSequence {
     const sequence = new AnimationSequence(elementId, context, manager);
 
-    if (!sequenceDef || !Array.isArray(sequenceDef.steps)) return sequence;
+    if (!sequenceDef?.steps) return sequence;
 
-    sequenceDef.steps.forEach((step: any) => {
+    sequenceDef.steps.forEach((step) => {
       if (!step) return;
-      const idx: number = Number(step.index) || 0;
-      const animations = Array.isArray(step.animations) ? step.animations : [];
-      animations.forEach((animCfg: any) => {
+      const idx: number = step.index;
+      step.animations.forEach((animCfg) => {
         const pure: AnimationConfig = { ...animCfg } as AnimationConfig;
         sequence.add(new Animation(elementId, pure, manager), idx);
       });

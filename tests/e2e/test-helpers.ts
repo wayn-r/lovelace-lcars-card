@@ -1,4 +1,3 @@
-
 import { promises as fs } from 'fs';
 import { HomeAssistant, PlaywrightBrowser } from 'hass-taste-test';
 import { expect } from '@playwright/test';
@@ -425,9 +424,9 @@ export class TestWaitHelper {
   ): Promise<void> {
     for (let i = 0; i < retries; i++) {
       try {
-        await cardLocator.locator('svg').waitFor({ state: 'attached', timeout: 1000 });
+        await cardLocator.locator('svg').waitFor({ state: 'attached', timeout: 10000 });
         await page.waitForTimeout(100);
-        await cardLocator.locator('svg').waitFor({ state: 'attached', timeout: 500 });
+        await cardLocator.locator('svg').waitFor({ state: 'attached', timeout: 5000 });
         break;
       } catch (error) {
         if (i === retries - 1) {

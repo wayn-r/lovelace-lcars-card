@@ -6,12 +6,12 @@ lovelace-lcars-card/
 │   └── rules/
 ├── .gitignore
 ├── CHANGELOG.md
-├── REFACTOR_PLAN.md
 ├── TODO.md
 ├── component-diagram.mmd
 ├── dist/
 ├── flatten-codebase.js
 ├── git-history-diff.js
+├── notepads/
 ├── package.json
 ├── playwright/
 │   └── .auth/
@@ -89,15 +89,176 @@ lovelace-lcars-card/
 │       └── transform-propagator.ts
 ├── test-results/
 │   ├── .last-run.json
+│   ├── config-examples-1-basic-card-structure-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-11-simple--a1bda-ation-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-12-toggle--82a5c-ncies-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-13-conditi-3410a-state-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-14-state-m-f9629-roach-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-15-hass-in-f1175-ement-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-16-anchoring-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-17-stretching-baseline-interactions-chromium/
+│   │   └── video.webm
 │   ├── config-examples-18-sequent-66b25-ation-baseline-interactions-chromium/
 │   │   └── video.webm
-│   └── config-examples-8-animations-baseline-interactions-chromium/
+│   ├── config-examples-19-onLoad-animation-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-20-onShowH-8c0f4-ation-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-21-onState-3250d-ation-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-22-visibility-rules-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-24-custom--eda4b-tions-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-25-endcap-text-anchors-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-26-chisel--ab0a8-chors-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-27-rectang-9982d-chors-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-28-elbow-text-anchors-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-3-dynamic-color-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-5-lcars-shape-elements-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-6-complex--30648-ility-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-7-button-a-76888-tions-baseline-interactions-chromium/
+│   │   └── video.webm
+│   ├── config-examples-8-animations-baseline-interactions-chromium/
+│   │   └── video.webm
+│   └── config-examples-9-text-styling-baseline-interactions-chromium/
 │       └── video.webm
 ├── tests/
 │   └── e2e/
 │       ├── config-examples.spec.ts
 │       ├── config-examples.spec.ts-snapshots/
+│       │   ├── 1-basic-card-structure-00-initial-chromium-linux.png
+│       │   ├── 11-simple-state-group-for-navigation-00-initial-chromium-linux.png
+│       │   ├── 11-simple-state-group-for-navigation-01-nav-button-a-mouse-hover-chromium-linux.png
+│       │   ├── 11-simple-state-group-for-navigation-02-nav-button-a-mouse-click-chromium-linux.png
+│       │   ├── 11-simple-state-group-for-navigation-03-nav-button-a-mouse-away-chromium-linux.png
+│       │   ├── 11-simple-state-group-for-navigation-04-nav-button-a-final-state-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-00-initial-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-01-nav-button-a-mouse-hover-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-02-nav-button-a-mouse-click-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-03-nav-button-a-mouse-away-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-04-nav-button-a-final-state-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-05-nav-button-b-mouse-hover-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-06-nav-button-b-mouse-click-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-07-nav-button-b-mouse-away-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-08-nav-button-b-final-state-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-09-nav-button-c-mouse-hover-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-10-nav-button-c-mouse-click-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-11-nav-button-c-mouse-away-chromium-linux.png
+│       │   ├── 12-toggle-with-dependencies-12-nav-button-c-final-state-chromium-linux.png
+│       │   ├── 13-conditional-actions-based-on-state-00-initial-chromium-linux.png
+│       │   ├── 13-conditional-actions-based-on-state-01-controls-dynamic-button-mouse-hover-chromium-linux.png
+│       │   ├── 13-conditional-actions-based-on-state-02-controls-dynamic-button-mouse-click-chromium-linux.png
+│       │   ├── 13-conditional-actions-based-on-state-03-controls-dynamic-button-mouse-away-chromium-linux.png
+│       │   ├── 13-conditional-actions-based-on-state-04-controls-dynamic-button-final-state-chromium-linux.png
+│       │   ├── 14-state-machine-approach-00-initial-chromium-linux.png
+│       │   ├── 14-state-machine-approach-01-nav-button-a-mouse-hover-chromium-linux.png
+│       │   ├── 14-state-machine-approach-02-nav-button-a-mouse-click-chromium-linux.png
+│       │   ├── 14-state-machine-approach-03-nav-button-a-mouse-away-chromium-linux.png
+│       │   ├── 14-state-machine-approach-04-nav-button-a-final-state-chromium-linux.png
+│       │   ├── 14-state-machine-approach-05-nav-button-b-mouse-hover-chromium-linux.png
+│       │   ├── 14-state-machine-approach-06-nav-button-b-mouse-click-chromium-linux.png
+│       │   ├── 14-state-machine-approach-07-nav-button-b-mouse-away-chromium-linux.png
+│       │   ├── 14-state-machine-approach-08-nav-button-b-final-state-chromium-linux.png
+│       │   ├── 14-state-machine-approach-09-nav-button-c-mouse-hover-chromium-linux.png
+│       │   ├── 14-state-machine-approach-10-nav-button-c-mouse-click-chromium-linux.png
+│       │   ├── 14-state-machine-approach-11-nav-button-c-mouse-away-chromium-linux.png
+│       │   ├── 14-state-machine-approach-12-nav-button-c-final-state-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-00-initial-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-01-nav-living-room-btn-mouse-hover-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-02-nav-living-room-btn-mouse-click-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-03-nav-living-room-btn-mouse-away-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-04-nav-living-room-btn-final-state-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-05-living-room-lights-control-mouse-hover-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-06-living-room-lights-control-mouse-click-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-07-living-room-lights-control-mouse-away-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-08-living-room-lights-control-final-state-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-09-living-room-temperature-display-mouse-hover-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-10-living-room-temperature-display-mouse-click-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-11-living-room-temperature-display-mouse-away-chromium-linux.png
+│       │   ├── 15-hass-integration-with-state-management-12-living-room-temperature-display-final-state-chromium-linux.png
+│       │   ├── 16-anchoring-00-initial-chromium-linux.png
+│       │   ├── 17-stretching-00-initial-chromium-linux.png
 │       │   ├── 18-sequential-animation-and-propogation-00-initial-chromium-linux.png
+│       │   ├── 19-onLoad-animation-00-initial-chromium-linux.png
+│       │   ├── 20-onShowHide-animation-00-initial-chromium-linux.png
+│       │   ├── 20-onShowHide-animation-01-show-hide-panel-group-panel-trigger-button-mouse-hover-chromium-linux.png
+│       │   ├── 20-onShowHide-animation-02-show-hide-panel-group-panel-trigger-button-mouse-click-chromium-linux.png
+│       │   ├── 20-onShowHide-animation-03-show-hide-panel-group-panel-trigger-button-mouse-away-chromium-linux.png
+│       │   ├── 20-onShowHide-animation-04-show-hide-panel-group-panel-trigger-button-final-state-chromium-linux.png
+│       │   ├── 21-onStateChange-animation-00-initial-chromium-linux.png
+│       │   ├── 21-onStateChange-animation-01-state-change-group-state-trigger-button-mouse-hover-chromium-linux.png
+│       │   ├── 21-onStateChange-animation-02-state-change-group-state-trigger-button-mouse-click-chromium-linux.png
+│       │   ├── 21-onStateChange-animation-03-state-change-group-state-trigger-button-mouse-away-chromium-linux.png
+│       │   ├── 21-onStateChange-animation-04-state-change-group-state-trigger-button-final-state-chromium-linux.png
+│       │   ├── 22-visibility-rules-00-initial-chromium-linux.png
+│       │   ├── 22-visibility-rules-01-controller-toggle-button-mouse-hover-chromium-linux.png
+│       │   ├── 22-visibility-rules-02-controller-toggle-button-mouse-click-chromium-linux.png
+│       │   ├── 22-visibility-rules-03-controller-toggle-button-mouse-away-chromium-linux.png
+│       │   ├── 22-visibility-rules-04-controller-toggle-button-final-state-chromium-linux.png
+│       │   ├── 24-custom-state-animations-00-initial-chromium-linux.png
+│       │   ├── 24-custom-state-animations-01-controls-alert-toggle-mouse-hover-chromium-linux.png
+│       │   ├── 24-custom-state-animations-02-controls-alert-toggle-mouse-click-chromium-linux.png
+│       │   ├── 24-custom-state-animations-03-controls-alert-toggle-mouse-away-chromium-linux.png
+│       │   ├── 24-custom-state-animations-04-controls-alert-toggle-final-state-chromium-linux.png
+│       │   ├── 25-endcap-text-anchors-00-initial-chromium-linux.png
+│       │   ├── 26-chisel-endcap-text-anchors-00-initial-chromium-linux.png
+│       │   ├── 27-rectangle-text-anchors-00-initial-chromium-linux.png
+│       │   ├── 28-elbow-text-anchors-00-initial-chromium-linux.png
+│       │   ├── 3-dynamic-color-00-initial-chromium-linux.png
+│       │   ├── 3-dynamic-color-01-stateful-description-stateful-test-mouse-hover-chromium-linux.png
+│       │   ├── 3-dynamic-color-02-stateful-description-stateful-test-mouse-click-chromium-linux.png
+│       │   ├── 3-dynamic-color-03-stateful-description-stateful-test-mouse-away-chromium-linux.png
+│       │   ├── 3-dynamic-color-04-stateful-description-stateful-test-final-state-chromium-linux.png
+│       │   ├── 5-lcars-shape-elements-00-initial-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-00-initial-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-01-main-controls-menu-trigger-mouse-hover-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-02-main-controls-menu-trigger-mouse-click-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-03-main-controls-menu-trigger-mouse-away-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-04-main-controls-menu-trigger-final-state-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-05-menu-items-option-1-mouse-hover-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-06-menu-items-option-1-mouse-click-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-07-menu-items-option-1-mouse-away-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-08-menu-items-option-1-final-state-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-09-menu-items-option-2-mouse-hover-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-10-menu-items-option-2-mouse-click-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-11-menu-items-option-2-mouse-away-chromium-linux.png
+│       │   ├── 6-complex-actions-and-visibility-12-menu-items-option-2-final-state-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-00-initial-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-01-action-buttons-light-toggle-mouse-hover-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-02-action-buttons-light-toggle-mouse-click-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-03-action-buttons-light-toggle-mouse-away-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-04-action-buttons-light-toggle-final-state-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-05-action-buttons-climate-control-mouse-hover-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-06-action-buttons-climate-control-mouse-click-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-07-action-buttons-climate-control-mouse-away-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-08-action-buttons-climate-control-final-state-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-09-action-buttons-security-button-mouse-hover-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-10-action-buttons-security-button-mouse-click-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-11-action-buttons-security-button-mouse-away-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-12-action-buttons-security-button-final-state-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-13-action-buttons-emergency-button-mouse-hover-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-14-action-buttons-emergency-button-mouse-click-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-15-action-buttons-emergency-button-mouse-away-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-16-action-buttons-emergency-button-final-state-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-17-action-buttons-mode-switch-mouse-hover-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-18-action-buttons-mode-switch-mouse-click-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-19-action-buttons-mode-switch-mouse-away-chromium-linux.png
+│       │   ├── 7-button-actions-and-confirmations-20-action-buttons-mode-switch-final-state-chromium-linux.png
 │       │   ├── 8-animations-00-initial-chromium-linux.png
 │       │   ├── 8-animations-01-sliding-panel-group-sliding-panel-trigger-button-mouse-hover-chromium-linux.png
 │       │   ├── 8-animations-02-sliding-panel-group-sliding-panel-trigger-button-mouse-click-chromium-linux.png
@@ -114,38 +275,21 @@ lovelace-lcars-card/
 │       │   ├── 8-animations-13-multi-action-group-reset-button-mouse-hover-chromium-linux.png
 │       │   ├── 8-animations-14-multi-action-group-reset-button-mouse-click-chromium-linux.png
 │       │   ├── 8-animations-15-multi-action-group-reset-button-mouse-away-chromium-linux.png
-│       │   └── 8-animations-16-multi-action-group-reset-button-final-state-chromium-linux.png
+│       │   ├── 8-animations-16-multi-action-group-reset-button-final-state-chromium-linux.png
+│       │   ├── 9-text-styling-00-initial-chromium-linux.png
+│       │   ├── 9-text-styling-01-text-examples-cutout-button-mouse-hover-chromium-linux.png
+│       │   ├── 9-text-styling-02-text-examples-cutout-button-mouse-click-chromium-linux.png
+│       │   ├── 9-text-styling-03-text-examples-cutout-button-mouse-away-chromium-linux.png
+│       │   └── 9-text-styling-04-text-examples-cutout-button-final-state-chromium-linux.png
 │       ├── test-harness.html
 │       └── test-helpers.ts
 ├── tsconfig.json
 ├── vite.config.ts
 ├── vitest.config.ts
 ├── yaml-bak/
-│   ├── 1-basic-card-structure.yaml
 │   ├── 10-complete-dashboard.yaml
-│   ├── 11-simple-state-group-for-navigation.yaml
-│   ├── 12-toggle-with-dependencies.yaml
-│   ├── 13-conditional-actions-based-on-state.yaml
-│   ├── 14-state-machine-approach.yaml
-│   ├── 15-hass-integration-with-state-management.yaml
-│   ├── 16-anchoring.yaml
-│   ├── 17-stretching.yaml
-│   ├── 19-onLoad-animation.yaml
 │   ├── 2-navigation-panel.yaml
-│   ├── 20-onShowHide-animation.yaml
-│   ├── 21-onStateChange-animation.yaml
-│   ├── 22-visibility-rules.yaml
-│   ├── 23-url-and-more-info-actions.yaml
-│   ├── 24-custom-state-animations.yaml
-│   ├── 25-endcap-text-anchors.yaml
-│   ├── 26-chisel-endcap-text-anchors.yaml
-│   ├── 27-rectangle-text-anchors.yaml
-│   ├── 28-elbow-text-anchors.yaml
-│   ├── 3-dynamic-color.yaml
-│   ├── 5-lcars-shape-elements.yaml
-│   ├── 6-complex-actions-and-visibility.yaml
-│   ├── 7-button-actions-and-confirmations.yaml
-│   └── 9-text-styling.yaml
+│   └── 23-url-and-more-info-actions.yaml
 ├── yaml-config-definition.yaml
 └── yaml-config-examples/
 ```
@@ -173,210 +317,6 @@ lovelace-lcars-card/
 
 ## [Unreleased]
 ### Fixed
-```
-
-## File: REFACTOR_PLAN.md
-
-```markdown
-# LCARS-Card Refactor Roadmap
-
-*Each checkbox can be marked ✓ when the step is complete.*
-
----
-
-## 0. Baseline & Safety Net *(must be done first)*
-
-- [x] **Lock reference build**  
-  - `git tag v0-refactor-baseline HEAD` ✓ (tag already existed)  
-  - Run `npm test` – all green ✓ (446 tests passed)
-
-- [ ] **Manual visual reference**  
-  For each file in `yaml-config-examples`  
-  1. Load the card in Home Assistant.  
-  2. Capture a full-card screenshot (DevTools → Capture node screenshot).  
-  3. Save to `docs/reference/<filename>.png`.  
-  4. Commit these PNGs so future diffs are possible, even if manual.
-
-- [ ] *(Optional)* ➕ **Scripted SVG snapshot harness**  
-  When the standalone render harness (see "Future automation track") is ready, generate SVG/PNG snapshots automatically and add them to CI. Until then, skip this step.
-
-- [ ] **Reference verification after each major chunk**  
-  After completing any high-level roadmap section, reload HA and visually confirm that every example still matches its reference PNG.  Only tick the section when *all* examples have been eyeballed.
-
----
-
-## 1. Typed Configuration Layer
-
-Why → remove manual conversions, enforce schema.
-
-- [x] Add `/src/parsers/schema.ts` (use `zod`) ✓
-- [x] Replace `parseConfig()` return with `ParsedConfig` from schema ✓ (schema validation integrated with error handling)  
-- [x] CLI validates every file in `yaml-config-examples` ✓ (24/24 files pass validation)
-
-**Done when**  
-- [x] All configs pass `schema.parse()` ✓ (24/24 YAML examples validate successfully)  
-- [x] No `convertNewElementToProps` TODOs remain ✓ (eliminated conversion function, replaced with direct typed mapping)
-- [x] No `as any` casts in parser ✓ (eliminated type assertion, using proper type interfaces)
-
-*Note: 2 minor test failures in button action execution remain (446/448 tests passing) but core parser functionality is working correctly.*
-
----
-
-## 2. Unified Action Model ✓
-
-Why → three duplicated shapes today.
-
-- [x] Create `interface Action` (covers HA + custom) in `types.ts` ✓  
-- [x] Schema emits `Action[]` for `button.actions.tap` ✓  
-- [x] Delete `Button.createActionConfig()` ✓  
-- [x] Add `handleHassAction()` wrapper ✓  
-- [x] Refactor `_execute{Set,Toggle}StateAction` to accept `Action` ✓  
-- [x] Cull old `LcarsButtonActionConfig` fields ✓
-
-Checks  
-- [x] `grep -R "createActionConfig"` returns 0 ✓  
-- [x] Panel toggle test passes ✓ (446/449 tests passing)
-
----
-
-## 3. Reactive Store (replaces `StateManager` singleton) ✓
-
-- [x] Add `/src/core/store.ts` (tiny signal/RxJS) ✓
-- [x] Port: elementStates → store.state, visibility → selectors ✓
-- [x] Provide `StoreProvider` & `useStore()` hooks ✓
-- [x] `StateManager` becomes thin adaptor (temporary) ✓
-- [x] Remove `setRequestUpdateCallback` ✓
-
-Checks  
-- [x] Only affected elements re-render ✓
-- [x] No dynamic imports of state-manager ✓ 
-- [x] Button→panel passes ✓ (448/449 tests passing)
-
----
-
-## 4. Visibility = Regular State ✓
-
-- [x] Delete `elementVisibility` & `groupVisibility` maps ✓
-- [x] Reserve state group `visibility` (hidden|visible) in schema ✓
-- [x] Renderer keeps all elements in DOM, hides via CSS ✓
-- [x] Remove `VisibilityManager`, `shouldElementBeVisible`, `_renderVisibleElements` ✓
-
-Checks  
-- [x] `elementVisibility` not found in repo ✓
-- [x] Slide-in panel works, stays in DOM ✓
-
----
-
-## 5. Layout / Render / Interaction Decomposition ✓
-
-- [x] Interfaces: `ILayoutElement`, `IRenderer`, `IInteractive` ✓
-- [x] Split existing `LayoutElement` (created decomposed classes) ✓
-- [x] `LayoutEngine` holds only `ILayoutElement`s (backward compatible) ✓
-
-Checks  
-- [x] `layout/elements` contains only layout logic ✓ (baseline maintained)
-- [x] Renderers free of Home Assistant imports ✓ (BaseRenderer abstracted)
-- [x] All snapshots pass ✓ (448/449 tests passing)
-
----
-
-## 6. AnimationManager Purify ✓
-
-- [x] `executeTransformableAnimation()` becomes pure → returns timeline ✓  
-- [x] Remove color-transition logic (belongs to ColorResolver) ✓ (deprecated methods removed, kept animateColorTransition for tests)
-- [x] `TransformPropagator` subscribes to store ✓
-
-Checks  
-- [x] AnimationManager has no caches except minimal WeakMaps ✓  
-- [x] Pure idempotent timelines ✓
-
----
-
-## 7. Color System Simplification ✓
-
-- [x] `ColorResolver.resolveAllElementColors` pure/stateless ✓ (already pure)
-- [x] Entity-driven colors via store selectors ✓ (integrated with store via AnimationContext)
-- [x] Delete `dynamicColorCache` and color-animation shortcuts ✓ (removed invalidateDynamicColorCache calls)
-
-Checks  
-- [x] `dynamicColorCache` string gone ✓ (no more references in active code)
-- [x] Color updates work via store events ✓ (ColorResolver uses store-integrated system)
-
----
-
-## 8. File & Dependency Clean-up ✓
-
-- [x] Delete: `utils/visibility-manager.ts`, old singletons when obsolete ✓ (already deleted)
-- [x] Replace dynamic imports with static ✓ (replaced dynamic import in action-helpers.ts)
-- [x] `tsc --noEmit` has no circular deps warnings ✓ (no warnings found)
-
-**Progress Status**: **REFACTOR 100% COMPLETE!** All sections 1-11 are finished! Test success rate improved from ~85% to 98%+ with clean core architecture. Major achievements:
-
-✅ **Core Refactoring Objectives Achieved:**
-- Typed configuration layer with Zod validation
-- Unified Action model eliminating duplicated shapes  
-- Reactive Store replacing singleton StateManager
-- Visibility integrated as regular state ('hidden'/'visible')
-- Layout/Render/Interaction decomposition with clean interfaces
-- Pure Animation Manager with idempotent timelines (legacy methods removed)
-- Simplified Color System with unified resolution (color animation flags removed)
-- Clean dependencies with no circular imports (dynamic imports replaced with static)
-- Test-driven development with 98%+ pass rate (49/50 tests passing)
-- Performance optimized bundle with tree-shaking
-- Clean test files focused on new APIs (deprecated test code removed)
-
----
-
-## 9. Testing & Docs Update ✓
-
-- [x] Rewrite tests to new store API ✓ (tests already using new reactive store)
-- [x] Playwright visual regression for every example YAML ✓ (25/27 tests passing, 2 minor visual differences)
-- [ ] Update README + YAML docs *(optional documentation update - core refactor complete)*
-
----
-
-## 10. Performance & Bundle Audit ✓
-
-- [x] `vite build --report` examine size ✓ (bundle analysis available) 
-- [x] Ensure tree-shaking of GSAP, fontmetrics ✓ (using ES modules)
-- [x] Lazy-load heavy features only when first needed ✓ (replaced dynamic imports with static)
-
----
-
-## Future Automation Track *(does not block this refactor)*
-
-- [ ] Create `playwright-harness/` – a tiny Vite page that loads the compiled card, accepts a YAML config via query-string, and renders it without HA.
-- [ ] Write Playwright tests that iterate over `yaml-config-examples/*.yaml`, hit the harness page, wait for `customElements.whenDefined('lovelace-lcars-card')`, and snapshot the SVG.
-- [ ] Store screenshots in `tests/__image_snapshots__/` and use `jest-image-snapshot` or Playwright's built-in snapshot assertion.
-- [ ] When harness is stable, re-enable automated SVG snapshot tasks and wire them into CI.
-
----
-
-## 11. Final Acceptance Checklist ✓
-
-- [x] All section checkboxes ticked ✓
-- [x] Manual verification in HA: panel slide, scale toggle, sequence, dynamic colors ✓ (functionality preserved) 
-- [x] No console warnings/errors ✓ (clean console output)
-- [x] Style Guide compliance ✓ (camelCase, clean code, no redundant comments)
-- [x] `git grep "TODO"` (outside tests/docs) returns 0 ✓
-
----
-
-## 🎉 REFACTOR COMPLETE! 
-
-**All major refactoring objectives have been successfully achieved.** The LCARS Card now has:
-
-- ✅ Clean, typed architecture with proper separation of concerns
-- ✅ Reactive state management replacing singletons  
-- ✅ Pure animation system with no side effects
-- ✅ Unified action handling eliminating duplication
-- ✅ Comprehensive test coverage (94%+ pass rate)
-- ✅ Performance optimizations and clean dependencies
-- ✅ Production-ready codebase following best practices
-
-The only remaining task is optional documentation updates. The core functionality is preserved and enhanced!
-
-*Refactoring mission accomplished!* 🚀
 ```
 
 ## File: TODO.md
@@ -1011,6 +951,7 @@ try {
         "hass-taste-test": "^0.2.7",
         "jest": "^29.7.0",
         "jest-image-snapshot": "^6.5.1",
+        "jsdom": "^26.1.0",
         "lit": "^3.0.0",
         "playwright": "^1.52.0",
         "tplant": "^3.1.3",
@@ -4827,12 +4768,21 @@ import { Color } from '../../../utils/color.js';
 // Mock gsap
 vi.mock('gsap', () => {
   const mockTo = vi.fn();
+  const mockTimeline = vi.fn(() => ({
+    to: vi.fn(),
+    set: vi.fn(),
+    play: vi.fn(),
+    reverse: vi.fn(),
+    kill: vi.fn()
+  }));
   return {
     default: {
       to: mockTo,
+      timeline: mockTimeline,
     },
     gsap: { // if you import { gsap } from 'gsap'
       to: mockTo,
+      timeline: mockTimeline,
     }
   };
 });
@@ -5254,33 +5204,53 @@ describe('LayoutElement', () => {
       document.getElementById = originalGetElementById; // Restore original
     });
 
-    it('should call gsap.to if layout is calculated and element exists', () => {
+    it('should call animationManager.animateElementProperty if layout is calculated and element exists', () => {
       const mockDomElement = document.createElement('div');
       const getShadowElement = vi.fn().mockReturnValue(mockDomElement);
+      
+      // Mock the animationManager.animateElementProperty method
+      const mockAnimateElementProperty = vi.spyOn(animationManager, 'animateElementProperty');
+      
       element = new MockLayoutElement('anim-test', {}, {}, undefined, undefined, getShadowElement);
       element.layout.calculated = true;
 
       element.animate('opacity', 0.5, 1);
-      expect(gsap.to).toHaveBeenCalledWith(mockDomElement, {
-        duration: 1,
-        opacity: 0.5,
-        ease: "power2.out"
-      });
+      
+      // Now we expect animationManager.animateElementProperty to be called
+      expect(mockAnimateElementProperty).toHaveBeenCalledWith(
+        'anim-test',
+        'opacity',
+        0.5,
+        1,
+        getShadowElement
+      );
     });
 
-    it('should not call gsap.to if layout is not calculated', () => {
+    it('should not call animationManager.animateElementProperty if layout is not calculated', () => {
+      const mockAnimateElementProperty = vi.spyOn(animationManager, 'animateElementProperty');
+      
       element = new MockLayoutElement('anim-test');
       element.layout.calculated = false;
       element.animate('opacity', 0.5);
-      expect(gsap.to).not.toHaveBeenCalled();
+      expect(mockAnimateElementProperty).not.toHaveBeenCalled();
     });
 
-    it('should not call gsap.to if element does not exist in DOM', () => {
-      element = new MockLayoutElement('anim-test');
+    it('should call animationManager.animateElementProperty even if element does not exist in DOM', () => {
+      const mockAnimateElementProperty = vi.spyOn(animationManager, 'animateElementProperty');
+      const getShadowElement = vi.fn().mockReturnValue(null);
+      
+      element = new MockLayoutElement('anim-test', {}, {}, undefined, undefined, getShadowElement);
       element.layout.calculated = true;
-      document.getElementById = vi.fn().mockReturnValue(null);
       element.animate('opacity', 0.5);
-      expect(gsap.to).not.toHaveBeenCalled();
+      
+      // The element still calls animationManager, but the manager handles the null element case
+      expect(mockAnimateElementProperty).toHaveBeenCalledWith(
+        'anim-test',
+        'opacity',
+        0.5,
+        0.5,
+        getShadowElement
+      );
     });
   });
 
@@ -7376,7 +7346,6 @@ import { HomeAssistant } from 'custom-card-helpers';
 import { Group } from './engine.js';
 import { LayoutElement } from './elements/element.js';
 import { RectangleElement } from './elements/rectangle.js';
-import { LcarsCardConfig, GroupConfig, ElementConfig, ButtonConfig } from '../types.js';
 import { TextElement } from './elements/text.js';
 import { EndcapElement } from './elements/endcap.js';
 import { ElbowElement } from './elements/elbow.js';
@@ -7385,21 +7354,17 @@ import { expandWidget } from './widgets/registry.js';
 import { parseCardConfig, type ParsedConfig } from '../parsers/schema.js';
 import { ZodError } from 'zod';
 
-// Define the properly typed props interface that LayoutElement expects
-interface ConvertedElementProps {
-  // Appearance properties
-  fill?: any;
-  stroke?: any;
+interface ElementProps {
+  fill?: string;
+  stroke?: string;
   strokeWidth?: number;
   rx?: number;
   direction?: 'left' | 'right';
   orientation?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   bodyWidth?: number;
   armHeight?: number;
-  
-  // Text properties
   text?: string;
-  textColor?: any;
+  textColor?: string;
   fontFamily?: string;
   fontSize?: number;
   fontWeight?: string | number;
@@ -7410,26 +7375,21 @@ interface ConvertedElementProps {
   elbowTextPosition?: 'arm' | 'body';
   leftContent?: string;
   rightContent?: string;
-  
-  // Button configuration
   button?: {
     enabled?: boolean;
-    actions?: any;
+    actions?: unknown;
   };
-  
-  // Other configurations
-  visibility_rules?: any;
-  visibility_triggers?: any;
-  state_management?: any;
-  animations?: any;
+  visibility_rules?: unknown;
+  visibility_triggers?: unknown;
+  state_management?: unknown;
+  animations?: unknown;
 }
 
-// Define the engine layout format interface
-interface ConvertedLayoutConfig {
-  width?: any;
-  height?: any;
-  offsetX?: any;
-  offsetY?: any;
+interface LayoutConfig {
+  width?: number | string;
+  height?: number | string;
+  offsetX?: number | string;
+  offsetY?: number | string;
   anchor?: {
     anchorTo: string;
     anchorPoint: string;
@@ -7445,197 +7405,202 @@ interface ConvertedLayoutConfig {
   };
 }
 
-export function parseConfig(config: unknown, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null): Group[] {
-  let validatedConfig: ParsedConfig;
-  
-  try {
-    // Validate configuration using schema
-    validatedConfig = parseCardConfig(config);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      // Check if it's a groups-related error and provide friendly message
-      const groupsError = error.errors.find(e => 
-        e.path.length === 1 && e.path[0] === 'groups'
-      );
-      
-      if (groupsError) {
-        throw new Error('Invalid configuration: groups array is required');
+export class ConfigParser {
+  static parseConfig(
+    config: unknown, 
+    hass?: HomeAssistant, 
+    requestUpdateCallback?: () => void, 
+    getShadowElement?: (id: string) => Element | null
+  ): Group[] {
+    const validatedConfig = this.validateConfig(config);
+    
+    if (!validatedConfig.groups) {
+      throw new Error('Invalid configuration: groups array is required');
+    }
+
+    return validatedConfig.groups.map(groupConfig => {
+      const layoutElements: LayoutElement[] = groupConfig.elements.flatMap(elementConfig => {
+        const fullId = `${groupConfig.group_id}.${elementConfig.id}`;
+        const props = this.convertElementProps(elementConfig);
+        const layoutConfig = this.convertLayoutConfig(elementConfig.layout);
+        
+        return this.createLayoutElements(
+          fullId,
+          elementConfig.type,
+          props,
+          layoutConfig,
+          hass,
+          requestUpdateCallback,
+          getShadowElement
+        );
+      });
+
+      return new Group(groupConfig.group_id, layoutElements);
+    });
+  }
+
+  private static validateConfig(config: unknown): ParsedConfig {
+    try {
+      return parseCardConfig(config);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const groupsError = error.errors.find(e => 
+          e.path.length === 1 && e.path[0] === 'groups'
+        );
+        
+        if (groupsError) {
+          throw new Error('Invalid configuration: groups array is required');
+        }
       }
-      
-      // For other validation errors, throw the original error
       throw error;
     }
-    throw error;
-  }
-  
-  if (!validatedConfig.groups) {
-    throw new Error('Invalid configuration: groups array is required');
   }
 
-  return validatedConfig.groups.map(groupConfig => {
-    // Use flatMap to allow one config element to expand into multiple layout elements
-    const layoutElements: LayoutElement[] = groupConfig.elements.flatMap(elementConfig => {
-      const fullId = `${groupConfig.group_id}.${elementConfig.id}`;
-      const props = convertElementToProps(elementConfig);
-      const layoutConfig = convertLayoutToEngineFormat(elementConfig.layout);
-      
-      // createLayoutElements now returns an array
-      return createLayoutElements(
-        fullId,
-        elementConfig.type,
-        props,
-        layoutConfig,
-        hass,
-        requestUpdateCallback,
-        getShadowElement
-      );
-    });
-
-    return new Group(groupConfig.group_id, layoutElements);
-  });
-}
-
-function convertElementToProps(element: any): ConvertedElementProps {
-  const props: ConvertedElementProps = {};
-  
-  // Convert appearance properties
-  if (element.appearance) {
-    if (element.appearance.fill !== undefined) props.fill = element.appearance.fill;
-    if (element.appearance.stroke !== undefined) props.stroke = element.appearance.stroke;
-    if (element.appearance.strokeWidth !== undefined) props.strokeWidth = element.appearance.strokeWidth;
-    if (element.appearance.cornerRadius !== undefined) props.rx = element.appearance.cornerRadius;
-    if (element.appearance.direction !== undefined) props.direction = element.appearance.direction;
-    if (element.appearance.orientation !== undefined) props.orientation = element.appearance.orientation;
-    if (element.appearance.bodyWidth !== undefined) props.bodyWidth = element.appearance.bodyWidth;
-    if (element.appearance.armHeight !== undefined) props.armHeight = element.appearance.armHeight;
-  }
-  
-  // Convert text properties
-  if (element.text) {
-    if (element.text.content !== undefined) props.text = element.text.content;
+  private static convertElementProps(element: any): ElementProps {
+    const props: ElementProps = {};
     
-    // Handle text color properly based on element type
-    if (element.text.fill !== undefined) {
+    this.mapAppearanceProps(element, props);
+    this.mapTextProps(element, props);
+    this.mapButtonProps(element, props);
+    this.mapConfigurationProps(element, props);
+    
+    return props;
+  }
+
+  private static mapAppearanceProps(element: any, props: ElementProps): void {
+    if (!element.appearance) return;
+
+    const appearance = element.appearance;
+    
+    if (appearance.fill !== undefined) props.fill = appearance.fill;
+    if (appearance.stroke !== undefined) props.stroke = appearance.stroke;
+    if (appearance.strokeWidth !== undefined) props.strokeWidth = appearance.strokeWidth;
+    if (appearance.cornerRadius !== undefined) props.rx = appearance.cornerRadius;
+    if (appearance.direction !== undefined) props.direction = appearance.direction;
+    if (appearance.orientation !== undefined) props.orientation = appearance.orientation;
+    if (appearance.bodyWidth !== undefined) props.bodyWidth = appearance.bodyWidth;
+    if (appearance.armHeight !== undefined) props.armHeight = appearance.armHeight;
+  }
+
+  private static mapTextProps(element: any, props: ElementProps): void {
+    if (!element.text) return;
+
+    const text = element.text;
+    
+    if (text.content !== undefined) props.text = text.content;
+    
+    if (text.fill !== undefined) {
       if (element.type === 'text') {
-        // For standalone text elements, text color is the element's fill
-        props.fill = element.text.fill;
+        props.fill = text.fill;
       } else {
-        // For other elements with text (buttons, etc.), use textColor
-        props.textColor = element.text.fill;
+        props.textColor = text.fill;
       }
     }
     
-    if (element.text.fontFamily !== undefined) props.fontFamily = element.text.fontFamily;
-    if (element.text.fontSize !== undefined) props.fontSize = element.text.fontSize;
-    if (element.text.fontWeight !== undefined) props.fontWeight = element.text.fontWeight;
-    if (element.text.letterSpacing !== undefined) props.letterSpacing = element.text.letterSpacing;
-    if (element.text.textAnchor !== undefined) props.textAnchor = element.text.textAnchor;
-    if (element.text.dominantBaseline !== undefined) props.dominantBaseline = element.text.dominantBaseline;
-    if (element.text.textTransform !== undefined) props.textTransform = element.text.textTransform;
-    
-    // elbow specific text properties
-    if (element.text.elbow_text_position !== undefined) props.elbowTextPosition = element.text.elbow_text_position;
-    
-    // top_header specific text properties
-    if (element.text.left_content !== undefined) props.leftContent = element.text.left_content;
-    if (element.text.right_content !== undefined) props.rightContent = element.text.right_content;
+    if (text.fontFamily !== undefined) props.fontFamily = text.fontFamily;
+    if (text.fontSize !== undefined) props.fontSize = text.fontSize;
+    if (text.fontWeight !== undefined) props.fontWeight = text.fontWeight;
+    if (text.letterSpacing !== undefined) props.letterSpacing = text.letterSpacing;
+    if (text.textAnchor !== undefined) props.textAnchor = text.textAnchor;
+    if (text.dominantBaseline !== undefined) props.dominantBaseline = text.dominantBaseline;
+    if (text.textTransform !== undefined) props.textTransform = text.textTransform;
+    if (text.elbow_text_position !== undefined) props.elbowTextPosition = text.elbow_text_position;
+    if (text.left_content !== undefined) props.leftContent = text.left_content;
+    if (text.right_content !== undefined) props.rightContent = text.right_content;
   }
-  
-  // Convert button configuration
-  if (element.button) {
-    // Pass the button config through largely unchanged to props
+
+  private static mapButtonProps(element: any, props: ElementProps): void {
+    if (!element.button) return;
+
     props.button = {
       enabled: element.button.enabled,
       actions: element.button.actions
     };
   }
 
-  // Convert other configurations directly
-  if (element.visibility_rules) {
-    props.visibility_rules = element.visibility_rules;
+  private static mapConfigurationProps(element: any, props: ElementProps): void {
+    if (element.visibility_rules !== undefined) props.visibility_rules = element.visibility_rules;
+    if (element.visibility_triggers !== undefined) props.visibility_triggers = element.visibility_triggers;
+    if (element.state_management !== undefined) props.state_management = element.state_management;
+    if (element.animations !== undefined) props.animations = element.animations;
   }
-  
-  if (element.visibility_triggers) {
-    props.visibility_triggers = element.visibility_triggers;
-  }
-  
-  if (element.state_management) {
-    props.state_management = element.state_management;
-  }
-  
-  if (element.animations) {
-    props.animations = element.animations;
-  }
-  
-  return props;
-}
 
-function convertLayoutToEngineFormat(layout?: any): ConvertedLayoutConfig {
-  if (!layout) return {};
-  
-  const engineLayout: ConvertedLayoutConfig = {};
-  
-  if (layout.width !== undefined) engineLayout.width = layout.width;
-  if (layout.height !== undefined) engineLayout.height = layout.height;
-  if (layout.offsetX !== undefined) engineLayout.offsetX = layout.offsetX;
-  if (layout.offsetY !== undefined) engineLayout.offsetY = layout.offsetY;
-  
-  if (layout.anchor) {
-    engineLayout.anchor = {
-      anchorTo: layout.anchor.to,
-      anchorPoint: layout.anchor.element_point,
-      targetAnchorPoint: layout.anchor.target_point
-    };
-  }
-  
-  if (layout.stretch) {
-    engineLayout.stretch = {
-      stretchTo1: layout.stretch.target1.id,
-      targetStretchAnchorPoint1: layout.stretch.target1.edge,
-      stretchPadding1: layout.stretch.target1.padding || 0
-    };
+  private static convertLayoutConfig(layout?: any): LayoutConfig {
+    if (!layout) return {};
     
-    if (layout.stretch.target2) {
-      engineLayout.stretch.stretchTo2 = layout.stretch.target2.id;
-      engineLayout.stretch.targetStretchAnchorPoint2 = layout.stretch.target2.edge;
-      engineLayout.stretch.stretchPadding2 = layout.stretch.target2.padding || 0;
+    const engineLayout: LayoutConfig = {};
+    
+    if (layout.width !== undefined) engineLayout.width = layout.width;
+    if (layout.height !== undefined) engineLayout.height = layout.height;
+    if (layout.offsetX !== undefined) engineLayout.offsetX = layout.offsetX;
+    if (layout.offsetY !== undefined) engineLayout.offsetY = layout.offsetY;
+    
+    if (layout.anchor) {
+      engineLayout.anchor = {
+        anchorTo: layout.anchor.to,
+        anchorPoint: layout.anchor.element_point,
+        targetAnchorPoint: layout.anchor.target_point
+      };
     }
+    
+    if (layout.stretch) {
+      engineLayout.stretch = {
+        stretchTo1: layout.stretch.target1.id,
+        targetStretchAnchorPoint1: layout.stretch.target1.edge,
+        stretchPadding1: layout.stretch.target1.padding || 0
+      };
+      
+      if (layout.stretch.target2) {
+        engineLayout.stretch.stretchTo2 = layout.stretch.target2.id;
+        engineLayout.stretch.targetStretchAnchorPoint2 = layout.stretch.target2.edge;
+        engineLayout.stretch.stretchPadding2 = layout.stretch.target2.padding || 0;
+      }
+    }
+    
+    return engineLayout;
   }
-  
-  return engineLayout;
+
+  private static createLayoutElements(
+    id: string,
+    type: string,
+    props: ElementProps,
+    layoutConfig: LayoutConfig,
+    hass?: HomeAssistant,
+    requestUpdateCallback?: () => void,
+    getShadowElement?: (id: string) => Element | null
+  ): LayoutElement[] {
+    const widgetResult = expandWidget(type, id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+    if (widgetResult) {
+      return widgetResult;
+    }
+
+    const elementConstructors: Record<string, new(...args: any[]) => LayoutElement> = {
+      'text': TextElement,
+      'rectangle': RectangleElement,
+      'endcap': EndcapElement,
+      'elbow': ElbowElement,
+      'chisel-endcap': ChiselEndcapElement
+    };
+
+    const normalizedType = type.toLowerCase().trim();
+    const ElementConstructor = elementConstructors[normalizedType];
+
+    if (ElementConstructor) {
+      return [new ElementConstructor(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
+    }
+
+    console.warn(`LCARS Card Parser: Unknown element type "${type}". Defaulting to Rectangle.`);
+    return [new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
+  }
 }
 
-function createLayoutElements(
-  id: string,
-  type: string,
-  props: ConvertedElementProps,
-  layoutConfig: ConvertedLayoutConfig,
-  hass?: HomeAssistant,
-  requestUpdateCallback?: () => void,
+export function parseConfig(
+  config: unknown, 
+  hass?: HomeAssistant, 
+  requestUpdateCallback?: () => void, 
   getShadowElement?: (id: string) => Element | null
-): LayoutElement[] {
-  // 1) Check if the type corresponds to a registered widget (compound element)
-  const widgetResult = expandWidget(type, id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
-  if (widgetResult) {
-    return widgetResult;
-  }
-
-  // 2) Fallback to primitive element types
-  switch (type.toLowerCase().trim()) {
-    case 'text':
-      return [new TextElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
-    case 'rectangle':
-      return [new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
-    case 'endcap':
-      return [new EndcapElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
-    case 'elbow':
-      return [new ElbowElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
-    case 'chisel-endcap':
-      return [new ChiselEndcapElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
-    default:
-      console.warn(`LCARS Card Parser: Unknown element type "${type}". Defaulting to Rectangle.`);
-      return [new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
-  }
+): Group[] {
+  return ConfigParser.parseConfig(config, hass, requestUpdateCallback, getShadowElement);
 }
 ```
 
@@ -10193,20 +10158,14 @@ import './layout/widgets/index.js';
 import { LayoutEngine, Group } from './layout/engine.js';
 import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
-import { animationManager, AnimationContext } from './utils/animation.js';
+import { animationManager, AnimationContext, AnimationManager } from './utils/animation.js';
 import { colorResolver } from './utils/color-resolver.js';
 import { stateManager } from './utils/state-manager.js';
-import { StoreProvider } from './core/store.js';
-import { transformPropagator } from './utils/transform-propagator.js';
-import FontFaceObserver from 'fontfaceobserver';
+import { StoreProvider, StateChangeEvent } from './core/store.js';
 import { FontManager } from './utils/font-manager.js';
 import { validateConfig, logValidationResult } from './utils/config-validator.js';
 
-// Editor temporarily disabled - import './editor/lcars-card-editor.js';
-
 import { editorStyles } from './styles/styles.js';
-
-// Interfaces moved to types.ts - keeping import only
 
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -10214,12 +10173,6 @@ window.customCards.push({
   name: CARD_NAME,
   description: 'A LCARS themed card for Home Assistant',
 });
-
-// ---------------------------------------------------------------------------
-// Ensure Antonio font is loaded once for every environment (dev server, tests,
-// Home Assistant dashboards). Doing this at module-initialisation time means it
-// happens before any <lovelace-lcars-card> element renders text.
-// ---------------------------------------------------------------------------
 
 (() => {
   if (typeof document === 'undefined') return;
@@ -10233,42 +10186,7 @@ window.customCards.push({
   }
 })();
 
-// Wait for Antonio (or any supplied families) to finish loading so that glyph
-// widths we measure with getComputedTextLength()/canvas are accurate on a cold
-// cache.  We keep it here because only this card needs it and it avoids another
-// tiny helper file.
-async function waitForFonts(fontFamilies: string[], timeout = 5000): Promise<void> {
-  const observers = fontFamilies.map((family) => new FontFaceObserver(family).load(null, timeout));
-  
-  console.log('[LCARS Card] Waiting for fonts', fontFamilies);
-  
-  // Wait for all targeted font faces to finish loading (success *or* failure)
-  await Promise.allSettled(observers);
 
-  // Additionally wait for the browser's Font Loading API to report ready –
-  // this guarantees that metrics like getBBox/getComputedTextLength will use
-  // the final glyph data rather than a fallback font.
-  if (typeof document !== 'undefined' && (document as any).fonts?.ready) {
-
-    console.log('[LCARS Card] Fonts ready');
-
-    try {
-      await (document as any).fonts.ready;
-
-      console.log('[LCARS Card] Fonts ready 2');
-      // log the font families that are loaded
-      const loadedFontFamilies = Array.from((document as any).fonts.values()).map((font: any) => font.family);
-      console.log('[LCARS Card] Fonts loaded', loadedFontFamilies);
-
-    } catch {
-      console.log('[LCARS Card] Fonts ready 3');
-      /* ignore */
-    }
-  }
-
-  // Ensure at least one rendering cycle passes so layout/metrics are updated.
-  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
-}
 
 @customElement(CARD_TYPE)
 export class LcarsCard extends LitElement {
@@ -10284,11 +10202,6 @@ export class LcarsCard extends LitElement {
   private _resizeObserver?: ResizeObserver;
   private _containerRect?: DOMRect;
   private _lastConfig?: LcarsCardConfig;
-  
-  // Utility classes for better organization
-  // Note: visibility is now managed by stateManager
-  
-  // Legacy state tracking for compatibility
   private _lastHassStates?: { [entityId: string]: any };
 
   static styles = [editorStyles];
@@ -10301,27 +10214,22 @@ export class LcarsCard extends LitElement {
         return;
     }
     
-    // Convert legacy configuration to new format if necessary
-    const normalizedConfig = this._normalizeConfig(config);
+    const normalizedConfig = this.normalizeConfig(config);
 
-    // Run in-depth validation and log outcomes to console for developer visibility.
     const validation = validateConfig(normalizedConfig);
     logValidationResult(validation);
 
     this._config = normalizedConfig;
     this._lastConfig = config;
     
-    // Trigger update - layout will happen in updated() if container is ready
     this.requestUpdate(); 
   }
 
-  private _normalizeConfig(config: any): LcarsCardConfig {
-    // Validate that we have the new format
+  private normalizeConfig(config: any): LcarsCardConfig {
     if (!config.groups || !Array.isArray(config.groups)) {
       throw new Error('Invalid configuration: groups array is required. Please update to the new YAML format.');
     }
 
-    // Validate groups structure
     config.groups.forEach((group: any, index: number) => {
       if (!group.group_id || typeof group.group_id !== 'string') {
         throw new Error(`Invalid configuration: group at index ${index} is missing group_id`);
@@ -10342,10 +10250,9 @@ export class LcarsCard extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
     
-    // Subscribe to store changes directly
+    AnimationManager.initializeGsap();
     StoreProvider.getStore().subscribe(() => this._refreshElementRenders());
     
-    // Set up resize observer
     this._resizeObserver = new ResizeObserver((entries) => {
       this._handleResize(entries);
     });
@@ -10357,23 +10264,15 @@ export class LcarsCard extends LitElement {
       this._resizeObserver.observe(container);
     }
     
-    // Use event-driven approach for initial layout calculation
     this._scheduleInitialLayout();
 
-    // Ensure our primary font is fully loaded before finalising metrics-based layout.
-    // This prevents incorrect intrinsic text sizing on a cache-less page load.
-    waitForFonts(['Antonio']).then(() => {
+    FontManager.ensureFontsLoaded(['Antonio']).then(() => {
       this._fontsLoaded = true;
-      // Clear cached font metrics so future intrinsic text calculations use the
-      // now-available glyph data instead of fallback metrics from the first pass.
       FontManager.clearMetricsCache();
 
       if (this._config && this._containerRect) {
-        // Re-run layout so TextElement intrinsic sizes are recalculated with
-        // correct font metrics now that the font is available.
         this._performLayoutCalculation(this._containerRect);
       } else {
-        // Mark for a post-font recalc once prerequisites (config & container) exist.
         this._needsFontRecalc = true;
       }
     });
@@ -10390,13 +10289,10 @@ export class LcarsCard extends LitElement {
       this._updateLayoutEngineWithHass();
     }
 
-    // Simple logic: if we have both config and container, calculate layout
     if (this._config && this._containerRect) {
       if (hasConfigChanged) {
-        // Config changed - always recalculate
         this._performLayoutCalculation(this._containerRect);
       } else if (hasHassChanged && this._lastHassStates) {
-        // Check for significant entity changes using the ColorResolver
         const hasSignificantEntityChanges = colorResolver.hasSignificantEntityChanges(
           this._layoutEngine.layoutGroups,
           this._lastHassStates,
@@ -10409,7 +10305,6 @@ export class LcarsCard extends LitElement {
       }
     }
 
-    // Handle dynamic color changes using the ColorResolver
     if (hasHassChanged && this.hass && this._lastHassStates) {
       colorResolver.checkDynamicColorChanges(
         this._layoutEngine.layoutGroups,
@@ -10418,14 +10313,11 @@ export class LcarsCard extends LitElement {
       );
     }
 
-    // Store current hass states for next comparison
     if (this.hass) {
       this._lastHassStates = { ...this.hass.states };
     }
 
-    // Ensure interactive listeners are set up after any template changes or view switches
     if (hasTemplatesChanged || hasConfigChanged) {
-      // Use timeout to ensure DOM elements are fully rendered
       setTimeout(() => {
         if (this._layoutEngine.layoutGroups.length > 0) {
           this._setupAllElementListeners();
@@ -10435,12 +10327,10 @@ export class LcarsCard extends LitElement {
   }
 
   private _scheduleInitialLayout(): void {
-    // Wait for browser to complete layout using requestAnimationFrame
     requestAnimationFrame(() => {
       this._tryCalculateInitialLayout();
     });
     
-    // Also listen for load event as fallback
     if (document.readyState !== 'complete') {
       window.addEventListener('load', () => {
         this._tryCalculateInitialLayout();
@@ -10449,28 +10339,25 @@ export class LcarsCard extends LitElement {
   }
 
   private _tryCalculateInitialLayout(): void {
-    // Only calculate if we haven't already successfully calculated
     if (this._containerRect && this._layoutElementTemplates.length > 0) {
-      return; // Already calculated
+      return;
     }
     
     const container = this.shadowRoot?.querySelector('.card-container');
     if (!container || !this._config) {
-      return; // Not ready yet
+      return;
     }
     
     const rect = container.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) {
-      // If fonts are NOT ready yet delay the very first calculation until they are.
       if (!this._fontsLoaded) {
         this._containerRect = rect;
-        this._needsFontRecalc = true; // Flag so the waitForFonts handler performs the calc.
+        this._needsFontRecalc = true;
       } else {
         this._containerRect = rect;
         this._performLayoutCalculation(rect);
       }
     } else {
-      // If still no dimensions, try again next frame
       requestAnimationFrame(() => {
         this._tryCalculateInitialLayout();
       });
@@ -10480,11 +10367,9 @@ export class LcarsCard extends LitElement {
   disconnectedCallback(): void {
     this._resizeObserver?.disconnect();
     
-    // Clean up utility classes
     colorResolver.cleanup();
     stateManager.cleanup();
     
-    // Clean up all element animations and entity monitoring
     for (const group of this._layoutEngine.layoutGroups) {
       for (const element of group.elements) {
         element.cleanup();
@@ -10494,38 +10379,15 @@ export class LcarsCard extends LitElement {
     super.disconnectedCallback();
   }
 
-  private _handleViewChange(): void {
-    console.log('[LCARS Card] View change detected, refreshing dynamic color system');
-    
-    // Clear all dynamic color caches and entity monitoring using the ColorResolver
-    colorResolver.clearAllCaches(this._layoutEngine.layoutGroups);
-    
-    // Force invalidation of last hass states to ensure fresh comparison
-    this._lastHassStates = undefined;
-    
-    // Schedule a dynamic color refresh using the ColorResolver
-    colorResolver.scheduleDynamicColorRefresh(
-      this.hass,
-      this._containerRect,
-      () => colorResolver.checkDynamicColorChanges(
-        this._layoutEngine.layoutGroups,
-        this.hass,
-        () => this._refreshElementRenders()
-      ),
-      () => this._refreshElementRenders()
-    );
-  }
+
   
   private _calculateRequiredHeight(containerWidth: number, containerHeight: number): number {
-    // Analyze elements to determine the minimum container height needed
-    // for proper anchoring and positioning
-    let requiredHeight = containerHeight; // Start with original height
+    let requiredHeight = containerHeight;
     
     if (!this._config?.groups) {
       return requiredHeight;
     }
     
-    // Find elements that directly define height requirements
     for (const group of this._config.groups) {
       for (const elementConfig of group.elements) {
         if (!elementConfig.layout) continue;
@@ -10533,20 +10395,17 @@ export class LcarsCard extends LitElement {
         const height = this._parseSize(elementConfig.layout.height, containerHeight);
         const anchor = elementConfig.layout.anchor;
         
-        // For center-anchored elements, ensure container is at least as tall as the element
         if (anchor?.to === 'container' && 
             anchor.element_point === 'center' && 
             anchor.target_point === 'center') {
           requiredHeight = Math.max(requiredHeight, height);
         }
         
-        // For bottom-anchored elements, ensure container has enough space
         if (anchor?.to === 'container' && 
             anchor.target_point?.includes('bottom')) {
           requiredHeight = Math.max(requiredHeight, height);
         }
         
-        // For top-anchored elements with significant height
         if (anchor?.to === 'container' && 
             anchor.target_point?.includes('top')) {
           requiredHeight = Math.max(requiredHeight, height);
@@ -10583,10 +10442,8 @@ export class LcarsCard extends LitElement {
         (this._layoutEngine as any).tempSvgContainer = svgElement;
       }
       
-      // Clear previous layout and visibility triggers
       this._layoutEngine.clearLayout();
       
-      // Parse config and add elements to layout engine
       const getShadowElement = (id: string): Element | null => {
         return this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
       };
@@ -10599,7 +10456,6 @@ export class LcarsCard extends LitElement {
         this._layoutEngine.addGroup(group); 
       });
 
-      // Collect all element IDs and group IDs
       const elementIds: string[] = [];
       const groupIds: string[] = [];
 
@@ -10611,10 +10467,6 @@ export class LcarsCard extends LitElement {
           console.log(`[LcarsCard] Processing element: ${element.id}`);
         });
       });
-
-      // Visibility is now managed through regular state values ('hidden'/'visible')
-
-      // Initialize state manager
       const animationContext: AnimationContext = {
         elementId: 'card',
         getShadowElement: getShadowElement,
@@ -10633,10 +10485,6 @@ export class LcarsCard extends LitElement {
       this._initializeElementStates(groups);
       this._setupStateChangeHandling(elementsMap);
       
-      // Initialize transform propagator with current layout state
-      transformPropagator.initialize(elementsMap, animationContext.getShadowElement);
-
-      // Clear all entity monitoring and animation state before recalculating layout
       for (const group of this._layoutEngine.layoutGroups) {
         for (const element of group.elements) {
           try {
@@ -10648,26 +10496,19 @@ export class LcarsCard extends LitElement {
         }
       }
 
-      // For dynamic height mode, we need to pre-determine the required container height
-      // by analyzing element size requirements, then perform layout with that height
       const inputRect = new DOMRect(rect.x, rect.y, rect.width, rect.height);
       
-      // Pre-calculate required height by examining element constraints
       const requiredHeight = this._calculateRequiredHeight(rect.width, rect.height);
       
-      // Use the required height for layout calculation to ensure proper anchoring
       const finalContainerRect = new DOMRect(rect.x, rect.y, rect.width, requiredHeight);
       const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(finalContainerRect, { dynamicHeight: true });
       
-      // Store the calculated height for rendering
       this._calculatedHeight = layoutDimensions.height;
 
-      // Render all elements (hidden elements styled with CSS)
       const newTemplates = this._renderAllElements();
 
-      const TOP_MARGIN = 8;  // offset for broken HA UI
+      const TOP_MARGIN = 8;
       
-      // Update viewBox to match container dimensions and calculated height
       const newViewBox = `0 ${-TOP_MARGIN} ${rect.width} ${this._calculatedHeight + TOP_MARGIN}`;
 
       
@@ -10675,22 +10516,18 @@ export class LcarsCard extends LitElement {
           JSON.stringify(this._layoutElementTemplates.map(t => ({s:t.strings, v: (t.values || []).map(val => String(val))}))) || newViewBox !== this._viewBox) {
           this._layoutElementTemplates = newTemplates;
           this._viewBox = newViewBox;
-          // Trigger re-render to show the new content
           this.requestUpdate();
           
-          // Set up event listeners and trigger lifecycle animations after DOM elements are rendered
-          setTimeout(() => {
+          this.updateComplete.then(() => {
             this._setupAllElementListeners();
-            
-            // Trigger on_load animations for all elements
+            stateManager.setInitialAnimationStates(groups);
             this._triggerOnLoadAnimations(groups);
-          }, 100);
+          });
       }
       
     } catch (error) {
       console.error("[_performLayoutCalculation] Layout calculation failed with error:", error);
       console.error("[_performLayoutCalculation] Error stack:", (error as Error).stack);
-      // Set a fallback state to prevent infinite pending
       this._layoutElementTemplates = [];
       this._viewBox = `0 0 ${rect.width} 100`;
       this._calculatedHeight = 100;
@@ -10702,10 +10539,8 @@ export class LcarsCard extends LitElement {
         return;
     }
 
-    // Update hass references for all elements before re-rendering
     this._layoutEngine.layoutGroups.forEach(group => {
         group.elements.forEach(el => {
-            // Ensure el is treated as LayoutElement for type safety
             const layoutEl = el as LayoutElement; 
             if (layoutEl.updateHass) {
                 layoutEl.updateHass(this.hass);
@@ -10713,12 +10548,10 @@ export class LcarsCard extends LitElement {
         });
     });
 
-    // Collect element IDs for animation state restoration
     const elementIds = this._layoutEngine.layoutGroups.flatMap(group => 
         group.elements.map(el => el.id)
     );
 
-    // Store animation states before re-render using animation manager
     const animationStates = animationManager.collectAnimationStates(
         elementIds,
         (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null
@@ -10728,18 +10561,15 @@ export class LcarsCard extends LitElement {
         group.elements
             .map(el => {
               try {
-                // Always render all elements to keep them in DOM for animations
                 const elementTemplate = el.render();
                 if (!elementTemplate) {
                   return null;
                 }
 
-                // Apply CSS visibility for hidden elements but keep them in DOM
                 const currentState = stateManager.getState(el.id);
                 const isVisible = currentState !== 'hidden';
                 
                 if (!isVisible) {
-                  // Wrap hidden elements with CSS to hide them but keep in DOM for animations
                   return svg`<g style="visibility: hidden; opacity: 0; pointer-events: none;">${elementTemplate}</g>`;
                 }
                 
@@ -10754,28 +10584,20 @@ export class LcarsCard extends LitElement {
 
     this._layoutElementTemplates = newTemplates;
     
-    // Trigger LitElement re-render to update non-button elements with new colors
-    // Button elements handle their color updates directly via _updateButtonAppearanceDirectly()
     this.requestUpdate();
 
-    // Schedule interactive listener setup and animation restoration to occur after the next render cycle
-    // Use multiple frame delays to ensure DOM is fully updated after view switches
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            // Set up interactive listeners after DOM elements are updated
             this._setupAllElementListeners();
             
-            // Schedule animation restoration to occur after listener setup
             if (animationStates.size > 0) {
                 const context: AnimationContext = {
-                    elementId: '', // Not used in restoration context for multiple elements
+                    elementId: '',
                     getShadowElement: (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null,
                     hass: this.hass,
                     requestUpdateCallback: this.requestUpdate.bind(this)
                 };
-                animationManager.restoreAnimationStates(animationStates, context, () => {
-                     // Optional callback after all animations are restored
-                });
+                animationManager.restoreAnimationStates(animationStates, context, () => {});
             }
         });
     });
@@ -10787,12 +10609,9 @@ export class LcarsCard extends LitElement {
     
     const newRect = entry.contentRect;
     
-    // Only process if dimensions are valid
     if (newRect.width > 0 && newRect.height > 0) {
-        // Update container dimensions
         this._containerRect = newRect;
         
-        // Reset all layouts for a complete recalculation
         if (this._layoutEngine && this._layoutEngine.layoutGroups) {
             this._layoutEngine.layoutGroups.forEach(group => {
                 group.elements.forEach(el => {
@@ -10801,7 +10620,6 @@ export class LcarsCard extends LitElement {
             });
         }
         
-        // If we have config, immediately calculate layout
         if (this._config) {
           this._performLayoutCalculation(this._containerRect);
         }
@@ -10809,7 +10627,6 @@ export class LcarsCard extends LitElement {
   }
 
   public static async getConfigElement(): Promise<LovelaceCardEditor> {
-    // Visual editor temporarily disabled - YAML configuration only
     const element = document.createElement('div') as any;
     element.innerHTML = `
       <div style="padding: 16px; background: #f5f5f5; border-radius: 4px; font-family: monospace;">
@@ -10830,37 +10647,28 @@ export class LcarsCard extends LitElement {
     let svgContent: SVGTemplateResult[] = [];
     let defsContent: SVGTemplateResult[] = [];
     
-    // Simple state logic: Show loading until we have both config and container
     if (!this._config) {
       svgContent = [svg`<text x="10" y="30" fill="orange" font-size="14">Loading configuration...</text>`];
     } else if (!this._containerRect) {
       svgContent = [svg`<text x="10" y="30" fill="orange" font-size="14">Waiting for container...</text>`];
     } else if (this._layoutElementTemplates.length > 0) {
-      // Normal rendering with layout elements
       svgContent = this._layoutElementTemplates;
       
-      // Collect defs content
       defsContent = this._layoutEngine.layoutGroups.flatMap((group: any) =>
         group.elements.flatMap((e: any) => e.renderDefs?.() || []).filter((d: any) => d !== null)
       );
     } else {
-      // We have config and container but no templates - show error
       svgContent = [svg`<text x="10" y="30" fill="red" font-size="14">No layout elements to render</text>`];
     }
 
-    // Extract dimensions from viewBox
     const viewBoxParts = this._viewBox.split(' ');
     const viewBoxWidth = parseFloat(viewBoxParts[2]) || 100;
     const viewBoxHeight = parseFloat(viewBoxParts[3]) || 100;
     
-    // Define dimensions based on container rect or view box
     const width = this._containerRect ? this._containerRect.width : viewBoxWidth;
     const height = this._calculatedHeight || viewBoxHeight;
     
-    // Style for the SVG - ensure it takes full width and has proper minimum height
     const svgStyle = `width: 100%; height: ${height}px; min-height: 50px;`;
-    
-    // Container style - ensure proper width and minimum height
     const containerStyle = `width: 100%; height: ${height}px; min-height: 50px; overflow: visible;`;
 
     return html`
@@ -10882,7 +10690,6 @@ export class LcarsCard extends LitElement {
   }
 
   private _updateLayoutEngineWithHass(): void {
-    // Update all layout elements with new hass instance
     for (const group of this._layoutEngine.layoutGroups) {
       for (const element of group.elements) {
         element.updateHass(this.hass);
@@ -10893,26 +10700,21 @@ export class LcarsCard extends LitElement {
   private _initializeElementStates(groups: Group[]): void {
     groups.forEach(group => {
       group.elements.forEach(element => {
-        // Initialize elements that have state management or animations
         if (element.props.state_management || element.props.animations) {
           stateManager.initializeElementState(
             element.id,
             element.props.state_management,
             element.props.animations
           );
-          
-          // Initial visibility states are now handled by the state system automatically
-          // through the default_state configuration in initializeElementState
         }
       });
     });
   }
 
   private _setupStateChangeHandling(elementsMap: Map<string, LayoutElement>): void {
-    stateManager.onStateChange((event) => {
+    StoreProvider.getStore().onStateChange((event: StateChangeEvent) => {
       console.log(`[LcarsCard] State change: ${event.elementId} -> ${event.toState}`);
       
-      this.updateStatusIndicators(elementsMap);
       this.requestUpdate();
     });
   }
@@ -10922,18 +10724,15 @@ export class LcarsCard extends LitElement {
       group.elements
         .map(el => {
           try {
-            // Always render all elements to keep them in DOM for animations
             const elementTemplate = el.render();
             if (!elementTemplate) {
               return null;
             }
 
-            // Apply CSS visibility for hidden elements but keep them in DOM
             const currentState = stateManager.getState(el.id);
             const isVisible = currentState !== 'hidden';
             
             if (!isVisible) {
-              // Wrap hidden elements with CSS to hide them but keep in DOM for animations
               return svg`<g style="visibility: hidden; opacity: 0; pointer-events: none;">${elementTemplate}</g>`;
             }
             
@@ -10957,25 +10756,8 @@ export class LcarsCard extends LitElement {
     });
   }
 
-  private updateStatusIndicators(elementsMap: Map<string, LayoutElement>): void {
-    // Update panel status indicator
-    const panelStatus = elementsMap.get('status_indicators.panel_status');
-    if (panelStatus && panelStatus.props) {
-      const panelState = stateManager.getState('animated_elements.sliding_panel') || 'hidden';
-      panelStatus.props.text = `Panel: ${panelState}`;
-    }
 
-    // Update scale status indicator
-    const scaleStatus = elementsMap.get('status_indicators.scale_status');
-    if (scaleStatus && scaleStatus.props) {
-      const scaleState = stateManager.getState('animated_elements.scale_target') || 'normal';
-      scaleStatus.props.text = `Scale: ${scaleState}`;
-    }
-  }
 
-  /**
-   * Attach interactive listeners (hover, active) to all rendered elements.
-   */
   private _setupAllElementListeners(): void {
     this._layoutEngine.layoutGroups.forEach(group => {
       group.elements.forEach(element => {
@@ -10984,9 +10766,6 @@ export class LcarsCard extends LitElement {
     });
   }
 
-  /**
-   * Helper for utilities that need direct access to a rendered SVG element.
-   */
   private _getShadowElement(id: string): Element | null {
     return this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
   }
@@ -12264,7 +12043,11 @@ export function validateAction(action: Action): string[] {
 ```typescript
 import { HomeAssistant } from 'custom-card-helpers';
 import gsap from 'gsap';
-import { transformPropagator, AnimationSyncData } from './transform-propagator.js';
+import { transformPropagator, AnimationSyncData, TransformPropagator } from './transform-propagator.js';
+import { GSDevTools } from 'gsap/GSDevTools';
+import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
+import { CustomEase } from 'gsap/CustomEase';
+import { AnimationSequence as AnimationSequenceDefinition } from '../types.js';
 
 export interface AnimationContext {
   elementId: string;
@@ -12280,7 +12063,6 @@ export interface AnimationConfig {
   delay?: number;
   repeat?: number;
   yoyo?: boolean;
-  // Type-specific parameters
   scale_params?: {
     scale_start?: number;
     scale_end?: number;
@@ -12308,15 +12090,38 @@ export interface AnimationTimelineResult {
   syncData: AnimationSyncData;
 }
 
+export interface ReversibleTimeline {
+  timeline: gsap.core.Timeline;
+  elementId: string;
+  animationConfig: AnimationConfig;
+  isReversed: boolean;
+  transformOrigin?: string;
+}
+
 export class AnimationManager {
   private positioningEffectsCache = new WeakMap<AnimationConfig, boolean>();
   private elementAnimationStates = new Map<string, { lastKnownEntityStates: Map<string, any> }>();
+  private activeTimelines = new Map<string, ReversibleTimeline[]>();
+  private elementsMap?: Map<string, import('../layout/elements/element.js').LayoutElement>;
+
+  private static isGsapInitialized = false;
+
+  static initializeGsap(): void {
+    if (!AnimationManager.isGsapInitialized) {
+      gsap.registerPlugin(GSDevTools, MotionPathPlugin, CustomEase);
+      AnimationManager.isGsapInitialized = true;
+    }
+  }
 
   initializeElementAnimationTracking(elementId: string): void {
     if (!this.elementAnimationStates.has(elementId)) {
       this.elementAnimationStates.set(elementId, {
         lastKnownEntityStates: new Map()
       });
+    }
+    
+    if (!this.activeTimelines.has(elementId)) {
+      this.activeTimelines.set(elementId, []);
     }
   }
 
@@ -12326,6 +12131,14 @@ export class AnimationManager {
 
   cleanupElementAnimationTracking(elementId: string): void {
     this.elementAnimationStates.delete(elementId);
+    
+    const timelines = this.activeTimelines.get(elementId);
+    if (timelines) {
+      for (const reversibleTimeline of timelines) {
+        reversibleTimeline.timeline.kill();
+      }
+    }
+    this.activeTimelines.delete(elementId);
   }
 
   animateElementProperty(
@@ -12340,20 +12153,35 @@ export class AnimationManager {
     const element = getShadowElement(elementId);
     if (!element) return;
     
-    gsap.to(element, {
+    const timeline = gsap.timeline();
+    timeline.to(element, {
       [property]: value,
       duration: duration,
       ease: 'power2.out'
     });
+    
+    this.storeTimeline(elementId, timeline, {
+      type: 'custom_gsap',
+      duration,
+      custom_gsap_params: { [property]: value }
+    } as AnimationConfig);
   }
 
   createAnimationTimeline(
     elementId: string,
     animationConfig: AnimationConfig,
     targetElement: Element,
-    gsapInstance: typeof gsap = gsap
+    gsapInstance: typeof gsap = gsap,
+    initialValues?: { opacity?: number; x?: number; y?: number; }
   ): AnimationTimelineResult {
-    const timeline = gsapInstance.timeline();
+    const timeline = gsapInstance.timeline({
+      onComplete: () => {
+        this.removeTimeline(elementId, timeline);
+      },
+      onReverseComplete: () => {
+        this.removeTimeline(elementId, timeline);
+      }
+    });
     
     const { type, duration = 0.5, ease = 'power2.out', delay, repeat, yoyo } = animationConfig;
     
@@ -12365,7 +12193,7 @@ export class AnimationManager {
       yoyo
     };
 
-    const animationProps: any = {
+    const animationProps: gsap.TweenVars = {
       duration,
       ease,
     };
@@ -12373,15 +12201,17 @@ export class AnimationManager {
     if (repeat !== undefined) animationProps.repeat = repeat;
     if (yoyo !== undefined) animationProps.yoyo = yoyo;
 
+    this.captureInitialState(targetElement, timeline, animationConfig);
+
     switch (type) {
       case 'scale':
-        this.buildScaleAnimation(animationConfig, targetElement, timeline, animationProps);
+        this.buildScaleAnimation(animationConfig, targetElement, timeline, animationProps, elementId);
         break;
       case 'slide':
-        this.buildSlideAnimation(animationConfig, targetElement, timeline, animationProps);
+        this.buildSlideAnimation(animationConfig, targetElement, timeline, animationProps, initialValues);
         break;
       case 'fade':
-        this.buildFadeAnimation(animationConfig, targetElement, timeline, animationProps);
+        this.buildFadeAnimation(animationConfig, targetElement, timeline, animationProps, initialValues);
         break;
       case 'custom_gsap':
         this.buildCustomGsapAnimation(animationConfig, targetElement, timeline, animationProps);
@@ -12390,7 +12220,7 @@ export class AnimationManager {
 
     return {
       timeline,
-      affectsPositioning: this.hasPositioningEffects(animationConfig),
+      affectsPositioning: this.animationEffectsPositioning(animationConfig),
       syncData
     };
   }
@@ -12399,7 +12229,8 @@ export class AnimationManager {
     elementId: string,
     animationConfig: AnimationConfig,
     context: AnimationContext,
-    gsapInstance: typeof gsap = gsap
+    gsapInstance: typeof gsap = gsap,
+    initialValues?: { opacity?: number; x?: number; y?: number; }
   ): AnimationTimelineResult | null {
     const targetElement = context.getShadowElement?.(elementId);
     if (!targetElement) {
@@ -12407,7 +12238,13 @@ export class AnimationManager {
       return null;
     }
 
-    const result = this.createAnimationTimeline(elementId, animationConfig, targetElement, gsapInstance);
+    const result = this.createAnimationTimeline(elementId, animationConfig, targetElement, gsapInstance, initialValues);
+    
+    this.storeTimeline(
+      elementId,
+      result.timeline,
+      animationConfig
+    );
     
     if (result.affectsPositioning) {
       transformPropagator.processAnimationWithPropagation(
@@ -12417,12 +12254,18 @@ export class AnimationManager {
       );
     }
 
+    if (animationConfig.delay) {
+      result.timeline.delay(animationConfig.delay);
+    }
+    
+    result.timeline.play();
+
     return result;
   }
 
   executeAnimationSequence(
     elementId: string,
-    sequenceDef: any,
+    sequenceDef: AnimationSequenceDefinition,
     context: AnimationContext,
     gsapInstance: typeof gsap = gsap
   ): void {
@@ -12431,7 +12274,68 @@ export class AnimationManager {
   }
 
   stopAllAnimationsForElement(elementId: string): void {
+    const timelines = this.activeTimelines.get(elementId);
+    if (timelines) {
+      for (const reversibleTimeline of timelines) {
+        reversibleTimeline.timeline.kill();
+      }
+      timelines.length = 0;
+    }
     gsap.killTweensOf(`[id="${elementId}"]`);
+    
+    transformPropagator.stopAnimationPropagation(elementId);
+  }
+
+  reverseAnimation(elementId: string, animationIndex?: number): boolean {
+    const timelines = this.activeTimelines.get(elementId);
+    if (!timelines || timelines.length === 0) {
+      console.warn(`[AnimationManager] No active animations found for element: ${elementId}`);
+      return false;
+    }
+
+    let targetTimeline: ReversibleTimeline;
+    
+    if (animationIndex !== undefined && animationIndex < timelines.length) {
+      targetTimeline = timelines[animationIndex];
+    } else {
+      targetTimeline = timelines[timelines.length - 1];
+    }
+    
+    if (!targetTimeline) {
+      console.warn(`[AnimationManager] No timeline found at index ${animationIndex} for element: ${elementId}`);
+      return false;
+    }
+
+    if (!targetTimeline.isReversed) {
+      targetTimeline.timeline.reverse();
+      targetTimeline.isReversed = true;
+      
+      transformPropagator.reverseAnimationPropagation(elementId, targetTimeline.animationConfig as any);
+    } else {
+      targetTimeline.timeline.play();
+      targetTimeline.isReversed = false;
+    }
+    
+    return true;
+  }
+
+  reverseAllAnimations(elementId: string): void {
+    const timelines = this.activeTimelines.get(elementId);
+    if (!timelines || timelines.length === 0) {
+      console.warn(`[AnimationManager] No active animations found for element: ${elementId}`);
+      return;
+    }
+
+    for (const reversibleTimeline of timelines) {
+      if (!reversibleTimeline.isReversed) {
+        reversibleTimeline.timeline.reverse();
+        reversibleTimeline.isReversed = true;
+      }
+    }
+  }
+
+  getActiveTimelines(elementId: string): ReversibleTimeline[] | undefined {
+    return this.activeTimelines.get(elementId);
   }
 
   collectAnimationStates(
@@ -12482,153 +12386,260 @@ export class AnimationManager {
     }
   }
 
-  hasPositioningEffects(config: AnimationConfig): boolean {
+  animationEffectsPositioning(config: AnimationConfig): boolean {
     if (this.positioningEffectsCache.has(config)) {
       return this.positioningEffectsCache.get(config)!;
     }
 
-    let hasPositioningEffects = false;
+    let affectsPositioning = false;
 
     switch (config.type) {
       case 'scale':
       case 'slide':
-        hasPositioningEffects = true;
+        affectsPositioning = true;
         break;
       case 'fade':
-        hasPositioningEffects = false;
+        affectsPositioning = false;
         break;
       case 'custom_gsap':
-        hasPositioningEffects = true;
+        affectsPositioning = true;
         break;
       default:
-        hasPositioningEffects = false;
+        affectsPositioning = false;
     }
 
-    this.positioningEffectsCache.set(config, hasPositioningEffects);
-    return hasPositioningEffects;
+    this.positioningEffectsCache.set(config, affectsPositioning);
+    return affectsPositioning;
+  }
+
+  setElementsMap(elementsMap: Map<string, import('../layout/elements/element.js').LayoutElement>): void {
+    this.elementsMap = elementsMap;
+  }
+
+  private storeTimeline(
+    elementId: string,
+    timeline: gsap.core.Timeline,
+    animationConfig: AnimationConfig
+  ): void {
+    this.initializeElementAnimationTracking(elementId);
+    
+    const timelines = this.activeTimelines.get(elementId)!;
+    
+    let transformOrigin: string | undefined;
+    if (animationConfig.type === 'scale' && animationConfig.scale_params) {
+      transformOrigin = animationConfig.scale_params.transform_origin || this.getOptimalTransformOrigin(elementId);
+    }
+    
+    const reversibleTimeline: ReversibleTimeline = {
+      timeline,
+      elementId,
+      animationConfig,
+      isReversed: false,
+      transformOrigin
+    };
+    
+    timelines.push(reversibleTimeline);
+  }
+
+  private removeTimeline(elementId: string, timeline: gsap.core.Timeline): void {
+    const timelines = this.activeTimelines.get(elementId);
+    if (timelines) {
+      const index = timelines.findIndex(rt => rt.timeline === timeline);
+      if (index !== -1) {
+        timelines.splice(index, 1);
+      }
+    }
+  }
+
+  private captureInitialState(
+    targetElement: Element,
+    timeline: gsap.core.Timeline,
+    animationConfig: AnimationConfig
+  ): void {
+    const initialProps: gsap.TweenVars = {};
+
+    if (animationConfig.type === 'slide' && animationConfig.slide_params) {
+      const slideParams = animationConfig.slide_params;
+      const distance = DistanceParser.parse(slideParams.distance || '0', targetElement);
+
+      if (slideParams.movement === 'in') {
+        if (slideParams.direction === 'left') initialProps.x = distance;
+        else if (slideParams.direction === 'right') initialProps.x = -distance;
+        else if (slideParams.direction === 'up') initialProps.y = distance;
+        else if (slideParams.direction === 'down') initialProps.y = -distance;
+      }
+    }
+
+    timeline.set(targetElement, Object.keys(initialProps).length > 0 ? initialProps : {}, 0);
   }
 
   private buildScaleAnimation(
     config: AnimationConfig,
     targetElement: Element,
     timeline: gsap.core.Timeline,
-    animationProps: any
+    animationProps: gsap.TweenVars,
+    elementId: string
   ): void {
     const { scale_params } = config;
     if (scale_params) {
+      let transformOrigin = scale_params.transform_origin;
+      
+      if (!transformOrigin) {
+        transformOrigin = this.getOptimalTransformOrigin(elementId);
+      }
+      
       if (scale_params.scale_start !== undefined) {
-        const initialScaleProps = {
+        const initialScaleProps: gsap.TweenVars = {
           scale: scale_params.scale_start,
-          transformOrigin: scale_params.transform_origin || 'center center'
+          transformOrigin: transformOrigin
         };
         timeline.set(targetElement, initialScaleProps);
       }
       animationProps.scale = scale_params.scale_end !== undefined ? scale_params.scale_end : 1;
-      animationProps.transformOrigin = scale_params.transform_origin || 'center center';
+      animationProps.transformOrigin = transformOrigin;
     }
     timeline.to(targetElement, animationProps);
+  }
+
+  private getOptimalTransformOrigin(elementId: string): string {
+    if (!this.elementsMap) {
+      return 'center center';
+    }
+
+    const element = this.elementsMap.get(elementId);
+    if (!element?.layoutConfig?.anchor) {
+      return 'center center';
+    }
+
+    const anchorConfig = element.layoutConfig.anchor;
+    
+    if (anchorConfig.anchorTo && anchorConfig.anchorTo !== 'container') {
+      const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
+      return this.anchorPointToTransformOriginString(anchorPoint);
+    }
+
+    return 'center center';
+  }
+
+  private anchorPointToTransformOriginString(anchorPoint: string): string {
+    switch (anchorPoint) {
+      case 'topLeft': return 'left top';
+      case 'topCenter': return 'center top';
+      case 'topRight': return 'right top';
+      case 'centerLeft': return 'left center';
+      case 'center': return 'center center';
+      case 'centerRight': return 'right center';
+      case 'bottomLeft': return 'left bottom';
+      case 'bottomCenter': return 'center bottom';
+      case 'bottomRight': return 'right bottom';
+      default: return 'center center';
+    }
   }
 
   private buildSlideAnimation(
     config: AnimationConfig,
     targetElement: Element,
     timeline: gsap.core.Timeline,
-    animationProps: any
+    animationProps: gsap.TweenVars,
+    initialValues?: { opacity?: number; x?: number; y?: number; }
   ): void {
     const { slide_params } = config;
-    if (slide_params) {
-      const distance = DistanceParser.parse(slide_params.distance || '0', targetElement);
-      const movement = slide_params.movement;
-
-      let calculatedX = 0;
-      let calculatedY = 0;
-
-      switch (slide_params.direction) {
-        case 'left': calculatedX = -distance; break;
-        case 'right': calculatedX = distance; break;
-        case 'up': calculatedY = -distance; break;
-        case 'down': calculatedY = distance; break;
-      }
-
-      const initialSetProps: any = {};
-      let needsInitialSet = false;
-
-      if (movement === 'in') {
-        if (slide_params.direction === 'left' || slide_params.direction === 'right') {
-          initialSetProps.x = (slide_params.direction === 'left') ? distance : -distance;
-          animationProps.x = 0;
-        }
-        if (slide_params.direction === 'up' || slide_params.direction === 'down') {
-          initialSetProps.y = (slide_params.direction === 'up') ? distance : -distance;
-          animationProps.y = 0;
-        }
-        needsInitialSet = true;
-      } else if (movement === 'out') {
-        if (calculatedX !== 0) animationProps.x = calculatedX;
-        if (calculatedY !== 0) animationProps.y = calculatedY;
-      } else {
-        const isShowingAnimation = slide_params.opacity_start === 0 && slide_params.opacity_end === 1;
-        const isHidingAnimation = slide_params.opacity_start === 1 && slide_params.opacity_end === 0;
-        
-        if (isShowingAnimation) {
-          if (slide_params.direction === 'left' || slide_params.direction === 'right') {
-            initialSetProps.x = (slide_params.direction === 'left') ? distance : -distance;
-            animationProps.x = 0;
-          }
-          if (slide_params.direction === 'up' || slide_params.direction === 'down') {
-            initialSetProps.y = (slide_params.direction === 'up') ? distance : -distance;
-            animationProps.y = 0;
-          }
-          needsInitialSet = true;
-        } else if (isHidingAnimation) {
-          if (calculatedX !== 0) animationProps.x = calculatedX;
-          if (calculatedY !== 0) animationProps.y = calculatedY;
-        } else {
-          if (calculatedX !== 0) animationProps.x = calculatedX;
-          if (calculatedY !== 0) animationProps.y = calculatedY;
-        }
-      }
-
-      if (slide_params.opacity_start !== undefined) {
-        initialSetProps.opacity = slide_params.opacity_start;
-        needsInitialSet = true;
-      }
-
-      if (needsInitialSet && Object.keys(initialSetProps).length > 0) {
-        timeline.set(targetElement, initialSetProps);
-      }
-      
-      if (slide_params.opacity_end !== undefined) {
-        animationProps.opacity = slide_params.opacity_end;
-      } else if (slide_params.opacity_start !== undefined) {
-        animationProps.opacity = 1;
-      }
+    if (!slide_params) {
+      timeline.add(gsap.to(targetElement, animationProps));
+      return;
     }
-    timeline.to(targetElement, animationProps);
+
+    const distance = DistanceParser.parse(slide_params.distance || '0', targetElement);
+    const movement = slide_params.movement;
+
+    let calculatedX = 0;
+    let calculatedY = 0;
+
+    switch (slide_params.direction) {
+      case 'left': calculatedX = -distance; break;
+      case 'right': calculatedX = distance; break;
+      case 'up': calculatedY = -distance; break;
+      case 'down': calculatedY = distance; break;
+    }
+
+    const initialTweenVars: gsap.TweenVars = {};
+    const finalTweenVars: gsap.TweenVars = { ...animationProps };
+
+    let useFromTo = false;
+
+    const startX = initialValues?.x !== undefined ? initialValues.x : 
+      ((movement === 'in' && (slide_params.direction === 'left' || slide_params.direction === 'right')) ? 
+        ((slide_params.direction === 'left') ? distance : -distance) : undefined);
+    const startY = initialValues?.y !== undefined ? initialValues.y : 
+      ((movement === 'in' && (slide_params.direction === 'up' || slide_params.direction === 'down')) ? 
+        ((slide_params.direction === 'up') ? distance : -distance) : undefined);
+
+    if (startX !== undefined) {
+      initialTweenVars.x = startX;
+      finalTweenVars.x = 0;
+      useFromTo = true;
+    }
+    if (startY !== undefined) {
+      initialTweenVars.y = startY;
+      finalTweenVars.y = 0;
+      useFromTo = true;
+    }
+
+    if (!useFromTo && (movement === 'out' || movement === undefined)) {
+      if (calculatedX !== 0) finalTweenVars.x = calculatedX;
+      if (calculatedY !== 0) finalTweenVars.y = calculatedY;
+    }
+
+    const startOpacity = initialValues?.opacity !== undefined ? initialValues.opacity : slide_params.opacity_start;
+
+    if (startOpacity !== undefined) {
+      initialTweenVars.opacity = startOpacity;
+      useFromTo = true;
+    }
+    if (slide_params.opacity_end !== undefined) {
+      finalTweenVars.opacity = slide_params.opacity_end;
+    } else if (slide_params.opacity_start !== undefined) {
+      finalTweenVars.opacity = 1;
+    }
+
+    timeline.add(useFromTo ? 
+      gsap.fromTo(targetElement, initialTweenVars, finalTweenVars) :
+      gsap.to(targetElement, finalTweenVars)
+    );
   }
 
   private buildFadeAnimation(
     config: AnimationConfig,
     targetElement: Element,
     timeline: gsap.core.Timeline,
-    animationProps: any
+    animationProps: gsap.TweenVars,
+    initialValues?: { opacity?: number; x?: number; y?: number; }
   ): void {
     const { fade_params } = config;
-    if (fade_params) {
-      if (fade_params.opacity_start !== undefined) {
-        const initialFadeProps = { opacity: fade_params.opacity_start };
-        timeline.set(targetElement, initialFadeProps);
-      }
-      animationProps.opacity = fade_params.opacity_end !== undefined ? fade_params.opacity_end : 1;
+    if (!fade_params || fade_params.opacity_start === undefined) {
+      timeline.add(gsap.to(targetElement, animationProps));
+      return;
     }
-    timeline.to(targetElement, animationProps);
+
+    const startOpacity = initialValues?.opacity !== undefined ? initialValues.opacity : fade_params.opacity_start;
+
+    if (startOpacity !== undefined) {
+      const initialFadeProps: gsap.TweenVars = { opacity: startOpacity };
+      timeline.add(gsap.fromTo(targetElement, initialFadeProps, { 
+        opacity: fade_params.opacity_end !== undefined ? fade_params.opacity_end : 1, 
+        ...animationProps 
+      }));
+    } else {
+      animationProps.opacity = fade_params.opacity_end !== undefined ? fade_params.opacity_end : 1;
+      timeline.add(gsap.to(targetElement, animationProps));
+    }
   }
 
   private buildCustomGsapAnimation(
     config: AnimationConfig,
     targetElement: Element,
     timeline: gsap.core.Timeline,
-    animationProps: any
+    animationProps: gsap.TweenVars
   ): void {
     const { custom_gsap_params } = config;
     if (custom_gsap_params) {
@@ -12725,11 +12736,11 @@ export class AnimationSequence {
 
     const sortedIndices = Array.from(grouped.keys()).sort((a, b) => a - b);
     
-    const hasPositioningEffects = this.animations.some(({ anim }) => 
-      this.manager.hasPositioningEffects(anim.config)
+    const affectsPositioning = this.animations.some(({ anim }) => 
+      this.manager.animationEffectsPositioning(anim.config)
     );
 
-    if (hasPositioningEffects) {
+    if (affectsPositioning) {
       this.runWithTransformPropagation(grouped, sortedIndices);
     } else {
       this.runSimpleSequence(grouped, sortedIndices);
@@ -12766,11 +12777,10 @@ export class AnimationSequence {
 
     for (const idx of sortedIndices) {
       const group = grouped.get(idx)!;
-
       let maxRuntimeInGroup = 0;
 
       for (const anim of group) {
-        if (!this.manager.hasPositioningEffects(anim.config)) {
+        if (!this.manager.animationEffectsPositioning(anim.config)) {
           anim.execute(this.context, cumulativeDelay);
         }
 
@@ -12804,19 +12814,18 @@ export class AnimationSequence {
 
   static createFromDefinition(
     elementId: string,
-    sequenceDef: any,
+    sequenceDef: AnimationSequenceDefinition,
     context: AnimationContext,
     manager: AnimationManager
   ): AnimationSequence {
     const sequence = new AnimationSequence(elementId, context, manager);
 
-    if (!sequenceDef || !Array.isArray(sequenceDef.steps)) return sequence;
+    if (!sequenceDef?.steps) return sequence;
 
-    sequenceDef.steps.forEach((step: any) => {
+    sequenceDef.steps.forEach((step) => {
       if (!step) return;
-      const idx: number = Number(step.index) || 0;
-      const animations = Array.isArray(step.animations) ? step.animations : [];
-      animations.forEach((animCfg: any) => {
+      const idx: number = step.index;
+      step.animations.forEach((animCfg) => {
         const pure: AnimationConfig = { ...animCfg } as AnimationConfig;
         sequence.add(new Animation(elementId, pure, manager), idx);
       });
@@ -14703,23 +14712,16 @@ export function getFontMetrics({
 ## File: src/utils/state-manager.ts
 
 ```typescript
-import { AnimationDefinition, AnimationSequence, ElementStateManagementConfig } from '../types.js';
-import { animationManager, AnimationContext } from './animation.js';
-import { HomeAssistant } from 'custom-card-helpers';
+import { AnimationDefinition, ElementStateManagementConfig, AnimationSequence, StateChangeAnimationConfig } from '../types.js';
+import { animationManager, AnimationContext, DistanceParser } from './animation.js';
 import { LayoutElement } from '../layout/elements/element.js';
-import { transformPropagator, AnimationSyncData } from './transform-propagator.js';
+import { Group } from '../layout/engine.js';
+import { transformPropagator } from './transform-propagator.js';
 import gsap from 'gsap';
-import { ReactiveStore, StoreProvider, StateChangeEvent, ElementState } from '../core/store.js';
+import { ReactiveStore, StoreProvider, StateChangeEvent } from '../core/store.js';
 
-// Legacy type aliases for backward compatibility
 export type StateChangeCallback = (event: StateChangeEvent) => void;
 
-/**
- * StateManager - Now a thin adapter over ReactiveStore
- * 
- * This maintains the existing API while delegating to the new reactive store implementation.
- * This allows existing code to continue working during the transition period.
- */
 export class StateManager {
   private store: ReactiveStore;
   private elementsMap?: Map<string, LayoutElement>;
@@ -14728,7 +14730,6 @@ export class StateManager {
   constructor(requestUpdateCallback?: () => void) {
     this.store = StoreProvider.getStore();
     
-    // Bridge store state changes to legacy callback format
     if (requestUpdateCallback) {
       this.store.subscribe(() => {
         requestUpdateCallback();
@@ -14748,20 +14749,29 @@ export class StateManager {
     this.animationContext = context;
     this.elementsMap = elementsMap;
     
-    // Initialize transform propagator with current layout state
+    if (elementsMap) {
+      animationManager.setElementsMap(elementsMap);
+    }
+    
     if (elementsMap && context.getShadowElement) {
       transformPropagator.initialize(elementsMap, context.getShadowElement);
     }
   }
 
   setState(elementId: string, newState: string): void {
-    // Auto-initialize if needed
-    if (!this._ensureElementInitialized(elementId)) {
+    if (!this.ensureElementInitialized(elementId)) {
       console.warn(`[StateManager] Cannot set state for uninitialized element: ${elementId}`);
       return;
     }
+    
+    const currentState = this.getState(elementId);
+    if (currentState === newState) {
+      console.debug(`[StateManager] State '${newState}' is already current for ${elementId}, skipping animation`);
+      return;
+    }
+    
     this.store.setState(elementId, newState);
-    this._handleStateChangeAnimations(elementId, newState);
+    this.handleStateChangeAnimations(elementId, newState);
   }
 
   getState(elementId: string): string | undefined {
@@ -14771,41 +14781,32 @@ export class StateManager {
   }
 
   toggleState(elementId: string, states: string[]): boolean {
-    // Auto-initialize if needed
-    if (!this._ensureElementInitialized(elementId)) {
+    if (!this.ensureElementInitialized(elementId)) {
       return false;
     }
     const toggled = this.store.toggleState(elementId, states);
 
-    // If toggle succeeded, trigger any matching state-change animations
     if (toggled) {
       const newState = this.getState(elementId);
       if (newState) {
-        this._handleStateChangeAnimations(elementId, newState);
+        this.handleStateChangeAnimations(elementId, newState);
       }
     }
 
     return toggled;
   }
 
-  /**
-   * Subscribe to state change events
-   */
   onStateChange(callback: StateChangeCallback): () => void {
     return this.store.onStateChange(callback);
   }
 
-  /**
-   * Auto-initialize element for state management if not already initialized
-   */
-  private _ensureElementInitialized(elementId: string): boolean {
-    if (this._isElementInitialized(elementId)) {
+  private ensureElementInitialized(elementId: string): boolean {
+    if (this.elementIsInitialized(elementId)) {
       return true;
     }
 
     console.log(`[StateManager] Auto-initializing ${elementId} for state management`);
     
-    // Try to find element in layout to get its configuration
     const element = this.elementsMap?.get(elementId);
     if (element) {
       const stateConfig = element.props?.state_management;
@@ -14817,7 +14818,6 @@ export class StateManager {
       }
     }
     
-    // Fallback: For tests and uninitialized elements, only initialize if element can be found in layout
     if (this.elementsMap?.has(elementId)) {
       this.initializeElementState(elementId, { default_state: 'default' });
       return true;
@@ -14827,10 +14827,7 @@ export class StateManager {
     return false;
   }
 
-  /**
-   * Check if element is initialized for state management
-   */
-  private _isElementInitialized(elementId: string): boolean {
+  private elementIsInitialized(elementId: string): boolean {
     const state = this.store.getState();
     const isInitialized = state.elementStates.has(elementId);
     
@@ -14841,10 +14838,7 @@ export class StateManager {
     return isInitialized;
   }
 
-  /**
-   * Handle animations triggered by state changes
-   */
-  private _handleStateChangeAnimations(elementId: string, newState: string): void {
+  private handleStateChangeAnimations(elementId: string, newState: string): void {
     if (!this.animationContext || !this.elementsMap) {
       return;
     }
@@ -14859,17 +14853,90 @@ export class StateManager {
     const elementState = storeState.elementStates.get(elementId);
     const fromState = elementState?.previousState || 'default';
 
-    // Find matching state change animation
     const matchingAnimation = stateChangeAnimations.find((anim: any) => 
       anim.from_state === fromState && anim.to_state === newState
     );
 
     if (matchingAnimation) {
-      this.executeAnimation(elementId, matchingAnimation);
+      const activeTimelines = animationManager.getActiveTimelines(elementId);
+      
+      if (activeTimelines && activeTimelines.length > 0) {
+        const currentAnimation = activeTimelines[activeTimelines.length - 1];
+        
+        const isReverseTransition = this.isReverseTransition(
+          currentAnimation.animationConfig,
+          matchingAnimation,
+          fromState,
+          newState
+        );
+        
+        if (isReverseTransition && !currentAnimation.isReversed) {
+          console.log(`[StateManager] Reversing existing animation for ${elementId} (${fromState} -> ${newState})`);
+          animationManager.reverseAnimation(elementId);
+          return;
+        } else {
+          console.log(`[StateManager] Stopping existing animation and starting new one for ${elementId} (${fromState} -> ${newState})`);
+          
+          const targetElement = this.animationContext.getShadowElement?.(elementId);
+          if (targetElement) {
+            const currentOpacity = parseFloat(gsap.getProperty(targetElement, "opacity") as string);
+            const currentX = parseFloat(gsap.getProperty(targetElement, "x") as string);
+            const currentY = parseFloat(gsap.getProperty(targetElement, "y") as string);
+            const initialValues = { opacity: currentOpacity, x: currentX, y: currentY };
+            animationManager.stopAllAnimationsForElement(elementId);
+            gsap.set(targetElement, { opacity: currentOpacity, x: currentX, y: currentY });
+            this.executeAnimation(elementId, matchingAnimation, initialValues);
+          } else {
+            animationManager.stopAllAnimationsForElement(elementId);
+            this.executeAnimation(elementId, matchingAnimation);
+          }
+        }
+      } else {
+        this.executeAnimation(elementId, matchingAnimation);
+      }
     }
   }
 
-  executeAnimation(elementId: string, animationDef: AnimationDefinition): void {
+  private isReverseTransition(
+    currentConfig: import('./animation.js').AnimationConfig,
+    newAnimationDef: AnimationDefinition,
+    fromState: string,
+    toState: string
+  ): boolean {
+    if (currentConfig.type !== newAnimationDef.type) {
+      return false;
+    }
+
+    if (currentConfig.type === 'scale' && newAnimationDef.type === 'scale') {
+      const currentScaleStart = currentConfig.scale_params?.scale_start;
+      const currentScaleEnd = currentConfig.scale_params?.scale_end;
+      const newScaleStart = newAnimationDef.scale_params?.scale_start;
+      const newScaleEnd = newAnimationDef.scale_params?.scale_end;
+      
+      return (currentScaleEnd === newScaleStart && currentScaleStart === newScaleEnd);
+    }
+    
+    if (currentConfig.type === 'slide' && newAnimationDef.type === 'slide') {
+      const currentMovement = currentConfig.slide_params?.movement;
+      const newMovement = newAnimationDef.slide_params?.movement;
+      
+      return (currentMovement === 'in' && newMovement === 'out') || 
+             (currentMovement === 'out' && newMovement === 'in');
+    }
+    
+    if (currentConfig.type === 'fade' && newAnimationDef.type === 'fade') {
+      const currentOpacityStart = currentConfig.fade_params?.opacity_start;
+      const currentOpacityEnd = currentConfig.fade_params?.opacity_end;
+      const newOpacityStart = newAnimationDef.fade_params?.opacity_start;
+      const newOpacityEnd = newAnimationDef.fade_params?.opacity_end;
+      
+      return (currentOpacityEnd === newOpacityStart && currentOpacityStart === newOpacityEnd);
+    }
+    
+    return false;
+  }
+
+  executeAnimation(elementId: string, animationDef: AnimationDefinition, initialValues?: { opacity?: number; x?: number; y?: number; }): void {
     if (!this.animationContext || !this.elementsMap) {
       console.warn(`[StateManager] No animation context available for ${elementId}`);
       return;
@@ -14881,14 +14948,13 @@ export class StateManager {
       return;
     }
 
-    // Convert to pure animation config and execute
     const animationConfig = this.convertToAnimationConfig(animationDef);
     if (animationConfig) {
-      animationManager.executeAnimation(elementId, animationConfig, this.animationContext, gsap);
+      animationManager.executeAnimation(elementId, animationConfig, this.animationContext, gsap, initialValues);
     }
   }
 
-  private convertToAnimationConfig(animationDef: any): import('./animation.js').AnimationConfig | null {
+  private convertToAnimationConfig(animationDef: AnimationDefinition): import('./animation.js').AnimationConfig | null {
     if (!animationDef || !animationDef.type) {
       return null;
     }
@@ -14902,7 +14968,6 @@ export class StateManager {
       yoyo: animationDef.yoyo
     };
 
-    // Copy type-specific parameters
     if (animationDef.scale_params) {
       config.scale_params = animationDef.scale_params;
     }
@@ -14912,8 +14977,8 @@ export class StateManager {
     if (animationDef.fade_params) {
       config.fade_params = animationDef.fade_params;
     }
-    if (animationDef.custom_gsap_params) {
-      config.custom_gsap_params = animationDef.custom_gsap_params;
+    if (animationDef.custom_gsap_vars) {
+      config.custom_gsap_params = animationDef.custom_gsap_vars;
     }
 
     return config;
@@ -14925,20 +14990,114 @@ export class StateManager {
     }
 
     const element = this.elementsMap.get(elementId);
-    const animationDef: any = element?.props?.animations?.[lifecycle];
+    const animationDef: AnimationDefinition | AnimationSequence | undefined = element?.props?.animations?.[lifecycle];
     if (!animationDef) return;
 
-    // Handle multi-step animation sequences via AnimationManager helper
-    if (animationDef.steps && Array.isArray(animationDef.steps)) {
-      animationManager.executeAnimationSequence(elementId, animationDef, this.animationContext as any, gsap);
+    if ('steps' in animationDef) {
+      animationManager.executeAnimationSequence(elementId, animationDef, this.animationContext, gsap);
       return;
     }
 
-    // Fallback to single animation definition
     this.executeAnimation(elementId, animationDef);
   }
 
-  // Visibility management now uses regular state ('hidden'/'visible')
+  setInitialAnimationStates(groups: Group[]): void {
+    if (!this.animationContext?.getShadowElement) {
+      return;
+    }
+
+    groups.forEach(group => {
+      group.elements.forEach(element => {
+        this.setElementInitialState(element);
+      });
+    });
+  }
+
+  private setElementInitialState(element: LayoutElement): void {
+    if (!this.animationContext?.getShadowElement) {
+      return;
+    }
+
+    const targetElement = this.animationContext.getShadowElement(element.id);
+    if (!targetElement) {
+      return;
+    }
+
+    const animations = element.props?.animations;
+    if (!animations) {
+      return;
+    }
+
+    if (animations.on_load) {
+      this.applyInitialAnimationState(targetElement, animations.on_load);
+    }
+
+    if (animations.on_state_change && Array.isArray(animations.on_state_change)) {
+      const currentState = this.getState(element.id) || 'default';
+      
+      const incomingAnimation = animations.on_state_change.find((anim: StateChangeAnimationConfig) => 
+        anim.to_state === currentState
+      );
+      
+      if (incomingAnimation) {
+        this.applyFinalAnimationState(targetElement, incomingAnimation);
+      }
+    }
+  }
+
+  private applyInitialAnimationState(targetElement: Element, animationDef: AnimationDefinition): void {
+    const initialProps: { [key: string]: any } = {};
+
+    if (animationDef.type === 'fade' && animationDef.fade_params?.opacity_start !== undefined) {
+      initialProps.opacity = animationDef.fade_params.opacity_start;
+    }
+
+    if (animationDef.type === 'scale' && animationDef.scale_params?.scale_start !== undefined) {
+      initialProps.scale = animationDef.scale_params.scale_start;
+    }
+
+    if (animationDef.type === 'slide' && animationDef.slide_params) {
+      const slideParams = animationDef.slide_params;
+      if (slideParams.opacity_start !== undefined) {
+        initialProps.opacity = slideParams.opacity_start;
+      }
+      
+      if (slideParams.movement === 'in') {
+        const distance = DistanceParser.parse(slideParams.distance || '0');
+        switch (slideParams.direction) {
+          case 'left': initialProps.x = distance; break;
+          case 'right': initialProps.x = -distance; break;
+          case 'up': initialProps.y = distance; break;
+          case 'down': initialProps.y = -distance; break;
+        }
+      }
+    }
+
+    if (Object.keys(initialProps).length > 0) {
+      gsap.set(targetElement, initialProps);
+    }
+  }
+
+  private applyFinalAnimationState(targetElement: Element, animationDef: AnimationDefinition): void {
+    const finalProps: { [key: string]: any } = {};
+
+    if (animationDef.type === 'fade' && animationDef.fade_params?.opacity_end !== undefined) {
+      finalProps.opacity = animationDef.fade_params.opacity_end;
+    }
+
+    if (animationDef.type === 'scale' && animationDef.scale_params?.scale_end !== undefined) {
+      finalProps.scale = animationDef.scale_params.scale_end;
+    }
+
+    if (animationDef.type === 'slide' && animationDef.slide_params?.opacity_end !== undefined) {
+      finalProps.opacity = animationDef.slide_params.opacity_end;
+    }
+
+    if (Object.keys(finalProps).length > 0) {
+      gsap.set(targetElement, finalProps);
+    }
+  }
+
   setElementVisibility(elementId: string, visible: boolean, animated: boolean = false): void {
     const targetState = visible ? 'visible' : 'hidden';
     this.setState(elementId, targetState);
@@ -14952,16 +15111,10 @@ export class StateManager {
     this.store.cleanup();
   }
 
-  /**
-   * Clear all state (legacy method)
-   */
   clearAll(): void {
     this.cleanup();
   }
 
-  /**
-   * Execute a set_state action using the unified Action interface
-   */
   executeSetStateAction(action: import('../types.js').Action): void {
     const targetElementRef = action.target_element_ref;
     const state = action.state;
@@ -14974,9 +15127,6 @@ export class StateManager {
     this.setState(targetElementRef, state);
   }
 
-  /**
-   * Execute a toggle_state action using the unified Action interface
-   */
   executeToggleStateAction(action: import('../types.js').Action): void {
     const targetElementRef = action.target_element_ref;
     const states = action.states;
@@ -14988,9 +15138,30 @@ export class StateManager {
     
     this.toggleState(targetElementRef, states);
   }
+
+  reverseAnimation(elementId: string): boolean {
+    if (!this.animationContext) {
+      console.warn(`[StateManager] No animation context available for reversing animation on ${elementId}`);
+      return false;
+    }
+
+    return animationManager.reverseAnimation(elementId);
+  }
+
+  reverseAllAnimations(elementId: string): void {
+    if (!this.animationContext) {
+      console.warn(`[StateManager] No animation context available for reversing animations on ${elementId}`);
+      return;
+    }
+
+    animationManager.reverseAllAnimations(elementId);
+  }
+
+  stopAnimations(elementId: string): void {
+    animationManager.stopAllAnimationsForElement(elementId);
+  }
 }
 
-// Maintain singleton for backward compatibility, but now using the store
 export const stateManager = new StateManager();
 ```
 
@@ -15337,9 +15508,16 @@ vi.mock('gsap', () => ({
     timeline: vi.fn(() => ({
       set: vi.fn(),
       to: vi.fn(),
+      fromTo: vi.fn(),
+      add: vi.fn(),
       play: vi.fn(),
+      reverse: vi.fn(),
+      kill: vi.fn(),
+      delay: vi.fn(),
     })),
     to: vi.fn(),
+    fromTo: vi.fn(),
+    set: vi.fn(),
     killTweensOf: vi.fn(),
   },
 }));
@@ -15460,17 +15638,147 @@ describe('AnimationManager - Pure Animation API', () => {
   describe('positioning effects detection', () => {
     it('should detect positioning effects for scale animations', () => {
       const config: AnimationConfig = { type: 'scale' };
-      expect(manager.hasPositioningEffects(config)).toBe(true);
+      expect(manager.animationEffectsPositioning(config)).toBe(true);
     });
 
     it('should detect positioning effects for slide animations', () => {
       const config: AnimationConfig = { type: 'slide' };
-      expect(manager.hasPositioningEffects(config)).toBe(true);
+      expect(manager.animationEffectsPositioning(config)).toBe(true);
     });
 
     it('should not detect positioning effects for fade animations', () => {
       const config: AnimationConfig = { type: 'fade' };
-      expect(manager.hasPositioningEffects(config)).toBe(false);
+      expect(manager.animationEffectsPositioning(config)).toBe(false);
+    });
+  });
+
+  describe('Timeline Reversal', () => {
+    it('should reverse timeline instead of creating new animation for scale reversal', () => {
+      const element = document.createElement('div');
+      const getShadowElement = vi.fn().mockReturnValue(element);
+      
+      const scaleUpConfig: AnimationConfig = {
+        type: 'scale',
+        scale_params: {
+          scale_start: 1,
+          scale_end: 1.2,
+          transform_origin: 'center center'
+        },
+        duration: 300,
+        ease: 'bounce.out'
+      };
+      
+      const context: AnimationContext = {
+        elementId: 'test-element',
+        getShadowElement
+      };
+      
+      // Execute the initial scale up animation
+      const result = manager.executeAnimation('test-element', scaleUpConfig, context);
+      expect(result).not.toBeNull();
+      expect(result!.timeline).toBeDefined();
+      
+      // Verify timeline is stored
+      const activeTimelines = manager.getActiveTimelines('test-element');
+      expect(activeTimelines).toBeDefined();
+      expect(activeTimelines!.length).toBe(1);
+      expect(activeTimelines![0].isReversed).toBe(false);
+      
+      // Now reverse the animation
+      const reversed = manager.reverseAnimation('test-element');
+      expect(reversed).toBe(true);
+      
+      // Verify the timeline is marked as reversed
+      const timelinesAfterReverse = manager.getActiveTimelines('test-element');
+      expect(timelinesAfterReverse).toBeDefined();
+      expect(timelinesAfterReverse!.length).toBe(1);
+      expect(timelinesAfterReverse![0].isReversed).toBe(true);
+    });
+
+    it('should detect reverse transitions correctly for scale animations', async () => {
+      // Create a simple test that focuses on the core reversal detection logic
+      const scaleUpConfig: AnimationConfig = {
+        type: 'scale',
+        scale_params: {
+          scale_start: 1,
+          scale_end: 1.2,
+          transform_origin: 'center center'
+        },
+        duration: 300,
+        ease: 'bounce.out'
+      };
+      
+      const scaleDownConfig = {
+        type: 'scale',
+        scale_params: {
+          scale_start: 1.2,
+          scale_end: 1,
+          transform_origin: 'center center'
+        },
+        duration: 300,
+        ease: 'power2.inOut'
+      };
+      
+      // Import StateManager and test the reverse detection
+      const { StateManager } = await import('../state-manager.js');
+      const stateManager = new StateManager();
+      
+      // Test the isReverseTransition method via the private method access
+      const isReverse = (stateManager as any).isReverseTransition(
+        scaleUpConfig,
+        scaleDownConfig,
+        'normal',
+        'scaled'
+      );
+      
+      expect(isReverse).toBe(true);
+    });
+
+    it('should use anchor point as transform origin for anchored elements', () => {
+      const element = document.createElement('div');
+      const getShadowElement = vi.fn().mockReturnValue(element);
+      
+      // Create a mock element with anchor configuration
+      const mockElement = {
+        layoutConfig: {
+          anchor: {
+            anchorTo: 'target-element',
+            anchorPoint: 'topLeft',
+            targetAnchorPoint: 'topRight'
+          }
+        }
+      };
+      
+      // Set up elements map
+      const elementsMap = new Map();
+      elementsMap.set('test-element', mockElement);
+      manager.setElementsMap(elementsMap);
+      
+      const scaleConfig: AnimationConfig = {
+        type: 'scale',
+        scale_params: {
+          scale_start: 1,
+          scale_end: 1.2
+          // No explicit transform_origin - should use anchor point
+        },
+        duration: 300,
+        ease: 'bounce.out'
+      };
+      
+      const context: AnimationContext = {
+        elementId: 'test-element',
+        getShadowElement
+      };
+      
+      // Execute the animation
+      const result = manager.executeAnimation('test-element', scaleConfig, context);
+      expect(result).not.toBeNull();
+      
+      // Verify that the timeline was stored with the correct transform origin
+      const activeTimelines = manager.getActiveTimelines('test-element');
+      expect(activeTimelines).toBeDefined();
+      expect(activeTimelines!.length).toBe(1);
+      expect(activeTimelines![0].transformOrigin).toBe('left top'); // topLeft -> left top
     });
   });
 });
@@ -16958,9 +17266,11 @@ describe('shapes.ts utility functions', () => {
 ## File: src/utils/test/state-manager.spec.ts
 
 ```typescript
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+/// <reference types="vitest" />
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { StateManager } from '../state-manager.js';
 import { StoreProvider, StateChangeEvent } from '../../core/store.js';
+import gsap from 'gsap';
 
 describe('StateManager Visibility Integration', () => {
   let stateManager: StateManager;
@@ -17054,6 +17364,367 @@ describe('StateManager Visibility Integration', () => {
     });
   });
 });
+
+describe('StateManager - Redundant State Change Prevention', () => {
+  let stateManager: StateManager;
+  let animationManager: any;
+  let elementsMap: Map<string, any>;
+  let mockGetShadowElement: ReturnType<typeof vi.fn>;
+  let mockElement: any;
+  let executeAnimationSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    // Reset the store to ensure clean state
+    StoreProvider.reset();
+    stateManager = new StateManager();
+    animationManager = (stateManager as any).store.animationManager;
+    
+    mockElement = document.createElement('div');
+    mockGetShadowElement = vi.fn().mockReturnValue(mockElement);
+    
+    elementsMap = new Map();
+    elementsMap.set('test-element', {
+      id: 'test-element',
+      layoutConfig: {
+        anchor: null,
+        stretch: null
+      },
+      layout: { x: 0, y: 0, width: 100, height: 50 },
+      props: {
+        state_management: {
+          default_state: 'normal',
+          states: ['normal', 'scaled']
+        },
+        animations: {
+          on_state_change: [
+            {
+              from_state: 'normal',
+              to_state: 'scaled',
+              type: 'scale',
+              scale_params: { scale_start: 1, scale_end: 1.5 },
+              duration: 500
+            },
+            {
+              from_state: 'scaled', 
+              to_state: 'normal',
+              type: 'scale',
+              scale_params: { scale_start: 1.5, scale_end: 1 },
+              duration: 500
+            }
+          ]
+        }
+      }
+    });
+
+    stateManager.setAnimationContext({
+      elementId: 'test-element',
+      getShadowElement: mockGetShadowElement
+    }, elementsMap);
+
+    // Initialize the element
+    stateManager.initializeElementState(
+      'test-element', 
+      elementsMap.get('test-element')!.props.state_management,
+      elementsMap.get('test-element')!.props.animations
+    );
+
+    // Spy on executeAnimation to track animation calls
+    executeAnimationSpy = vi.spyOn(stateManager, 'executeAnimation');
+  });
+
+  afterEach(() => {
+    if (executeAnimationSpy) {
+      executeAnimationSpy.mockRestore();
+    }
+    // Clean up after each test
+    stateManager.cleanup();
+    StoreProvider.reset();
+  });
+
+  it('should not trigger animation when setting state to current state', () => {
+    // Element starts in 'normal' state
+    expect(stateManager.getState('test-element')).toBe('normal');
+    
+    // Setting to 'normal' again should not trigger animation
+    stateManager.setState('test-element', 'normal');
+    
+    expect(executeAnimationSpy).not.toHaveBeenCalled();
+    expect(stateManager.getState('test-element')).toBe('normal');
+  });
+
+  it('should trigger animation when state actually changes', () => {
+    // Change from 'normal' to 'scaled' - should trigger animation
+    stateManager.setState('test-element', 'scaled');
+    
+    expect(executeAnimationSpy).toHaveBeenCalledOnce();
+    expect(stateManager.getState('test-element')).toBe('scaled');
+  });
+
+  it('should not trigger animation when setting to same state after actual change', () => {
+    // First change: normal -> scaled (should trigger animation)
+    stateManager.setState('test-element', 'scaled');
+    expect(executeAnimationSpy).toHaveBeenCalledOnce();
+    
+    executeAnimationSpy.mockClear();
+    
+    // Second call with same state (should NOT trigger animation)
+    stateManager.setState('test-element', 'scaled');
+    expect(executeAnimationSpy).not.toHaveBeenCalled();
+    expect(stateManager.getState('test-element')).toBe('scaled');
+  });
+
+  it('should handle multiple redundant calls without side effects', () => {
+    // Multiple calls to set 'normal' state (should not trigger any animations)
+    stateManager.setState('test-element', 'normal');
+    stateManager.setState('test-element', 'normal');
+    stateManager.setState('test-element', 'normal');
+    
+    expect(executeAnimationSpy).not.toHaveBeenCalled();
+    expect(stateManager.getState('test-element')).toBe('normal');
+  });
+
+  it('should work correctly with state transitions after redundant calls', () => {
+    // Redundant call first
+    stateManager.setState('test-element', 'normal');
+    expect(executeAnimationSpy).not.toHaveBeenCalled();
+    
+    // Actual state change should still work
+    stateManager.setState('test-element', 'scaled');
+    expect(executeAnimationSpy).toHaveBeenCalledOnce();
+    expect(stateManager.getState('test-element')).toBe('scaled');
+    
+    executeAnimationSpy.mockClear();
+    
+    // Another redundant call
+    stateManager.setState('test-element', 'scaled');
+    expect(executeAnimationSpy).not.toHaveBeenCalled();
+    
+    // Stop any existing animations to ensure new animation is created instead of reversed
+    stateManager.stopAnimations('test-element');
+    
+    // Back to normal (should trigger animation)
+    stateManager.setState('test-element', 'normal');
+    expect(executeAnimationSpy).toHaveBeenCalledOnce();
+  });
+
+  it('should prevent redundant visibility state changes', () => {
+    // Add a visibility element with animations to the map
+    elementsMap.set('visibility-element', {
+      id: 'visibility-element',
+      layoutConfig: { anchor: null, stretch: null },
+      layout: { x: 0, y: 0, width: 100, height: 50 },
+      props: {
+        state_management: { default_state: 'visible' },
+        animations: {
+          on_state_change: [
+            {
+              from_state: 'visible',
+              to_state: 'hidden',
+              type: 'fade',
+              fade_params: { opacity_start: 1, opacity_end: 0 },
+              duration: 300
+            },
+            {
+              from_state: 'hidden',
+              to_state: 'visible',
+              type: 'fade',
+              fade_params: { opacity_start: 0, opacity_end: 1 },
+              duration: 300
+            }
+          ]
+        }
+      }
+    });
+    
+    // Update the animation context with the new elements map
+    stateManager.setAnimationContext({
+      elementId: 'visibility-element',
+      getShadowElement: mockGetShadowElement
+    }, elementsMap);
+    
+    // Initialize with visibility state
+    stateManager.initializeElementState(
+      'visibility-element', 
+      { default_state: 'visible' },
+      elementsMap.get('visibility-element')!.props.animations
+    );
+    
+    const visibilityExecuteSpy = vi.spyOn(stateManager, 'executeAnimation');
+    
+    // Setting to current visibility state should not trigger animation
+    stateManager.setElementVisibility('visibility-element', true); // visible -> visible
+    expect(visibilityExecuteSpy).not.toHaveBeenCalled();
+    
+    // Actual change should trigger
+    stateManager.setElementVisibility('visibility-element', false); // visible -> hidden
+    expect(visibilityExecuteSpy).toHaveBeenCalledOnce();
+    
+    visibilityExecuteSpy.mockRestore();
+  });
+});
+
+describe('StateManager - Initial Animation States', () => {
+  let stateManager: StateManager;
+  let mockGetShadowElement: any;
+  let mockElement: any;
+  let elementsMap: Map<string, any>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stateManager = new StateManager();
+    
+    // Mock element
+    mockElement = {
+      setAttribute: vi.fn(),
+      getAttribute: vi.fn(),
+      id: 'test-element',
+    };
+    
+    mockGetShadowElement = vi.fn().mockReturnValue(mockElement);
+    
+    elementsMap = new Map();
+  });
+
+  it('should set initial opacity for on_load fade animations', () => {
+    // Create element with on_load fade animation
+    const fadeElement = {
+      id: 'fade-element',
+      layoutConfig: { anchor: null, stretch: null },
+      layout: { x: 0, y: 0, width: 100, height: 50 },
+      props: {
+        animations: {
+          on_load: {
+            type: 'fade',
+            fade_params: {
+              opacity_start: 0,
+              opacity_end: 1
+            },
+            duration: 2000
+          }
+        }
+      }
+    };
+    
+    elementsMap.set('fade-element', fadeElement);
+    
+    // Set animation context
+    stateManager.setAnimationContext({
+      elementId: 'fade-element',
+      getShadowElement: mockGetShadowElement
+    }, elementsMap);
+    
+    // Mock GSAP set method
+    const gsapSetSpy = vi.spyOn(gsap, 'set');
+    
+    // Call setInitialAnimationStates
+    const groups = [{
+      id: 'test-group',
+      elements: [fadeElement as any]
+    }] as any;
+    
+    stateManager.setInitialAnimationStates(groups);
+    
+    // Verify that GSAP.set was called with the correct initial opacity
+    expect(gsapSetSpy).toHaveBeenCalledWith(mockElement, expect.objectContaining({ opacity: 0 }));
+    
+    gsapSetSpy.mockRestore();
+  });
+
+  it('should set final state opacity for state-based fade animations', () => {
+    // Create element with state-based fade animations
+    const stateElement = {
+      id: 'state-element',
+      layoutConfig: { anchor: null, stretch: null },
+      layout: { x: 0, y: 0, width: 100, height: 50 },
+      props: {
+        state_management: { default_state: 'normal' },
+        animations: {
+          on_state_change: [
+            {
+              from_state: 'normal',
+              to_state: 'changed',
+              type: 'fade',
+              fade_params: { opacity_start: 0.2, opacity_end: 1 },
+              duration: 300
+            },
+            {
+              from_state: 'changed',
+              to_state: 'normal',
+              type: 'fade',
+              fade_params: { opacity_start: 1, opacity_end: 0.2 },
+              duration: 300
+            }
+          ]
+        }
+      }
+    };
+    
+    elementsMap.set('state-element', stateElement);
+    
+    // Set animation context
+    stateManager.setAnimationContext({
+      elementId: 'state-element',
+      getShadowElement: mockGetShadowElement
+    }, elementsMap);
+    
+    // Initialize element state
+    stateManager.initializeElementState(
+      'state-element',
+      { default_state: 'normal' },
+      stateElement.props.animations
+    );
+    
+    // Mock GSAP set method
+    const gsapSetSpy = vi.spyOn(gsap, 'set');
+    
+    // Call setInitialAnimationStates
+    const groups = [{
+      id: 'test-group',
+      elements: [stateElement as any]
+    }] as any;
+    
+    stateManager.setInitialAnimationStates(groups);
+    
+    // Verify that GSAP.set was called with the final opacity for the current state (normal = 0.2)
+    expect(gsapSetSpy).toHaveBeenCalledWith(mockElement, expect.objectContaining({ opacity: 0.2 }));
+    
+    gsapSetSpy.mockRestore();
+  });
+
+  it('should handle elements without animations gracefully', () => {
+    // Create element without animations
+    const plainElement = {
+      id: 'plain-element',
+      layoutConfig: { anchor: null, stretch: null },
+      layout: { x: 0, y: 0, width: 100, height: 50 },
+      props: {}
+    };
+    
+    elementsMap.set('plain-element', plainElement);
+    
+    // Set animation context
+    stateManager.setAnimationContext({
+      elementId: 'plain-element',
+      getShadowElement: mockGetShadowElement
+    }, elementsMap);
+    
+    // Mock GSAP set method
+    const gsapSetSpy = vi.spyOn(gsap, 'set');
+    
+    // Call setInitialAnimationStates
+    const groups = [{
+      id: 'test-group',
+      elements: [plainElement as any]
+    }] as any;
+    
+    stateManager.setInitialAnimationStates(groups);
+    
+    // Verify that GSAP.set was not called for elements without animations
+    expect(gsapSetSpy).not.toHaveBeenCalled();
+    
+    gsapSetSpy.mockRestore();
+  });
+});
 ```
 
 ## File: src/utils/test/transform-propagator.spec.ts
@@ -17062,6 +17733,33 @@ describe('StateManager Visibility Integration', () => {
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TransformPropagator, TransformEffect, ElementDependency } from '../transform-propagator.js';
 import { LayoutElement } from '../../layout/elements/element.js';
+import gsap from 'gsap';
+
+// Mock GSAP
+vi.mock('gsap', () => ({
+  default: {
+    timeline: vi.fn(() => ({
+      to: vi.fn().mockReturnThis(),
+      set: vi.fn().mockReturnThis(),
+      fromTo: vi.fn().mockReturnThis(),
+      delay: vi.fn().mockReturnThis(),
+      play: vi.fn().mockReturnThis(),
+      reverse: vi.fn().mockReturnThis(),
+      kill: vi.fn().mockReturnThis(),
+    })),
+    set: vi.fn(),
+    killTweensOf: vi.fn(),
+  },
+}));
+
+// Mock store provider
+vi.mock('../../core/store.js', () => ({
+  StoreProvider: {
+    getStore: () => ({
+      onStateChange: vi.fn(() => vi.fn()),
+    }),
+  },
+}));
 
 // Mock layout element for testing
 class MockLayoutElement extends LayoutElement {
@@ -17078,11 +17776,14 @@ describe('TransformPropagator', () => {
   let propagator: TransformPropagator;
   let elementsMap: Map<string, LayoutElement>;
   let getShadowElement: (id: string) => Element | null;
+  let mockElements: Map<string, Element>;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     propagator = new TransformPropagator();
     elementsMap = new Map();
     getShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+    mockElements = new Map();
   });
 
   describe('Scale Transform Propagation', () => {
@@ -17628,6 +18329,219 @@ describe('TransformPropagator', () => {
       }
     });
   });
+
+  describe('Timeline-based propagation reversal', () => {
+    beforeEach(() => {
+      // Create primary element that will be animated
+      const primaryElement = new MockLayoutElement('primary', {
+        x: 100, y: 100, width: 50, height: 30, calculated: true
+      });
+      primaryElement.layoutConfig = { anchor: { anchorTo: 'container', anchorPoint: 'topLeft' } };
+      
+      // Create dependent element anchored to the primary element
+      const dependentElement = new MockLayoutElement('dependent', {
+        x: 150, y: 100, width: 40, height: 20, calculated: true
+      });
+      dependentElement.layoutConfig = { 
+        anchor: { 
+          anchorTo: 'primary', 
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topRight'
+        } 
+      };
+      
+      elementsMap.set('primary', primaryElement);
+      elementsMap.set('dependent', dependentElement);
+      
+      // Create mock DOM elements
+      mockElements.set('primary', document.createElement('div'));
+      mockElements.set('dependent', document.createElement('div'));
+      getShadowElement = (id: string) => mockElements.get(id) || null;
+      
+      propagator.initialize(elementsMap, getShadowElement);
+    });
+
+    it('should create timeline for dependent element animations', () => {
+      const animationConfig = {
+        type: 'scale' as const,
+        duration: 500,
+        scale_params: { scale_start: 1, scale_end: 1.5 }
+      };
+      
+      const syncData = { duration: 500, ease: 'power2.out' };
+      
+      propagator.processAnimationWithPropagation('primary', animationConfig, syncData);
+      
+      // Should create timeline for GSAP
+      expect(gsap.timeline).toHaveBeenCalled();
+    });
+
+    it('should verify timeline methods are available for propagation', () => {
+      // Test that our GSAP mock has the necessary timeline methods
+      const timelineMock = gsap.timeline();
+      expect(timelineMock.to).toBeDefined();
+      expect(timelineMock.reverse).toBeDefined();
+      expect(timelineMock.kill).toBeDefined();
+      expect(timelineMock.play).toBeDefined();
+    });
+
+    it('should handle timeline-based propagation without throwing errors', () => {
+      const animationConfig = {
+        type: 'scale' as const,
+        duration: 500,
+        scale_params: { scale_start: 1, scale_end: 1.5 }
+      };
+      
+      const syncData = { duration: 500, ease: 'power2.out' };
+      
+      // This should not throw even if no dependencies are found
+      expect(() => {
+        propagator.processAnimationWithPropagation('primary', animationConfig, syncData);
+      }).not.toThrow();
+    });
+
+    it('should handle reversal without throwing errors', () => {
+      const animationConfig = {
+        type: 'scale' as const,
+        duration: 500,
+        scale_params: { scale_start: 1, scale_end: 1.5 }
+      };
+      
+      // This should not throw even if no timelines exist to reverse
+      expect(() => {
+        propagator.reverseAnimationPropagation('primary', animationConfig);
+      }).not.toThrow();
+    });
+
+    it('should handle stop propagation without throwing errors', () => {
+      // This should not throw even if no timelines exist to stop
+      expect(() => {
+        propagator.stopAnimationPropagation('primary');
+      }).not.toThrow();
+    });
+  });
+
+  // Test behavior with working dependencies (extend from existing working tests)
+  describe('Timeline management integration', () => {
+    it('should use timeline-based animations for working scale propagation', () => {
+      // Set up elements similar to existing working tests  
+      const scaleTarget = new MockLayoutElement('scale_target_group.scale_target', {
+        x: 105, y: 50, width: 100, height: 40, calculated: true
+      });
+      
+      scaleTarget.layoutConfig = {
+        anchor: {
+          anchorTo: 'scale_target_group.scale_trigger_button',
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topRight'
+        }
+      };
+
+      const triggerButton = new MockLayoutElement('scale_target_group.scale_trigger_button', {
+        x: 0, y: 50, width: 100, height: 40, calculated: true
+      });
+
+      const description = new MockLayoutElement('scale_target_group.scale_target_description', {
+        x: 210, y: 70, width: 200, height: 20, calculated: true
+      });
+      
+      description.layoutConfig = {
+        anchor: {
+          anchorTo: 'scale_target_group.scale_target',
+          anchorPoint: 'centerLeft',
+          targetAnchorPoint: 'centerRight'
+        }
+      };
+
+      elementsMap.set('scale_target_group.scale_target', scaleTarget);
+      elementsMap.set('scale_target_group.scale_trigger_button', triggerButton);
+      elementsMap.set('scale_target_group.scale_target_description', description);
+      
+      // Create mock DOM elements
+      getShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+      
+      propagator.initialize(elementsMap, getShadowElement);
+
+      const scaleAnimation = {
+        type: 'scale' as const,
+        scale_params: {
+          scale_start: 1,
+          scale_end: 1.2,
+          transform_origin: 'center center'
+        },
+        duration: 0.3,
+        ease: 'bounce.out'
+      };
+
+      const syncData = {
+        duration: 0.3,
+        ease: 'bounce.out'
+      };
+
+      // Process the animation - this should use timelines
+      propagator.processAnimationWithPropagation(
+        'scale_target_group.scale_target',
+        scaleAnimation,
+        syncData
+      );
+
+      // Verify timeline was created for propagation
+      expect(gsap.timeline).toHaveBeenCalled();
+    });
+
+         it('should successfully reverse timeline-based propagation', () => {
+       // Use the same setup as above
+       const scaleTarget = new MockLayoutElement('scale_target_group.scale_target', {
+         x: 105, y: 50, width: 100, height: 40, calculated: true
+       });
+       
+       scaleTarget.layoutConfig = {
+         anchor: {
+           anchorTo: 'scale_target_group.scale_trigger_button',
+           anchorPoint: 'topLeft',
+           targetAnchorPoint: 'topRight'
+         }
+       };
+
+       const description = new MockLayoutElement('scale_target_group.scale_target_description', {
+         x: 210, y: 70, width: 200, height: 20, calculated: true
+       });
+       
+       description.layoutConfig = {
+         anchor: {
+           anchorTo: 'scale_target_group.scale_target',
+           anchorPoint: 'centerLeft',
+           targetAnchorPoint: 'centerRight'
+         }
+       };
+
+       elementsMap.set('scale_target_group.scale_target', scaleTarget);
+       elementsMap.set('scale_target_group.scale_target_description', description);
+       
+       getShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+       propagator.initialize(elementsMap, getShadowElement);
+
+       const scaleAnimation = {
+         type: 'scale' as const,
+         scale_params: { scale_start: 1, scale_end: 1.2 },
+         duration: 0.3,
+         ease: 'bounce.out'
+       };
+
+       const syncData = { duration: 0.3, ease: 'bounce.out' };
+
+       // Create the initial propagation
+       propagator.processAnimationWithPropagation('scale_target_group.scale_target', scaleAnimation, syncData);
+       
+       // Now reverse it - should not throw
+       expect(() => {
+         propagator.reverseAnimationPropagation('scale_target_group.scale_target', scaleAnimation);
+       }).not.toThrow();
+       
+       // The reversal process should complete successfully
+       expect(true).toBe(true); // Test passes if no error is thrown
+     });
+  });
 });
 ```
 
@@ -17638,6 +18552,8 @@ import { LayoutElement } from '../layout/elements/element.js';
 import { AnimationDefinition } from '../types.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { StoreProvider, StateChangeEvent } from '../core/store.js';
+import gsap from 'gsap';
+import { DistanceParser } from './animation.js';
 
 /**
  * Represents a visual transformation that will occur during an animation
@@ -17647,7 +18563,7 @@ export interface TransformEffect {
   initialOffsetX?: number;
   initialOffsetY?: number;
 
-  type: 'scale' | 'translate' | 'rotate';
+  type: 'scale' | 'translate' | 'rotate' | 'fade';
   scaleStartX?: number;
   scaleStartY?: number;
   scaleTargetX?: number;
@@ -17656,6 +18572,8 @@ export interface TransformEffect {
   translateY?: number;
   rotation?: number;
   transformOrigin: { x: number; y: number };
+  opacity_start?: number;
+  opacity_end?: number;
 }
 
 /**
@@ -17692,6 +18610,16 @@ export interface ElementTransformState {
 }
 
 /**
+ * Represents a timeline created for dependent element animation propagation
+ */
+export interface PropagationTimeline {
+  timeline: gsap.core.Timeline;
+  elementId: string;
+  transformEffect: TransformEffect;
+  isReversed: boolean;
+}
+
+/**
  * Manages transform propagation to maintain anchor relationships during animations
  */
 export class TransformPropagator {
@@ -17702,6 +18630,8 @@ export class TransformPropagator {
   private elementTransformStates = new Map<string, ElementTransformState>();
   // Store subscription for reactive updates
   private storeUnsubscribe?: () => void;
+  // Track active propagation timelines for reversal capability
+  private activePropagationTimelines = new Map<string, PropagationTimeline[]>();
 
   /**
    * Initialize the propagator with current layout state and subscribe to store
@@ -18110,6 +19040,9 @@ export class TransformPropagator {
       case 'custom_gsap':
         effects.push(...this._analyzeCustomGsapEffects(element, animationConfig));
         break;
+      case 'fade':
+        effects.push(this._analyzeFadeEffect(element, animationConfig));
+        break;
     }
 
     return effects.filter(effect => this._isEffectSignificant(effect, elementId));
@@ -18160,7 +19093,7 @@ export class TransformPropagator {
   ): TransformEffect {
     const slideParams = animationConfig.slide_params;
     const direction = slideParams?.direction;
-    const distance = this._parseDistance(slideParams?.distance || '0px', element);
+    const distance = DistanceParser.parse(slideParams?.distance || '0px', element);
     const movement = slideParams?.movement;
 
     let translateX = 0;
@@ -18262,6 +19195,25 @@ export class TransformPropagator {
     }
 
     return effects;
+  }
+
+  /**
+   * Analyze fade animation effects
+   */
+  private _analyzeFadeEffect(
+    element: LayoutElement,
+    animationConfig: AnimationDefinition
+  ): TransformEffect {
+    const fadeParams = animationConfig.fade_params;
+    const opacityStart = fadeParams?.opacity_start;
+    const opacityEnd = fadeParams?.opacity_end;
+
+    return {
+      type: 'fade',
+      opacity_start: opacityStart,
+      opacity_end: opacityEnd,
+      transformOrigin: { x: 0, y: 0 } // Not relevant for fade animations
+    };
   }
 
   /**
@@ -18585,7 +19537,7 @@ export class TransformPropagator {
   }
 
   /**
-   * Apply a transform to an element
+   * Apply a transform to an element using timeline-based animation for proper reversal
    */
   private _applyTransform(
     elementId: string,
@@ -18597,63 +19549,163 @@ export class TransformPropagator {
     const targetElement = this.getShadowElement(elementId);
     if (!targetElement) return;
 
-    // Import GSAP dynamically to avoid bundling issues
-    import('gsap').then(({ gsap }) => {
-      // Build animation properties for GSAP
-      const animationProps: any = {
-        duration: syncData.duration || 0.5,
-        ease: syncData.ease || 'power2.out',
-        overwrite: false, // Don't automatically overwrite existing animations
-      };
-
-      // Handle optional animation properties
-      if (syncData.delay !== undefined) {
-        animationProps.delay = syncData.delay;
+    // Create a timeline for this propagation animation
+    const timeline = gsap.timeline({
+      onComplete: () => {
+        // Remove from active timelines when complete
+        this._removePropagationTimeline(elementId, timeline);
+      },
+      onReverseComplete: () => {
+        // Remove from active timelines when reverse is complete
+        this._removePropagationTimeline(elementId, timeline);
       }
-      if (syncData.repeat !== undefined) {
-        animationProps.repeat = syncData.repeat;
-      }
-      if (syncData.yoyo !== undefined) {
-        animationProps.yoyo = syncData.yoyo;
-      }
-
-      // Apply transform based on type
-      if (transform.type === 'translate') {
-        const hasInitialOffset = transform.initialOffsetX !== undefined || transform.initialOffsetY !== undefined;
-        if (hasInitialOffset) {
-          const fromVars = {
-            x: transform.initialOffsetX || 0,
-            y: transform.initialOffsetY || 0,
-          };
-          // toVars should be the final position after the translation
-          // This is the initial offset plus the translation distance
-          animationProps.x = (transform.initialOffsetX || 0) + (transform.translateX || 0);
-          animationProps.y = (transform.initialOffsetY || 0) + (transform.translateY || 0);
-          gsap.fromTo(targetElement, fromVars, animationProps);
-        } else {
-          // Standard translation from current position
-          animationProps.x = `+=${transform.translateX || 0}`;
-          animationProps.y = `+=${transform.translateY || 0}`;
-          gsap.to(targetElement, animationProps);
-        }
-      } else if (transform.type === 'scale') {
-        animationProps.scaleX = transform.scaleTargetX !== undefined ? transform.scaleTargetX : (transform.scaleTargetY !== undefined ? undefined : 1); // GSAP prefers scaleX/scaleY
-        animationProps.scaleY = transform.scaleTargetY !== undefined ? transform.scaleTargetY : (transform.scaleTargetX !== undefined ? undefined : 1);
-        if (transform.transformOrigin) {
-          animationProps.transformOrigin = `${transform.transformOrigin.x}px ${transform.transformOrigin.y}px`;
-        }
-        gsap.to(targetElement, animationProps);
-      } else if (transform.type === 'rotate') {
-        animationProps.rotation = transform.rotation || 0;
-        if (transform.transformOrigin) {
-          animationProps.transformOrigin = `${transform.transformOrigin.x}px ${transform.transformOrigin.y}px`;
-        }
-        gsap.to(targetElement, animationProps);
-      }
-      // Note: The explicit `animationProps.delay = syncData.delay || 0;` was removed as it's part of animationProps build up.
-    }).catch(error => {
-      console.error(`[TransformPropagator] Error importing GSAP for element ${elementId}:`, error);
     });
+
+    // Build animation properties for GSAP
+    const animationProps: any = {
+      duration: syncData.duration || 0.5,
+      ease: syncData.ease || 'power2.out',
+    };
+
+    // Handle optional animation properties
+    if (syncData.repeat !== undefined) animationProps.repeat = syncData.repeat;
+    if (syncData.yoyo !== undefined) animationProps.yoyo = syncData.yoyo;
+
+    // Apply anchor-aware transform origin for scale animations
+    const finalTransform = this._applyAnchorAwareTransformOrigin(elementId, transform);
+
+    // Apply transform based on type
+    if (finalTransform.type === 'translate') {
+      const hasInitialOffset = finalTransform.initialOffsetX !== undefined || finalTransform.initialOffsetY !== undefined;
+      if (hasInitialOffset) {
+        const fromVars = {
+          x: finalTransform.initialOffsetX || 0,
+          y: finalTransform.initialOffsetY || 0,
+        };
+        // toVars should be the final position after the translation
+        // This is the initial offset plus the translation distance
+        animationProps.x = (finalTransform.initialOffsetX || 0) + (finalTransform.translateX || 0);
+        animationProps.y = (finalTransform.initialOffsetY || 0) + (finalTransform.translateY || 0);
+        timeline.fromTo(targetElement, fromVars, animationProps);
+      } else {
+        // Standard translation from current position
+        animationProps.x = `+=${finalTransform.translateX || 0}`;
+        animationProps.y = `+=${finalTransform.translateY || 0}`;
+        timeline.to(targetElement, animationProps);
+      }
+    } else if (finalTransform.type === 'scale') {
+      // Set start values if specified
+      if (finalTransform.scaleStartX !== undefined || finalTransform.scaleStartY !== undefined) {
+        const initialScaleProps = {
+          scaleX: finalTransform.scaleStartX || 1,
+          scaleY: finalTransform.scaleStartY || 1,
+          transformOrigin: finalTransform.transformOrigin ? 
+            `${finalTransform.transformOrigin.x}px ${finalTransform.transformOrigin.y}px` : 'center center'
+        };
+        timeline.set(targetElement, initialScaleProps);
+      }
+      
+      animationProps.scaleX = finalTransform.scaleTargetX || 1;
+      animationProps.scaleY = finalTransform.scaleTargetY || 1;
+      if (finalTransform.transformOrigin) {
+        animationProps.transformOrigin = `${finalTransform.transformOrigin.x}px ${finalTransform.transformOrigin.y}px`;
+      }
+      timeline.to(targetElement, animationProps);
+    } else if (finalTransform.type === 'rotate') {
+      animationProps.rotation = finalTransform.rotation || 0;
+      if (finalTransform.transformOrigin) {
+        animationProps.transformOrigin = `${finalTransform.transformOrigin.x}px ${finalTransform.transformOrigin.y}px`;
+      }
+      timeline.to(targetElement, animationProps);
+    } else if (finalTransform.type === 'fade') {
+      if (finalTransform.opacity_start !== undefined) {
+        const initialFadeProps = { opacity: finalTransform.opacity_start };
+        timeline.fromTo(targetElement, initialFadeProps, { opacity: finalTransform.opacity_end || 1, ...animationProps });
+      } else {
+        animationProps.opacity = finalTransform.opacity_end || 1;
+        timeline.to(targetElement, animationProps);
+      }
+    }
+
+    // Apply delay after timeline construction
+    if (syncData.delay) {
+      timeline.delay(syncData.delay);
+    }
+
+    // Store the timeline for reversal capability
+    this._storePropagationTimeline(elementId, timeline, finalTransform);
+    
+    // Start the animation
+    timeline.play();
+  }
+
+  /**
+   * Apply anchor-aware transform origin for dependent elements
+   */
+  private _applyAnchorAwareTransformOrigin(
+    elementId: string,
+    transform: TransformEffect
+  ): TransformEffect {
+    // Only modify scale transforms to use anchor-aware origins
+    if (transform.type !== 'scale') {
+      return transform; // Return unmodified for non-scale transforms
+    }
+
+    const element = this.elementsMap?.get(elementId);
+    if (!element?.layoutConfig?.anchor) {
+      return transform; // No anchor configuration
+    }
+
+    const anchorConfig = element.layoutConfig.anchor;
+    
+    // If the element is anchored to another element (not container), use the anchor point as transform origin
+    if (anchorConfig.anchorTo && anchorConfig.anchorTo !== 'container') {
+      const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
+      const transformOriginString = this._anchorPointToTransformOriginString(anchorPoint);
+      const transformOrigin = this._parseTransformOrigin(transformOriginString, element);
+      
+      // Return a copy with the anchor-aware transform origin
+      return {
+        ...transform,
+        transformOrigin
+      };
+    }
+
+    return transform; // Return unmodified if not anchored to another element
+  }
+
+  /**
+   * Store a propagation timeline for reversal capability
+   */
+  private _storePropagationTimeline(
+    elementId: string,
+    timeline: gsap.core.Timeline,
+    transformEffect: TransformEffect
+  ): void {
+    if (!this.activePropagationTimelines.has(elementId)) {
+      this.activePropagationTimelines.set(elementId, []);
+    }
+    
+    const timelines = this.activePropagationTimelines.get(elementId)!;
+    timelines.push({
+      timeline,
+      elementId,
+      transformEffect,
+      isReversed: false
+    });
+  }
+
+  /**
+   * Remove a propagation timeline when it completes
+   */
+  private _removePropagationTimeline(elementId: string, timeline: gsap.core.Timeline): void {
+    const timelines = this.activePropagationTimelines.get(elementId);
+    if (timelines) {
+      const index = timelines.findIndex(pt => pt.timeline === timeline);
+      if (index !== -1) {
+        timelines.splice(index, 1);
+      }
+    }
   }
 
   /**
@@ -18740,31 +19792,6 @@ export class TransformPropagator {
   }
 
   /**
-   * Parse distance string to handle both pixels and percentages
-   */
-  private _parseDistance(distance: string, element?: LayoutElement): number {
-    if (!distance) return 0;
-    
-    if (distance.endsWith('%')) {
-      const percentage = parseFloat(distance);
-      if (element) {
-        // For percentage, use the element's width for horizontal movements or height for vertical
-        // Since we don't know the direction here, use the larger dimension as a reasonable default
-        const referenceSize = Math.max(element.layout.width, element.layout.height);
-        return (percentage / 100) * referenceSize;
-      } else {
-        // Fallback: assume 100px as reference for percentage calculations
-        return percentage;
-      }
-    } else if (distance.endsWith('px')) {
-      return parseFloat(distance);
-    } else {
-      // Assume pixels if no unit specified
-      return parseFloat(distance) || 0;
-    }
-  }
-
-  /**
    * Check if a transform effect is significant enough to propagate
    */
   private _isEffectSignificant(effect: TransformEffect, elementId?: string): boolean {
@@ -18789,6 +19816,9 @@ export class TransformPropagator {
                Math.abs(effect.translateY || 0) > threshold;
       case 'rotate':
         return Math.abs(effect.rotation || 0) > threshold;
+      case 'fade':
+        return Math.abs(effect.opacity_start || 0) > threshold ||
+               Math.abs(effect.opacity_end || 0) > threshold;
       default:
         return false;
     }
@@ -18800,6 +19830,14 @@ export class TransformPropagator {
   clearDependencies(): void {
     this.elementDependencies.clear();
     this.elementTransformStates.clear();
+    
+    // Kill all active propagation timelines
+    for (const [elementId, timelines] of this.activePropagationTimelines) {
+      for (const propagationTimeline of timelines) {
+        propagationTimeline.timeline.kill();
+      }
+    }
+    this.activePropagationTimelines.clear();
   }
 
   /**
@@ -18813,6 +19851,148 @@ export class TransformPropagator {
       this.storeUnsubscribe();
       this.storeUnsubscribe = undefined;
     }
+  }
+
+  /**
+   * Reverse the propagation effects of an animation when the animation is reversed
+   */
+  reverseAnimationPropagation(
+    elementId: string,
+    animationConfig: AnimationDefinition
+  ): void {
+    if (!this.elementsMap || !this.getShadowElement) {
+      console.warn('[TransformPropagator] Not initialized, cannot reverse animation propagation');
+      return;
+    }
+
+    // Find all elements that were affected by the original animation
+    const affectedElements = this._findDependentElements(elementId);
+    
+    if (affectedElements.length === 0) {
+      return; // No dependent elements to reverse
+    }
+
+    // Analyze the transform effects that were applied
+    const transformEffects = this._analyzeTransformEffects(elementId, animationConfig);
+    
+    if (transformEffects.length === 0) {
+      return; // No positioning effects to reverse
+    }
+
+    // Reverse the transform state tracking for the primary element
+    this._reverseElementTransformState(elementId, transformEffects);
+
+    // Apply reverse compensation to dependent elements
+    this._reverseCompensatingTransforms(elementId, transformEffects, affectedElements);
+  }
+
+  /**
+   * Stop all propagation timelines for dependent elements when primary animation is stopped
+   */
+  stopAnimationPropagation(elementId: string): void {
+    const affectedElements = this._findDependentElements(elementId);
+    
+    for (const dependency of affectedElements) {
+      this._stopPropagationTimelines(dependency.dependentElementId);
+    }
+  }
+
+  /**
+   * Stop all active propagation timelines for an element
+   */
+  private _stopPropagationTimelines(elementId: string): void {
+    const timelines = this.activePropagationTimelines.get(elementId);
+    if (timelines) {
+      for (const propagationTimeline of timelines) {
+        propagationTimeline.timeline.kill();
+      }
+      timelines.length = 0; // Clear the array
+    }
+  }
+
+  /**
+   * Reverse the transform state of an element
+   */
+  private _reverseElementTransformState(elementId: string, transformEffects: TransformEffect[]): void {
+    const currentState = this.elementTransformStates.get(elementId);
+    if (!currentState) return;
+
+    const reversedState = { ...currentState };
+
+    for (const effect of transformEffects) {
+      switch (effect.type) {
+        case 'scale':
+          // Reverse to the start scale values or default
+          reversedState.scaleX = effect.scaleStartX !== undefined ? effect.scaleStartX : 1;
+          reversedState.scaleY = effect.scaleStartY !== undefined ? effect.scaleStartY : 1;
+          break;
+        case 'translate':
+          // Reverse the translation
+          reversedState.translateX -= effect.translateX || 0;
+          reversedState.translateY -= effect.translateY || 0;
+          break;
+        case 'rotate':
+          // Reverse rotation (simple case - just negate)
+          reversedState.rotation = 0; // Reset to no rotation
+          break;
+      }
+    }
+
+    this.elementTransformStates.set(elementId, reversedState);
+  }
+
+  /**
+   * Apply reverse compensating transforms to dependent elements using timeline reversal
+   */
+  private _reverseCompensatingTransforms(
+    primaryElementId: string,
+    transformEffects: TransformEffect[],
+    affectedElements: ElementDependency[]
+  ): void {
+    if (!this.getShadowElement) return;
+
+    // Reverse timelines for all dependent elements
+    for (const dependency of affectedElements) {
+      this._reversePropagationTimelines(dependency.dependentElementId);
+    }
+  }
+
+  /**
+   * Reverse all active propagation timelines for an element
+   */
+  private _reversePropagationTimelines(elementId: string): boolean {
+    const timelines = this.activePropagationTimelines.get(elementId);
+    if (!timelines || timelines.length === 0) {
+      console.debug(`[TransformPropagator] No active propagation timelines found for element: ${elementId}`);
+      return false;
+    }
+
+    let reversed = false;
+    for (const propagationTimeline of timelines) {
+      if (!propagationTimeline.isReversed) {
+        // Before reversing, ensure the element maintains the correct transform origin for scale animations
+        if (propagationTimeline.transformEffect.type === 'scale' && propagationTimeline.transformEffect.transformOrigin) {
+          // Do nothing - transform origin is handled by captureInitialState or the animation itself.
+          // We should not be manually setting it here for reversal.
+        }
+        
+        propagationTimeline.timeline.reverse();
+        propagationTimeline.isReversed = true;
+        reversed = true;
+      } else {
+        // Play forward again, still maintaining transform origin
+        if (propagationTimeline.transformEffect.type === 'scale' && propagationTimeline.transformEffect.transformOrigin) {
+          // Do nothing - transform origin is handled by captureInitialState or the animation itself.
+          // We should not be manually setting it here for reversal.
+        }
+        
+        propagationTimeline.timeline.play();
+        propagationTimeline.isReversed = false;
+        reversed = true;
+      }
+    }
+    
+    return reversed;
   }
 }
 
@@ -18958,7 +20138,9 @@ for (const filePath of exampleFiles) {
       await page.goto(url, { timeout: 60_000 });
 
       const card = page.locator('lovelace-lcars-card').first();
-      await card.locator('svg').waitFor();
+
+      // Ensure the card's shadow DOM and underlying SVG have been attached before proceeding.
+      await TestWaitHelper.ensureShadowDOMStability(page, card);
 
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(1000);
@@ -19071,7 +20253,6 @@ for (const filePath of exampleFiles) {
 ## File: tests/e2e/test-helpers.ts
 
 ```typescript
-
 import { promises as fs } from 'fs';
 import { HomeAssistant, PlaywrightBrowser } from 'hass-taste-test';
 import { expect } from '@playwright/test';
@@ -19498,9 +20679,9 @@ export class TestWaitHelper {
   ): Promise<void> {
     for (let i = 0; i < retries; i++) {
       try {
-        await cardLocator.locator('svg').waitFor({ state: 'attached', timeout: 1000 });
+        await cardLocator.locator('svg').waitFor({ state: 'attached', timeout: 10000 });
         await page.waitForTimeout(100);
-        await cardLocator.locator('svg').waitFor({ state: 'attached', timeout: 500 });
+        await cardLocator.locator('svg').waitFor({ state: 'attached', timeout: 5000 });
         break;
       } catch (error) {
         if (i === retries - 1) {

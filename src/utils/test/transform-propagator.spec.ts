@@ -1,6 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TransformPropagator, TransformEffect, ElementDependency } from '../transform-propagator.js';
 import { LayoutElement } from '../../layout/elements/element.js';
+import gsap from 'gsap';
+
+// Mock GSAP
+vi.mock('gsap', () => ({
+  default: {
+    timeline: vi.fn(() => ({
+      to: vi.fn().mockReturnThis(),
+      set: vi.fn().mockReturnThis(),
+      fromTo: vi.fn().mockReturnThis(),
+      delay: vi.fn().mockReturnThis(),
+      play: vi.fn().mockReturnThis(),
+      reverse: vi.fn().mockReturnThis(),
+      kill: vi.fn().mockReturnThis(),
+    })),
+    set: vi.fn(),
+    killTweensOf: vi.fn(),
+  },
+}));
+
+// Mock store provider
+vi.mock('../../core/store.js', () => ({
+  StoreProvider: {
+    getStore: () => ({
+      onStateChange: vi.fn(() => vi.fn()),
+    }),
+  },
+}));
 
 // Mock layout element for testing
 class MockLayoutElement extends LayoutElement {
@@ -17,11 +44,14 @@ describe('TransformPropagator', () => {
   let propagator: TransformPropagator;
   let elementsMap: Map<string, LayoutElement>;
   let getShadowElement: (id: string) => Element | null;
+  let mockElements: Map<string, Element>;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     propagator = new TransformPropagator();
     elementsMap = new Map();
     getShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+    mockElements = new Map();
   });
 
   describe('Scale Transform Propagation', () => {
@@ -566,5 +596,218 @@ describe('TransformPropagator', () => {
         expect(dependentScaleCompensationCall[2]).toEqual(scaleSyncData); // The SyncData
       }
     });
+  });
+
+  describe('Timeline-based propagation reversal', () => {
+    beforeEach(() => {
+      // Create primary element that will be animated
+      const primaryElement = new MockLayoutElement('primary', {
+        x: 100, y: 100, width: 50, height: 30, calculated: true
+      });
+      primaryElement.layoutConfig = { anchor: { anchorTo: 'container', anchorPoint: 'topLeft' } };
+      
+      // Create dependent element anchored to the primary element
+      const dependentElement = new MockLayoutElement('dependent', {
+        x: 150, y: 100, width: 40, height: 20, calculated: true
+      });
+      dependentElement.layoutConfig = { 
+        anchor: { 
+          anchorTo: 'primary', 
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topRight'
+        } 
+      };
+      
+      elementsMap.set('primary', primaryElement);
+      elementsMap.set('dependent', dependentElement);
+      
+      // Create mock DOM elements
+      mockElements.set('primary', document.createElement('div'));
+      mockElements.set('dependent', document.createElement('div'));
+      getShadowElement = (id: string) => mockElements.get(id) || null;
+      
+      propagator.initialize(elementsMap, getShadowElement);
+    });
+
+    it('should create timeline for dependent element animations', () => {
+      const animationConfig = {
+        type: 'scale' as const,
+        duration: 500,
+        scale_params: { scale_start: 1, scale_end: 1.5 }
+      };
+      
+      const syncData = { duration: 500, ease: 'power2.out' };
+      
+      propagator.processAnimationWithPropagation('primary', animationConfig, syncData);
+      
+      // Should create timeline for GSAP
+      expect(gsap.timeline).toHaveBeenCalled();
+    });
+
+    it('should verify timeline methods are available for propagation', () => {
+      // Test that our GSAP mock has the necessary timeline methods
+      const timelineMock = gsap.timeline();
+      expect(timelineMock.to).toBeDefined();
+      expect(timelineMock.reverse).toBeDefined();
+      expect(timelineMock.kill).toBeDefined();
+      expect(timelineMock.play).toBeDefined();
+    });
+
+    it('should handle timeline-based propagation without throwing errors', () => {
+      const animationConfig = {
+        type: 'scale' as const,
+        duration: 500,
+        scale_params: { scale_start: 1, scale_end: 1.5 }
+      };
+      
+      const syncData = { duration: 500, ease: 'power2.out' };
+      
+      // This should not throw even if no dependencies are found
+      expect(() => {
+        propagator.processAnimationWithPropagation('primary', animationConfig, syncData);
+      }).not.toThrow();
+    });
+
+    it('should handle reversal without throwing errors', () => {
+      const animationConfig = {
+        type: 'scale' as const,
+        duration: 500,
+        scale_params: { scale_start: 1, scale_end: 1.5 }
+      };
+      
+      // This should not throw even if no timelines exist to reverse
+      expect(() => {
+        propagator.reverseAnimationPropagation('primary', animationConfig);
+      }).not.toThrow();
+    });
+
+    it('should handle stop propagation without throwing errors', () => {
+      // This should not throw even if no timelines exist to stop
+      expect(() => {
+        propagator.stopAnimationPropagation('primary');
+      }).not.toThrow();
+    });
+  });
+
+  // Test behavior with working dependencies (extend from existing working tests)
+  describe('Timeline management integration', () => {
+    it('should use timeline-based animations for working scale propagation', () => {
+      // Set up elements similar to existing working tests  
+      const scaleTarget = new MockLayoutElement('scale_target_group.scale_target', {
+        x: 105, y: 50, width: 100, height: 40, calculated: true
+      });
+      
+      scaleTarget.layoutConfig = {
+        anchor: {
+          anchorTo: 'scale_target_group.scale_trigger_button',
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topRight'
+        }
+      };
+
+      const triggerButton = new MockLayoutElement('scale_target_group.scale_trigger_button', {
+        x: 0, y: 50, width: 100, height: 40, calculated: true
+      });
+
+      const description = new MockLayoutElement('scale_target_group.scale_target_description', {
+        x: 210, y: 70, width: 200, height: 20, calculated: true
+      });
+      
+      description.layoutConfig = {
+        anchor: {
+          anchorTo: 'scale_target_group.scale_target',
+          anchorPoint: 'centerLeft',
+          targetAnchorPoint: 'centerRight'
+        }
+      };
+
+      elementsMap.set('scale_target_group.scale_target', scaleTarget);
+      elementsMap.set('scale_target_group.scale_trigger_button', triggerButton);
+      elementsMap.set('scale_target_group.scale_target_description', description);
+      
+      // Create mock DOM elements
+      getShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+      
+      propagator.initialize(elementsMap, getShadowElement);
+
+      const scaleAnimation = {
+        type: 'scale' as const,
+        scale_params: {
+          scale_start: 1,
+          scale_end: 1.2,
+          transform_origin: 'center center'
+        },
+        duration: 0.3,
+        ease: 'bounce.out'
+      };
+
+      const syncData = {
+        duration: 0.3,
+        ease: 'bounce.out'
+      };
+
+      // Process the animation - this should use timelines
+      propagator.processAnimationWithPropagation(
+        'scale_target_group.scale_target',
+        scaleAnimation,
+        syncData
+      );
+
+      // Verify timeline was created for propagation
+      expect(gsap.timeline).toHaveBeenCalled();
+    });
+
+         it('should successfully reverse timeline-based propagation', () => {
+       // Use the same setup as above
+       const scaleTarget = new MockLayoutElement('scale_target_group.scale_target', {
+         x: 105, y: 50, width: 100, height: 40, calculated: true
+       });
+       
+       scaleTarget.layoutConfig = {
+         anchor: {
+           anchorTo: 'scale_target_group.scale_trigger_button',
+           anchorPoint: 'topLeft',
+           targetAnchorPoint: 'topRight'
+         }
+       };
+
+       const description = new MockLayoutElement('scale_target_group.scale_target_description', {
+         x: 210, y: 70, width: 200, height: 20, calculated: true
+       });
+       
+       description.layoutConfig = {
+         anchor: {
+           anchorTo: 'scale_target_group.scale_target',
+           anchorPoint: 'centerLeft',
+           targetAnchorPoint: 'centerRight'
+         }
+       };
+
+       elementsMap.set('scale_target_group.scale_target', scaleTarget);
+       elementsMap.set('scale_target_group.scale_target_description', description);
+       
+       getShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+       propagator.initialize(elementsMap, getShadowElement);
+
+       const scaleAnimation = {
+         type: 'scale' as const,
+         scale_params: { scale_start: 1, scale_end: 1.2 },
+         duration: 0.3,
+         ease: 'bounce.out'
+       };
+
+       const syncData = { duration: 0.3, ease: 'bounce.out' };
+
+       // Create the initial propagation
+       propagator.processAnimationWithPropagation('scale_target_group.scale_target', scaleAnimation, syncData);
+       
+       // Now reverse it - should not throw
+       expect(() => {
+         propagator.reverseAnimationPropagation('scale_target_group.scale_target', scaleAnimation);
+       }).not.toThrow();
+       
+       // The reversal process should complete successfully
+       expect(true).toBe(true); // Test passes if no error is thrown
+     });
   });
 }); 

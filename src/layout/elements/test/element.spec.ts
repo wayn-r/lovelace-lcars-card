@@ -9,12 +9,21 @@ import { Color } from '../../../utils/color.js';
 // Mock gsap
 vi.mock('gsap', () => {
   const mockTo = vi.fn();
+  const mockTimeline = vi.fn(() => ({
+    to: vi.fn(),
+    set: vi.fn(),
+    play: vi.fn(),
+    reverse: vi.fn(),
+    kill: vi.fn()
+  }));
   return {
     default: {
       to: mockTo,
+      timeline: mockTimeline,
     },
     gsap: { // if you import { gsap } from 'gsap'
       to: mockTo,
+      timeline: mockTimeline,
     }
   };
 });
@@ -436,33 +445,53 @@ describe('LayoutElement', () => {
       document.getElementById = originalGetElementById; // Restore original
     });
 
-    it('should call gsap.to if layout is calculated and element exists', () => {
+    it('should call animationManager.animateElementProperty if layout is calculated and element exists', () => {
       const mockDomElement = document.createElement('div');
       const getShadowElement = vi.fn().mockReturnValue(mockDomElement);
+      
+      // Mock the animationManager.animateElementProperty method
+      const mockAnimateElementProperty = vi.spyOn(animationManager, 'animateElementProperty');
+      
       element = new MockLayoutElement('anim-test', {}, {}, undefined, undefined, getShadowElement);
       element.layout.calculated = true;
 
       element.animate('opacity', 0.5, 1);
-      expect(gsap.to).toHaveBeenCalledWith(mockDomElement, {
-        duration: 1,
-        opacity: 0.5,
-        ease: "power2.out"
-      });
+      
+      // Now we expect animationManager.animateElementProperty to be called
+      expect(mockAnimateElementProperty).toHaveBeenCalledWith(
+        'anim-test',
+        'opacity',
+        0.5,
+        1,
+        getShadowElement
+      );
     });
 
-    it('should not call gsap.to if layout is not calculated', () => {
+    it('should not call animationManager.animateElementProperty if layout is not calculated', () => {
+      const mockAnimateElementProperty = vi.spyOn(animationManager, 'animateElementProperty');
+      
       element = new MockLayoutElement('anim-test');
       element.layout.calculated = false;
       element.animate('opacity', 0.5);
-      expect(gsap.to).not.toHaveBeenCalled();
+      expect(mockAnimateElementProperty).not.toHaveBeenCalled();
     });
 
-    it('should not call gsap.to if element does not exist in DOM', () => {
-      element = new MockLayoutElement('anim-test');
+    it('should call animationManager.animateElementProperty even if element does not exist in DOM', () => {
+      const mockAnimateElementProperty = vi.spyOn(animationManager, 'animateElementProperty');
+      const getShadowElement = vi.fn().mockReturnValue(null);
+      
+      element = new MockLayoutElement('anim-test', {}, {}, undefined, undefined, getShadowElement);
       element.layout.calculated = true;
-      document.getElementById = vi.fn().mockReturnValue(null);
       element.animate('opacity', 0.5);
-      expect(gsap.to).not.toHaveBeenCalled();
+      
+      // The element still calls animationManager, but the manager handles the null element case
+      expect(mockAnimateElementProperty).toHaveBeenCalledWith(
+        'anim-test',
+        'opacity',
+        0.5,
+        0.5,
+        getShadowElement
+      );
     });
   });
 

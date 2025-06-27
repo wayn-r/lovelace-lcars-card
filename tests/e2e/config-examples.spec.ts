@@ -124,7 +124,9 @@ for (const filePath of exampleFiles) {
       await page.goto(url, { timeout: 60_000 });
 
       const card = page.locator('lovelace-lcars-card').first();
-      await card.locator('svg').waitFor();
+
+      // Ensure the card's shadow DOM and underlying SVG have been attached before proceeding.
+      await TestWaitHelper.ensureShadowDOMStability(page, card);
 
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(1000);

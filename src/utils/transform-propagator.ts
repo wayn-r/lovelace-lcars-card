@@ -2,6 +2,8 @@ import { LayoutElement } from '../layout/elements/element.js';
 import { AnimationDefinition } from '../types.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { StoreProvider, StateChangeEvent } from '../core/store.js';
+import gsap from 'gsap';
+import { DistanceParser } from './animation.js';
 
 /**
  * Represents a visual transformation that will occur during an animation
@@ -11,7 +13,7 @@ export interface TransformEffect {
   initialOffsetX?: number;
   initialOffsetY?: number;
 
-  type: 'scale' | 'translate' | 'rotate';
+  type: 'scale' | 'translate' | 'rotate' | 'fade';
   scaleStartX?: number;
   scaleStartY?: number;
   scaleTargetX?: number;
@@ -20,6 +22,8 @@ export interface TransformEffect {
   translateY?: number;
   rotation?: number;
   transformOrigin: { x: number; y: number };
+  opacity_start?: number;
+  opacity_end?: number;
 }
 
 /**
@@ -56,6 +60,16 @@ export interface ElementTransformState {
 }
 
 /**
+ * Represents a timeline created for dependent element animation propagation
+ */
+export interface PropagationTimeline {
+  timeline: gsap.core.Timeline;
+  elementId: string;
+  transformEffect: TransformEffect;
+  isReversed: boolean;
+}
+
+/**
  * Manages transform propagation to maintain anchor relationships during animations
  */
 export class TransformPropagator {
@@ -66,6 +80,8 @@ export class TransformPropagator {
   private elementTransformStates = new Map<string, ElementTransformState>();
   // Store subscription for reactive updates
   private storeUnsubscribe?: () => void;
+  // Track active propagation timelines for reversal capability
+  private activePropagationTimelines = new Map<string, PropagationTimeline[]>();
 
   /**
    * Initialize the propagator with current layout state and subscribe to store
@@ -474,6 +490,9 @@ export class TransformPropagator {
       case 'custom_gsap':
         effects.push(...this._analyzeCustomGsapEffects(element, animationConfig));
         break;
+      case 'fade':
+        effects.push(this._analyzeFadeEffect(element, animationConfig));
+        break;
     }
 
     return effects.filter(effect => this._isEffectSignificant(effect, elementId));
@@ -524,7 +543,7 @@ export class TransformPropagator {
   ): TransformEffect {
     const slideParams = animationConfig.slide_params;
     const direction = slideParams?.direction;
-    const distance = this._parseDistance(slideParams?.distance || '0px', element);
+    const distance = DistanceParser.parse(slideParams?.distance || '0px', element);
     const movement = slideParams?.movement;
 
     let translateX = 0;
@@ -626,6 +645,25 @@ export class TransformPropagator {
     }
 
     return effects;
+  }
+
+  /**
+   * Analyze fade animation effects
+   */
+  private _analyzeFadeEffect(
+    element: LayoutElement,
+    animationConfig: AnimationDefinition
+  ): TransformEffect {
+    const fadeParams = animationConfig.fade_params;
+    const opacityStart = fadeParams?.opacity_start;
+    const opacityEnd = fadeParams?.opacity_end;
+
+    return {
+      type: 'fade',
+      opacity_start: opacityStart,
+      opacity_end: opacityEnd,
+      transformOrigin: { x: 0, y: 0 } // Not relevant for fade animations
+    };
   }
 
   /**
@@ -949,7 +987,7 @@ export class TransformPropagator {
   }
 
   /**
-   * Apply a transform to an element
+   * Apply a transform to an element using timeline-based animation for proper reversal
    */
   private _applyTransform(
     elementId: string,
@@ -961,63 +999,163 @@ export class TransformPropagator {
     const targetElement = this.getShadowElement(elementId);
     if (!targetElement) return;
 
-    // Import GSAP dynamically to avoid bundling issues
-    import('gsap').then(({ gsap }) => {
-      // Build animation properties for GSAP
-      const animationProps: any = {
-        duration: syncData.duration || 0.5,
-        ease: syncData.ease || 'power2.out',
-        overwrite: false, // Don't automatically overwrite existing animations
-      };
-
-      // Handle optional animation properties
-      if (syncData.delay !== undefined) {
-        animationProps.delay = syncData.delay;
+    // Create a timeline for this propagation animation
+    const timeline = gsap.timeline({
+      onComplete: () => {
+        // Remove from active timelines when complete
+        this._removePropagationTimeline(elementId, timeline);
+      },
+      onReverseComplete: () => {
+        // Remove from active timelines when reverse is complete
+        this._removePropagationTimeline(elementId, timeline);
       }
-      if (syncData.repeat !== undefined) {
-        animationProps.repeat = syncData.repeat;
-      }
-      if (syncData.yoyo !== undefined) {
-        animationProps.yoyo = syncData.yoyo;
-      }
-
-      // Apply transform based on type
-      if (transform.type === 'translate') {
-        const hasInitialOffset = transform.initialOffsetX !== undefined || transform.initialOffsetY !== undefined;
-        if (hasInitialOffset) {
-          const fromVars = {
-            x: transform.initialOffsetX || 0,
-            y: transform.initialOffsetY || 0,
-          };
-          // toVars should be the final position after the translation
-          // This is the initial offset plus the translation distance
-          animationProps.x = (transform.initialOffsetX || 0) + (transform.translateX || 0);
-          animationProps.y = (transform.initialOffsetY || 0) + (transform.translateY || 0);
-          gsap.fromTo(targetElement, fromVars, animationProps);
-        } else {
-          // Standard translation from current position
-          animationProps.x = `+=${transform.translateX || 0}`;
-          animationProps.y = `+=${transform.translateY || 0}`;
-          gsap.to(targetElement, animationProps);
-        }
-      } else if (transform.type === 'scale') {
-        animationProps.scaleX = transform.scaleTargetX !== undefined ? transform.scaleTargetX : (transform.scaleTargetY !== undefined ? undefined : 1); // GSAP prefers scaleX/scaleY
-        animationProps.scaleY = transform.scaleTargetY !== undefined ? transform.scaleTargetY : (transform.scaleTargetX !== undefined ? undefined : 1);
-        if (transform.transformOrigin) {
-          animationProps.transformOrigin = `${transform.transformOrigin.x}px ${transform.transformOrigin.y}px`;
-        }
-        gsap.to(targetElement, animationProps);
-      } else if (transform.type === 'rotate') {
-        animationProps.rotation = transform.rotation || 0;
-        if (transform.transformOrigin) {
-          animationProps.transformOrigin = `${transform.transformOrigin.x}px ${transform.transformOrigin.y}px`;
-        }
-        gsap.to(targetElement, animationProps);
-      }
-      // Note: The explicit `animationProps.delay = syncData.delay || 0;` was removed as it's part of animationProps build up.
-    }).catch(error => {
-      console.error(`[TransformPropagator] Error importing GSAP for element ${elementId}:`, error);
     });
+
+    // Build animation properties for GSAP
+    const animationProps: any = {
+      duration: syncData.duration || 0.5,
+      ease: syncData.ease || 'power2.out',
+    };
+
+    // Handle optional animation properties
+    if (syncData.repeat !== undefined) animationProps.repeat = syncData.repeat;
+    if (syncData.yoyo !== undefined) animationProps.yoyo = syncData.yoyo;
+
+    // Apply anchor-aware transform origin for scale animations
+    const finalTransform = this._applyAnchorAwareTransformOrigin(elementId, transform);
+
+    // Apply transform based on type
+    if (finalTransform.type === 'translate') {
+      const hasInitialOffset = finalTransform.initialOffsetX !== undefined || finalTransform.initialOffsetY !== undefined;
+      if (hasInitialOffset) {
+        const fromVars = {
+          x: finalTransform.initialOffsetX || 0,
+          y: finalTransform.initialOffsetY || 0,
+        };
+        // toVars should be the final position after the translation
+        // This is the initial offset plus the translation distance
+        animationProps.x = (finalTransform.initialOffsetX || 0) + (finalTransform.translateX || 0);
+        animationProps.y = (finalTransform.initialOffsetY || 0) + (finalTransform.translateY || 0);
+        timeline.fromTo(targetElement, fromVars, animationProps);
+      } else {
+        // Standard translation from current position
+        animationProps.x = `+=${finalTransform.translateX || 0}`;
+        animationProps.y = `+=${finalTransform.translateY || 0}`;
+        timeline.to(targetElement, animationProps);
+      }
+    } else if (finalTransform.type === 'scale') {
+      // Set start values if specified
+      if (finalTransform.scaleStartX !== undefined || finalTransform.scaleStartY !== undefined) {
+        const initialScaleProps = {
+          scaleX: finalTransform.scaleStartX || 1,
+          scaleY: finalTransform.scaleStartY || 1,
+          transformOrigin: finalTransform.transformOrigin ? 
+            `${finalTransform.transformOrigin.x}px ${finalTransform.transformOrigin.y}px` : 'center center'
+        };
+        timeline.set(targetElement, initialScaleProps);
+      }
+      
+      animationProps.scaleX = finalTransform.scaleTargetX || 1;
+      animationProps.scaleY = finalTransform.scaleTargetY || 1;
+      if (finalTransform.transformOrigin) {
+        animationProps.transformOrigin = `${finalTransform.transformOrigin.x}px ${finalTransform.transformOrigin.y}px`;
+      }
+      timeline.to(targetElement, animationProps);
+    } else if (finalTransform.type === 'rotate') {
+      animationProps.rotation = finalTransform.rotation || 0;
+      if (finalTransform.transformOrigin) {
+        animationProps.transformOrigin = `${finalTransform.transformOrigin.x}px ${finalTransform.transformOrigin.y}px`;
+      }
+      timeline.to(targetElement, animationProps);
+    } else if (finalTransform.type === 'fade') {
+      if (finalTransform.opacity_start !== undefined) {
+        const initialFadeProps = { opacity: finalTransform.opacity_start };
+        timeline.fromTo(targetElement, initialFadeProps, { opacity: finalTransform.opacity_end || 1, ...animationProps });
+      } else {
+        animationProps.opacity = finalTransform.opacity_end || 1;
+        timeline.to(targetElement, animationProps);
+      }
+    }
+
+    // Apply delay after timeline construction
+    if (syncData.delay) {
+      timeline.delay(syncData.delay);
+    }
+
+    // Store the timeline for reversal capability
+    this._storePropagationTimeline(elementId, timeline, finalTransform);
+    
+    // Start the animation
+    timeline.play();
+  }
+
+  /**
+   * Apply anchor-aware transform origin for dependent elements
+   */
+  private _applyAnchorAwareTransformOrigin(
+    elementId: string,
+    transform: TransformEffect
+  ): TransformEffect {
+    // Only modify scale transforms to use anchor-aware origins
+    if (transform.type !== 'scale') {
+      return transform; // Return unmodified for non-scale transforms
+    }
+
+    const element = this.elementsMap?.get(elementId);
+    if (!element?.layoutConfig?.anchor) {
+      return transform; // No anchor configuration
+    }
+
+    const anchorConfig = element.layoutConfig.anchor;
+    
+    // If the element is anchored to another element (not container), use the anchor point as transform origin
+    if (anchorConfig.anchorTo && anchorConfig.anchorTo !== 'container') {
+      const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
+      const transformOriginString = this._anchorPointToTransformOriginString(anchorPoint);
+      const transformOrigin = this._parseTransformOrigin(transformOriginString, element);
+      
+      // Return a copy with the anchor-aware transform origin
+      return {
+        ...transform,
+        transformOrigin
+      };
+    }
+
+    return transform; // Return unmodified if not anchored to another element
+  }
+
+  /**
+   * Store a propagation timeline for reversal capability
+   */
+  private _storePropagationTimeline(
+    elementId: string,
+    timeline: gsap.core.Timeline,
+    transformEffect: TransformEffect
+  ): void {
+    if (!this.activePropagationTimelines.has(elementId)) {
+      this.activePropagationTimelines.set(elementId, []);
+    }
+    
+    const timelines = this.activePropagationTimelines.get(elementId)!;
+    timelines.push({
+      timeline,
+      elementId,
+      transformEffect,
+      isReversed: false
+    });
+  }
+
+  /**
+   * Remove a propagation timeline when it completes
+   */
+  private _removePropagationTimeline(elementId: string, timeline: gsap.core.Timeline): void {
+    const timelines = this.activePropagationTimelines.get(elementId);
+    if (timelines) {
+      const index = timelines.findIndex(pt => pt.timeline === timeline);
+      if (index !== -1) {
+        timelines.splice(index, 1);
+      }
+    }
   }
 
   /**
@@ -1104,31 +1242,6 @@ export class TransformPropagator {
   }
 
   /**
-   * Parse distance string to handle both pixels and percentages
-   */
-  private _parseDistance(distance: string, element?: LayoutElement): number {
-    if (!distance) return 0;
-    
-    if (distance.endsWith('%')) {
-      const percentage = parseFloat(distance);
-      if (element) {
-        // For percentage, use the element's width for horizontal movements or height for vertical
-        // Since we don't know the direction here, use the larger dimension as a reasonable default
-        const referenceSize = Math.max(element.layout.width, element.layout.height);
-        return (percentage / 100) * referenceSize;
-      } else {
-        // Fallback: assume 100px as reference for percentage calculations
-        return percentage;
-      }
-    } else if (distance.endsWith('px')) {
-      return parseFloat(distance);
-    } else {
-      // Assume pixels if no unit specified
-      return parseFloat(distance) || 0;
-    }
-  }
-
-  /**
    * Check if a transform effect is significant enough to propagate
    */
   private _isEffectSignificant(effect: TransformEffect, elementId?: string): boolean {
@@ -1153,6 +1266,9 @@ export class TransformPropagator {
                Math.abs(effect.translateY || 0) > threshold;
       case 'rotate':
         return Math.abs(effect.rotation || 0) > threshold;
+      case 'fade':
+        return Math.abs(effect.opacity_start || 0) > threshold ||
+               Math.abs(effect.opacity_end || 0) > threshold;
       default:
         return false;
     }
@@ -1164,6 +1280,14 @@ export class TransformPropagator {
   clearDependencies(): void {
     this.elementDependencies.clear();
     this.elementTransformStates.clear();
+    
+    // Kill all active propagation timelines
+    for (const [elementId, timelines] of this.activePropagationTimelines) {
+      for (const propagationTimeline of timelines) {
+        propagationTimeline.timeline.kill();
+      }
+    }
+    this.activePropagationTimelines.clear();
   }
 
   /**
@@ -1177,6 +1301,148 @@ export class TransformPropagator {
       this.storeUnsubscribe();
       this.storeUnsubscribe = undefined;
     }
+  }
+
+  /**
+   * Reverse the propagation effects of an animation when the animation is reversed
+   */
+  reverseAnimationPropagation(
+    elementId: string,
+    animationConfig: AnimationDefinition
+  ): void {
+    if (!this.elementsMap || !this.getShadowElement) {
+      console.warn('[TransformPropagator] Not initialized, cannot reverse animation propagation');
+      return;
+    }
+
+    // Find all elements that were affected by the original animation
+    const affectedElements = this._findDependentElements(elementId);
+    
+    if (affectedElements.length === 0) {
+      return; // No dependent elements to reverse
+    }
+
+    // Analyze the transform effects that were applied
+    const transformEffects = this._analyzeTransformEffects(elementId, animationConfig);
+    
+    if (transformEffects.length === 0) {
+      return; // No positioning effects to reverse
+    }
+
+    // Reverse the transform state tracking for the primary element
+    this._reverseElementTransformState(elementId, transformEffects);
+
+    // Apply reverse compensation to dependent elements
+    this._reverseCompensatingTransforms(elementId, transformEffects, affectedElements);
+  }
+
+  /**
+   * Stop all propagation timelines for dependent elements when primary animation is stopped
+   */
+  stopAnimationPropagation(elementId: string): void {
+    const affectedElements = this._findDependentElements(elementId);
+    
+    for (const dependency of affectedElements) {
+      this._stopPropagationTimelines(dependency.dependentElementId);
+    }
+  }
+
+  /**
+   * Stop all active propagation timelines for an element
+   */
+  private _stopPropagationTimelines(elementId: string): void {
+    const timelines = this.activePropagationTimelines.get(elementId);
+    if (timelines) {
+      for (const propagationTimeline of timelines) {
+        propagationTimeline.timeline.kill();
+      }
+      timelines.length = 0; // Clear the array
+    }
+  }
+
+  /**
+   * Reverse the transform state of an element
+   */
+  private _reverseElementTransformState(elementId: string, transformEffects: TransformEffect[]): void {
+    const currentState = this.elementTransformStates.get(elementId);
+    if (!currentState) return;
+
+    const reversedState = { ...currentState };
+
+    for (const effect of transformEffects) {
+      switch (effect.type) {
+        case 'scale':
+          // Reverse to the start scale values or default
+          reversedState.scaleX = effect.scaleStartX !== undefined ? effect.scaleStartX : 1;
+          reversedState.scaleY = effect.scaleStartY !== undefined ? effect.scaleStartY : 1;
+          break;
+        case 'translate':
+          // Reverse the translation
+          reversedState.translateX -= effect.translateX || 0;
+          reversedState.translateY -= effect.translateY || 0;
+          break;
+        case 'rotate':
+          // Reverse rotation (simple case - just negate)
+          reversedState.rotation = 0; // Reset to no rotation
+          break;
+      }
+    }
+
+    this.elementTransformStates.set(elementId, reversedState);
+  }
+
+  /**
+   * Apply reverse compensating transforms to dependent elements using timeline reversal
+   */
+  private _reverseCompensatingTransforms(
+    primaryElementId: string,
+    transformEffects: TransformEffect[],
+    affectedElements: ElementDependency[]
+  ): void {
+    if (!this.getShadowElement) return;
+
+    // Reverse timelines for all dependent elements
+    for (const dependency of affectedElements) {
+      this._reversePropagationTimelines(dependency.dependentElementId);
+    }
+  }
+
+  /**
+   * Reverse all active propagation timelines for an element
+   */
+  private _reversePropagationTimelines(elementId: string): boolean {
+    const timelines = this.activePropagationTimelines.get(elementId);
+    if (!timelines || timelines.length === 0) {
+      console.debug(`[TransformPropagator] No active propagation timelines found for element: ${elementId}`);
+      return false;
+    }
+
+    let reversed = false;
+    for (const propagationTimeline of timelines) {
+      if (!propagationTimeline.isReversed) {
+        // Before reversing, ensure the element maintains the correct transform origin for scale animations
+        if (propagationTimeline.transformEffect.type === 'scale' && propagationTimeline.transformEffect.transformOrigin) {
+          // Do nothing - transform origin is handled by captureInitialState or the animation itself.
+          // We should not be manually setting it here for reversal.
+        }
+        
+        propagationTimeline.timeline.reverse();
+        propagationTimeline.isReversed = true;
+        reversed = true;
+      } else {
+        // Play forward again, still maintaining transform origin
+        if (propagationTimeline.transformEffect.type === 'scale' && propagationTimeline.transformEffect.transformOrigin) {
+          // Do nothing - transform origin is handled by captureInitialState or the animation itself.
+          // We should not be manually setting it here for reversal.
+        }
+        
+        propagationTimeline.timeline.play();
+        propagationTimeline.isReversed = false;
+        reversed = true;
+      }
+    }
+    
+    return reversed;
   }
 }
 

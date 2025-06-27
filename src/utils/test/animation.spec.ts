@@ -9,9 +9,16 @@ vi.mock('gsap', () => ({
     timeline: vi.fn(() => ({
       set: vi.fn(),
       to: vi.fn(),
+      fromTo: vi.fn(),
+      add: vi.fn(),
       play: vi.fn(),
+      reverse: vi.fn(),
+      kill: vi.fn(),
+      delay: vi.fn(),
     })),
     to: vi.fn(),
+    fromTo: vi.fn(),
+    set: vi.fn(),
     killTweensOf: vi.fn(),
   },
 }));
@@ -132,17 +139,147 @@ describe('AnimationManager - Pure Animation API', () => {
   describe('positioning effects detection', () => {
     it('should detect positioning effects for scale animations', () => {
       const config: AnimationConfig = { type: 'scale' };
-      expect(manager.hasPositioningEffects(config)).toBe(true);
+      expect(manager.animationEffectsPositioning(config)).toBe(true);
     });
 
     it('should detect positioning effects for slide animations', () => {
       const config: AnimationConfig = { type: 'slide' };
-      expect(manager.hasPositioningEffects(config)).toBe(true);
+      expect(manager.animationEffectsPositioning(config)).toBe(true);
     });
 
     it('should not detect positioning effects for fade animations', () => {
       const config: AnimationConfig = { type: 'fade' };
-      expect(manager.hasPositioningEffects(config)).toBe(false);
+      expect(manager.animationEffectsPositioning(config)).toBe(false);
+    });
+  });
+
+  describe('Timeline Reversal', () => {
+    it('should reverse timeline instead of creating new animation for scale reversal', () => {
+      const element = document.createElement('div');
+      const getShadowElement = vi.fn().mockReturnValue(element);
+      
+      const scaleUpConfig: AnimationConfig = {
+        type: 'scale',
+        scale_params: {
+          scale_start: 1,
+          scale_end: 1.2,
+          transform_origin: 'center center'
+        },
+        duration: 300,
+        ease: 'bounce.out'
+      };
+      
+      const context: AnimationContext = {
+        elementId: 'test-element',
+        getShadowElement
+      };
+      
+      // Execute the initial scale up animation
+      const result = manager.executeAnimation('test-element', scaleUpConfig, context);
+      expect(result).not.toBeNull();
+      expect(result!.timeline).toBeDefined();
+      
+      // Verify timeline is stored
+      const activeTimelines = manager.getActiveTimelines('test-element');
+      expect(activeTimelines).toBeDefined();
+      expect(activeTimelines!.length).toBe(1);
+      expect(activeTimelines![0].isReversed).toBe(false);
+      
+      // Now reverse the animation
+      const reversed = manager.reverseAnimation('test-element');
+      expect(reversed).toBe(true);
+      
+      // Verify the timeline is marked as reversed
+      const timelinesAfterReverse = manager.getActiveTimelines('test-element');
+      expect(timelinesAfterReverse).toBeDefined();
+      expect(timelinesAfterReverse!.length).toBe(1);
+      expect(timelinesAfterReverse![0].isReversed).toBe(true);
+    });
+
+    it('should detect reverse transitions correctly for scale animations', async () => {
+      // Create a simple test that focuses on the core reversal detection logic
+      const scaleUpConfig: AnimationConfig = {
+        type: 'scale',
+        scale_params: {
+          scale_start: 1,
+          scale_end: 1.2,
+          transform_origin: 'center center'
+        },
+        duration: 300,
+        ease: 'bounce.out'
+      };
+      
+      const scaleDownConfig = {
+        type: 'scale',
+        scale_params: {
+          scale_start: 1.2,
+          scale_end: 1,
+          transform_origin: 'center center'
+        },
+        duration: 300,
+        ease: 'power2.inOut'
+      };
+      
+      // Import StateManager and test the reverse detection
+      const { StateManager } = await import('../state-manager.js');
+      const stateManager = new StateManager();
+      
+      // Test the isReverseTransition method via the private method access
+      const isReverse = (stateManager as any).isReverseTransition(
+        scaleUpConfig,
+        scaleDownConfig,
+        'normal',
+        'scaled'
+      );
+      
+      expect(isReverse).toBe(true);
+    });
+
+    it('should use anchor point as transform origin for anchored elements', () => {
+      const element = document.createElement('div');
+      const getShadowElement = vi.fn().mockReturnValue(element);
+      
+      // Create a mock element with anchor configuration
+      const mockElement = {
+        layoutConfig: {
+          anchor: {
+            anchorTo: 'target-element',
+            anchorPoint: 'topLeft',
+            targetAnchorPoint: 'topRight'
+          }
+        }
+      };
+      
+      // Set up elements map
+      const elementsMap = new Map();
+      elementsMap.set('test-element', mockElement);
+      manager.setElementsMap(elementsMap);
+      
+      const scaleConfig: AnimationConfig = {
+        type: 'scale',
+        scale_params: {
+          scale_start: 1,
+          scale_end: 1.2
+          // No explicit transform_origin - should use anchor point
+        },
+        duration: 300,
+        ease: 'bounce.out'
+      };
+      
+      const context: AnimationContext = {
+        elementId: 'test-element',
+        getShadowElement
+      };
+      
+      // Execute the animation
+      const result = manager.executeAnimation('test-element', scaleConfig, context);
+      expect(result).not.toBeNull();
+      
+      // Verify that the timeline was stored with the correct transform origin
+      const activeTimelines = manager.getActiveTimelines('test-element');
+      expect(activeTimelines).toBeDefined();
+      expect(activeTimelines!.length).toBe(1);
+      expect(activeTimelines![0].transformOrigin).toBe('left top'); // topLeft -> left top
     });
   });
 }); 
