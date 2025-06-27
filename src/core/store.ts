@@ -1,12 +1,12 @@
 /**
  * Reactive Store for LCARS Card State Management
  * 
- * This replaces the singleton StateManager with a more modern, reactive approach
- * using signals for state changes and selectors for derived state.
+ * Provides a reactive state management system using signals for state changes.
  */
 
-// Simple signal implementation for reactive state management
-export interface Signal<T> {
+import { ElementStateManagementConfig, AnimationsConfig } from '../types.js';
+
+interface Signal<T> {
   value: T;
   subscribe(callback: (value: T) => void): () => void;
   set(value: T): void;
@@ -40,7 +40,6 @@ function createSignal<T>(initialValue: T): Signal<T> {
   };
 }
 
-// Store state interfaces
 export interface ElementState {
   currentState: string;
   previousState?: string;
@@ -49,8 +48,8 @@ export interface ElementState {
 
 export interface StoreState {
   elementStates: Map<string, ElementState>;
-  stateConfigs: Map<string, any>;
-  animationConfigs: Map<string, any>;
+  stateConfigs: Map<string, ElementStateManagementConfig>;
+  animationConfigs: Map<string, AnimationsConfig>;
 }
 
 export interface StateChangeEvent {
@@ -60,53 +59,41 @@ export interface StateChangeEvent {
   timestamp: number;
 }
 
-// Selector function type
-export type Selector<T> = (state: StoreState) => T;
-
-// Store implementation
 export class ReactiveStore {
-  private _state: Signal<StoreState>;
-  private _stateChangeCallbacks = new Set<(event: StateChangeEvent) => void>();
+  private state: Signal<StoreState>;
+  private stateChangeCallbacks = new Set<(event: StateChangeEvent) => void>();
 
   constructor() {
-    this._state = createSignal<StoreState>({
+    this.state = createSignal<StoreState>({
       elementStates: new Map(),
       stateConfigs: new Map(),
       animationConfigs: new Map()
     });
   }
 
-  // Core state access
   getState(): StoreState {
-    return this._state.value;
+    return this.state.value;
   }
 
   subscribe(callback: (state: StoreState) => void): () => void {
-    return this._state.subscribe(callback);
+    return this.state.subscribe(callback);
   }
 
-  // Selector utilities
-  select<T>(selector: Selector<T>): T {
-    return selector(this.getState());
-  }
-
-  // State change events
   onStateChange(callback: (event: StateChangeEvent) => void): () => void {
-    this._stateChangeCallbacks.add(callback);
-    return () => this._stateChangeCallbacks.delete(callback);
+    this.stateChangeCallbacks.add(callback);
+    return () => this.stateChangeCallbacks.delete(callback);
   }
 
   private emitStateChange(event: StateChangeEvent): void {
-    this._stateChangeCallbacks.forEach(callback => callback(event));
+    this.stateChangeCallbacks.forEach(callback => callback(event));
   }
 
-  // Element state management
   initializeElementState(
     elementId: string,
-    stateConfig?: any,
-    animationConfig?: any
+    stateConfig?: ElementStateManagementConfig,
+    animationConfig?: AnimationsConfig
   ): void {
-    this._state.update(state => {
+    this.state.update(state => {
       if (stateConfig) {
         state.stateConfigs.set(elementId, stateConfig);
         
@@ -121,7 +108,6 @@ export class ReactiveStore {
         state.animationConfigs.set(elementId, animationConfig);
       }
       
-      // Initialize state tracking for elements with only animations
       if (!stateConfig && animationConfig) {
         state.elementStates.set(elementId, {
           currentState: 'default',
@@ -139,7 +125,7 @@ export class ReactiveStore {
 
     const timestamp = Date.now();
     
-    this._state.update(state => {
+    this.state.update(state => {
       const elementState = state.elementStates.get(elementId);
       if (elementState) {
         state.elementStates.set(elementId, {
@@ -152,7 +138,6 @@ export class ReactiveStore {
       return { ...state };
     });
 
-    // Emit state change event
     this.emitStateChange({
       elementId,
       fromState: currentState,
@@ -172,7 +157,6 @@ export class ReactiveStore {
       return false;
     }
 
-    // Check if element is initialized
     const elementState = this.getState().elementStates.get(elementId);
     if (!elementState) {
       console.warn(`[Store] Cannot toggle state for uninitialized element: ${elementId}`);
@@ -188,24 +172,21 @@ export class ReactiveStore {
     return true;
   }
 
-  // Element visibility now handled through regular state ('hidden'/'visible' state values)
-  isElementVisible(elementId: string): boolean {
+  elementIsVisible(elementId: string): boolean {
     const currentState = this.getElementState(elementId);
     return currentState !== 'hidden';
   }
 
-  // Store cleanup
   cleanup(): void {
-    this._state.set({
+    this.state.set({
       elementStates: new Map(),
       stateConfigs: new Map(),
       animationConfigs: new Map()
     });
-    this._stateChangeCallbacks.clear();
+    this.stateChangeCallbacks.clear();
   }
 }
 
-// Store provider for dependency injection
 export class StoreProvider {
   private static instance: ReactiveStore | null = null;
   
@@ -223,58 +204,4 @@ export class StoreProvider {
   static reset(): void {
     StoreProvider.instance = null;
   }
-}
-
-// Hook for accessing the store (for future React-like patterns)
-export function useStore(): ReactiveStore {
-  return StoreProvider.getStore();
-}
-
-// Selectors for common state queries
-export const selectors = {
-  getElementState: (elementId: string): Selector<string> => 
-    (state) => state.elementStates.get(elementId)?.currentState || 'default',
-    
-  // Visibility is now based on state - element is visible unless state is 'hidden'
-  isElementVisible: (elementId: string): Selector<boolean> => 
-    (state) => {
-      const currentState = state.elementStates.get(elementId)?.currentState || 'default';
-      return currentState !== 'hidden';
-    },
-    
-  getAllElementStates: (): Selector<Map<string, ElementState>> => 
-    (state) => new Map(state.elementStates),
-    
-  getElementsInState: (targetState: string): Selector<string[]> => 
-    (state) => {
-      const result: string[] = [];
-      state.elementStates.forEach((elementState, elementId) => {
-        if (elementState.currentState === targetState) {
-          result.push(elementId);
-        }
-      });
-      return result;
-    },
-    
-  getVisibleElements: (): Selector<string[]> =>
-    (state) => {
-      const result: string[] = [];
-      state.elementStates.forEach((elementState, elementId) => {
-        if (elementState.currentState !== 'hidden') {
-          result.push(elementId);
-        }
-      });
-      return result;
-    },
-    
-  getHiddenElements: (): Selector<string[]> =>
-    (state) => {
-      const result: string[] = [];
-      state.elementStates.forEach((elementState, elementId) => {
-        if (elementState.currentState === 'hidden') {
-          result.push(elementId);
-        }
-      });
-      return result;
-    }
-}; 
+} 

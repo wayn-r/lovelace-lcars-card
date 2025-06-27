@@ -27,7 +27,7 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      expect((element as any).statefulColorsExist()).toBe(true);
+              expect((element as any).hasStatefulColors()).toBe(true);
     });
 
     it('should detect when element does not have stateful colors', () => {
@@ -37,7 +37,7 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      expect((element as any).statefulColorsExist()).toBe(false);
+              expect((element as any).hasStatefulColors()).toBe(false);
     });
 
     it('should setup interactive listeners for elements with stateful colors', () => {

@@ -390,7 +390,7 @@ export class StateManager {
   }
 
   getElementVisibility(elementId: string): boolean {
-    return this.store.isElementVisible(elementId);
+    return this.store.elementIsVisible(elementId);
   }
 
   cleanup(): void {

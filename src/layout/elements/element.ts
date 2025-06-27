@@ -97,7 +97,7 @@ export abstract class LayoutElement {
         };
     }
 
-    protected statefulColorsExist(): boolean {
+    protected hasStatefulColors(): boolean {
         const { fill, stroke, textColor } = this.props;
         return this.colorIsStateful(fill) || 
                this.colorIsStateful(stroke) || 
@@ -122,9 +122,9 @@ export abstract class LayoutElement {
             return;
         }
 
-        const hasInteractiveFeatures = this.statefulColorsExist() || 
-                                     this.buttonConfigExists() ||
-                                     this.animationsExist();
+        const hasInteractiveFeatures = this.hasStatefulColors() || 
+                                     this.hasButtonConfig() ||
+                                     this.hasAnimations();
 
         if (hasInteractiveFeatures) {
             element.addEventListener('mouseenter', this.boundHandleMouseEnter);
@@ -864,12 +864,12 @@ export abstract class LayoutElement {
         this.cleanupAnimations();
     }
 
-    protected nonButtonTextExists(): boolean {
+    protected hasNonButtonText(): boolean {
         return Boolean(this.props.text && this.props.text.trim() !== '');
     }
 
     protected renderNonButtonText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
-        if (!this.nonButtonTextExists()) return null;
+        if (!this.hasNonButtonText()) return null;
 
         return svg`
           <text
@@ -918,19 +918,19 @@ export abstract class LayoutElement {
         return this.getDefaultTextPosition();
     }
 
-    protected textExists(): boolean {
-        return this.nonButtonTextExists();
+    protected hasText(): boolean {
+        return this.hasNonButtonText();
     }
 
     protected renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
         return this.renderNonButtonText(x, y, colors);
     }
 
-    private buttonConfigExists(): boolean {
+    private hasButtonConfig(): boolean {
         return Boolean(this.props.button?.enabled);
     }
 
-    private animationsExist(): boolean {
+    private hasAnimations(): boolean {
         return Boolean(this.props.animations);
     }
 } 

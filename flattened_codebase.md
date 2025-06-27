@@ -21,9 +21,6 @@ lovelace-lcars-card/
 ├── src/
 │   ├── constants.ts
 │   ├── core/
-│   │   ├── interaction.ts
-│   │   ├── interfaces.ts
-│   │   ├── renderer.ts
 │   │   └── store.ts
 │   ├── layout/
 │   │   ├── elements/
@@ -936,587 +933,18 @@ export const DEFAULT_TITLE = "LCARS Card";
 export const DEFAULT_TEXT = "Hello from LCARS";
 ```
 
-## File: src/core/interaction.ts
-
-```typescript
-import { IInteractive } from './interfaces.js';
-import { LayoutElementProps } from '../layout/engine.js';
-import { ColorValue, Action } from '../types.js';
-
-/**
- * Interaction manager that handles user interactions and state changes
- */
-export class InteractionManager implements IInteractive {
-  id: string;
-  private _isHovering = false;
-  private _isActive = false;
-  private _hoverTimeout?: ReturnType<typeof setTimeout>;
-  private _activeTimeout?: ReturnType<typeof setTimeout>;
-
-  private readonly _boundHandleMouseEnter: () => void;
-  private readonly _boundHandleMouseLeave: () => void;
-  private readonly _boundHandleMouseDown: () => void;
-  private readonly _boundHandleMouseUp: () => void;
-  private readonly _boundHandleTouchStart: () => void;
-  private readonly _boundHandleTouchEnd: () => void;
-
-  getShadowElement?: (id: string) => Element | null;
-  requestUpdateCallback?: () => void;
-  private _props?: LayoutElementProps;
-
-  constructor(
-    id: string,
-    getShadowElement?: (id: string) => Element | null,
-    requestUpdateCallback?: () => void,
-    props?: LayoutElementProps
-  ) {
-    this.id = id;
-    this.getShadowElement = getShadowElement;
-    this.requestUpdateCallback = requestUpdateCallback;
-    this._props = props;
-
-    // Bind event handlers once for consistent listener removal
-    this._boundHandleMouseEnter = this._handleMouseEnter.bind(this);
-    this._boundHandleMouseLeave = this._handleMouseLeave.bind(this);
-    this._boundHandleMouseDown = this._handleMouseDown.bind(this);
-    this._boundHandleMouseUp = this._handleMouseUp.bind(this);
-    this._boundHandleTouchStart = this._handleTouchStart.bind(this);
-    this._boundHandleTouchEnd = this._handleTouchEnd.bind(this);
-  }
-
-  // Interactive state management
-  get isHovering(): boolean {
-    return this._isHovering;
-  }
-
-  set isHovering(value: boolean) {
-    if (this._isHovering !== value) {
-      this._isHovering = value;
-      
-      // Clear hover timeout if it exists
-      if (this._hoverTimeout) {
-        clearTimeout(this._hoverTimeout);
-        this._hoverTimeout = undefined;
-      }
-      
-      // Request update to re-render with new interactive state
-      this._requestUpdateWithInteractiveState();
-    }
-  }
-
-  get isActive(): boolean {
-    return this._isActive;
-  }
-
-  set isActive(value: boolean) {
-    if (this._isActive !== value) {
-      this._isActive = value;
-      
-      // Clear active timeout if it exists
-      if (this._activeTimeout) {
-        clearTimeout(this._activeTimeout);
-        this._activeTimeout = undefined;
-      }
-      
-      // Request update to re-render with new interactive state
-      this._requestUpdateWithInteractiveState();
-    }
-  }
-
-  private _requestUpdateWithInteractiveState(): void {
-    this.requestUpdateCallback?.();
-  }
-
-  /**
-   * Setup event listeners for interactive states (hover/active)
-   */
-  setupInteractiveListeners(): void {
-    if (!this.getShadowElement) {
-      return;
-    }
-
-    // First clean up any existing listeners
-    this._cleanupInteractiveListeners();
-
-    const element = this.getShadowElement(this.id);
-    if (!element) {
-      return;
-    }
-
-    // Check if this element should have interactive behavior
-    if (this.hasInteractiveFeatures()) {
-      // Add mouse event listeners
-      element.addEventListener('mouseenter', this._boundHandleMouseEnter);
-      element.addEventListener('mouseleave', this._boundHandleMouseLeave);
-      element.addEventListener('mousedown', this._boundHandleMouseDown);
-      element.addEventListener('mouseup', this._boundHandleMouseUp);
-      
-      // Add touch event listeners for mobile support
-      element.addEventListener('touchstart', this._boundHandleTouchStart);
-      element.addEventListener('touchend', this._boundHandleTouchEnd);
-    }
-  }
-
-  /**
-   * Check if this element has interactive features
-   */
-  hasInteractiveFeatures(): boolean {
-    if (!this._props) {
-      return false;
-    }
-
-    return this._hasStatefulColors() || 
-           this._hasButtonConfig() ||
-           this._hasVisibilityTriggers() ||
-           this._hasAnimations();
-  }
-
-  /**
-   * Get the current state context for external use
-   */
-  getStateContext() {
-    return {
-      isCurrentlyHovering: this._isHovering,
-      isCurrentlyActive: this._isActive
-    };
-  }
-
-  /**
-   * Update properties for interactive feature detection
-   */
-  updateProps(props: LayoutElementProps): void {
-    this._props = props;
-  }
-
-  private _handleMouseEnter(): void {
-    this.isHovering = true;
-  }
-
-  private _handleMouseLeave(): void {
-    this.isHovering = false;
-    this.isActive = false;
-  }
-
-  private _handleMouseDown(): void {
-    this.isActive = true;
-  }
-
-  private _handleMouseUp(): void {
-    this.isActive = false;
-  }
-
-  private _handleTouchStart(): void {
-    this.isHovering = true;
-    this.isActive = true;
-  }
-
-  private _handleTouchEnd(): void {
-    this.isHovering = false;
-    this.isActive = false;
-  }
-
-  private _cleanupInteractiveListeners(): void {
-    const element = this.getShadowElement?.(this.id);
-    if (!element) return;
-
-    element.removeEventListener('mouseenter', this._boundHandleMouseEnter);
-    element.removeEventListener('mouseleave', this._boundHandleMouseLeave);
-    element.removeEventListener('mousedown', this._boundHandleMouseDown);
-    element.removeEventListener('mouseup', this._boundHandleMouseUp);
-    element.removeEventListener('touchstart', this._boundHandleTouchStart);
-    element.removeEventListener('touchend', this._boundHandleTouchEnd);
-  }
-
-  /**
-   * Check if this element has stateful colors (supports hover/active states)
-   */
-  private _hasStatefulColors(): boolean {
-    if (!this._props) return false;
-    
-    const { fill, stroke, textColor } = this._props;
-    return this._isStatefulColor(fill) || 
-           this._isStatefulColor(stroke) || 
-           this._isStatefulColor(textColor);
-  }
-
-  private _isStatefulColor(color: any): boolean {
-    return Boolean(color && typeof color === 'object' && 
-                  ('default' in color || 'hover' in color || 'active' in color) &&
-                  !('entity' in color) && !('mapping' in color));
-  }
-
-  private _hasButtonConfig(): boolean {
-    return Boolean(this._props?.button?.enabled);
-  }
-
-  private _hasVisibilityTriggers(): boolean {
-    // Check if element has visibility triggers that would benefit from hover states
-    return Boolean(this._props?.button?.actions?.tap?.some((action: Action) => 
-      action.action === 'set_state' || action.action === 'toggle_state'
-    ));
-  }
-
-  private _hasAnimations(): boolean {
-    return Boolean(this._props?.animations);
-  }
-
-  /**
-   * Cleanup method to remove listeners and clear timeouts
-   */
-  cleanup(): void {
-    this._cleanupInteractiveListeners();
-    
-    if (this._hoverTimeout) {
-      clearTimeout(this._hoverTimeout);
-      this._hoverTimeout = undefined;
-    }
-    
-    if (this._activeTimeout) {
-      clearTimeout(this._activeTimeout);
-      this._activeTimeout = undefined;
-    }
-  }
-}
-```
-
-## File: src/core/interfaces.ts
-
-```typescript
-import { LayoutElementProps, LayoutState, IntrinsicSize, LayoutConfigOptions } from "../layout/engine.js";
-import { HomeAssistant } from "custom-card-helpers";
-import { SVGTemplateResult } from 'lit';
-import { ComputedElementColors } from '../utils/color.js';
-
-/**
- * Core layout interface - handles element sizing and positioning
- */
-export interface ILayoutElement {
-  id: string;
-  props: LayoutElementProps;
-  layoutConfig: LayoutConfigOptions;
-  layout: LayoutState;
-  intrinsicSize: IntrinsicSize;
-  
-  // Layout calculation methods
-  resetLayout(): void;
-  calculateIntrinsicSize(container: SVGElement): void;
-  canCalculateLayout(elementsMap: Map<string, ILayoutElement>, dependencies?: string[]): boolean;
-  calculateLayout(elementsMap: Map<string, ILayoutElement>, containerRect: DOMRect): void;
-  
-  // Home Assistant integration
-  updateHass(hass?: HomeAssistant): void;
-  entityChangesDetected(hass: HomeAssistant): boolean;
-  
-  // Lifecycle
-  cleanup(): void;
-}
-
-/**
- * Rendering interface - handles SVG generation and visual representation
- */
-export interface IRenderer {
-  id: string;
-  props: LayoutElementProps;
-  layout: LayoutState;
-  
-  // Core rendering
-  render(): SVGTemplateResult | null;
-  renderDefs?(): SVGTemplateResult[];
-  
-  // Shape rendering
-  renderShape(): SVGTemplateResult | null;
-  
-  // Color resolution
-  resolveColors(): ComputedElementColors;
-  
-  // Animation support
-  cleanupAnimations(): void;
-}
-
-/**
- * Interaction interface - handles user interactions and state changes
- */
-export interface IInteractive {
-  id: string;
-  
-  // Interactive state
-  isHovering: boolean;
-  isActive: boolean;
-  
-  // Event handling
-  setupInteractiveListeners(): void;
-  cleanup(): void;
-  
-  // State management
-  hasInteractiveFeatures(): boolean;
-  
-  // Callbacks
-  getShadowElement?: (id: string) => Element | null;
-  requestUpdateCallback?: () => void;
-}
-
-/**
- * Animation interface - handles element animations
- */
-export interface IAnimatable {
-  id: string;
-  
-  // Animation methods
-  animate(property: string, value: any, duration?: number): void;
-  cleanupAnimations(): void;
-  
-  // Animation context
-  getAnimationContext?(): any;
-}
-
-/**
- * Combined interface for elements that need all capabilities
- */
-export interface ILayoutRendererElement extends ILayoutElement, IRenderer {
-  // Combined interface - no additional methods needed
-}
-
-/**
- * Full element interface with all capabilities
- */
-export interface IFullElement extends ILayoutElement, IRenderer, IInteractive, IAnimatable {
-  // Full capability element - no additional methods needed
-}
-```
-
-## File: src/core/renderer.ts
-
-```typescript
-import { SVGTemplateResult, svg } from 'lit';
-import { IRenderer } from './interfaces.js';
-import { LayoutElementProps, LayoutState } from '../layout/engine.js';
-import { ComputedElementColors, ColorResolutionDefaults } from '../utils/color.js';
-import { colorResolver } from '../utils/color-resolver.js';
-import { Button } from '../utils/button.js';
-import { HomeAssistant } from 'custom-card-helpers';
-
-/**
- * Base renderer class that handles SVG generation and visual representation
- */
-export abstract class BaseRenderer implements IRenderer {
-  id: string;
-  props: LayoutElementProps;
-  layout: LayoutState;
-  hass?: HomeAssistant;
-  button?: Button;
-  requestUpdateCallback?: () => void;
-  getShadowElement?: (id: string) => Element | null;
-
-  constructor(
-    id: string, 
-    props: LayoutElementProps, 
-    layout: LayoutState,
-    hass?: HomeAssistant,
-    requestUpdateCallback?: () => void,
-    getShadowElement?: (id: string) => Element | null
-  ) {
-    this.id = id;
-    this.props = props;
-    this.layout = layout;
-    this.hass = hass;
-    this.requestUpdateCallback = requestUpdateCallback;
-    this.getShadowElement = getShadowElement;
-
-    // Initialize button if button config exists
-    if (props.button?.enabled) {
-      this.button = new Button(id, props, hass, requestUpdateCallback, getShadowElement);
-    }
-  }
-
-  /**
-   * Main render method - combines shape and text rendering
-   */
-  render(): SVGTemplateResult | null {
-    if (!this.layout.calculated) {
-      return null;
-    }
-
-    // Get resolved colors for rendering
-    const colors = this.resolveColors();
-    
-    // Render the shape
-    const shapeTemplate = this.renderShape();
-    if (!shapeTemplate) {
-      return null;
-    }
-
-    // Render text if present
-    const textTemplate = this.renderText(colors);
-    
-    // Combine shape and text
-    if (textTemplate) {
-      return svg`
-        <g id="${this.id}">
-          ${shapeTemplate}
-          ${textTemplate}
-        </g>
-      `;
-    } else {
-      return svg`
-        <g id="${this.id}">
-          ${shapeTemplate}
-        </g>
-      `;
-    }
-  }
-
-  /**
-   * Optional method for rendering SVG definitions (gradients, patterns, etc.)
-   */
-  renderDefs?(): SVGTemplateResult[];
-
-  /**
-   * Abstract method that subclasses must implement to render their specific shape
-   */
-  abstract renderShape(): SVGTemplateResult | null;
-
-  /**
-   * Resolve colors for this element based on current state
-   */
-  resolveColors(): ComputedElementColors {
-    const stateContext = this.getStateContext();
-    const options: ColorResolutionDefaults = {
-      fallbackFillColor: 'none',
-      fallbackStrokeColor: 'none', 
-      fallbackStrokeWidth: '0',
-      fallbackTextColor: 'currentColor'
-    };
-    
-    const animationContext = {
-      elementId: this.id,
-      getShadowElement: this.getShadowElement,
-      hass: this.hass,
-      requestUpdateCallback: this.requestUpdateCallback
-    };
-    
-    return colorResolver.resolveAllElementColors(this.id, this.props, animationContext, options, stateContext);
-  }
-
-  /**
-   * Get the current state context for color resolution
-   */
-  protected getStateContext() {
-    // Default implementation - subclasses can override for interactive states
-    return {
-      isCurrentlyHovering: false,
-      isCurrentlyActive: false
-    };
-  }
-
-  /**
-   * Render text content if present
-   */
-  protected renderText(colors: ComputedElementColors): SVGTemplateResult | null {
-    if (!this.hasText()) {
-      return null;
-    }
-
-    // Check if this is button text (handled by button renderer)
-    if (this.hasButtonConfig()) {
-      return null; // Button handles its own text rendering
-    }
-
-    // Render non-button text
-    return this.renderNonButtonText(colors);
-  }
-
-  /**
-   * Render text that's not part of a button
-   */
-  protected renderNonButtonText(colors: ComputedElementColors): SVGTemplateResult | null {
-    if (!this.hasNonButtonText()) {
-      return null;
-    }
-
-    const textPosition = this.getTextPosition();
-    const text = this.props.text || '';
-    const fontSize = this.props.fontSize || 12;
-    const fontFamily = this.props.fontFamily || 'sans-serif';
-    
-    return svg`
-      <text 
-        x="${textPosition.x}" 
-        y="${textPosition.y}" 
-        fill="${colors.textColor}" 
-        font-size="${fontSize}" 
-        font-family="${fontFamily}"
-        text-anchor="middle" 
-        dominant-baseline="central"
-      >
-        ${text}
-      </text>
-    `;
-  }
-
-  /**
-   * Check if element has text content
-   */
-  protected hasText(): boolean {
-    return Boolean(this.props.text && this.props.text.trim() !== '');
-  }
-
-  /**
-   * Check if element has non-button text
-   */
-  protected hasNonButtonText(): boolean {
-    return this.hasText() && !this.hasButtonConfig();
-  }
-
-  /**
-   * Check if element has button configuration
-   */
-  protected hasButtonConfig(): boolean {
-    return Boolean(this.props.button?.enabled);
-  }
-
-  /**
-   * Get text position based on element layout
-   */
-  protected getTextPosition(): { x: number, y: number } {
-    // Default to center of element
-    return {
-      x: this.layout.x + this.layout.width / 2,
-      y: this.layout.y + this.layout.height / 2
-    };
-  }
-
-  /**
-   * Cleanup animations - default implementation
-   */
-  cleanupAnimations(): void {
-    // Default implementation - subclasses can override
-    // Animation cleanup logic would go here
-  }
-
-  /**
-   * Update Home Assistant instance
-   */
-  updateHass(hass?: HomeAssistant): void {
-    this.hass = hass;
-    if (this.button) {
-      this.button.updateHass(hass);
-    }
-  }
-}
-```
-
 ## File: src/core/store.ts
 
 ```typescript
 /**
  * Reactive Store for LCARS Card State Management
  * 
- * This replaces the singleton StateManager with a more modern, reactive approach
- * using signals for state changes and selectors for derived state.
+ * Provides a reactive state management system using signals for state changes.
  */
 
-// Simple signal implementation for reactive state management
-export interface Signal<T> {
+import { ElementStateManagementConfig, AnimationsConfig } from '../types.js';
+
+interface Signal<T> {
   value: T;
   subscribe(callback: (value: T) => void): () => void;
   set(value: T): void;
@@ -1550,7 +978,6 @@ function createSignal<T>(initialValue: T): Signal<T> {
   };
 }
 
-// Store state interfaces
 export interface ElementState {
   currentState: string;
   previousState?: string;
@@ -1559,8 +986,8 @@ export interface ElementState {
 
 export interface StoreState {
   elementStates: Map<string, ElementState>;
-  stateConfigs: Map<string, any>;
-  animationConfigs: Map<string, any>;
+  stateConfigs: Map<string, ElementStateManagementConfig>;
+  animationConfigs: Map<string, AnimationsConfig>;
 }
 
 export interface StateChangeEvent {
@@ -1570,53 +997,41 @@ export interface StateChangeEvent {
   timestamp: number;
 }
 
-// Selector function type
-export type Selector<T> = (state: StoreState) => T;
-
-// Store implementation
 export class ReactiveStore {
-  private _state: Signal<StoreState>;
-  private _stateChangeCallbacks = new Set<(event: StateChangeEvent) => void>();
+  private state: Signal<StoreState>;
+  private stateChangeCallbacks = new Set<(event: StateChangeEvent) => void>();
 
   constructor() {
-    this._state = createSignal<StoreState>({
+    this.state = createSignal<StoreState>({
       elementStates: new Map(),
       stateConfigs: new Map(),
       animationConfigs: new Map()
     });
   }
 
-  // Core state access
   getState(): StoreState {
-    return this._state.value;
+    return this.state.value;
   }
 
   subscribe(callback: (state: StoreState) => void): () => void {
-    return this._state.subscribe(callback);
+    return this.state.subscribe(callback);
   }
 
-  // Selector utilities
-  select<T>(selector: Selector<T>): T {
-    return selector(this.getState());
-  }
-
-  // State change events
   onStateChange(callback: (event: StateChangeEvent) => void): () => void {
-    this._stateChangeCallbacks.add(callback);
-    return () => this._stateChangeCallbacks.delete(callback);
+    this.stateChangeCallbacks.add(callback);
+    return () => this.stateChangeCallbacks.delete(callback);
   }
 
   private emitStateChange(event: StateChangeEvent): void {
-    this._stateChangeCallbacks.forEach(callback => callback(event));
+    this.stateChangeCallbacks.forEach(callback => callback(event));
   }
 
-  // Element state management
   initializeElementState(
     elementId: string,
-    stateConfig?: any,
-    animationConfig?: any
+    stateConfig?: ElementStateManagementConfig,
+    animationConfig?: AnimationsConfig
   ): void {
-    this._state.update(state => {
+    this.state.update(state => {
       if (stateConfig) {
         state.stateConfigs.set(elementId, stateConfig);
         
@@ -1631,7 +1046,6 @@ export class ReactiveStore {
         state.animationConfigs.set(elementId, animationConfig);
       }
       
-      // Initialize state tracking for elements with only animations
       if (!stateConfig && animationConfig) {
         state.elementStates.set(elementId, {
           currentState: 'default',
@@ -1649,7 +1063,7 @@ export class ReactiveStore {
 
     const timestamp = Date.now();
     
-    this._state.update(state => {
+    this.state.update(state => {
       const elementState = state.elementStates.get(elementId);
       if (elementState) {
         state.elementStates.set(elementId, {
@@ -1662,7 +1076,6 @@ export class ReactiveStore {
       return { ...state };
     });
 
-    // Emit state change event
     this.emitStateChange({
       elementId,
       fromState: currentState,
@@ -1682,7 +1095,6 @@ export class ReactiveStore {
       return false;
     }
 
-    // Check if element is initialized
     const elementState = this.getState().elementStates.get(elementId);
     if (!elementState) {
       console.warn(`[Store] Cannot toggle state for uninitialized element: ${elementId}`);
@@ -1698,24 +1110,21 @@ export class ReactiveStore {
     return true;
   }
 
-  // Element visibility now handled through regular state ('hidden'/'visible' state values)
-  isElementVisible(elementId: string): boolean {
+  elementIsVisible(elementId: string): boolean {
     const currentState = this.getElementState(elementId);
     return currentState !== 'hidden';
   }
 
-  // Store cleanup
   cleanup(): void {
-    this._state.set({
+    this.state.set({
       elementStates: new Map(),
       stateConfigs: new Map(),
       animationConfigs: new Map()
     });
-    this._stateChangeCallbacks.clear();
+    this.stateChangeCallbacks.clear();
   }
 }
 
-// Store provider for dependency injection
 export class StoreProvider {
   private static instance: ReactiveStore | null = null;
   
@@ -1734,60 +1143,6 @@ export class StoreProvider {
     StoreProvider.instance = null;
   }
 }
-
-// Hook for accessing the store (for future React-like patterns)
-export function useStore(): ReactiveStore {
-  return StoreProvider.getStore();
-}
-
-// Selectors for common state queries
-export const selectors = {
-  getElementState: (elementId: string): Selector<string> => 
-    (state) => state.elementStates.get(elementId)?.currentState || 'default',
-    
-  // Visibility is now based on state - element is visible unless state is 'hidden'
-  isElementVisible: (elementId: string): Selector<boolean> => 
-    (state) => {
-      const currentState = state.elementStates.get(elementId)?.currentState || 'default';
-      return currentState !== 'hidden';
-    },
-    
-  getAllElementStates: (): Selector<Map<string, ElementState>> => 
-    (state) => new Map(state.elementStates),
-    
-  getElementsInState: (targetState: string): Selector<string[]> => 
-    (state) => {
-      const result: string[] = [];
-      state.elementStates.forEach((elementState, elementId) => {
-        if (elementState.currentState === targetState) {
-          result.push(elementId);
-        }
-      });
-      return result;
-    },
-    
-  getVisibleElements: (): Selector<string[]> =>
-    (state) => {
-      const result: string[] = [];
-      state.elementStates.forEach((elementState, elementId) => {
-        if (elementState.currentState !== 'hidden') {
-          result.push(elementId);
-        }
-      });
-      return result;
-    },
-    
-  getHiddenElements: (): Selector<string[]> =>
-    (state) => {
-      const result: string[] = [];
-      state.elementStates.forEach((elementState, elementId) => {
-        if (elementState.currentState === 'hidden') {
-          result.push(elementId);
-        }
-      });
-      return result;
-    }
-};
 ```
 
 ## File: src/layout/elements/chisel_endcap.ts
@@ -2156,7 +1511,7 @@ export abstract class LayoutElement {
         };
     }
 
-    protected statefulColorsExist(): boolean {
+    protected hasStatefulColors(): boolean {
         const { fill, stroke, textColor } = this.props;
         return this.colorIsStateful(fill) || 
                this.colorIsStateful(stroke) || 
@@ -2181,9 +1536,9 @@ export abstract class LayoutElement {
             return;
         }
 
-        const hasInteractiveFeatures = this.statefulColorsExist() || 
-                                     this.buttonConfigExists() ||
-                                     this.animationsExist();
+        const hasInteractiveFeatures = this.hasStatefulColors() || 
+                                     this.hasButtonConfig() ||
+                                     this.hasAnimations();
 
         if (hasInteractiveFeatures) {
             element.addEventListener('mouseenter', this.boundHandleMouseEnter);
@@ -2923,12 +2278,12 @@ export abstract class LayoutElement {
         this.cleanupAnimations();
     }
 
-    protected nonButtonTextExists(): boolean {
+    protected hasNonButtonText(): boolean {
         return Boolean(this.props.text && this.props.text.trim() !== '');
     }
 
     protected renderNonButtonText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
-        if (!this.nonButtonTextExists()) return null;
+        if (!this.hasNonButtonText()) return null;
 
         return svg`
           <text
@@ -2977,19 +2332,19 @@ export abstract class LayoutElement {
         return this.getDefaultTextPosition();
     }
 
-    protected textExists(): boolean {
-        return this.nonButtonTextExists();
+    protected hasText(): boolean {
+        return this.hasNonButtonText();
     }
 
     protected renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
         return this.renderNonButtonText(x, y, colors);
     }
 
-    private buttonConfigExists(): boolean {
+    private hasButtonConfig(): boolean {
         return Boolean(this.props.button?.enabled);
     }
 
-    private animationsExist(): boolean {
+    private hasAnimations(): boolean {
         return Boolean(this.props.animations);
     }
 }
@@ -4057,7 +3412,7 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      expect((element as any).statefulColorsExist()).toBe(true);
+              expect((element as any).hasStatefulColors()).toBe(true);
     });
 
     it('should detect when element does not have stateful colors', () => {
@@ -4067,7 +3422,7 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      expect((element as any).statefulColorsExist()).toBe(false);
+              expect((element as any).hasStatefulColors()).toBe(false);
     });
 
     it('should setup interactive listeners for elements with stateful colors', () => {
@@ -14243,7 +13598,7 @@ export class StateManager {
   }
 
   getElementVisibility(elementId: string): boolean {
-    return this.store.isElementVisible(elementId);
+    return this.store.elementIsVisible(elementId);
   }
 
   cleanup(): void {
