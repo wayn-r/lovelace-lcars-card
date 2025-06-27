@@ -1,6 +1,7 @@
 import { HomeAssistant } from 'custom-card-helpers';
 import gsap from 'gsap';
 import { transformPropagator, AnimationSyncData, TransformPropagator } from './transform-propagator.js';
+import { TransformOriginUtils } from './transform-origin-utils.js';
 import { GSDevTools } from 'gsap/GSDevTools';
 import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
 import { CustomEase } from 'gsap/CustomEase';
@@ -459,11 +460,7 @@ export class AnimationManager {
   }
 
   private getOptimalTransformOrigin(elementId: string): string {
-    if (!this.elementsMap) {
-      return 'center center';
-    }
-
-    const element = this.elementsMap.get(elementId);
+    const element = this.elementsMap?.get(elementId);
     if (!element?.layoutConfig?.anchor) {
       return 'center center';
     }
@@ -472,25 +469,10 @@ export class AnimationManager {
     
     if (anchorConfig.anchorTo && anchorConfig.anchorTo !== 'container') {
       const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
-      return this.anchorPointToTransformOriginString(anchorPoint);
+      return TransformOriginUtils.anchorPointToTransformOriginString(anchorPoint);
     }
 
     return 'center center';
-  }
-
-  private anchorPointToTransformOriginString(anchorPoint: string): string {
-    switch (anchorPoint) {
-      case 'topLeft': return 'left top';
-      case 'topCenter': return 'center top';
-      case 'topRight': return 'right top';
-      case 'centerLeft': return 'left center';
-      case 'center': return 'center center';
-      case 'centerRight': return 'right center';
-      case 'bottomLeft': return 'left bottom';
-      case 'bottomCenter': return 'center bottom';
-      case 'bottomRight': return 'right bottom';
-      default: return 'center center';
-    }
   }
 
   private buildSlideAnimation(

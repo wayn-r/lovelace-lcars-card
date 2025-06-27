@@ -21,7 +21,7 @@ import { EndcapElement } from '../endcap';
 import { Button } from '../../../utils/button.js'; // Import the mocked Button
 import { LayoutElement } from '../element'; // For spying on superclass methods
 import { RectangleElement } from '../rectangle'; // Import RectangleElement
-import { generateEndcapPath } from '../../../utils/shapes'; // Actual function
+import { ShapeGenerator } from '../../../utils/shapes'; // Actual function
 import { svg, SVGTemplateResult } from 'lit';
 
 describe('EndcapElement', () => {
@@ -302,7 +302,7 @@ describe('EndcapElement', () => {
 
         const attrs = getPathAttributes(result);
         expect(attrs?.id).toBe('ec-render');
-        expect(attrs?.d).toBe(generateEndcapPath(40, 20, 'left', 5, 10));
+        expect(attrs?.d).toBe(ShapeGenerator.generateEndcap(40, 20, 'left', 5, 10));
         expect(attrs?.fill).toBe('none');
         expect(attrs?.stroke).toBe('none');
         expect(attrs?.['stroke-width']).toBe('0');
@@ -315,7 +315,7 @@ describe('EndcapElement', () => {
         expect(result).toMatchSnapshot();
         
         const attrs = getPathAttributes(result);
-        expect(attrs?.d).toBe(generateEndcapPath(40, 20, 'right', 5, 10));
+        expect(attrs?.d).toBe(ShapeGenerator.generateEndcap(40, 20, 'right', 5, 10));
       });
 
       it('should render with specified fill, stroke, strokeWidth from props', () => {
@@ -342,7 +342,7 @@ describe('EndcapElement', () => {
       it('should call button.createButton with correct parameters for default direction "left"', () => {
         endcapElement.render();
         expect(mockCreateButton).toHaveBeenCalledTimes(1);
-        const expectedPathD = generateEndcapPath(60, 30, 'left', 10, 15);
+        const expectedPathD = ShapeGenerator.generateEndcap(60, 30, 'left', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 15, 60, 30,
           { rx: 0 },
@@ -354,7 +354,7 @@ describe('EndcapElement', () => {
         endcapElement.props.direction = 'right'; // Modify props for this test
         endcapElement.render();
 
-        const expectedPathD = generateEndcapPath(60, 30, 'right', 10, 15);
+        const expectedPathD = ShapeGenerator.generateEndcap(60, 30, 'right', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 15, 60, 30,
           { rx: 0 },

@@ -328,13 +328,6 @@ describe('LayoutElement', () => {
 
         it('should not calculate if anchor target not found', () => {
             element.layoutConfig = { anchor: { anchorTo: 'nonexistent' }};
-            element.calculateLayout(elementsMap, containerRect);
-            // The initial x,y would be based on default (0,0 for topLeft to container's topLeft)
-            // but then _anchorToElement returns null, and calculateLayout sets calculated = false.
-            // However, _calculateInitialPosition has a fallback if _anchorToElement returns null:
-            // it will just use 0,0 based on container if it cannot make sense of the anchoring.
-            // Then, _finalizeLayout sets calculated to true.
-            // Let's check the console warning.
             const consoleWarnSpy = vi.spyOn(console, 'warn');
             element.calculateLayout(elementsMap, containerRect);
             expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("Anchor target 'nonexistent' not found"));
@@ -399,7 +392,7 @@ describe('LayoutElement', () => {
     });
   });
 
-  describe('_getRelativeAnchorPosition', () => {
+  describe('getRelativeAnchorPosition', () => {
     beforeEach(() => {
         element = new MockLayoutElement('el1');
         element.layout = { x:0, y:0, width: 100, height: 60, calculated: true };
@@ -416,16 +409,16 @@ describe('LayoutElement', () => {
         ['bottomCenter', { x: 50, y: 60 }],
         ['bottomRight', { x: 100, y: 60 }],
     ])('should return correct coordinates for anchorPoint "%s"', (anchorPoint, expected) => {
-        expect(element['_getRelativeAnchorPosition'](anchorPoint)).toEqual(expected);
+        expect(element.getRelativeAnchorPosition(anchorPoint)).toEqual(expected);
     });
 
     it('should use provided width/height if available', () => {
-        expect(element['_getRelativeAnchorPosition']('center', 200, 100)).toEqual({ x: 100, y: 50 });
+        expect(element.getRelativeAnchorPosition('center', 200, 100)).toEqual({ x: 100, y: 50 });
     });
 
     it('should warn and default to topLeft for unknown anchorPoint', () => {
         const consoleWarnSpy = vi.spyOn(console, 'warn');
-        expect(element['_getRelativeAnchorPosition']('unknown')).toEqual({ x: 0, y: 0 });
+        expect(element.getRelativeAnchorPosition('unknown')).toEqual({ x: 0, y: 0 });
         expect(consoleWarnSpy).toHaveBeenCalledWith("Unknown anchor point: unknown. Defaulting to topLeft.");
     });
   });

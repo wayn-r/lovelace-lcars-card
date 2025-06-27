@@ -21,8 +21,7 @@ export interface ILayoutElement {
   
   // Home Assistant integration
   updateHass(hass?: HomeAssistant): void;
-  checkEntityChanges(hass: HomeAssistant): boolean;
-  clearMonitoredEntities(): void;
+  entityChangesDetected(hass: HomeAssistant): boolean;
   
   // Lifecycle
   cleanup(): void;

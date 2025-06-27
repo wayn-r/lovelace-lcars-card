@@ -20,18 +20,18 @@ exports[`ChiselEndcapElement > render > Non-Button Rendering > should render a b
       "_$litType$": 2,
       "strings": [
         "
-          <path
-            id="",
+            <path
+                id="",
         "__shape"
-            d=",
+                d=",
         "
-            fill=",
+                fill=",
         "
-            stroke=",
+                stroke=",
         "
-            stroke-width=",
+                stroke-width=",
         "
-          />
+            />
         ",
       ],
       "values": [
@@ -67,18 +67,18 @@ exports[`ChiselEndcapElement > render > Non-Button Rendering > should render wit
       "_$litType$": 2,
       "strings": [
         "
-          <path
-            id="",
+            <path
+                id="",
         "__shape"
-            d=",
+                d=",
         "
-            fill=",
+                fill=",
         "
-            stroke=",
+                stroke=",
         "
-            stroke-width=",
+                stroke-width=",
         "
-          />
+            />
         ",
       ],
       "values": [
@@ -114,18 +114,18 @@ exports[`ChiselEndcapElement > render > Non-Button Rendering > should render wit
       "_$litType$": 2,
       "strings": [
         "
-          <path
-            id="",
+            <path
+                id="",
         "__shape"
-            d=",
+                d=",
         "
-            fill=",
+                fill=",
         "
-            stroke=",
+                stroke=",
         "
-            stroke-width=",
+                stroke-width=",
         "
-          />
+            />
         ",
       ],
       "values": [

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { registerWidget, expandWidget, WidgetFactory } from '../registry.js';
+import { WidgetRegistry, WidgetFactory } from '../registry.js';
 import { LayoutElement } from '../../elements/element.js';
 import { RectangleElement } from '../../elements/rectangle.js';
 import { HomeAssistant } from 'custom-card-helpers';
@@ -22,26 +22,25 @@ describe('Widget Registry', () => {
     mockFactory = vi.fn().mockReturnValue([mockElement]);
     
     // Clear registry between tests by accessing the internal registry
-    // This is a bit hacky but necessary for isolated tests
     const registryModule = await import('../registry.js');
-    (registryModule as any).registry?.clear?.();
+    (registryModule.WidgetRegistry as any).registry?.clear?.();
   });
 
   describe('registerWidget', () => {
     it('should register a widget factory with lowercase type', () => {
-      registerWidget('TestWidget', mockFactory);
+      WidgetRegistry.registerWidget('TestWidget', mockFactory);
       
-      const result = expandWidget('testwidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('testwidget', 'test-id');
       expect(result).toEqual([mockElement]);
       expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined);
     });
 
     it('should register widget factory with case-insensitive type', () => {
-      registerWidget('MixedCaseWidget', mockFactory);
+      WidgetRegistry.registerWidget('MixedCaseWidget', mockFactory);
       
-      const resultLower = expandWidget('mixedcasewidget', 'test-1');
-      const resultMixed = expandWidget('MixedCaseWidget', 'test-2');
-      const resultUpper = expandWidget('MIXEDCASEWIDGET', 'test-3');
+      const resultLower = WidgetRegistry.expandWidget('mixedcasewidget', 'test-1');
+      const resultMixed = WidgetRegistry.expandWidget('MixedCaseWidget', 'test-2');
+      const resultUpper = WidgetRegistry.expandWidget('MIXEDCASEWIDGET', 'test-3');
       
       expect(resultLower).toEqual([mockElement]);
       expect(resultMixed).toEqual([mockElement]);
@@ -50,9 +49,9 @@ describe('Widget Registry', () => {
     });
 
     it('should trim whitespace from widget type during registration', () => {
-      registerWidget('  spacedWidget  ', mockFactory);
+      WidgetRegistry.registerWidget('  spacedWidget  ', mockFactory);
       
-      const result = expandWidget('spacedwidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('spacedwidget', 'test-id');
       expect(result).toEqual([mockElement]);
       expect(mockFactory).toHaveBeenCalled();
     });
@@ -63,10 +62,10 @@ describe('Widget Registry', () => {
       const firstFactory = vi.fn().mockReturnValue([firstElement]);
       const secondFactory = vi.fn().mockReturnValue([secondElement]);
       
-      registerWidget('overrideWidget', firstFactory);
-      registerWidget('overrideWidget', secondFactory);
+      WidgetRegistry.registerWidget('overrideWidget', firstFactory);
+      WidgetRegistry.registerWidget('overrideWidget', secondFactory);
       
-      const result = expandWidget('overridewidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('overridewidget', 'test-id');
       expect(result).toEqual([secondElement]);
       expect(secondFactory).toHaveBeenCalled();
       expect(firstFactory).not.toHaveBeenCalled();
@@ -75,17 +74,17 @@ describe('Widget Registry', () => {
 
   describe('expandWidget', () => {
     beforeEach(() => {
-      registerWidget('registeredWidget', mockFactory);
+      WidgetRegistry.registerWidget('registeredWidget', mockFactory);
     });
 
     it('should return null for unregistered widget type', () => {
-      const result = expandWidget('unknownWidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('unknownWidget', 'test-id');
       expect(result).toBeNull();
       expect(mockFactory).not.toHaveBeenCalled();
     });
 
     it('should expand widget with minimal parameters', () => {
-      const result = expandWidget('registeredWidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('registeredWidget', 'test-id');
       
       expect(result).toEqual([mockElement]);
       expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined);
@@ -95,7 +94,7 @@ describe('Widget Registry', () => {
       const props = { customProp: 'value' };
       const layoutConfig = { offsetX: 10 };
       
-      const result = expandWidget(
+      const result = WidgetRegistry.expandWidget(
         'registeredWidget', 
         'test-id', 
         props, 
@@ -121,33 +120,33 @@ describe('Widget Registry', () => {
       const element2 = new RectangleElement('element2');
       const multiElementFactory = vi.fn().mockReturnValue([element1, element2]);
       
-      registerWidget('multiWidget', multiElementFactory);
+      WidgetRegistry.registerWidget('multiWidget', multiElementFactory);
       
-      const result = expandWidget('multiWidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('multiWidget', 'test-id');
       expect(result).toEqual([element1, element2]);
       expect(multiElementFactory).toHaveBeenCalled();
     });
 
     it('should handle factory returning empty array', () => {
       const emptyFactory = vi.fn().mockReturnValue([]);
-      registerWidget('emptyWidget', emptyFactory);
+      WidgetRegistry.registerWidget('emptyWidget', emptyFactory);
       
-      const result = expandWidget('emptyWidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('emptyWidget', 'test-id');
       expect(result).toEqual([]);
       expect(emptyFactory).toHaveBeenCalled();
     });
 
     it('should trim whitespace from widget type during expansion', () => {
-      const result = expandWidget('  registeredWidget  ', 'test-id');
+      const result = WidgetRegistry.expandWidget('  registeredWidget  ', 'test-id');
       
       expect(result).toEqual([mockElement]);
       expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined);
     });
 
     it('should use case-insensitive lookup for expansion', () => {
-      const resultLower = expandWidget('registeredwidget', 'test-1');
-      const resultMixed = expandWidget('RegisteredWidget', 'test-2');
-      const resultUpper = expandWidget('REGISTEREDWIDGET', 'test-3');
+      const resultLower = WidgetRegistry.expandWidget('registeredwidget', 'test-1');
+      const resultMixed = WidgetRegistry.expandWidget('RegisteredWidget', 'test-2');
+      const resultUpper = WidgetRegistry.expandWidget('REGISTEREDWIDGET', 'test-3');
       
       expect(resultLower).toEqual([mockElement]);
       expect(resultMixed).toEqual([mockElement]);
@@ -162,7 +161,7 @@ describe('Widget Registry', () => {
         return [new RectangleElement(id)];
       };
       
-      expect(() => registerWidget('validFactory', validFactory)).not.toThrow();
+      expect(() => WidgetRegistry.registerWidget('validFactory', validFactory)).not.toThrow();
     });
 
     it('should work with factory using optional parameters', () => {
@@ -170,9 +169,9 @@ describe('Widget Registry', () => {
         return [new RectangleElement(id)];
       };
       
-      expect(() => registerWidget('optionalFactory', optionalParamFactory)).not.toThrow();
+      expect(() => WidgetRegistry.registerWidget('optionalFactory', optionalParamFactory)).not.toThrow();
       
-      const result = expandWidget('optionalFactory', 'test-id');
+      const result = WidgetRegistry.expandWidget('optionalFactory', 'test-id');
       expect(result).toHaveLength(1);
       expect(result![0]).toBeInstanceOf(RectangleElement);
     });
@@ -187,9 +186,9 @@ describe('Widget Registry', () => {
         return [container, child1, child2];
       };
       
-      registerWidget('complexWidget', complexFactory);
+      WidgetRegistry.registerWidget('complexWidget', complexFactory);
       
-      const result = expandWidget('complexWidget', 'complex-test', { width: 100 }, { offsetX: 5 });
+      const result = WidgetRegistry.expandWidget('complexWidget', 'complex-test', { width: 100 }, { offsetX: 5 });
       
       expect(result).toHaveLength(3);
       expect(result![0].id).toBe('complex-test_container');
@@ -203,9 +202,9 @@ describe('Widget Registry', () => {
         return [element];
       };
       
-      registerWidget('parameterWidget', parameterAccessFactory);
+      WidgetRegistry.registerWidget('parameterWidget', parameterAccessFactory);
       
-      const result = expandWidget(
+      const result = WidgetRegistry.expandWidget(
         'parameterWidget',
         'param-test',
         { fill: 'red' },

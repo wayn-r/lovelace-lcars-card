@@ -1,17 +1,14 @@
 import FontFaceObserver from 'fontfaceobserver';
 import FontMetrics from 'fontmetrics';
-import { getSvgTextWidth } from './shapes.js';
+import { TextMeasurement } from './shapes.js';
 import { TextConfig } from '../types.js';
 
-/**
- * Centralised font utility so the rest of the codebase no longer talks directly
- * to FontFaceObserver, FontMetrics, or ad-hoc SVG text measurement helpers.
- */
+type FontMetricsResult = ReturnType<typeof FontMetrics>;
+
 export class FontManager {
-  private static metricsCache = new Map<string, ReturnType<typeof FontMetrics> | null>();
+  private static metricsCache = new Map<string, FontMetricsResult | null>();
   private static fontsReadyPromise: Promise<void> | null = null;
 
-  /** Ensure the supplied font families are fully loaded (or failed) before resolving */
   static async ensureFontsLoaded(fontFamilies: string[] = ['Antonio'], timeout = 5000): Promise<void> {
     if (!this.fontsReadyPromise) {
       const observers = fontFamilies.map((family) => new FontFaceObserver(family).load(null, timeout));
@@ -23,15 +20,13 @@ export class FontManager {
             /* ignore */
           }
         }
-        // Wait a frame so glyph metrics are final.
         await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
       });
     }
     return this.fontsReadyPromise;
   }
 
-  /** Retrieve (and cache) font-metrics for the requested family/weight. */
-  static getFontMetrics(fontFamily: string, fontWeight: string | number = 'normal', fontSize = 200): ReturnType<typeof FontMetrics> | null {
+  static getFontMetrics(fontFamily: string, fontWeight: string | number = 'normal', fontSize = 200): FontMetricsResult | null {
     const key = `${fontFamily}::${fontWeight}`;
     if (this.metricsCache.has(key)) return this.metricsCache.get(key)!;
 
@@ -45,13 +40,11 @@ export class FontManager {
     }
   }
 
-  /** Convenience wrapper around the existing SVG text-width helper with cache. */
   static measureTextWidth(text: string, config: TextConfig): number {
     const fontString = `${config.fontWeight || 'normal'} ${config.fontSize || 16}px ${config.fontFamily}`;
-    return getSvgTextWidth(text, fontString, config.letterSpacing as any, config.textTransform);
+    return TextMeasurement.measureSvgTextWidth(text, fontString, config.letterSpacing?.toString(), config.textTransform);
   }
 
-  /** Clear cached FontMetrics so they can be regenerated after font load events. */
   static clearMetricsCache(): void {
     this.metricsCache.clear();
   }

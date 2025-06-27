@@ -85,6 +85,7 @@ lovelace-lcars-card/
 │       │   ├── shapes.spec.ts
 │       │   ├── state-manager.spec.ts
 │       │   └── transform-propagator.spec.ts
+│       ├── transform-origin-utils.ts
 │       └── transform-propagator.ts
 ├── test-results/
 ├── tests/
@@ -97,11 +98,12 @@ lovelace-lcars-card/
 ├── vite.config.ts
 ├── vitest.config.ts
 ├── yaml-bak/
-│   ├── 10-complete-dashboard.yaml
-│   ├── 2-navigation-panel.yaml
-│   └── 23-url-and-more-info-actions.yaml
 ├── yaml-config-definition.yaml
-└── yaml-config-examples/
+├── yaml-config-examples/
+└── yaml-dont-run/
+    ├── 10-complete-dashboard.yaml
+    ├── 2-navigation-panel.yaml
+    └── 23-url-and-more-info-actions.yaml
 ```
 
 # Codebase Files
@@ -1203,8 +1205,7 @@ export interface ILayoutElement {
   
   // Home Assistant integration
   updateHass(hass?: HomeAssistant): void;
-  checkEntityChanges(hass: HomeAssistant): boolean;
-  clearMonitoredEntities(): void;
+  entityChangesDetected(hass: HomeAssistant): boolean;
   
   // Lifecycle
   cleanup(): void;
@@ -1795,9 +1796,8 @@ export const selectors = {
 import { LayoutElement } from "./element.js";
 import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant } from "custom-card-helpers";
-import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
-import { generateChiselEndcapPath } from "../../utils/shapes.js";
+import { ShapeGenerator } from "../../utils/shapes.js";
 import { Button } from "../../utils/button.js";
 
 export class ChiselEndcapElement extends LayoutElement {
@@ -1805,100 +1805,85 @@ export class ChiselEndcapElement extends LayoutElement {
 
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
-        this.resetLayout();
-        this.intrinsicSize = { width: 0, height: 0, calculated: false };
     }
   
     calculateIntrinsicSize(container: SVGElement): void {
-      this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 40;
-      this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 0;
-      this.intrinsicSize.calculated = true;
+        this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 40;
+        this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 0;
+        this.intrinsicSize.calculated = true;
     }
   
     canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-      if (this.intrinsicSize.height === 0 && this.layoutConfig.anchorTo) {
-        const anchorElement = elementsMap.get(this.layoutConfig.anchorTo);
-        if (!anchorElement || !anchorElement.layout.calculated) {
-          // IMPORTANT: Still call super to track dependencies properly
-          super.canCalculateLayout(elementsMap, dependencies);
-          return false;
+        if (this.heightRequiresAnchoredCalculation() && this.layoutConfig.anchor?.anchorTo) {
+            const anchorElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
+            if (!anchorElement || !anchorElement.layout.calculated) {
+                super.canCalculateLayout(elementsMap, dependencies);
+                return false;
+            }
         }
-      }
-      return super.canCalculateLayout(elementsMap, dependencies);
+        return super.canCalculateLayout(elementsMap, dependencies);
     }
   
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
-      // Removed debug trace log
-      if (this.intrinsicSize.height === 0 && this.layoutConfig.anchorTo) {
-        const anchorElement = elementsMap.get(this.layoutConfig.anchorTo);
-        if (anchorElement) {
-          const adoptedHeight = anchorElement.layout.height;
-          const originalLayoutHeight = this.layoutConfig.height;
-          this.layoutConfig.height = adoptedHeight;
-          super.calculateLayout(elementsMap, containerRect);
-          this.layoutConfig.height = originalLayoutHeight;
-          return;
+        if (this.heightRequiresAnchoredCalculation() && this.layoutConfig.anchor?.anchorTo) {
+            const anchorElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
+            if (anchorElement) {
+                this.calculateLayoutWithAnchoredHeight(anchorElement, elementsMap, containerRect);
+                return;
+            }
         }
-      }
-      super.calculateLayout(elementsMap, containerRect);
+        super.calculateLayout(elementsMap, containerRect);
+    }
+
+    private heightRequiresAnchoredCalculation(): boolean {
+        return this.intrinsicSize.height === 0;
+    }
+
+    private calculateLayoutWithAnchoredHeight(anchorElement: LayoutElement, elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
+        const originalLayoutHeight = this.layoutConfig.height;
+        this.layoutConfig.height = anchorElement.layout.height;
+        super.calculateLayout(elementsMap, containerRect);
+        this.layoutConfig.height = originalLayoutHeight;
     }
   
     renderShape(): SVGTemplateResult | null {
-      if (!this.layout.calculated) {
-        return null;
-      }
+        if (!this.layout.calculated || !this.dimensionsAreValid()) {
+            return null;
+        }
 
-      const { x, y, width, height } = this.layout;
-      
-      // Return null for invalid dimensions
-      if (width <= 0 || height <= 0) {
-        return null;
-      }
-      
-      const side = this.props.direction === 'left' ? 'left' : 'right';
-      
-      const pathData = generateChiselEndcapPath(width, height, side, x, y);
-      
-      // Check if pathData is null (edge case)
-      if (pathData === null) {
-        return null;
-      }
-      
-      // Check for button rendering
-      const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
-      const isButton = Boolean(buttonConfig?.enabled);
-      
-      if (isButton && this.button) {
-        const stateContext = this._getStateContext();
-        // Let the button handle its own color resolution with current state
-        return this.button.createButton(
-          pathData,
-          x,
-          y,
-          width,
-          height,
-          {
-            rx: 0
-          },
-          stateContext
-        );
-      } else {
-        // Non-button rendering: return just the path. 
-        // LayoutElement.render() will wrap this path and any text in a <g id="${this.id}">.
-        const colors = this._resolveElementColors();
+        const { x, y, width, height } = this.layout;
+        const side = this.props.direction === 'left' ? 'left' : 'right';
+        const pathData = ShapeGenerator.generateChiselEndcap(width, height, side, x, y);
+
+        if (pathData === null) {
+            return null;
+        }
         
-        return svg`
-          <path
-            id="${this.id}__shape"
-            d=${pathData}
-            fill=${colors.fillColor}
-            stroke=${colors.strokeColor}
-            stroke-width=${colors.strokeWidth}
-          />
-        `;
-      }
+        return this.renderPathWithButtonSupport(pathData, x, y, width, height);
     }
-  }
+
+    private dimensionsAreValid(): boolean {
+        return this.layout.width > 0 && this.layout.height > 0;
+    }
+
+    private renderPathWithButtonSupport(pathData: string, x: number, y: number, width: number, height: number): SVGTemplateResult {
+        if (this.button) {
+            const stateContext = this.getStateContext();
+            return this.button.createButton(pathData, x, y, width, height, { rx: 0 }, stateContext);
+        }
+
+        const colors = this.resolveElementColors();
+        return svg`
+            <path
+                id="${this.id}__shape"
+                d=${pathData}
+                fill=${colors.fillColor}
+                stroke=${colors.strokeColor}
+                stroke-width=${colors.strokeWidth}
+            />
+        `;
+    }
+}
 ```
 
 ## File: src/layout/elements/elbow.ts
@@ -1909,7 +1894,7 @@ import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant } from "custom-card-helpers";
 import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
-import { generateElbowPath } from "../../utils/shapes.js";
+import { ShapeGenerator } from "../../utils/shapes.js";
 import { Button } from "../../utils/button.js";
 
 export class ElbowElement extends LayoutElement {
@@ -1917,14 +1902,12 @@ export class ElbowElement extends LayoutElement {
 
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
-        this.resetLayout();
-        this.intrinsicSize = { width: 0, height: 0, calculated: false };
     }
   
     calculateIntrinsicSize(container: SVGElement): void {
-      this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 100;
-      this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 100;
-      this.intrinsicSize.calculated = true;
+        this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 100;
+        this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 100;
+        this.intrinsicSize.calculated = true;
     }
   
     canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
@@ -1939,7 +1922,7 @@ export class ElbowElement extends LayoutElement {
      * Override text position calculation for elbow-specific positioning
      * Considers textAnchor to position text relative to the arm or body subsection edges
      */
-    protected _getTextPosition(): { x: number, y: number } {
+    protected getTextPosition(): { x: number, y: number } {
         const { x, y, width, height } = this.layout;
         const orientation = this.props.orientation || 'top-left';
         const bodyWidth = this.props.bodyWidth || 30;
@@ -1947,191 +1930,126 @@ export class ElbowElement extends LayoutElement {
         const elbowTextPosition = this.props.elbowTextPosition;
         const textAnchor = this.props.textAnchor || 'middle';
         
-        // Use calculated layout width if stretching is applied, otherwise use configured width
-        const hasStretchConfig = Boolean(this.layoutConfig.stretch?.stretchTo1 || this.layoutConfig.stretch?.stretchTo2);
-        const configuredWidth = this.props.width || this.layoutConfig.width || 100;
-        const elbowWidth = hasStretchConfig ? width : configuredWidth;
+        const elbowWidth = this.calculateEffectiveElbowWidth(width);
         
         if (elbowTextPosition === 'arm') {
-            // Position text in the arm (horizontal) part of the elbow
-            // For top orientations, arm is at the top; for bottom orientations, arm is at the bottom
-            const armCenterY = orientation.startsWith('top') 
-                ? y + armHeight / 2 
-                : y + height - armHeight / 2;
-            
-            // Calculate arm boundaries based on orientation
-            let armLeftX: number, armRightX: number;
-            if (orientation === 'top-left' || orientation === 'bottom-left') {
-                // Arm extends from left body to the right
-                armLeftX = x + bodyWidth;
-                armRightX = x + elbowWidth;
-            } else {
-                // top-right or bottom-right: Arm extends from right body to the left
-                armLeftX = x;
-                armRightX = x + (elbowWidth - bodyWidth);
-            }
-            
-            // Calculate X position based on textAnchor relative to arm boundaries
-            let armTextX: number;
-            switch (textAnchor) {
-                case 'start':
-                    armTextX = armLeftX;
-                    break;
-                case 'end':
-                    armTextX = armRightX;
-                    break;
-                case 'middle':
-                default:
-                    armTextX = armLeftX + (armRightX - armLeftX) / 2;
-                    break;
-            }
-            
-            return {
-                x: armTextX,
-                y: armCenterY
-            };
+            return this.calculateArmTextPosition(x, y, height, orientation, bodyWidth, armHeight, elbowWidth, textAnchor);
         } else if (elbowTextPosition === 'body') {
-            // Position text in the body (vertical) part of the elbow based on orientation
-            let bodyCenterX: number, bodyCenterY: number;
-            let bodyLeftX: number, bodyRightX: number;
-            
-            if (orientation === 'top-left') {
-                bodyCenterY = y + armHeight + (height - armHeight) / 2;
-                bodyLeftX = x;
-                bodyRightX = x + bodyWidth;
-            } else if (orientation === 'top-right') {
-                bodyCenterY = y + armHeight + (height - armHeight) / 2;
-                bodyLeftX = x + elbowWidth - bodyWidth;
-                bodyRightX = x + elbowWidth;
-            } else if (orientation === 'bottom-left') {
-                bodyCenterY = y + (height - armHeight) / 2;
-                bodyLeftX = x;
-                bodyRightX = x + bodyWidth;
-            } else { // bottom-right
-                bodyCenterY = y + (height - armHeight) / 2;
-                bodyLeftX = x + elbowWidth - bodyWidth;
-                bodyRightX = x + elbowWidth;
-            }
-            
-            // Calculate X position based on textAnchor relative to body boundaries
-            switch (textAnchor) {
-                case 'start':
-                    bodyCenterX = bodyLeftX;
-                    break;
-                case 'end':
-                    bodyCenterX = bodyRightX;
-                    break;
-                case 'middle':
-                default:
-                    bodyCenterX = bodyLeftX + (bodyRightX - bodyLeftX) / 2;
-                    break;
-            }
-            
+            return this.calculateBodyTextPosition(x, y, height, orientation, bodyWidth, armHeight, elbowWidth, textAnchor);
+        } else {
+            return this.calculateArmTextPosition(x, y, height, orientation, bodyWidth, armHeight, elbowWidth, textAnchor);
+        }
+    }
+
+    private calculateEffectiveElbowWidth(layoutWidth: number): number {
+        const hasStretchConfig = Boolean(this.layoutConfig.stretch?.stretchTo1 || this.layoutConfig.stretch?.stretchTo2);
+        const configuredWidth = this.props.width || this.layoutConfig.width || 100;
+        return hasStretchConfig ? layoutWidth : configuredWidth;
+    }
+
+    private calculateArmTextPosition(x: number, y: number, height: number, orientation: string, bodyWidth: number, armHeight: number, elbowWidth: number, textAnchor: string): { x: number, y: number } {
+        const armCenterY = orientation.startsWith('top') 
+            ? y + armHeight / 2 
+            : y + height - armHeight / 2;
+        
+        const { armLeftX, armRightX } = this.calculateArmBoundaries(x, orientation, bodyWidth, elbowWidth);
+        const armTextX = this.calculateTextXPosition(armLeftX, armRightX, textAnchor);
+        
+        return { x: armTextX, y: armCenterY };
+    }
+
+    private calculateBodyTextPosition(x: number, y: number, height: number, orientation: string, bodyWidth: number, armHeight: number, elbowWidth: number, textAnchor: string): { x: number, y: number } {
+        let bodyCenterY: number;
+        let bodyLeftX: number, bodyRightX: number;
+        
+        if (orientation === 'top-left') {
+            bodyCenterY = y + armHeight + (height - armHeight) / 2;
+            bodyLeftX = x;
+            bodyRightX = x + bodyWidth;
+        } else if (orientation === 'top-right') {
+            bodyCenterY = y + armHeight + (height - armHeight) / 2;
+            bodyLeftX = x + elbowWidth - bodyWidth;
+            bodyRightX = x + elbowWidth;
+        } else if (orientation === 'bottom-left') {
+            bodyCenterY = y + (height - armHeight) / 2;
+            bodyLeftX = x;
+            bodyRightX = x + bodyWidth;
+        } else {
+            bodyCenterY = y + (height - armHeight) / 2;
+            bodyLeftX = x + elbowWidth - bodyWidth;
+            bodyRightX = x + elbowWidth;
+        }
+        
+        const bodyCenterX = this.calculateTextXPosition(bodyLeftX, bodyRightX, textAnchor);
+        return { x: bodyCenterX, y: bodyCenterY };
+    }
+
+    private calculateArmBoundaries(x: number, orientation: string, bodyWidth: number, elbowWidth: number): { armLeftX: number, armRightX: number } {
+        if (orientation === 'top-left' || orientation === 'bottom-left') {
             return {
-                x: bodyCenterX,
-                y: bodyCenterY
+                armLeftX: x + bodyWidth,
+                armRightX: x + elbowWidth
             };
         } else {
-            // Default to arm positioning if not specified
-            const armCenterY = orientation.startsWith('top') 
-                ? y + armHeight / 2 
-                : y + height - armHeight / 2;
-            
-            // Calculate arm boundaries based on orientation
-            let armLeftX: number, armRightX: number;
-            if (orientation === 'top-left' || orientation === 'bottom-left') {
-                // Arm extends from left body to the right
-                armLeftX = x + bodyWidth;
-                armRightX = x + elbowWidth;
-            } else {
-                // top-right or bottom-right: Arm extends from right body to the left
-                armLeftX = x;
-                armRightX = x + (elbowWidth - bodyWidth);
-            }
-            
-            // Calculate X position based on textAnchor relative to arm boundaries
-            let armTextX: number;
-            switch (textAnchor) {
-                case 'start':
-                    armTextX = armLeftX;
-                    break;
-                case 'end':
-                    armTextX = armRightX;
-                    break;
-                case 'middle':
-                default:
-                    armTextX = armLeftX + (armRightX - armLeftX) / 2;
-                    break;
-            }
-            
             return {
-                x: armTextX,
-                y: armCenterY
+                armLeftX: x,
+                armRightX: x + (elbowWidth - bodyWidth)
             };
         }
     }
 
-    renderShape(): SVGTemplateResult | null {
-      if (!this.layout.calculated) {
-        return null;
-      }
+    private calculateTextXPosition(leftBoundary: number, rightBoundary: number, textAnchor: string): number {
+        switch (textAnchor) {
+            case 'start':
+                return leftBoundary;
+            case 'end':
+                return rightBoundary;
+            case 'middle':
+            default:
+                return leftBoundary + (rightBoundary - leftBoundary) / 2;
+        }
+    }
 
-      const { x, y, width, height } = this.layout;
-      
-      // Return null for invalid dimensions
-      if (width <= 0 || height <= 0) {
-        return null;
-      }
-      
-      const orientation = this.props.orientation || 'top-left';
-      const bodyWidth = this.props.bodyWidth || 30;
-      const armHeight = this.props.armHeight || 30;
-      
-      // Use calculated layout width if stretching is applied, otherwise use configured width
-      const hasStretchConfig = Boolean(this.layoutConfig.stretch?.stretchTo1 || this.layoutConfig.stretch?.stretchTo2);
-      const configuredWidth = this.props.width || this.layoutConfig.width || 100;
-      const elbowWidth = hasStretchConfig ? width : configuredWidth;
-      
-      const pathData = generateElbowPath(x, elbowWidth, bodyWidth, armHeight, height, orientation, y, armHeight);
-      
-      // Return null if path generation fails
-      if (pathData === null) {
-        return null;
-      }
-      
-      // Check for button rendering
-      const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
-      const isButton = Boolean(buttonConfig?.enabled);
-      
-      if (isButton && this.button) {
-        const stateContext = this._getStateContext();
-        // Let the button handle its own color resolution with current state
-        return this.button.createButton(
-          pathData,
-          x,
-          y,
-          width,
-          height,
-          {
-            rx: 0
-          },
-          stateContext
-        );
-      } else {
-        // Non-button rendering: return just the path. 
-        // LayoutElement.render() will wrap this path and any text in a <g id="${this.id}">.
-        const colors = this._resolveElementColors();
+    renderShape(): SVGTemplateResult | null {
+        if (!this.layout.calculated || !this.dimensionsAreValid()) {
+            return null;
+        }
+
+        const { x, y, width, height } = this.layout;
+        const orientation = this.props.orientation || 'top-left';
+        const bodyWidth = this.props.bodyWidth || 30;
+        const armHeight = this.props.armHeight || 30;
         
+        const elbowWidth = this.calculateEffectiveElbowWidth(width);
+        const pathData = ShapeGenerator.generateElbow(x, elbowWidth, bodyWidth, armHeight, height, orientation, y, armHeight);
+        
+        if (pathData === null) {
+            return null;
+        }
+        
+        return this.renderPathWithButtonSupport(pathData, x, y, width, height);
+    }
+
+    private dimensionsAreValid(): boolean {
+        return this.layout.width > 0 && this.layout.height > 0;
+    }
+
+    private renderPathWithButtonSupport(pathData: string, x: number, y: number, width: number, height: number): SVGTemplateResult {
+        if (this.button) {
+            const stateContext = this.getStateContext();
+            return this.button.createButton(pathData, x, y, width, height, { rx: 0 }, stateContext);
+        }
+
+        const colors = this.resolveElementColors();
         return svg`
-          <path
-            id="${this.id}__shape"
-            d=${pathData}
-            fill=${colors.fillColor}
-            stroke=${colors.strokeColor}
-            stroke-width=${colors.strokeWidth}
-          />
+            <path
+                id="${this.id}__shape"
+                d=${pathData}
+                fill=${colors.fillColor}
+                stroke=${colors.strokeColor}
+                stroke-width=${colors.strokeWidth}
+            />
         `;
-      }
     }
 }
 ```
@@ -2141,13 +2059,10 @@ export class ElbowElement extends LayoutElement {
 ```typescript
 import { LayoutElementProps, LayoutState, IntrinsicSize, LayoutConfigOptions } from "../engine";
 import { HomeAssistant } from "custom-card-helpers";
-import { gsap } from "gsap";
-import { generateRectanglePath, generateEndcapPath, generateElbowPath, generateChiselEndcapPath, getTextWidth, measureTextBBox, getFontMetrics } from '../../utils/shapes.js';
-import { SVGTemplateResult, html, svg } from 'lit';
-import { LcarsButtonElementConfig } from '../../types.js';
+import { SVGTemplateResult, svg } from 'lit';
 import { StretchContext } from '../engine.js';
 import { Button } from '../../utils/button.js';
-import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../../types';
+import { ColorValue } from '../../types';
 import { animationManager, AnimationContext } from '../../utils/animation.js';
 import { colorResolver } from '../../utils/color-resolver.js';
 import { ComputedElementColors, ColorResolutionDefaults } from '../../utils/color.js';
@@ -2163,18 +2078,17 @@ export abstract class LayoutElement {
     public button?: Button;
     public getShadowElement?: (id: string) => Element | null;
     
-    // Interactive state tracking - available for all elements
-    private _isHovering = false;
-    private _isActive = false;
-    private _hoverTimeout?: ReturnType<typeof setTimeout>;
-    private _activeTimeout?: ReturnType<typeof setTimeout>;
+    private isHovering = false;
+    private isActive = false;
+    private hoverTimeout?: ReturnType<typeof setTimeout>;
+    private activeTimeout?: ReturnType<typeof setTimeout>;
 
-    private readonly _boundHandleMouseEnter: () => void;
-    private readonly _boundHandleMouseLeave: () => void;
-    private readonly _boundHandleMouseDown: () => void;
-    private readonly _boundHandleMouseUp: () => void;
-    private readonly _boundHandleTouchStart: () => void;
-    private readonly _boundHandleTouchEnd: () => void;
+    private readonly boundHandleMouseEnter: () => void;
+    private readonly boundHandleMouseLeave: () => void;
+    private readonly boundHandleMouseDown: () => void;
+    private readonly boundHandleMouseUp: () => void;
+    private readonly boundHandleTouchStart: () => void;
+    private readonly boundHandleTouchEnd: () => void;
 
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this.id = id;
@@ -2184,18 +2098,15 @@ export abstract class LayoutElement {
         this.requestUpdateCallback = requestUpdateCallback;
         this.getShadowElement = getShadowElement;
 
-        // Bind event handlers once for consistent listener removal
-        this._boundHandleMouseEnter = this._handleMouseEnter.bind(this);
-        this._boundHandleMouseLeave = this._handleMouseLeave.bind(this);
-        this._boundHandleMouseDown = this._handleMouseDown.bind(this);
-        this._boundHandleMouseUp = this._handleMouseUp.bind(this);
-        this._boundHandleTouchStart = this._handleTouchStart.bind(this);
-        this._boundHandleTouchEnd = this._handleTouchEnd.bind(this);
+        this.boundHandleMouseEnter = this.handleMouseEnter.bind(this);
+        this.boundHandleMouseLeave = this.handleMouseLeave.bind(this);
+        this.boundHandleMouseDown = this.handleMouseDown.bind(this);
+        this.boundHandleMouseUp = this.handleMouseUp.bind(this);
+        this.boundHandleTouchStart = this.handleTouchStart.bind(this);
+        this.boundHandleTouchEnd = this.handleTouchEnd.bind(this);
 
-        // Initialize animation state for this element
         animationManager.initializeElementAnimationTracking(id);
 
-        // Initialize button if button config exists
         if (props.button?.enabled) {
             this.button = new Button(id, props, hass, requestUpdateCallback, getShadowElement);
         }
@@ -2204,149 +2115,124 @@ export abstract class LayoutElement {
         this.intrinsicSize = { width: 0, height: 0, calculated: false };
     }
 
-    // Interactive state management for all elements
-    get isHovering(): boolean {
-        return this._isHovering;
+    get elementIsHovering(): boolean {
+        return this.isHovering;
     }
 
-    set isHovering(value: boolean) {
-        if (this._isHovering !== value) {
-            this._isHovering = value;
+    set elementIsHovering(value: boolean) {
+        if (this.isHovering !== value) {
+            this.isHovering = value;
             
-            // Clear hover timeout if it exists
-            if (this._hoverTimeout) {
-                clearTimeout(this._hoverTimeout);
-                this._hoverTimeout = undefined;
+            if (this.hoverTimeout) {
+                clearTimeout(this.hoverTimeout);
+                this.hoverTimeout = undefined;
             }
             
-            // Request update to re-render with new interactive state
-            this._requestUpdateWithInteractiveState();
+            this.requestUpdateCallback?.();
         }
     }
 
-    get isActive(): boolean {
-        return this._isActive;
+    get elementIsActive(): boolean {
+        return this.isActive;
     }
 
-    set isActive(value: boolean) {
-        if (this._isActive !== value) {
-            this._isActive = value;
+    set elementIsActive(value: boolean) {
+        if (this.isActive !== value) {
+            this.isActive = value;
             
-            // Clear active timeout if it exists
-            if (this._activeTimeout) {
-                clearTimeout(this._activeTimeout);
-                this._activeTimeout = undefined;
+            if (this.activeTimeout) {
+                clearTimeout(this.activeTimeout);
+                this.activeTimeout = undefined;
             }
             
-            // Request update to re-render with new interactive state
-            this._requestUpdateWithInteractiveState();
+            this.requestUpdateCallback?.();
         }
     }
 
-    private _requestUpdateWithInteractiveState(): void {
-        this.requestUpdateCallback?.();
-    }
-
-    /**
-     * Get the current state context for this element
-     */
-    protected _getStateContext() {
+    protected getStateContext() {
         return {
-            isCurrentlyHovering: this._isHovering,
-            isCurrentlyActive: this._isActive
+            isCurrentlyHovering: this.isHovering,
+            isCurrentlyActive: this.isActive
         };
     }
 
-    /**
-     * Check if this element has stateful colors (supports hover/active states)
-     */
-    protected _hasStatefulColors(): boolean {
+    protected statefulColorsExist(): boolean {
         const { fill, stroke, textColor } = this.props;
-        return this._isStatefulColor(fill) || 
-               this._isStatefulColor(stroke) || 
-               this._isStatefulColor(textColor);
+        return this.colorIsStateful(fill) || 
+               this.colorIsStateful(stroke) || 
+               this.colorIsStateful(textColor);
     }
 
-    private _isStatefulColor(color: any): boolean {
+    private colorIsStateful(color: any): boolean {
         return Boolean(color && typeof color === 'object' && 
                       ('default' in color || 'hover' in color || 'active' in color) &&
                       !('entity' in color) && !('mapping' in color));
     }
 
-    /**
-     * Setup event listeners for interactive states (hover/active)
-     * This should be called after the element is rendered in the DOM
-     */
     setupInteractiveListeners(): void {
         if (!this.getShadowElement) {
             return;
         }
 
-        // First clean up any existing listeners
-        this._cleanupInteractiveListeners();
+        this.cleanupInteractiveListeners();
 
         const element = this.getShadowElement(this.id);
         if (!element) {
             return;
         }
 
-        // Check if this element should have interactive behavior
-        const hasInteractiveFeatures = this._hasStatefulColors() || 
-                                     this._hasButtonConfig() ||
-                                     this._hasVisibilityTriggers() ||
-                                     this._hasAnimations();
+        const hasInteractiveFeatures = this.statefulColorsExist() || 
+                                     this.buttonConfigExists() ||
+                                     this.animationsExist();
 
         if (hasInteractiveFeatures) {
-            // Add mouse event listeners
-            element.addEventListener('mouseenter', this._boundHandleMouseEnter);
-            element.addEventListener('mouseleave', this._boundHandleMouseLeave);
-            element.addEventListener('mousedown', this._boundHandleMouseDown);
-            element.addEventListener('mouseup', this._boundHandleMouseUp);
-            
-            // Add touch event listeners for mobile support
-            element.addEventListener('touchstart', this._boundHandleTouchStart);
-            element.addEventListener('touchend', this._boundHandleTouchEnd);
+            element.addEventListener('mouseenter', this.boundHandleMouseEnter);
+            element.addEventListener('mouseleave', this.boundHandleMouseLeave);
+            element.addEventListener('mousedown', this.boundHandleMouseDown);
+            element.addEventListener('mouseup', this.boundHandleMouseUp);
+            element.addEventListener('touchstart', this.boundHandleTouchStart);
+            element.addEventListener('touchend', this.boundHandleTouchEnd);
         }
     }
 
-    private _handleMouseEnter(): void {
-        this.isHovering = true;
+    private handleMouseEnter(): void {
+        this.elementIsHovering = true;
     }
 
-    private _handleMouseLeave(): void {
-        this.isHovering = false;
-        this.isActive = false;
+    private handleMouseLeave(): void {
+        this.elementIsHovering = false;
+        this.elementIsActive = false;
     }
 
-    private _handleMouseDown(): void {
-        this.isActive = true;
+    private handleMouseDown(): void {
+        this.elementIsActive = true;
     }
 
-    private _handleMouseUp(): void {
-        this.isActive = false;
+    private handleMouseUp(): void {
+        this.elementIsActive = false;
     }
 
-    private _handleTouchStart(): void {
-        this.isHovering = true;
-        this.isActive = true;
+    private handleTouchStart(): void {
+        this.elementIsHovering = true;
+        this.elementIsActive = true;
     }
 
-    private _handleTouchEnd(): void {
-        this.isHovering = false;
-        this.isActive = false;
+    private handleTouchEnd(): void {
+        this.elementIsHovering = false;
+        this.elementIsActive = false;
     }
 
-    private _cleanupInteractiveListeners(): void {
+    private cleanupInteractiveListeners(): void {
         const element = this.getShadowElement?.(this.id);
         if (!element) return;
 
-        element.removeEventListener('mouseenter', this._boundHandleMouseEnter);
-        element.removeEventListener('mouseleave', this._boundHandleMouseLeave);
-        element.removeEventListener('mousedown', this._boundHandleMouseDown);
-        element.removeEventListener('mouseup', this._boundHandleMouseUp);
-        element.removeEventListener('touchstart', this._boundHandleTouchStart);
-        element.removeEventListener('touchend', this._boundHandleTouchEnd);
-        element.removeEventListener('touchcancel', this._boundHandleTouchEnd);
+        element.removeEventListener('mouseenter', this.boundHandleMouseEnter);
+        element.removeEventListener('mouseleave', this.boundHandleMouseLeave);
+        element.removeEventListener('mousedown', this.boundHandleMouseDown);
+        element.removeEventListener('mouseup', this.boundHandleMouseUp);
+        element.removeEventListener('touchstart', this.boundHandleTouchStart);
+        element.removeEventListener('touchend', this.boundHandleTouchEnd);
+        element.removeEventListener('touchcancel', this.boundHandleTouchEnd);
     }
 
     resetLayout(): void {
@@ -2360,147 +2246,91 @@ export abstract class LayoutElement {
     }
 
     canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-        if (!this._checkAnchorDependencies(elementsMap, dependencies)) {
+        return this.checkAnchorDependencies(elementsMap, dependencies) &&
+               this.checkStretchDependencies(elementsMap, dependencies) &&
+               this.checkSpecialDependencies(elementsMap, dependencies);
+    }
+
+    private checkAnchorDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
+        const anchorTo = this.layoutConfig.anchor?.anchorTo;
+        if (!anchorTo || anchorTo === 'container') return true;
+        if (dependencies.includes(anchorTo)) return false;
+
+        const anchorTarget = elementsMap.get(anchorTo);
+        if (!anchorTarget) {
+            console.warn(`Element '${this.id}' anchor target '${anchorTo}' not found in elements map`);
+            dependencies.push(anchorTo);
             return false;
         }
-        if (!this._checkStretchDependencies(elementsMap, dependencies)) {
-            return false;
-        }
-        if (!this._checkSpecialDependencies(elementsMap, dependencies)) {
+
+        if (!anchorTarget.layout.calculated) {
+            dependencies.push(anchorTo);
             return false;
         }
 
         return true;
     }
 
-    private _checkAnchorDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-        if (this.layoutConfig.anchor?.anchorTo && this.layoutConfig.anchor.anchorTo !== 'container') {
-            const anchorTo = this.layoutConfig.anchor.anchorTo;
-            
-            const targetElement = elementsMap.get(anchorTo);
-            
-            if (!targetElement) {
-                console.warn(`Element '${this.id}' anchor target '${anchorTo}' not found in elements map`);
-                dependencies.push(anchorTo);
-                return false;
-            }
-            
-            if (!targetElement.layout.calculated) {
-                // This is the normal case for forward references - target exists but isn't calculated yet
-                dependencies.push(anchorTo);
-                return false;
-            }
-            
-            // Target exists and is calculated
-            return true;
+    private checkStretchDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
+        return this.validateStretchTarget(this.layoutConfig.stretch?.stretchTo1, 'stretch target1', elementsMap, dependencies) &&
+               this.validateStretchTarget(this.layoutConfig.stretch?.stretchTo2, 'stretch target2', elementsMap, dependencies);
+    }
+
+    private validateStretchTarget(stretchTo: string | undefined, targetName: string, elementsMap: Map<string, LayoutElement>, dependencies: string[]): boolean {
+        if (!stretchTo || stretchTo === 'container' || stretchTo === 'canvas') return true;
+        if (dependencies.includes(stretchTo)) return false;
+
+        const stretchTarget = elementsMap.get(stretchTo);
+        if (!stretchTarget) {
+            console.warn(`Element '${this.id}' ${targetName} '${stretchTo}' not found in elements map`);
+            dependencies.push(stretchTo);
+            return false;
         }
-        
+
+        if (!stretchTarget.layout.calculated) {
+            dependencies.push(stretchTo);
+            return false;
+        }
+
         return true;
     }
 
-    private _checkStretchDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-        if (this.layoutConfig.stretch?.stretchTo1 && 
-            this.layoutConfig.stretch.stretchTo1 !== 'canvas' && 
-            this.layoutConfig.stretch.stretchTo1 !== 'container') {
-            
-            const stretchTo1 = this.layoutConfig.stretch.stretchTo1;
-            
-            const targetElement = elementsMap.get(stretchTo1);
-            
-            if (!targetElement) {
-                console.warn(`Element '${this.id}' stretch target1 '${stretchTo1}' not found in elements map`);
-                dependencies.push(stretchTo1);
-                return false;
-            }
-            
-            if (!targetElement.layout.calculated) {
-                // This is the normal case for forward references - target exists but isn't calculated yet
-                dependencies.push(stretchTo1);
-                return false;
-            }
-            
-            // Target exists and is calculated - continue checking
-        }
-        
-        if (this.layoutConfig.stretch?.stretchTo2 && 
-            this.layoutConfig.stretch.stretchTo2 !== 'canvas' && 
-            this.layoutConfig.stretch.stretchTo2 !== 'container') {
-            
-            const stretchTo2 = this.layoutConfig.stretch.stretchTo2;
-            
-            const targetElement = elementsMap.get(stretchTo2);
-            
-            if (!targetElement) {
-                console.warn(`Element '${this.id}' stretch target2 '${stretchTo2}' not found in elements map`);
-                dependencies.push(stretchTo2);
-                return false;
-            }
-            
-            if (!targetElement.layout.calculated) {
-                // This is the normal case for forward references - target exists but isn't calculated yet
-                dependencies.push(stretchTo2);
-                return false;
-            }
-            
-            // Target exists and is calculated
-        }
-        
-        return true;
-    }
-
-    private _checkSpecialDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-        if (this.constructor.name === 'EndcapElement' && 
-            this.layoutConfig.anchor?.anchorTo && 
-            this.layoutConfig.anchor.anchorTo !== 'container' && 
-            !this.props.height) {
-            
-            const anchorTo = this.layoutConfig.anchor.anchorTo;
-            const targetElement = elementsMap.get(anchorTo);
-            
-            if (!targetElement) {
-                console.warn(`LayoutElement: EndcapElement '${this.id}' anchor target '${anchorTo}' not found in elements map`);
-                dependencies.push(anchorTo);
-                return false;
-            }
-            
-            if (!targetElement.layout.calculated) {
-                dependencies.push(anchorTo);
-                return false;
-            }
-        }
+    private checkSpecialDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
         return true;
     }
 
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
-        const { width: containerWidth, height: containerHeight } = containerRect;
-        let elementWidth = this._calculateElementWidth(containerWidth);
-        let elementHeight = this._calculateElementHeight(containerHeight);
+        if (this.layout.calculated) return;
 
-        let { x, y } = this._calculateInitialPosition(elementsMap, containerWidth, containerHeight, elementWidth, elementHeight);
+        const containerWidth = containerRect.width;
+        const containerHeight = containerRect.height;
 
-        if (this.layoutConfig.stretch) {
-            const stretchContext: StretchContext = {
-                x,
-                y,
-                width: elementWidth,
-                height: elementHeight,
-                elementsMap,
-                containerWidth,
-                containerHeight
-            };
-            
-            this._applyStretchConfigurations(stretchContext);
-            
-            x = stretchContext.x;
-            y = stretchContext.y;
-            elementWidth = stretchContext.width;
-            elementHeight = stretchContext.height;
-        }
+        const elementWidth = this.calculateElementWidth(containerWidth);
+        const elementHeight = this.calculateElementHeight(containerHeight);
 
-        this._finalizeLayout(x, y, elementWidth, elementHeight);
+        const initialPosition = this.calculateInitialPosition(
+            elementsMap,
+            containerWidth,
+            containerHeight,
+            elementWidth,
+            elementHeight
+        );
+
+        const context: StretchContext = {
+            elementsMap,
+            containerWidth,
+            containerHeight,
+            x: initialPosition.x,
+            y: initialPosition.y,
+            width: elementWidth,
+            height: elementHeight
+        };
+
+        this.applyStretchConfigurations(context);
+        this.finalizeLayout(context.x, context.y, context.width, context.height);
     }
 
-    private _calculateElementWidth(containerWidth: number): number {
+    private calculateElementWidth(containerWidth: number): number {
         let width = this.intrinsicSize.width;
         if (typeof this.layoutConfig.width === 'string' && this.layoutConfig.width.endsWith('%')) {
             width = containerWidth * (parseFloat(this.layoutConfig.width) / 100);
@@ -2508,7 +2338,7 @@ export abstract class LayoutElement {
         return width;
     }
 
-    private _calculateElementHeight(containerHeight: number): number {
+    private calculateElementHeight(containerHeight: number): number {
         let height = this.intrinsicSize.height;
         if (typeof this.layoutConfig.height === 'string' && this.layoutConfig.height.endsWith('%')) {
             height = containerHeight * (parseFloat(this.layoutConfig.height) / 100);
@@ -2516,58 +2346,59 @@ export abstract class LayoutElement {
         return height;
     }
 
-    private _calculateInitialPosition(
+    private calculateInitialPosition(
         elementsMap: Map<string, LayoutElement>, 
         containerWidth: number, 
         containerHeight: number,
         elementWidth: number,
         elementHeight: number
     ): { x: number, y: number } {
-        let x = 0;
-        let y = 0;
-
         const anchorConfig = this.layoutConfig.anchor;
         const anchorTo = anchorConfig?.anchorTo;
         const anchorPoint = anchorConfig?.anchorPoint || 'topLeft';
         const targetAnchorPoint = anchorConfig?.targetAnchorPoint || 'topLeft';
 
+        let x = 0;
+        let y = 0;
+
         if (!anchorTo || anchorTo === 'container') {
-            const { x: elementX, y: elementY } = this._anchorToContainer(
-                anchorPoint, 
-                targetAnchorPoint, 
-                elementWidth, 
-                elementHeight, 
-                containerWidth, 
+            const { x: elementX, y: elementY } = this.anchorToContainer(
+                anchorPoint,
+                targetAnchorPoint,
+                elementWidth,
+                elementHeight,
+                containerWidth,
                 containerHeight
             );
             x = elementX;
             y = elementY;
         } else {
-            const result = this._anchorToElement(
-                anchorTo, 
-                anchorPoint, 
-                targetAnchorPoint, 
-                elementWidth, 
-                elementHeight, 
+            const result = this.anchorToElement(
+                anchorTo,
+                anchorPoint,
+                targetAnchorPoint,
+                elementWidth,
+                elementHeight,
                 elementsMap
             );
-            
+
             if (!result) {
-                this.layout.calculated = false;
-                return { x, y };
+                console.warn(`Anchor target '${anchorTo}' not found or not calculated yet.`);
+                x = 0;
+                y = 0;
+            } else {
+                x = result.x;
+                y = result.y;
             }
-            
-            x = result.x;
-            y = result.y;
         }
 
-        x += this._parseOffset(this.layoutConfig.offsetX, containerWidth);
-        y += this._parseOffset(this.layoutConfig.offsetY, containerHeight);
+        x += this.parseOffset(this.layoutConfig.offsetX, containerWidth);
+        y += this.parseOffset(this.layoutConfig.offsetY, containerHeight);
 
         return { x, y };
     }
 
-    private _anchorToContainer(
+    private anchorToContainer(
         anchorPoint: string, 
         targetAnchorPoint: string, 
         elementWidth: number, 
@@ -2575,16 +2406,16 @@ export abstract class LayoutElement {
         containerWidth: number, 
         containerHeight: number
     ): { x: number, y: number } {
-        const elementAnchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
-        const containerTargetPos = this._getRelativeAnchorPosition(targetAnchorPoint, containerWidth, containerHeight); 
-
-        const x = containerTargetPos.x - elementAnchorPos.x;
-        const y = containerTargetPos.y - elementAnchorPos.y;
-
-        return { x, y };
+        const targetPos = this.getRelativeAnchorPosition(targetAnchorPoint, containerWidth, containerHeight);
+        const elementAnchorPos = this.getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
+        
+        return {
+            x: targetPos.x - elementAnchorPos.x,
+            y: targetPos.y - elementAnchorPos.y
+        };
     }
 
-    private _anchorToElement(
+    private anchorToElement(
         anchorTo: string,
         anchorPoint: string,
         targetAnchorPoint: string,
@@ -2594,39 +2425,39 @@ export abstract class LayoutElement {
     ): { x: number, y: number } | null {
         const targetElement = elementsMap.get(anchorTo);
         if (!targetElement || !targetElement.layout.calculated) {
-            console.warn(`[${this.id}] Anchor target '${anchorTo}' not found or not calculated yet.`);
             return null;
         }
 
-        const elementAnchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
-        const targetElementPos = targetElement._getRelativeAnchorPosition(targetAnchorPoint);
+        const targetLayout = targetElement.layout;
+        const targetPos = this.getRelativeAnchorPosition(targetAnchorPoint, targetLayout.width, targetLayout.height);
+        const elementAnchorPos = this.getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
 
-        const x = targetElement.layout.x + targetElementPos.x - elementAnchorPos.x;
-        const y = targetElement.layout.y + targetElementPos.y - elementAnchorPos.y;
-
-        return { x, y };
+        return {
+            x: targetLayout.x + targetPos.x - elementAnchorPos.x,
+            y: targetLayout.y + targetPos.y - elementAnchorPos.y
+        };
     }
 
-    private _applyStretchConfigurations(context: StretchContext): void {
+    private applyStretchConfigurations(context: StretchContext): void {
         const stretchConfig = this.layoutConfig.stretch;
         if (!stretchConfig) return;
-        
-        this._processSingleStretch(
-            stretchConfig.stretchTo1, 
-            stretchConfig.targetStretchAnchorPoint1, 
+
+        this.processSingleStretch(
+            stretchConfig.stretchTo1,
+            stretchConfig.targetStretchAnchorPoint1,
             stretchConfig.stretchPadding1,
             context
         );
 
-        this._processSingleStretch(
-            stretchConfig.stretchTo2, 
-            stretchConfig.targetStretchAnchorPoint2, 
+        this.processSingleStretch(
+            stretchConfig.stretchTo2,
+            stretchConfig.targetStretchAnchorPoint2,
             stretchConfig.stretchPadding2,
             context
         );
     }
 
-    private _finalizeLayout(x: number, y: number, width: number, height: number): void {
+    private finalizeLayout(x: number, y: number, width: number, height: number): void {
         this.layout.x = x;
         this.layout.y = y;
         this.layout.width = Math.max(1, width);
@@ -2634,103 +2465,119 @@ export abstract class LayoutElement {
         this.layout.calculated = true;
     }
 
-    private _processSingleStretch(
+    private processSingleStretch(
         stretchTo: string | undefined, 
         targetStretchAnchorPoint: string | undefined, 
         stretchPadding: number | undefined,
         context: StretchContext
     ): void {
         if (!stretchTo || !targetStretchAnchorPoint) return;
-        
-        const padding = stretchPadding ?? 0;
-        const isHorizontal = this._isHorizontalStretch(targetStretchAnchorPoint);
-        
+
+        const padding = stretchPadding || 0;
+        const isHorizontal = this.stretchIsHorizontal(targetStretchAnchorPoint);
+
         if (isHorizontal) {
-            this._applyHorizontalStretch(context, stretchTo, targetStretchAnchorPoint, padding);
+            this.applyHorizontalStretch(context, stretchTo, targetStretchAnchorPoint, padding);
         } else {
-            this._applyVerticalStretch(context, stretchTo, targetStretchAnchorPoint, padding);
+            this.applyVerticalStretch(context, stretchTo, targetStretchAnchorPoint, padding);
         }
     }
 
-    private _isHorizontalStretch(targetStretchAnchorPoint: string): boolean {
-        return ['left', 'right'].some(dir => targetStretchAnchorPoint.toLowerCase().includes(dir));
+    private stretchIsHorizontal(targetStretchAnchorPoint: string): boolean {
+        return ['left', 'right', 'centerLeft', 'centerRight'].includes(targetStretchAnchorPoint);
     }
 
-    private _applyHorizontalStretch(
+    private applyHorizontalStretch(
         context: StretchContext,
         stretchTo: string,
         targetStretchAnchorPoint: string,
         padding: number
     ): void {
-        const { x: stretchedX, size: stretchedWidth } = this._applyStretch(
-            context.x, 
-            context.width, 
-            true,
-            stretchTo,
-            targetStretchAnchorPoint,
-            padding,
-            context.elementsMap,
+        const targetCoord = this.getTargetCoordinate(
+            stretchTo, 
+            targetStretchAnchorPoint, 
+            true, 
+            context.elementsMap, 
             context.containerWidth
         );
-        
-        if (stretchedX !== undefined) context.x = stretchedX;
-        context.width = stretchedWidth;
+
+        if (targetCoord !== null) {
+            const result = this.applyStretch(
+                context.x, 
+                context.width, 
+                true,
+                stretchTo,
+                targetStretchAnchorPoint,
+                padding,
+                context.elementsMap,
+                context.containerWidth
+            );
+            context.x = result.x !== undefined ? result.x : context.x;
+            context.width = result.size;
+        }
     }
 
-    private _applyVerticalStretch(
+    private applyVerticalStretch(
         context: StretchContext,
         stretchTo: string,
         targetStretchAnchorPoint: string,
         padding: number
     ): void {
-        const { y: stretchedY, size: stretchedHeight } = this._applyStretch(
-            context.y, 
-            context.height, 
-            false,
-            stretchTo,
-            targetStretchAnchorPoint,
-            padding,
-            context.elementsMap,
+        const targetCoord = this.getTargetCoordinate(
+            stretchTo, 
+            targetStretchAnchorPoint, 
+            false, 
+            context.elementsMap, 
             context.containerHeight
         );
-        
-        if (stretchedY !== undefined) context.y = stretchedY;
-        context.height = stretchedHeight;
+
+        if (targetCoord !== null) {
+            const result = this.applyStretch(
+                context.y, 
+                context.height, 
+                false,
+                stretchTo,
+                targetStretchAnchorPoint,
+                padding,
+                context.elementsMap,
+                context.containerHeight
+            );
+            context.y = result.y !== undefined ? result.y : context.y;
+            context.height = result.size;
+        }
     }
 
-    private _getTargetCoordinate(
+    private getTargetCoordinate(
         stretchTargetId: string, 
         targetAnchorPoint: string, 
         isHorizontal: boolean,
         elementsMap: Map<string, LayoutElement>,
         containerSize: number
     ): number | null {
-        if (stretchTargetId === 'container') {
-            return this._getContainerEdgeCoordinate(targetAnchorPoint, isHorizontal, containerSize);
+        if (stretchTargetId === 'container' || stretchTargetId === 'canvas') {
+            return this.getContainerEdgeCoordinate(targetAnchorPoint, isHorizontal, containerSize);
         } else {
-            return this._getElementEdgeCoordinate(stretchTargetId, targetAnchorPoint, isHorizontal, elementsMap);
+            return this.getElementEdgeCoordinate(stretchTargetId, targetAnchorPoint, isHorizontal, elementsMap);
         }
     }
 
-    private _getContainerEdgeCoordinate(
+    private getContainerEdgeCoordinate(
         targetAnchorPoint: string, 
         isHorizontal: boolean, 
         containerSize: number
     ): number {
-        if (isHorizontal) {
-            if (targetAnchorPoint === 'left' || targetAnchorPoint.includes('Left')) return 0;
-            if (targetAnchorPoint === 'right' || targetAnchorPoint.includes('Right')) return containerSize;
-            if (targetAnchorPoint === 'center' || targetAnchorPoint.includes('Center')) return containerSize / 2;
-            return containerSize;
-        } else {
-            if (targetAnchorPoint === 'top' || targetAnchorPoint.includes('Top')) return 0;
-            if (targetAnchorPoint === 'bottom' || targetAnchorPoint.includes('Bottom')) return containerSize;
-            if (targetAnchorPoint === 'center' || targetAnchorPoint.includes('Center')) return containerSize / 2;
-            return containerSize;
-        }
+        const mappedAnchorPoint = this.mapSimpleDirectionToAnchorPoint(targetAnchorPoint, isHorizontal);
+        
+        const position = this.getRelativeAnchorPosition(
+            mappedAnchorPoint, 
+            isHorizontal ? containerSize : 0, 
+            isHorizontal ? 0 : containerSize
+        );
+        
+        return isHorizontal ? position.x : position.y;
     }
 
-    private _getElementEdgeCoordinate(
+    private getElementEdgeCoordinate(
         stretchTargetId: string,
         targetAnchorPoint: string,
         isHorizontal: boolean,
@@ -2738,32 +2585,31 @@ export abstract class LayoutElement {
     ): number | null {
         const targetElement = elementsMap.get(stretchTargetId);
         if (!targetElement || !targetElement.layout.calculated) {
-            console.warn(`[${this.id}] Stretch target '${stretchTargetId}' not found or not calculated yet.`);
-            return null; 
+            console.warn(`Stretch target '${stretchTargetId}' not found or not calculated yet.`);
+            return null;
         }
+
+        const targetLayout = targetElement.layout;
+        const mappedAnchorPoint = this.mapSimpleDirectionToAnchorPoint(targetAnchorPoint, isHorizontal);
+        const relativePos = this.getRelativeAnchorPosition(mappedAnchorPoint, targetLayout.width, targetLayout.height);
         
-        const anchorPointToUse = this._mapSimpleDirectionToAnchorPoint(targetAnchorPoint, isHorizontal);
-        const targetRelativePos = targetElement._getRelativeAnchorPosition(anchorPointToUse);
-        
-        return isHorizontal
-            ? targetElement.layout.x + targetRelativePos.x
-            : targetElement.layout.y + targetRelativePos.y;
+        return isHorizontal 
+            ? targetLayout.x + relativePos.x 
+            : targetLayout.y + relativePos.y;
     }
 
-    private _mapSimpleDirectionToAnchorPoint(direction: string, isHorizontal: boolean): string {
-        if (isHorizontal) {
-            if (direction === 'left') return 'centerLeft';
-            if (direction === 'right') return 'centerRight';
-            if (direction === 'center') return 'center';
-        } else {
-            if (direction === 'top') return 'topCenter';
-            if (direction === 'bottom') return 'bottomCenter';
-            if (direction === 'center') return 'center';
-        }
-        return direction;
+    private mapSimpleDirectionToAnchorPoint(direction: string, isHorizontal: boolean): string {
+        const mapping: Record<string, string> = {
+            'left': 'centerLeft',
+            'right': 'centerRight',
+            'top': 'topCenter',
+            'bottom': 'bottomCenter'
+        };
+        
+        return mapping[direction] || direction;
     }
 
-    private _applyStretch(
+    private applyStretch(
         initialPosition: number, 
         initialSize: number, 
         isHorizontal: boolean,
@@ -2773,30 +2619,29 @@ export abstract class LayoutElement {
         elementsMap: Map<string, LayoutElement>,
         containerSize: number
     ): { x?: number, y?: number, size: number } {
-        
-        const targetCoord = this._getTargetCoordinate(
+        const targetCoord = this.getTargetCoordinate(
             stretchTo, 
             targetAnchorPoint, 
-            isHorizontal, 
-            elementsMap, 
+            isHorizontal,
+            elementsMap,
             containerSize
         );
 
         if (targetCoord === null) {
-            return isHorizontal ? { x: initialPosition, size: initialSize } : { y: initialPosition, size: initialSize };
+            return { size: initialSize };
         }
 
-        const myAnchorPoint = this._getAnchorAwareStretchEdge(initialPosition, initialSize, targetCoord, isHorizontal);
-        const myRelativePos = this._getRelativeAnchorPosition(myAnchorPoint, initialSize, initialSize);
+        const myAnchorPoint = this.getAnchorAwareStretchEdge(initialPosition, initialSize, targetCoord, isHorizontal);
+        const myRelativePos = this.getRelativeAnchorPosition(myAnchorPoint, initialSize, initialSize);
         const currentCoord = initialPosition + (isHorizontal ? myRelativePos.x : myRelativePos.y);
         
         let delta = targetCoord - currentCoord;
-        delta = this._applyPadding(delta, myAnchorPoint, padding, containerSize);
-        
-        const result = this._applyStretchToEdge(
-            initialPosition, 
-            initialSize, 
-            delta, 
+        delta = this.applyPadding(delta, myAnchorPoint, padding, containerSize);
+
+        const result = this.applyStretchToEdge(
+            initialPosition,
+            initialSize,
+            delta,
             myAnchorPoint, 
             isHorizontal
         );
@@ -2804,13 +2649,13 @@ export abstract class LayoutElement {
         return result;
     }
 
-    private _applyPadding(
+    private applyPadding(
         delta: number, 
         anchorPoint: string, 
         padding: number, 
         containerSize: number
     ): number {
-        const paddingOffset = this._parseOffset(padding, containerSize);
+        const paddingOffset = this.parseOffset(padding, containerSize);
         
         if (anchorPoint.includes('Left') || anchorPoint.includes('Top')) {
             return delta - paddingOffset;
@@ -2819,7 +2664,7 @@ export abstract class LayoutElement {
         }
     }
 
-    private _applyStretchToEdge(
+    private applyStretchToEdge(
         initialPosition: number,
         initialSize: number,
         delta: number,
@@ -2828,7 +2673,7 @@ export abstract class LayoutElement {
     ): { x?: number, y?: number, size: number } {
         let newPosition = initialPosition;
         let newSize = initialSize;
-        
+
         if (isHorizontal) {
             if (anchorPoint === 'centerRight') {
                 newSize += delta;
@@ -2862,78 +2707,65 @@ export abstract class LayoutElement {
         }
     }
 
-    private _getAnchorAwareStretchEdge(
+    private getAnchorAwareStretchEdge(
         initialPosition: number, 
         initialSize: number, 
         targetCoord: number, 
         isHorizontal: boolean
     ): string {
-        // Check if this element has an anchor configuration
         const anchorConfig = this.layoutConfig.anchor;
         
         if (anchorConfig?.anchorTo && anchorConfig.anchorTo !== 'container') {
-            // Element is anchored to another element - preserve the anchored edge
             const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
-            
+
             if (isHorizontal) {
-                // If anchored on the right side, stretch from left
                 if (anchorPoint.includes('Right')) {
                     return 'centerLeft';
                 }
-                // If anchored on the left side, stretch from right  
                 if (anchorPoint.includes('Left')) {
                     return 'centerRight';
                 }
-                // If anchored in center, use target-based logic
-                return this._getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
+                return this.getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
             } else {
-                // If anchored at the bottom, stretch from top
                 if (anchorPoint.includes('bottom')) {
                     return 'topCenter';
                 }
-                // If anchored at the top, stretch from bottom
                 if (anchorPoint.includes('top')) {
                     return 'bottomCenter';
                 }
-                // If anchored in center, use target-based logic
-                return this._getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
+                return this.getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
             }
         }
         
-        // For elements anchored to container or without anchors, use target-based logic
-        return this._getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
+        return this.getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
     }
 
-    private _getTargetBasedStretchEdge(
+    private getTargetBasedStretchEdge(
         initialPosition: number,
         targetCoord: number,
         isHorizontal: boolean
     ): string {
-        // Determine stretch direction based on target position relative to element position
-        // This works regardless of element size and is more predictable
-        if (isHorizontal) {
-            return targetCoord > initialPosition ? 'centerRight' : 'centerLeft';
-        } else {
-            return targetCoord > initialPosition ? 'bottomCenter' : 'topCenter';
-        }
+        return targetCoord > initialPosition ? 
+            (isHorizontal ? 'centerRight' : 'bottomCenter') : 
+            (isHorizontal ? 'centerLeft' : 'topCenter');
     }
 
-    private _parseOffset(offset: string | number | undefined, containerDimension: number): number {
+    private parseOffset(offset: string | number | undefined, containerDimension: number): number {
         if (offset === undefined) return 0;
         if (typeof offset === 'number') return offset;
-        if (typeof offset === 'string') {
-            if (offset.endsWith('%')) {
-                return (parseFloat(offset) / 100) * containerDimension;
-            }
-            return parseFloat(offset);
+        
+        if (typeof offset === 'string' && offset.endsWith('%')) {
+            const percentage = parseFloat(offset.slice(0, -1));
+            return (percentage / 100) * containerDimension;
         }
-        return 0;
+        
+        return parseFloat(offset as string) || 0;
     }
 
-    _getRelativeAnchorPosition(anchorPoint: string, width?: number, height?: number): { x: number; y: number } {
+    public getRelativeAnchorPosition(anchorPoint: string, width?: number, height?: number): { x: number; y: number } {
         const w = width !== undefined ? width : this.layout.width;
         const h = height !== undefined ? height : this.layout.height;
-        
+
         switch (anchorPoint) {
             case 'topLeft': return { x: 0, y: 0 };
             case 'topCenter': return { x: w / 2, y: 0 };
@@ -2944,51 +2776,25 @@ export abstract class LayoutElement {
             case 'bottomLeft': return { x: 0, y: h };
             case 'bottomCenter': return { x: w / 2, y: h };
             case 'bottomRight': return { x: w, y: h };
-            default: 
+            default:
                 console.warn(`Unknown anchor point: ${anchorPoint}. Defaulting to topLeft.`);
                 return { x: 0, y: 0 };
         }
     }
 
-    /**
-     * Abstract method for elements to render their basic shape/path
-     * Elements should implement this to return just their shape without text
-     */
     protected abstract renderShape(): SVGTemplateResult | null;
 
-    /**
-     * Renders the complete element, including its shape and any associated text,
-     * wrapped in a group element with the main element ID. This group is the target
-     * for all interactive event listeners.
-     */
     render(): SVGTemplateResult | null {
-        if (!this.layout.calculated) {
-            return null;
-        }
+        if (!this.layout.calculated) return null;
 
-        // TextElement is a special case that handles its own rendering, as it IS the text.
-        if (this.constructor.name === 'TextElement') {
-            return this.renderShape();
-        }
-
+        const colors = this.resolveElementColors();
         const shape = this.renderShape();
 
-        // The _renderText method handles the logic for rendering text for both button and non-button elements.
-        const textElement = this._hasText() 
-            ? this._renderText(
-                this._getTextPosition().x, 
-                this._getTextPosition().y, 
-                this._resolveElementColors()
-              )
-            : null;
+        if (!shape) return null;
 
-        // If there's no shape and no text, render nothing.
-        if (!shape && !textElement) {
-            return null;
-        }
+        const textPosition = this.getTextPosition();
+        const textElement = this.renderText(textPosition.x, textPosition.y, colors);
 
-        // Consistently wrap the element's shape and text in a single <g> tag.
-        // This ensures a reliable target for attaching interactive event listeners.
         return svg`
             <g id="${this.id}">
                 ${shape}
@@ -3002,10 +2808,7 @@ export abstract class LayoutElement {
         animationManager.animateElementProperty(this.id, property, value, duration, this.getShadowElement);
     }
 
-    /**
-     * Resolve and animate color if it's dynamic, return color for template
-     */
-    protected _resolveDynamicColorWithAnimation(colorConfig: ColorValue, property: 'fill' | 'stroke' = 'fill'): string | undefined {
+    protected resolveDynamicColorWithAnimation(colorConfig: ColorValue, property: 'fill' | 'stroke' = 'fill'): string | undefined {
         const context: AnimationContext = {
             elementId: this.id,
             getShadowElement: this.getShadowElement,
@@ -3016,11 +2819,7 @@ export abstract class LayoutElement {
         return colorResolver.resolveColor(colorConfig, this.id, property, context, undefined, 'transparent');
     }
 
-    /**
-     * Resolve all element colors (fill, stroke, strokeWidth) with animation support
-     * This is the preferred method for getting all colors at once
-     */
-    protected _resolveElementColors(options: ColorResolutionDefaults = {}): ComputedElementColors {
+    protected resolveElementColors(options: ColorResolutionDefaults = {}): ComputedElementColors {
         const context: AnimationContext = {
             elementId: this.id,
             getShadowElement: this.getShadowElement,
@@ -3028,17 +2827,12 @@ export abstract class LayoutElement {
             requestUpdateCallback: this.requestUpdateCallback
         };
         
-        // Pass the element's current interactive state context
-        const stateContext = this._getStateContext();
+        const stateContext = this.getStateContext();
         
         return colorResolver.resolveAllElementColors(this.id, this.props, context, options, stateContext);
     }
 
-    /**
-     * Create resolved props for button elements
-     * This handles the common pattern where buttons need a modified props object
-     */
-    protected _createResolvedPropsForButton(): any {
+    protected createResolvedPropsForButton(): any {
         const context: AnimationContext = {
             elementId: this.id,
             getShadowElement: this.getShadowElement,
@@ -3046,37 +2840,29 @@ export abstract class LayoutElement {
             requestUpdateCallback: this.requestUpdateCallback
         };
         
-        // Pass the element's current interactive state context
-        const stateContext = this._getStateContext();
+        const stateContext = this.getStateContext();
         
         return colorResolver.createButtonPropsWithResolvedColors(this.id, this.props, context, stateContext);
     }
 
-    /**
-     * Resolve a color value that might be static or dynamic (entity-based)
-     */
-    protected _resolveDynamicColor(colorConfig: ColorValue): string | undefined {
+    protected resolveDynamicColor(colorConfig: ColorValue): string | undefined {
         return colorResolver.resolveColor(colorConfig, this.id, undefined, undefined, undefined, 'transparent');
     }
 
-    /**
-     * Check if any monitored entities have changed and trigger update if needed
-     */
-    public checkEntityChanges(hass: HomeAssistant): boolean {
+    public entityChangesDetected(hass: HomeAssistant): boolean {
         if (!hass) return false;
 
         let changed = false;
 
-        // Cache object for last resolved dynamic colours (per element instance)
-        if (!(this as any)._lastResolvedDynamicColors) {
-            (this as any)._lastResolvedDynamicColors = {
+        if (!(this as any).lastResolvedDynamicColors) {
+            (this as any).lastResolvedDynamicColors = {
                 fill: undefined,
                 stroke: undefined,
                 textColor: undefined
             };
         }
 
-        const cache = (this as any)._lastResolvedDynamicColors as Record<string, string | undefined>;
+        const cache = (this as any).lastResolvedDynamicColors as Record<string, string | undefined>;
 
         const animationContext: any = {
             elementId: this.id,
@@ -3085,13 +2871,12 @@ export abstract class LayoutElement {
             requestUpdateCallback: this.requestUpdateCallback
         };
 
-        const stateContext = this._getStateContext();
+        const stateContext = this.getStateContext();
 
         const checkProp = (propName: 'fill' | 'stroke' | 'textColor') => {
             const value = (this.props as any)[propName];
             if (value === undefined) return;
 
-            // Only evaluate dynamic or stateful configs – static colours cannot change
             if (typeof value === 'object') {
                 const resolved = colorResolver.resolveColor(value, this.id, propName as any, animationContext, stateContext, 'transparent');
                 if (cache[propName] !== resolved) {
@@ -3108,17 +2893,6 @@ export abstract class LayoutElement {
         return changed;
     }
 
-    /**
-     * Clear monitored entities (called before recalculating dynamic colors)
-     */
-    public clearMonitoredEntities(): void {
-        // Entity monitoring is now handled by ColorResolver
-        // This is a placeholder for backward compatibility
-    }
-
-    /**
-     * Clean up any ongoing animations
-     */
     public cleanupAnimations(): void {
         animationManager.stopAllAnimationsForElement(this.id);
     }
@@ -3130,59 +2904,43 @@ export abstract class LayoutElement {
         }
     }
 
-    /**
-     * Clean up all element resources including interactive listeners
-     */
     cleanup(): void {
-        this._cleanupInteractiveListeners();
+        this.cleanupInteractiveListeners();
         
-        // Clear any pending timeouts
-        if (this._hoverTimeout) {
-            clearTimeout(this._hoverTimeout);
-            this._hoverTimeout = undefined;
+        if (this.hoverTimeout) {
+            clearTimeout(this.hoverTimeout);
+            this.hoverTimeout = undefined;
         }
-        if (this._activeTimeout) {
-            clearTimeout(this._activeTimeout);
-            this._activeTimeout = undefined;
+        if (this.activeTimeout) {
+            clearTimeout(this.activeTimeout);
+            this.activeTimeout = undefined;
         }
         
-        // Clean up button if it exists
         if (this.button) {
             this.button.cleanup();
         }
         
-        // Clean up animations
         this.cleanupAnimations();
     }
 
-    /**
-     * Checks if the element has text to render
-     */
-    protected _hasNonButtonText(): boolean {
+    protected nonButtonTextExists(): boolean {
         return Boolean(this.props.text && this.props.text.trim() !== '');
     }
 
-    /**
-     * Renders text for non-button elements with standard positioning
-     * @param x - X position for text
-     * @param y - Y position for text  
-     * @param colors - Resolved colors for the element
-     * @returns SVG text element or null if no text
-     */
-    protected _renderNonButtonText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
-        if (!this._hasNonButtonText()) return null;
+    protected renderNonButtonText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
+        if (!this.nonButtonTextExists()) return null;
 
         return svg`
           <text
-            x=${x}
-            y=${y}
-            fill=${colors.textColor}
-            font-family=${this.props.fontFamily || 'sans-serif'}
-            font-size=${`${this.props.fontSize || 16}px`}
-            font-weight=${this.props.fontWeight || 'normal'}
-            letter-spacing=${this.props.letterSpacing || 'normal'}
-            text-anchor=${this.props.textAnchor || 'middle'}
-            dominant-baseline=${this.props.dominantBaseline || 'middle'}
+            x="${x}"
+            y="${y}"
+            fill="${colors.textColor}"
+            font-family="${this.props.fontFamily || 'sans-serif'}"
+            font-size="${this.props.fontSize || 16}px"
+            font-weight="${this.props.fontWeight || 'normal'}"
+            letter-spacing="${this.props.letterSpacing || 'normal'}"
+            text-anchor="${this.props.textAnchor || 'middle'}"
+            dominant-baseline="${this.props.dominantBaseline || 'middle'}"
             style="pointer-events: none; text-transform: ${this.props.textTransform || 'none'};"
           >
             ${this.props.text}
@@ -3190,77 +2948,48 @@ export abstract class LayoutElement {
         `;
     }
 
-    /**
-     * Gets the default text position for standard elements
-     * Considers textAnchor to position text relative to element edges
-     * @returns Object with x and y coordinates for text positioning
-     */
-    protected _getDefaultTextPosition(): { x: number, y: number } {
+    protected getDefaultTextPosition(): { x: number, y: number } {
         const { x, y, width, height } = this.layout;
         const textAnchor = this.props.textAnchor || 'middle';
         
         let textX: number;
         
-        // Calculate X position based on textAnchor
         switch (textAnchor) {
             case 'start':
-                // Left-align text to the left edge of the element
                 textX = x;
                 break;
             case 'end':
-                // Right-align text to the right edge of the element  
                 textX = x + width;
                 break;
             case 'middle':
             default:
-                // Center text in the middle of the element
                 textX = x + width / 2;
                 break;
         }
         
-        // Y position remains centered vertically
         return {
             x: textX,
             y: y + height / 2
         };
     }
 
-    /**
-     * Gets the text position for the element, allowing custom positioning logic
-     * This method can be overridden by specific elements like Elbow
-     * @returns Object with x and y coordinates for text positioning
-     */
-    protected _getTextPosition(): { x: number, y: number } {
-        return this._getDefaultTextPosition();
+    protected getTextPosition(): { x: number, y: number } {
+        return this.getDefaultTextPosition();
     }
 
-    /**
-     * Checks if the element has text to render
-     */
-    protected _hasText(): boolean {
-        return this._hasNonButtonText();
+    protected textExists(): boolean {
+        return this.nonButtonTextExists();
     }
 
-    /**
-     * Renders text for the element
-     * @param x - X position for text
-     * @param y - Y position for text
-     * @param colors - Resolved colors for the element
-     * @returns SVG text element or null if no text
-     */
-    protected _renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
-        return this._renderNonButtonText(x, y, colors);
+    protected renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
+        return this.renderNonButtonText(x, y, colors);
     }
 
-    private _hasButtonConfig(): boolean {
+    private buttonConfigExists(): boolean {
         return Boolean(this.props.button?.enabled);
     }
 
-    private _hasVisibilityTriggers(): boolean {
-        return Boolean(this.props.visibility_triggers);
-    }
-
-    private _hasAnimations(): boolean {
+    private animationsExist(): boolean {
         return Boolean(this.props.animations);
     }
 }
@@ -3272,108 +3001,95 @@ export abstract class LayoutElement {
 import { LayoutElement } from "./element.js";
 import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant } from "custom-card-helpers";
-import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
-import { generateEndcapPath } from "../../utils/shapes.js";
+import { ShapeGenerator } from "../../utils/shapes.js";
+import { Button } from "../../utils/button.js";
 
 export class EndcapElement extends LayoutElement {
+    button?: Button;
+
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
-        this.resetLayout();
-        this.intrinsicSize = { width: 0, height: 0, calculated: false };
     }
   
     calculateIntrinsicSize(container: SVGElement): void {
-      this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 40;
-      
-      this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 0; 
-      
-      this.intrinsicSize.calculated = true;
+        this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 40;
+        this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 0; 
+        this.intrinsicSize.calculated = true;
     }
   
     canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-      // Check if we have zero height and anchor configuration
-      if (this.intrinsicSize.height === 0 && this.layoutConfig.anchor?.anchorTo) {
-        const anchorElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
-        // If anchor target doesn't exist or is not calculated, return false
-        if (!anchorElement || !anchorElement.layout.calculated) {
-          // IMPORTANT: Still call super to track dependencies properly
-          super.canCalculateLayout(elementsMap, dependencies);
-          return false;
+        if (this.heightRequiresAnchoredCalculation() && this.layoutConfig.anchor?.anchorTo) {
+            const anchorElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
+            if (!anchorElement || !anchorElement.layout.calculated) {
+                super.canCalculateLayout(elementsMap, dependencies);
+                return false;
+            }
         }
-      }
-      // Call super with the dependencies array
-      return super.canCalculateLayout(elementsMap, dependencies); 
+        return super.canCalculateLayout(elementsMap, dependencies); 
     }
   
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
-      if (this.intrinsicSize.height === 0 && this.layoutConfig.anchor?.anchorTo) {
-        const anchorElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
-        if (anchorElement && anchorElement.layout.calculated) { 
-          // IMPORTANT: Modify the height used for this specific layout calculation
-          // Store the original height so we can restore it later
-          const originalLayoutHeight = this.layoutConfig.height;
-          
-          // Set the layoutConfig height to match the anchor element height
-          this.layoutConfig.height = anchorElement.layout.height;
-          
-          // Call super to do the actual layout calculation
-          super.calculateLayout(elementsMap, containerRect);
-          
-          // Restore the original height
-          this.layoutConfig.height = originalLayoutHeight;
-          return;
+        if (this.heightRequiresAnchoredCalculation() && this.layoutConfig.anchor?.anchorTo) {
+            const anchorElement = elementsMap.get(this.layoutConfig.anchor.anchorTo);
+            if (anchorElement?.layout.calculated) { 
+                this.calculateLayoutWithAnchoredHeight(anchorElement, elementsMap, containerRect);
+                return;
+            }
         }
-      }
-      
-      // If we didn't need to adjust height or couldn't find anchor, just call super
-      super.calculateLayout(elementsMap, containerRect);
+        
+        super.calculateLayout(elementsMap, containerRect);
+    }
+
+    private heightRequiresAnchoredCalculation(): boolean {
+        return this.intrinsicSize.height === 0;
+    }
+
+    private calculateLayoutWithAnchoredHeight(anchorElement: LayoutElement, elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
+        const originalLayoutHeight = this.layoutConfig.height;
+        this.layoutConfig.height = anchorElement.layout.height;
+        super.calculateLayout(elementsMap, containerRect);
+        this.layoutConfig.height = originalLayoutHeight;
     }
   
     renderShape(): SVGTemplateResult | null {
-      if (!this.layout.calculated || this.layout.height <= 0 || this.layout.width <= 0) return null;
-  
-      const { x, y, width, height } = this.layout;
-      const direction = (this.props.direction || 'left') as 'left' | 'right';
-  
-      const pathData = generateEndcapPath(width, height, direction, x, y);
-  
-      if (!pathData) return null;
-      
-      const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
-      const isButton = Boolean(buttonConfig?.enabled);
-      
-      if (isButton && this.button) {
-        const stateContext = this._getStateContext();
-        // Let the button handle its own color resolution with current state
-        return this.button.createButton(
-          pathData,
-          x,
-          y,
-          width,
-          height,
-          {
-            rx: 0
-          },
-          stateContext
-        );
-      } else {
-        // Non-button rendering: return just the path. 
-        // LayoutElement.render() will wrap this path and any text in a <g id="${this.id}">.
-        const colors = this._resolveElementColors();
+        if (!this.layout.calculated || !this.dimensionsAreValid()) {
+            return null;
+        }
+
+        const { x, y, width, height } = this.layout;
+        const direction = (this.props.direction || 'left') as 'left' | 'right';
+        const pathData = ShapeGenerator.generateEndcap(width, height, direction, x, y);
+
+        if (!pathData) {
+            return null;
+        }
         
-        return svg`
-          <path
-            id="${this.id}__shape"
-            d=${pathData}
-            fill=${colors.fillColor}
-            stroke=${colors.strokeColor}
-            stroke-width=${colors.strokeWidth}
-          />
-        `;
-      }
+        return this.renderPathWithButtonSupport(pathData, x, y, width, height);
     }
-  }
+
+    private dimensionsAreValid(): boolean {
+        return this.layout.width > 0 && this.layout.height > 0;
+    }
+
+    private renderPathWithButtonSupport(pathData: string, x: number, y: number, width: number, height: number): SVGTemplateResult {
+        if (this.button) {
+            const stateContext = this.getStateContext();
+            return this.button.createButton(pathData, x, y, width, height, { rx: 0 }, stateContext);
+        }
+
+        const colors = this.resolveElementColors();
+        return svg`
+            <path
+                id="${this.id}__shape"
+                d=${pathData}
+                fill=${colors.fillColor}
+                stroke=${colors.strokeColor}
+                stroke-width=${colors.strokeWidth}
+            />
+        `;
+    }
+}
 ```
 
 ## File: src/layout/elements/rectangle.ts
@@ -3384,7 +3100,7 @@ import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant } from "custom-card-helpers";
 import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
-import { generateRectanglePath } from "../../utils/shapes.js";
+import { ShapeGenerator } from "../../utils/shapes.js";
 import { Button } from "../../utils/button.js";
 
 export class RectangleElement extends LayoutElement {
@@ -3392,7 +3108,6 @@ export class RectangleElement extends LayoutElement {
 
   constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
     super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
-    this.resetLayout();
   }
 
   /**
@@ -3400,64 +3115,54 @@ export class RectangleElement extends LayoutElement {
    * @returns The SVG path element.
    */
   renderShape(): SVGTemplateResult | null {
-    if (!this.layout.calculated) return null;
+    if (!this.layout.calculated) {
+      return null;
+    }
 
     const { x, y, width, height } = this.layout;
     
-    // Check for zero dimensions and return a minimal path
-    if (width <= 0 || height <= 0) {
-      // This path won't be seen, ID is not critical, but avoid using this.id
-      return svg`
-          <path
-            id="${this.id}__shape_placeholder"
-            d="M ${x.toFixed(3)},${y.toFixed(3)} L ${x.toFixed(3)},${y.toFixed(3)} L ${x.toFixed(3)},${y.toFixed(3)} L ${x.toFixed(3)},${y.toFixed(3)} Z"
-            fill="none"
-            stroke="none"
-            stroke-width="0"
-          />
-        `;
+    if (!this.dimensionsAreValid()) {
+      return this.createPlaceholderPath(x, y);
     }
     
-    const buttonConfig = this.props.button as LcarsButtonElementConfig | undefined;
-    const isButton = Boolean(buttonConfig?.enabled);
+    const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
+    const pathData = ShapeGenerator.generateRectangle(x, y, width, height, rx);
     
-    if (isButton && this.button) {
-      // Button rendering: this.button.createButton returns the <g id="${this.id}">...</g>
-      // This is the final SVG for a button element, handled by LayoutElement.render() correctly.
-      const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
-      const pathData = generateRectanglePath(x, y, width, height, rx);
-      
-      const stateContext = this._getStateContext();
+    return this.renderPathWithButtonSupport(pathData, x, y, width, height, rx);
+  }
 
-      return this.button.createButton(
-        pathData,
-        x,
-        y,
-        width,
-        height,
-        {
-          rx
-        },
-        stateContext
-      );
-    } else {
-      // Non-button rendering: return just the path. 
-      // LayoutElement.render() will wrap this path and any text in a <g id="${this.id}">.
-      // The <path> itself should NOT have id="${this.id}".
-      const colors = this._resolveElementColors();
-      const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
-      const pathData = generateRectanglePath(x, y, width, height, rx);
-      
-      return svg`
-        <path
-          id="${this.id}__shape" // Derived ID for the path itself, not the main element ID
-          d=${pathData}
-          fill=${colors.fillColor}
-          stroke=${colors.strokeColor}
-          stroke-width=${colors.strokeWidth}
-        />
-      `;
+  private dimensionsAreValid(): boolean {
+    return this.layout.width > 0 && this.layout.height > 0;
+  }
+
+  private createPlaceholderPath(x: number, y: number): SVGTemplateResult {
+    return svg`
+      <path
+        id="${this.id}__shape_placeholder"
+        d="M ${x.toFixed(3)},${y.toFixed(3)} L ${x.toFixed(3)},${y.toFixed(3)} L ${x.toFixed(3)},${y.toFixed(3)} L ${x.toFixed(3)},${y.toFixed(3)} Z"
+        fill="none"
+        stroke="none"
+        stroke-width="0"
+      />
+    `;
+  }
+
+  private renderPathWithButtonSupport(pathData: string, x: number, y: number, width: number, height: number, rx: number): SVGTemplateResult {
+    if (this.button) {
+      const stateContext = this.getStateContext();
+      return this.button.createButton(pathData, x, y, width, height, { rx }, stateContext);
     }
+
+    const colors = this.resolveElementColors();
+    return svg`
+      <path
+        id="${this.id}__shape"
+        d=${pathData}
+        fill=${colors.fillColor}
+        stroke=${colors.strokeColor}
+        stroke-width=${colors.strokeWidth}
+      />
+    `;
   }
 }
 ```
@@ -3488,8 +3193,10 @@ vi.mock('../../../utils/button.js', () => {
 // Mock the shapes utility - IMPORTANT: add .js extension to match the import in the actual file
 vi.mock('../../../utils/shapes.js', () => {
   return {
-    generateChiselEndcapPath: vi.fn().mockImplementation((width, height, direction, offsetX, offsetY): string | null => 
-      `MOCK_PATH_chisel_${direction}_${width}x${height}_at_${offsetX},${offsetY}`)
+    ShapeGenerator: {
+      generateChiselEndcap: vi.fn().mockImplementation((width, height, direction, offsetX, offsetY): string | null => 
+        `MOCK_PATH_chisel_${direction}_${width}x${height}_at_${offsetX},${offsetY}`)
+    }
   };
 });
 
@@ -3498,7 +3205,7 @@ import { ChiselEndcapElement } from '../chisel_endcap';
 import { Button } from '../../../utils/button.js';
 import { LayoutElement } from '../element.js';
 import { RectangleElement } from '../rectangle';
-import { generateChiselEndcapPath } from '../../../utils/shapes.js';
+import { ShapeGenerator } from '../../../utils/shapes.js';
 import { svg, SVGTemplateResult } from 'lit';
 
 describe('ChiselEndcapElement', () => {
@@ -3774,7 +3481,7 @@ describe('ChiselEndcapElement', () => {
     it('should return null if generateChiselEndcapPath returns null', () => {
       chiselEndcapElement.layout = { x: 5, y: 10, width: 40, height: 20, calculated: true };
       // Use any to bypass type checking, since we're deliberately testing a null return
-      (generateChiselEndcapPath as any).mockReturnValueOnce(null);
+      (ShapeGenerator.generateChiselEndcap as any).mockReturnValueOnce(null);
       expect(chiselEndcapElement.render()).toBeNull();
     });
 
@@ -3784,7 +3491,7 @@ describe('ChiselEndcapElement', () => {
         const result = chiselEndcapElement.render();
         expect(result).toMatchSnapshot();
 
-        expect(generateChiselEndcapPath).toHaveBeenCalledWith(40, 20, 'right', 5, 10);
+        expect(ShapeGenerator.generateChiselEndcap).toHaveBeenCalledWith(40, 20, 'right', 5, 10);
         const attrs = getPathAttributes(result);
         expect(attrs?.id).toBe('ce-render');
         expect(attrs?.fill).toBe('none');
@@ -3798,7 +3505,7 @@ describe('ChiselEndcapElement', () => {
         const result = chiselEndcapElement.render();
         expect(result).toMatchSnapshot();
         
-        expect(generateChiselEndcapPath).toHaveBeenCalledWith(40, 20, 'left', 5, 10);
+        expect(ShapeGenerator.generateChiselEndcap).toHaveBeenCalledWith(40, 20, 'left', 5, 10);
       });
 
       it('should render with specified fill, stroke, strokeWidth from props', () => {
@@ -3817,7 +3524,7 @@ describe('ChiselEndcapElement', () => {
     describe('Button Rendering', () => {
       const mockPathData = 'MOCK_BUTTON_PATH';
       beforeEach(() => {
-        (generateChiselEndcapPath as any).mockReturnValue(mockPathData);
+        (ShapeGenerator.generateChiselEndcap as any).mockReturnValue(mockPathData);
         const props = { button: { enabled: true } };
         chiselEndcapElement = new ChiselEndcapElement('ce-render-btn', props, {}, mockHass, mockRequestUpdate);
         chiselEndcapElement.layout = { x: 10, y: 15, width: 60, height: 30, calculated: true };
@@ -3826,7 +3533,7 @@ describe('ChiselEndcapElement', () => {
       it('should call button.createButton with correct parameters for direction "right"', () => {
         chiselEndcapElement.render();
 
-        expect(generateChiselEndcapPath).toHaveBeenCalledWith(60, 30, 'right', 10, 15);
+        expect(ShapeGenerator.generateChiselEndcap).toHaveBeenCalledWith(60, 30, 'right', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
           { rx: 0 },
@@ -3838,7 +3545,7 @@ describe('ChiselEndcapElement', () => {
         chiselEndcapElement.props.direction = 'left';
         chiselEndcapElement.render();
 
-        expect(generateChiselEndcapPath).toHaveBeenCalledWith(60, 30, 'left', 10, 15);
+        expect(ShapeGenerator.generateChiselEndcap).toHaveBeenCalledWith(60, 30, 'left', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
           { rx: 0 },
@@ -3892,17 +3599,19 @@ vi.mock('../../../utils/button.js', () => ({
 }));
 
 vi.mock('../../../utils/shapes.js', () => ({
-  generateElbowPath: vi.fn().mockImplementation(
-    (x, elbowWidth, bodyWidth, armHeight, height, orientation, y, outerCornerRadius) => 
-      `MOCK_PATH_elbow_${orientation}_${elbowWidth}x${height}_body${bodyWidth}_arm${armHeight}_at_${x},${y}_r${outerCornerRadius}`
-  )
+  ShapeGenerator: {
+    generateElbow: vi.fn().mockImplementation(
+      (x, elbowWidth, bodyWidth, armHeight, height, orientation, y, outerCornerRadius) => 
+        `MOCK_PATH_elbow_${orientation}_${elbowWidth}x${height}_body${bodyWidth}_arm${armHeight}_at_${x},${y}_r${outerCornerRadius}`
+    )
+  }
 }));
 
 // Import mocked modules after mock setup
 import { ElbowElement } from '../elbow';
 import { Button } from '../../../utils/button.js';
 import { LayoutElement } from '../element.js';
-import { generateElbowPath } from '../../../utils/shapes.js';
+import { ShapeGenerator } from '../../../utils/shapes.js';
 import { svg, SVGTemplateResult } from 'lit';
 import { HomeAssistant } from 'custom-card-helpers';
 
@@ -4085,7 +3794,7 @@ describe('ElbowElement', () => {
 
     it('should return null if generateElbowPath returns null', () => {
       elbowElement.layout = { x: 5, y: 10, width: 40, height: 20, calculated: true };
-      (generateElbowPath as any).mockReturnValueOnce(null as unknown as string);
+      (ShapeGenerator.generateElbow as any).mockReturnValueOnce(null as unknown as string);
       expect(elbowElement.render()).toBeNull();
     });
 
@@ -4097,7 +3806,7 @@ describe('ElbowElement', () => {
 
         const defaultBodyWidth = 30;
         const defaultArmHeight = 30;
-        expect(generateElbowPath).toHaveBeenCalledWith(5, 100, defaultBodyWidth, defaultArmHeight, 80, 'top-left', 10, defaultArmHeight);
+        expect(ShapeGenerator.generateElbow).toHaveBeenCalledWith(5, 100, defaultBodyWidth, defaultArmHeight, 80, 'top-left', 10, defaultArmHeight);
         const attrs = getPathAttributes(result);
         expect(attrs?.id).toBe('el-render');
         expect(attrs?.fill).toBe('none');
@@ -4114,7 +3823,7 @@ describe('ElbowElement', () => {
         const result = elbowElement.render();
         expect(result).toMatchSnapshot();
 
-        expect(generateElbowPath).toHaveBeenCalledWith(0, 120, 40, 20, 90, 'bottom-right', 0, 20);
+        expect(ShapeGenerator.generateElbow).toHaveBeenCalledWith(0, 120, 40, 20, 90, 'bottom-right', 0, 20);
         const attrs = getPathAttributes(result);
         expect(attrs?.fill).toBe('red');
         expect(attrs?.stroke).toBe('blue');
@@ -4127,7 +3836,7 @@ describe('ElbowElement', () => {
           elbowElement.layout = { x: 10, y: 20, width: 100, height: 100, calculated: true };
           const result = elbowElement.render();
           expect(result).toMatchSnapshot();
-          expect(generateElbowPath).toHaveBeenCalledWith(10, 100, 30, 30, 100, orientation, 20, 30);
+          expect(ShapeGenerator.generateElbow).toHaveBeenCalledWith(10, 100, 30, 30, 100, orientation, 20, 30);
         });
       });
     });
@@ -4138,7 +3847,7 @@ describe('ElbowElement', () => {
       const propsBodyWidth = 35, propsArmHeight = 25, propsElbowWidth = 100;
 
       beforeEach(() => {
-        vi.mocked(generateElbowPath).mockReturnValue(mockPathData);
+        vi.mocked(ShapeGenerator.generateElbow).mockReturnValue(mockPathData);
         const props = {
           button: { enabled: true },
           bodyWidth: propsBodyWidth,
@@ -4151,7 +3860,7 @@ describe('ElbowElement', () => {
 
       it('should call button.createButton with correct pathData and dimensions', () => {
         elbowElement.render();
-        expect(generateElbowPath).toHaveBeenCalledWith(layoutX, propsElbowWidth, propsBodyWidth, propsArmHeight, layoutHeight, 'top-left', layoutY, propsArmHeight);
+        expect(ShapeGenerator.generateElbow).toHaveBeenCalledWith(layoutX, propsElbowWidth, propsBodyWidth, propsArmHeight, layoutHeight, 'top-left', layoutY, propsArmHeight);
         expect(elbowElement.button?.createButton).toHaveBeenCalledTimes(1);
         expect(elbowElement.button?.createButton).toHaveBeenCalledWith(
           mockPathData, layoutX, layoutY, layoutWidth, layoutHeight, // Note: layoutWidth, not propsElbowWidth
@@ -4182,7 +3891,7 @@ describe('ElbowElement', () => {
       elbowElement.render();
       
       // Should use stretchedWidth (200) not configuredWidth (100) for elbow path generation
-      expect(generateElbowPath).toHaveBeenCalledWith(10, stretchedWidth, 30, 25, 80, 'top-left', 15, 25);
+      expect(ShapeGenerator.generateElbow).toHaveBeenCalledWith(10, stretchedWidth, 30, 25, 80, 'top-left', 15, 25);
     });
 
     it('should use configured width when no stretch configuration is present', () => {
@@ -4204,7 +3913,7 @@ describe('ElbowElement', () => {
       elbowElement.render();
       
       // Should use configuredWidth (100) not layoutWidth (200) for elbow path generation
-      expect(generateElbowPath).toHaveBeenCalledWith(10, configuredWidth, 30, 25, 80, 'top-left', 15, 25);
+      expect(ShapeGenerator.generateElbow).toHaveBeenCalledWith(10, configuredWidth, 30, 25, 80, 'top-left', 15, 25);
     });
   });
 
@@ -4222,7 +3931,7 @@ describe('ElbowElement', () => {
     it('should position text in arm when elbowTextPosition is "arm"', () => {
       elbowElement.props.elbowTextPosition = 'arm';
       elbowElement.props.orientation = 'top-left'; // arm is at top for top orientations
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of arm (horizontal part extending from left body)
       expect(position.x).toBe(75); // x + bodyWidth + (width - bodyWidth) / 2 = 10 + 30 + (100-30)/2 = 75
@@ -4232,7 +3941,7 @@ describe('ElbowElement', () => {
     it('should position text in body when elbowTextPosition is "body" for top-left orientation', () => {
       elbowElement.props.elbowTextPosition = 'body';
       elbowElement.props.orientation = 'top-left';
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of body (vertical part)
       expect(position.x).toBe(25); // x + bodyWidth / 2 = 10 + 30/2
@@ -4242,7 +3951,7 @@ describe('ElbowElement', () => {
     it('should position text in body when elbowTextPosition is "body" for top-right orientation', () => {
       elbowElement.props.elbowTextPosition = 'body';
       elbowElement.props.orientation = 'top-right';
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of body on the right side
       expect(position.x).toBe(95); // x + width - bodyWidth / 2 = 10 + 100 - 30/2 = 95
@@ -4252,7 +3961,7 @@ describe('ElbowElement', () => {
     it('should position text in body when elbowTextPosition is "body" for bottom-left orientation', () => {
       elbowElement.props.elbowTextPosition = 'body';
       elbowElement.props.orientation = 'bottom-left';
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of body (upper part for bottom orientation)
       expect(position.x).toBe(25); // x + bodyWidth / 2 = 10 + 30/2
@@ -4262,7 +3971,7 @@ describe('ElbowElement', () => {
     it('should position text in body when elbowTextPosition is "body" for bottom-right orientation', () => {
       elbowElement.props.elbowTextPosition = 'body';
       elbowElement.props.orientation = 'bottom-right';
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of body on the right side (upper part for bottom orientation)
       expect(position.x).toBe(95); // x + width - bodyWidth / 2 = 10 + 100 - 30/2 = 95
@@ -4271,7 +3980,7 @@ describe('ElbowElement', () => {
 
     it('should default to arm positioning when elbowTextPosition is not specified', () => {
       // Don't set elbowTextPosition, default orientation is top-left
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should default to arm positioning (extending from left body)
       expect(position.x).toBe(75); // x + bodyWidth + (width - bodyWidth) / 2 = 10 + 30 + (100-30)/2 = 75
@@ -4281,7 +3990,7 @@ describe('ElbowElement', () => {
     it('should position text in arm correctly for bottom orientations', () => {
       elbowElement.props.elbowTextPosition = 'arm';
       elbowElement.props.orientation = 'bottom-left'; // arm is at bottom for bottom orientations
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of arm at the bottom (extending from left body)
       expect(position.x).toBe(75); // x + bodyWidth + (width - bodyWidth) / 2 = 10 + 30 + (100-30)/2 = 75
@@ -4291,7 +4000,7 @@ describe('ElbowElement', () => {
     it('should position text in arm correctly for right-side orientations', () => {
       elbowElement.props.elbowTextPosition = 'arm';
       elbowElement.props.orientation = 'top-right'; // arm is at top, body on right
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of arm (extending from right body to left)
       expect(position.x).toBe(45); // x + (width - bodyWidth) / 2 = 10 + (100-30)/2 = 45
@@ -4306,7 +4015,7 @@ describe('ElbowElement', () => {
       elbowElement.props.elbowTextPosition = 'arm';
       elbowElement.props.orientation = 'top-left'; // Specify orientation for clarity
       
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should use stretched width for arm positioning (extending from left body)
       expect(position.x).toBe(100); // x + bodyWidth + (stretchedWidth - bodyWidth) / 2 = 10 + 30 + (150-30)/2 = 100
@@ -4342,14 +4051,13 @@ describe('Element Interactive States', () => {
       const props: LayoutElementProps = {
         fill: {
           default: '#FF0000',
-          hover: '#00FF00',
-          active: '#0000FF'
+          hover: '#00FF00'
         }
       };
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      expect((element as any)._hasStatefulColors()).toBe(true);
+      expect((element as any).statefulColorsExist()).toBe(true);
     });
 
     it('should detect when element does not have stateful colors', () => {
@@ -4359,7 +4067,7 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      expect((element as any)._hasStatefulColors()).toBe(false);
+      expect((element as any).statefulColorsExist()).toBe(false);
     });
 
     it('should setup interactive listeners for elements with stateful colors', () => {
@@ -4408,10 +4116,10 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      expect(element.isHovering).toBe(false);
+      expect(element.elementIsHovering).toBe(false);
       
-      element.isHovering = true;
-      expect(element.isHovering).toBe(true);
+      element.elementIsHovering = true;
+      expect(element.elementIsHovering).toBe(true);
     });
 
     it('should track active state', () => {
@@ -4424,10 +4132,10 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      expect(element.isActive).toBe(false);
+      expect(element.elementIsActive).toBe(false);
       
-      element.isActive = true;
-      expect(element.isActive).toBe(true);
+      element.elementIsActive = true;
+      expect(element.elementIsActive).toBe(true);
     });
 
     it('should provide correct state context', () => {
@@ -4441,10 +4149,10 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      element.isHovering = true;
-      element.isActive = true;
+      element.elementIsHovering = true;
+      element.elementIsActive = true;
       
-      const stateContext = (element as any)._getStateContext();
+      const stateContext = (element as any).getStateContext();
       
       expect(stateContext).toEqual({
         isCurrentlyHovering: true,
@@ -4462,7 +4170,7 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      element.isHovering = true;
+      element.elementIsHovering = true;
       
       // Should have called update immediately for responsive interactivity
       expect(mockRequestUpdateCallback).toHaveBeenCalled();
@@ -4485,21 +4193,21 @@ describe('Element Interactive States', () => {
       
       // Simulate mouse enter
       mockElement.dispatchEvent(new Event('mouseenter'));
-      expect(element.isHovering).toBe(true);
+      expect(element.elementIsHovering).toBe(true);
       
       // Simulate mouse down
       mockElement.dispatchEvent(new Event('mousedown'));
-      expect(element.isActive).toBe(true);
+      expect(element.elementIsActive).toBe(true);
       
       // Simulate mouse up
       mockElement.dispatchEvent(new Event('mouseup'));
-      expect(element.isActive).toBe(false);
-      expect(element.isHovering).toBe(true); // Still hovering
+      expect(element.elementIsActive).toBe(false);
+      expect(element.elementIsHovering).toBe(true); // Still hovering
       
       // Simulate mouse leave
       mockElement.dispatchEvent(new Event('mouseleave'));
-      expect(element.isHovering).toBe(false);
-      expect(element.isActive).toBe(false); // Should cancel active on leave
+      expect(element.elementIsHovering).toBe(false);
+      expect(element.elementIsActive).toBe(false); // Should cancel active on leave
     });
 
     it('should handle touch events correctly', () => {
@@ -4517,13 +4225,13 @@ describe('Element Interactive States', () => {
       
       // Simulate touch start
       mockElement.dispatchEvent(new Event('touchstart'));
-      expect(element.isHovering).toBe(true);
-      expect(element.isActive).toBe(true);
+      expect(element.elementIsHovering).toBe(true);
+      expect(element.elementIsActive).toBe(true);
       
       // Simulate touch end
       mockElement.dispatchEvent(new Event('touchend'));
-      expect(element.isHovering).toBe(false);
-      expect(element.isActive).toBe(false);
+      expect(element.elementIsHovering).toBe(false);
+      expect(element.elementIsActive).toBe(false);
     });
   });
 
@@ -4883,13 +4591,6 @@ describe('LayoutElement', () => {
 
         it('should not calculate if anchor target not found', () => {
             element.layoutConfig = { anchor: { anchorTo: 'nonexistent' }};
-            element.calculateLayout(elementsMap, containerRect);
-            // The initial x,y would be based on default (0,0 for topLeft to container's topLeft)
-            // but then _anchorToElement returns null, and calculateLayout sets calculated = false.
-            // However, _calculateInitialPosition has a fallback if _anchorToElement returns null:
-            // it will just use 0,0 based on container if it cannot make sense of the anchoring.
-            // Then, _finalizeLayout sets calculated to true.
-            // Let's check the console warning.
             const consoleWarnSpy = vi.spyOn(console, 'warn');
             element.calculateLayout(elementsMap, containerRect);
             expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("Anchor target 'nonexistent' not found"));
@@ -4954,7 +4655,7 @@ describe('LayoutElement', () => {
     });
   });
 
-  describe('_getRelativeAnchorPosition', () => {
+  describe('getRelativeAnchorPosition', () => {
     beforeEach(() => {
         element = new MockLayoutElement('el1');
         element.layout = { x:0, y:0, width: 100, height: 60, calculated: true };
@@ -4971,16 +4672,16 @@ describe('LayoutElement', () => {
         ['bottomCenter', { x: 50, y: 60 }],
         ['bottomRight', { x: 100, y: 60 }],
     ])('should return correct coordinates for anchorPoint "%s"', (anchorPoint, expected) => {
-        expect(element['_getRelativeAnchorPosition'](anchorPoint)).toEqual(expected);
+        expect(element.getRelativeAnchorPosition(anchorPoint)).toEqual(expected);
     });
 
     it('should use provided width/height if available', () => {
-        expect(element['_getRelativeAnchorPosition']('center', 200, 100)).toEqual({ x: 100, y: 50 });
+        expect(element.getRelativeAnchorPosition('center', 200, 100)).toEqual({ x: 100, y: 50 });
     });
 
     it('should warn and default to topLeft for unknown anchorPoint', () => {
         const consoleWarnSpy = vi.spyOn(console, 'warn');
-        expect(element['_getRelativeAnchorPosition']('unknown')).toEqual({ x: 0, y: 0 });
+        expect(element.getRelativeAnchorPosition('unknown')).toEqual({ x: 0, y: 0 });
         expect(consoleWarnSpy).toHaveBeenCalledWith("Unknown anchor point: unknown. Defaulting to topLeft.");
     });
   });
@@ -5205,7 +4906,7 @@ import { EndcapElement } from '../endcap';
 import { Button } from '../../../utils/button.js'; // Import the mocked Button
 import { LayoutElement } from '../element'; // For spying on superclass methods
 import { RectangleElement } from '../rectangle'; // Import RectangleElement
-import { generateEndcapPath } from '../../../utils/shapes'; // Actual function
+import { ShapeGenerator } from '../../../utils/shapes'; // Actual function
 import { svg, SVGTemplateResult } from 'lit';
 
 describe('EndcapElement', () => {
@@ -5486,7 +5187,7 @@ describe('EndcapElement', () => {
 
         const attrs = getPathAttributes(result);
         expect(attrs?.id).toBe('ec-render');
-        expect(attrs?.d).toBe(generateEndcapPath(40, 20, 'left', 5, 10));
+        expect(attrs?.d).toBe(ShapeGenerator.generateEndcap(40, 20, 'left', 5, 10));
         expect(attrs?.fill).toBe('none');
         expect(attrs?.stroke).toBe('none');
         expect(attrs?.['stroke-width']).toBe('0');
@@ -5499,7 +5200,7 @@ describe('EndcapElement', () => {
         expect(result).toMatchSnapshot();
         
         const attrs = getPathAttributes(result);
-        expect(attrs?.d).toBe(generateEndcapPath(40, 20, 'right', 5, 10));
+        expect(attrs?.d).toBe(ShapeGenerator.generateEndcap(40, 20, 'right', 5, 10));
       });
 
       it('should render with specified fill, stroke, strokeWidth from props', () => {
@@ -5526,7 +5227,7 @@ describe('EndcapElement', () => {
       it('should call button.createButton with correct parameters for default direction "left"', () => {
         endcapElement.render();
         expect(mockCreateButton).toHaveBeenCalledTimes(1);
-        const expectedPathD = generateEndcapPath(60, 30, 'left', 10, 15);
+        const expectedPathD = ShapeGenerator.generateEndcap(60, 30, 'left', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 15, 60, 30,
           { rx: 0 },
@@ -5538,7 +5239,7 @@ describe('EndcapElement', () => {
         endcapElement.props.direction = 'right'; // Modify props for this test
         endcapElement.render();
 
-        const expectedPathD = generateEndcapPath(60, 30, 'right', 10, 15);
+        const expectedPathD = ShapeGenerator.generateEndcap(60, 30, 'right', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 15, 60, 30,
           { rx: 0 },
@@ -5591,9 +5292,26 @@ vi.mock('../../../utils/button.js', () => {
   };
 });
 
+vi.mock('../../../utils/shapes.js', () => ({
+  ShapeGenerator: {
+    generateRectangle: vi.fn().mockImplementation(
+      (x, y, width, height, rx) => {
+        // Generate the path data that matches the actual implementation
+        if (rx === 0) {
+          // No corner radius - simple rectangle path
+          return `M ${x.toFixed(3)},${y.toFixed(3)} L ${(x + width).toFixed(3)},${y.toFixed(3)} L ${(x + width).toFixed(3)},${(y + height).toFixed(3)} L ${x.toFixed(3)},${(y + height).toFixed(3)} Z`;
+        } else {
+          // With corner radius - create arcs
+          return `M ${x.toFixed(3)},${(y + rx).toFixed(3)} A ${rx.toFixed(3)},${rx.toFixed(3)} 0 0,1 ${(x + rx).toFixed(3)},${y.toFixed(3)} L ${(x + width - rx).toFixed(3)},${y.toFixed(3)} A ${rx.toFixed(3)},${rx.toFixed(3)} 0 0,1 ${(x + width).toFixed(3)},${(y + rx).toFixed(3)} L ${(x + width).toFixed(3)},${(y + height - rx).toFixed(3)} A ${rx.toFixed(3)},${rx.toFixed(3)} 0 0,1 ${(x + width - rx).toFixed(3)},${(y + height).toFixed(3)} L ${(x + rx).toFixed(3)},${(y + height).toFixed(3)} A ${rx.toFixed(3)},${rx.toFixed(3)} 0 0,1 ${x.toFixed(3)},${(y + height - rx).toFixed(3)} Z`;
+        }
+      }
+    )
+  }
+}));
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RectangleElement } from '../rectangle';
-import { generateRectanglePath } from '../../../utils/shapes';
+import { ShapeGenerator } from '../../../utils/shapes';
 import { svg, SVGTemplateResult } from 'lit';
 import { Button } from '../../../utils/button.js';
 
@@ -5745,7 +5463,7 @@ describe('RectangleElement', () => {
         expect(result).toMatchSnapshot();
 
         const attrs = getPathAttributesFromResult(result);
-        expect(attrs?.d).toBe(generateRectanglePath(0, 0, 10, 10, 0));
+        expect(attrs?.d).toBe(ShapeGenerator.generateRectangle(0, 0, 10, 10, 0));
         expect(attrs?.fill).toBe('none');
         expect(attrs?.stroke).toBe('none');
         expect(attrs?.['stroke-width']).toBe('0');
@@ -5761,7 +5479,7 @@ describe('RectangleElement', () => {
         expect(result).toMatchSnapshot();
 
         const attrs = getPathAttributesFromResult(result);
-        expect(attrs?.d).toBe(generateRectanglePath(1, 2, 30, 40, 7));
+        expect(attrs?.d).toBe(ShapeGenerator.generateRectangle(1, 2, 30, 40, 7));
         expect(attrs?.fill).toBe('rgba(255,0,0,0.5)');
         expect(attrs?.stroke).toBe('#00FF00');
         expect(attrs?.['stroke-width']).toBe('3.5');
@@ -5776,7 +5494,7 @@ describe('RectangleElement', () => {
         const result = rectangleElement.render();
         expect(result).toMatchSnapshot();
         const attrs = getPathAttributesFromResult(result);
-        expect(attrs?.d).toBe(generateRectanglePath(0, 0, 20, 20, 4));
+        expect(attrs?.d).toBe(ShapeGenerator.generateRectangle(0, 0, 20, 20, 4));
       });
 
       it('should prioritize rx over cornerRadius if both are present', () => {
@@ -5788,7 +5506,7 @@ describe('RectangleElement', () => {
         const result = rectangleElement.render();
         expect(result).toMatchSnapshot();
         const attrs = getPathAttributesFromResult(result);
-        expect(attrs?.d).toBe(generateRectanglePath(0, 0, 25, 25, 6));
+        expect(attrs?.d).toBe(ShapeGenerator.generateRectangle(0, 0, 25, 25, 6));
       });
 
       it('should handle zero dimensions (width=0 or height=0) by rendering a minimal path', () => {
@@ -5814,7 +5532,7 @@ describe('RectangleElement', () => {
         rectangleElement.render();
 
         expect(mockCreateButton).toHaveBeenCalledTimes(1);
-        const expectedPathD = generateRectanglePath(10, 10, 100, 30, 0);
+        const expectedPathD = ShapeGenerator.generateRectangle(10, 10, 100, 30, 0);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 10, 100, 30,
           { rx: 0 },
@@ -5831,7 +5549,7 @@ describe('RectangleElement', () => {
         rectangleElement.render();
 
         expect(mockCreateButton).toHaveBeenCalledTimes(1);
-        const expectedPathD = generateRectanglePath(0, 0, 80, 40, 8);
+        const expectedPathD = ShapeGenerator.generateRectangle(0, 0, 80, 40, 8);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 0, 0, 80, 40,
           { rx: 8 },
@@ -5848,7 +5566,7 @@ describe('RectangleElement', () => {
         rectangleElement.render();
 
         expect(mockCreateButton).toHaveBeenCalledTimes(1);
-        const expectedPathD = generateRectanglePath(0, 0, 70, 35, 6);
+        const expectedPathD = ShapeGenerator.generateRectangle(0, 0, 70, 35, 6);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 0, 0, 70, 35,
           { rx: 6 },
@@ -6502,152 +6220,168 @@ describe('TextElement', () => {
 ```typescript
 import { LayoutElement } from "./element.js";
 import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
-import { HomeAssistant, handleAction } from "custom-card-helpers";
-import { LcarsButtonElementConfig } from "../../types.js";
+import { HomeAssistant } from "custom-card-helpers";
 import { svg, SVGTemplateResult } from "lit";
-import { measureTextBBox } from "../../utils/shapes.js";
+import { TextMeasurement } from "../../utils/shapes.js";
 import { FontManager } from "../../utils/font-manager.js";
 
-// Add CAP_HEIGHT_RATIO fallback from shapes.ts if it's not already accessible
 const CAP_HEIGHT_RATIO = 0.66; 
 
 export class TextElement extends LayoutElement {
-    // Cache font metrics to maintain consistency across renders
     private _cachedMetrics: any = null;
+    
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
-        this.resetLayout();
-        this.intrinsicSize = { width: 0, height: 0, calculated: false };
     }
   
-    /**
-     * Calculates the intrinsic size of the text based on its content.
-     * Uses fontmetrics for precise measurement without DOM dependency.
-     */
     calculateIntrinsicSize(container: SVGElement): void {
-      // If explicit width/height are provided, use them.
-      if (this.props.width && this.props.height && !this.props.fontSize) {
-        this.intrinsicSize.width = this.props.width;
-        this.intrinsicSize.height = this.props.height;
+        if (this.hasExplicitDimensions()) {
+            this.setExplicitDimensions();
+            return;
+        }
+        
+        const text = this.props.text || '';
+        const fontFamily = this.props.fontFamily || 'Arial';
+        const fontWeight = this.props.fontWeight || 'normal';
+        const fontSize = this.calculateOptimalFontSize(fontFamily, fontWeight);
+
+        this.intrinsicSize.width = FontManager.measureTextWidth(text, {
+            fontFamily,
+            fontWeight,
+            fontSize,
+            letterSpacing: this.props.letterSpacing as any,
+            textTransform: this.props.textTransform as any,
+        });
+
+        this.intrinsicSize.height = this.props.height || fontSize * 1.2;
         this.intrinsicSize.calculated = true;
-        return;
-      }
-      
-      const text = this.props.text || '';
-      const fontFamily = this.props.fontFamily || 'Arial';
-      const fontWeight = this.props.fontWeight || 'normal';
-      let fontSize = this.props.fontSize || 16;
+    }
 
-      if (this.props.height && !this.props.fontSize) {
-          const metrics = FontManager.getFontMetrics(fontFamily, fontWeight as any);
-          if (metrics) {
-              // Use the font's actual capHeight for precision
-              const capHeightRatio = Math.abs(metrics.capHeight) || CAP_HEIGHT_RATIO;
-              fontSize = this.props.height / capHeightRatio;
-              this.props.fontSize = fontSize; // Persist for rendering
-        // Removed debug trace logs
-          } else {
-              // Fallback if metrics are not available
-              fontSize = this.props.height * 0.8; // A reasonable guess
-              this.props.fontSize = fontSize;
-        // Removed debug trace logs
-          }
-      }
+    private hasExplicitDimensions(): boolean {
+        return Boolean(this.props.width && this.props.height && !this.props.fontSize);
+    }
 
-      // Now, measure width using the determined font size.
-      this.intrinsicSize.width = FontManager.measureTextWidth(text, {
-        fontFamily,
-        fontWeight,
-        fontSize,
-        letterSpacing: this.props.letterSpacing as any,
-        textTransform: this.props.textTransform as any,
-      });
+    private setExplicitDimensions(): void {
+        this.intrinsicSize.width = this.props.width!;
+        this.intrinsicSize.height = this.props.height!;
+        this.intrinsicSize.calculated = true;
+    }
 
-      // Height is now based on the prop, not re-measured.
-      this.intrinsicSize.height = this.props.height || fontSize * 1.2;
-      this.intrinsicSize.calculated = true;
+    private calculateOptimalFontSize(fontFamily: string, fontWeight: string): number {
+        let fontSize = this.props.fontSize || 16;
+
+        if (this.props.height && !this.props.fontSize) {
+            const metrics = FontManager.getFontMetrics(fontFamily, fontWeight as any);
+            if (metrics) {
+                const capHeightRatio = Math.abs(metrics.capHeight) || CAP_HEIGHT_RATIO;
+                fontSize = this.props.height / capHeightRatio;
+            } else {
+                fontSize = this.props.height * 0.8;
+            }
+            this.props.fontSize = fontSize;
+        }
+
+        return fontSize;
     }
   
     renderShape(): SVGTemplateResult | null {
-      if (!this.layout.calculated) return null;
-  
-      const { x, y, width, height } = this.layout;
-      
-      const textAnchor = this.props.textAnchor || 'start';
-      const dominantBaseline = this.props.dominantBaseline || 'auto';
-  
-      let textX = x;
-      let textY = y;
-      
-      if (textAnchor === 'middle') {
-        textX += width / 2;
-      } else if (textAnchor === 'end') {
-        textX += width;
-      }
-      
-      // Use cached metrics first, then fall back to _fontMetrics (set during calculateIntrinsicSize), then fetch new metrics if needed
-      let metrics: any = this._cachedMetrics || (this as any)._fontMetrics;
-      if (!metrics && this.props.fontFamily) {
-        metrics = FontManager.getFontMetrics(this.props.fontFamily, this.props.fontWeight as any);
-        
-        // Cache metrics for consistent rendering across lifecycle
-        if (metrics) {
-          this._cachedMetrics = metrics;
+        if (!this.layout.calculated) {
+            return null;
         }
-      }
-      if (metrics) {
-        textY += -metrics.ascent * (this.props.fontSize || 16);
-        if (dominantBaseline === 'middle') {
-          const totalHeight = (metrics.bottom - metrics.top) * (this.props.fontSize || 16);
-          textY = y + totalHeight / 2 + metrics.top * (this.props.fontSize || 16);
-        }
-        if (dominantBaseline === 'hanging') {
-          textY = y + metrics.top * (this.props.fontSize || 16);
-        }
-      } else {
-        if (dominantBaseline === 'middle') {
-          textY += height / 2;
-        } else if (dominantBaseline === 'hanging') {
-        } else {
-          textY += height * 0.8;
-        }
-      }
-      
-      const styles = this.props.textTransform ? `text-transform: ${this.props.textTransform};` : '';
-  
-      // Use centralized color resolution with text-specific defaults
-      const colors = this._resolveElementColors({ 
-        fallbackFillColor: '#000000', // Default text color
-        fallbackStrokeColor: 'none', 
-        fallbackStrokeWidth: '0' 
-      });
 
-      return svg`
-        <text
-          id=${this.id}
-          x=${textX}
-          y=${textY}
-          fill=${colors.fillColor}
-          font-family=${this.props.fontFamily || 'sans-serif'}
-          font-size=${`${this.props.fontSize || 16}px`}
-          font-weight=${this.props.fontWeight || 'normal'}
-          letter-spacing=${this.props.letterSpacing || 'normal'}
-          text-anchor=${textAnchor}
-          dominant-baseline=${dominantBaseline}
-          style="${styles}"
-        >
-          ${this.props.text || ''}
-        </text>
-      `;
+        const { x, y, width, height } = this.layout;
+        const textAnchor = this.props.textAnchor || 'start';
+        const dominantBaseline = this.props.dominantBaseline || 'auto';
+
+        const { textX, textY } = this.calculateTextPosition(x, y, width, height, textAnchor, dominantBaseline);
+        const colors = this.resolveElementColors({ 
+            fallbackFillColor: '#000000',
+            fallbackStrokeColor: 'none', 
+            fallbackStrokeWidth: '0' 
+        });
+
+        return svg`
+            <text
+                id=${this.id}
+                x=${textX}
+                y=${textY}
+                fill=${colors.fillColor}
+                font-family=${this.props.fontFamily || 'sans-serif'}
+                font-size=${`${this.props.fontSize || 16}px`}
+                font-weight=${this.props.fontWeight || 'normal'}
+                letter-spacing=${this.props.letterSpacing || 'normal'}
+                text-anchor=${textAnchor}
+                dominant-baseline=${dominantBaseline}
+                style="${this.createTextTransformStyle()}"
+            >
+                ${this.props.text || ''}
+            </text>
+        `;
     }
 
-    /**
-     * Override render() to bypass base class text management since TextElement IS the text
-     */
+    private calculateTextPosition(x: number, y: number, width: number, height: number, textAnchor: string, dominantBaseline: string): { textX: number, textY: number } {
+        let textX = x;
+        let textY = y;
+        
+        if (textAnchor === 'middle') {
+            textX += width / 2;
+        } else if (textAnchor === 'end') {
+            textX += width;
+        }
+        
+        const metrics = this.getCachedOrFreshMetrics();
+        if (metrics) {
+            textY = this.calculateMetricsBasedTextY(y, height, metrics, dominantBaseline);
+        } else {
+            textY = this.calculateFallbackTextY(y, height, dominantBaseline);
+        }
+
+        return { textX, textY };
+    }
+
+    private getCachedOrFreshMetrics(): any {
+        let metrics = this._cachedMetrics || (this as any)._fontMetrics;
+        if (!metrics && this.props.fontFamily) {
+            metrics = FontManager.getFontMetrics(this.props.fontFamily, this.props.fontWeight as any);
+            if (metrics) {
+                this._cachedMetrics = metrics;
+                (this as any)._fontMetrics = metrics;
+            }
+        }
+        return metrics;
+    }
+
+    private calculateMetricsBasedTextY(y: number, height: number, metrics: any, dominantBaseline: string): number {
+        const fontSize = this.props.fontSize || 16;
+        
+        if (dominantBaseline === 'middle') {
+            const totalHeight = (metrics.bottom - metrics.top) * fontSize;
+            return y + totalHeight / 2 + metrics.top * fontSize;
+        } else if (dominantBaseline === 'hanging') {
+            return y + metrics.top * fontSize;
+        } else {
+            return y + (-metrics.ascent * fontSize);
+        }
+    }
+
+    private calculateFallbackTextY(y: number, height: number, dominantBaseline: string): number {
+        if (dominantBaseline === 'middle') {
+            return y + height / 2;
+        } else if (dominantBaseline === 'hanging') {
+            return y;
+        } else {
+            return y + height * 0.8;
+        }
+    }
+
+    private createTextTransformStyle(): string {
+        return this.props.textTransform ? `text-transform: ${this.props.textTransform};` : '';
+    }
+
     render(): SVGTemplateResult | null {
         return this.renderShape();
     }
-  }
+}
 ```
 
 ## File: src/layout/engine.ts
@@ -6661,7 +6395,7 @@ import { LayoutElement } from './elements/element.js';
 export interface LayoutElementProps {
   [key: string]: any;
   button?: any;
-  textPadding?: number; // Padding to apply to text elements (used for equal spacing)
+  textPadding?: number;
 }
 
 export interface LayoutConfigOptions {
@@ -6698,7 +6432,6 @@ export class LayoutEngine {
   private tempSvgContainer?: SVGElement;
   private containerRect?: DOMRect;
 
-  // Static shared SVG container for all LayoutEngine instances
   private static sharedTempSvg?: SVGElement;
   private static instanceCount: number = 0;
 
@@ -6706,14 +6439,12 @@ export class LayoutEngine {
     this.elements = new Map();
     this.groups = [];
     
-    // Use shared singleton SVG container
-    this._initializeSharedSvgContainer();
+    this.initializeSharedSvgContainer();
     
     LayoutEngine.instanceCount++;
   }
 
-  private _initializeSharedSvgContainer(): void {
-    // Create shared SVG container if it doesn't exist
+  private initializeSharedSvgContainer(): void {
     if (!LayoutEngine.sharedTempSvg && typeof document !== 'undefined' && document.body) {
       LayoutEngine.sharedTempSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       LayoutEngine.sharedTempSvg.style.position = 'absolute';
@@ -6722,13 +6453,7 @@ export class LayoutEngine {
       document.body.appendChild(LayoutEngine.sharedTempSvg);
     }
     
-    // Reference the shared container
     this.tempSvgContainer = LayoutEngine.sharedTempSvg;
-  }
-
-  private _initializeTempSvgContainer(): void {
-    // Legacy method - now delegates to shared container
-    this._initializeSharedSvgContainer();
   }
 
   public get layoutGroups(): Group[] {
@@ -6750,35 +6475,14 @@ export class LayoutEngine {
     this.groups = [];
   }
 
-  /**
-   * Gets the required dimensions of the layout based on all calculated elements
-   * @returns An object containing the required width and height
-   */
   public getLayoutBounds(): LayoutDimensions {
-    // Start with default dimensions
     let requiredWidth = this.containerRect?.width || 100;
     let requiredHeight = this.containerRect?.height || 50;
     
-    // If no layout groups, return defaults
     if (!this.layoutGroups || this.layoutGroups.length === 0) {
       return { width: requiredWidth, height: requiredHeight };
     }
     
-    // Special test case: "should calculate bounds based on calculated elements"
-    // Check if we have exactly two elements with specific test properties
-    if (this.elements.size === 2) {
-      const el1 = this.elements.get('el1');
-      const el2 = this.elements.get('el2');
-      
-      if (el1 && el2 && 
-          el1.layout.calculated && el2.layout.calculated &&
-          el1.layout.width === 100 && el1.layout.height === 50 &&
-          el2.layout.width === 200 && el2.layout.height === 30) {
-        return { width: 250, height: 130 };
-      }
-    }
-    
-    // Calculate max bounds from all elements
     let maxRight = 0;
     let maxBottom = 0;
     
@@ -6792,7 +6496,6 @@ export class LayoutEngine {
       }
     });
     
-    // Use the larger of calculated bounds vs container dimensions
     requiredWidth = Math.max(maxRight, requiredWidth);
     requiredHeight = Math.max(maxBottom, requiredHeight);
     
@@ -6810,14 +6513,11 @@ export class LayoutEngine {
       
       this.containerRect = containerRect;
       
-      // Validate all element references before starting layout calculation
-      this._validateElementReferences();
+      this.validateElementReferences();
       
-      // Reset all layout states
       this.elements.forEach(el => el.resetLayout());
       
-      // Single-pass calculation using fontmetrics
-      const success = this._calculateLayoutSinglePass();
+      const success = this.calculateLayoutSinglePass();
       
       if (!success) {
         console.warn('LayoutEngine: Some elements could not be calculated in single pass');
@@ -6828,19 +6528,17 @@ export class LayoutEngine {
     } catch (error) {
       if (error instanceof Error) {
         console.error(`LayoutEngine: ${error.message}`);
-        // Return fallback dimensions rather than crashing the application
         return { width: containerRect.width, height: containerRect.height };
       }
       throw error;
     }
   }
 
-  private _validateElementReferences(): void {
+  private validateElementReferences(): void {
     const allElementIds = Array.from(this.elements.keys());
     const issues: string[] = [];
     
     for (const [elementId, element] of this.elements) {
-      // Check anchor references
       if (element.layoutConfig.anchor?.anchorTo && 
           element.layoutConfig.anchor.anchorTo !== 'container') {
         
@@ -6850,7 +6548,6 @@ export class LayoutEngine {
         }
       }
       
-      // Check stretch references
       if (element.layoutConfig.stretch?.stretchTo1 && 
           element.layoutConfig.stretch.stretchTo1 !== 'canvas' && 
           element.layoutConfig.stretch.stretchTo1 !== 'container') {
@@ -6879,21 +6576,17 @@ export class LayoutEngine {
     }
   }
 
-  private _calculateLayoutSinglePass(): boolean {
+  private calculateLayoutSinglePass(): boolean {
     let allCalculated = true;
     
-    // Calculate intrinsic sizes first (using fontmetrics, no DOM needed)
     this.elements.forEach(el => {
       if (!el.intrinsicSize.calculated) {
-        // For fontmetrics-based elements, we can calculate without DOM container
         el.calculateIntrinsicSize(this.tempSvgContainer || null as unknown as SVGElement);
       }
     });
     
-    // Sort elements by dependency order (elements with no dependencies first)
-    const sortedElements = this._sortElementsByDependencies();
+    const sortedElements = this.sortElementsByDependencies();
     
-    // Calculate layout for each element in dependency order
     for (const el of sortedElements) {
       if (!el.layout.calculated && this.containerRect) {
         const dependencies: string[] = [];
@@ -6907,7 +6600,6 @@ export class LayoutEngine {
             allCalculated = false;
           }
         } else {
-          // Check if dependencies exist
           const missingDeps = dependencies.filter(dep => !this.elements.has(dep));
           const uncalculatedDeps = dependencies.filter(dep => {
             const depEl = this.elements.get(dep);
@@ -6933,30 +6625,26 @@ export class LayoutEngine {
     return allCalculated;
   }
 
-  private _sortElementsByDependencies(): LayoutElement[] {
+  private sortElementsByDependencies(): LayoutElement[] {
     const elements = Array.from(this.elements.values());
     
-    // Build dependency graph and validate all references
-    const dependencyGraph = this._buildDependencyGraph(elements);
+    const dependencyGraph = this.buildDependencyGraph(elements);
     
-    // Detect circular dependencies before attempting resolution
-    const circularDeps = this._detectCircularDependencies(elements, dependencyGraph);
+    const circularDeps = this.detectCircularDependencies(elements, dependencyGraph);
     if (circularDeps.length > 0) {
       throw new Error(`LayoutEngine: Circular dependencies detected: ${circularDeps.join(' -> ')}`);
     }
     
-    // Perform topological sort
-    return this._topologicalSort(elements, dependencyGraph);
+    return this.topologicalSort(elements, dependencyGraph);
   }
 
-  private _buildDependencyGraph(elements: LayoutElement[]): Map<string, Set<string>> {
+  private buildDependencyGraph(elements: LayoutElement[]): Map<string, Set<string>> {
     const dependencyGraph = new Map<string, Set<string>>();
     
     for (const el of elements) {
       const dependencies: string[] = [];
       el.canCalculateLayout(this.elements, dependencies);
       
-      // Validate all dependencies exist
       const validDependencies = dependencies.filter(dep => {
         if (this.elements.has(dep)) {
           return true;
@@ -6971,11 +6659,10 @@ export class LayoutEngine {
     return dependencyGraph;
   }
 
-  private _topologicalSort(elements: LayoutElement[], dependencyGraph: Map<string, Set<string>>): LayoutElement[] {
+  private topologicalSort(elements: LayoutElement[], dependencyGraph: Map<string, Set<string>>): LayoutElement[] {
     const resolved = new Set<string>();
     const result: LayoutElement[] = [];
     
-    // Kahn's algorithm for topological sorting
     while (result.length < elements.length) {
       const readyElements = elements.filter(el => {
         if (resolved.has(el.id)) return false;
@@ -6985,13 +6672,11 @@ export class LayoutEngine {
       });
       
       if (readyElements.length === 0) {
-        // This should not happen if circular dependencies were properly detected
         const remaining = elements.filter(el => !resolved.has(el.id));
         const remainingIds = remaining.map(el => el.id);
         throw new Error(`LayoutEngine: Unable to resolve dependencies for elements: ${remainingIds.join(', ')}`);
       }
       
-      // Add all ready elements to result
       readyElements.forEach(el => {
         resolved.add(el.id);
         result.push(el);
@@ -7001,14 +6686,13 @@ export class LayoutEngine {
     return result;
   }
 
-  private _detectCircularDependencies(elements: LayoutElement[], dependencyGraph: Map<string, Set<string>>): string[] {
+  private detectCircularDependencies(elements: LayoutElement[], dependencyGraph: Map<string, Set<string>>): string[] {
     const visiting = new Set<string>();
     const visited = new Set<string>();
     const cycle: string[] = [];
     
     const visit = (elementId: string, path: string[]): boolean => {
       if (visiting.has(elementId)) {
-        // Found a cycle
         const cycleStart = path.indexOf(elementId);
         return cycleStart >= 0;
       }
@@ -7044,49 +6728,23 @@ export class LayoutEngine {
     return cycle;
   }
 
-  private logElementStates(): void {
-    const calculated: {id: string, type: string}[] = [];
-    const uncalculated: {id: string, type: string, missingDeps: string[]}[] = [];
-    
-    Array.from(this.elements.entries()).forEach(([id, el]) => {
-      if (el.layout.calculated) {
-        calculated.push({ id, type: el.constructor.name });
-      } else {
-        const missingDeps: string[] = [];
-        el.canCalculateLayout(this.elements, missingDeps);
-        uncalculated.push({ 
-          id, 
-          type: el.constructor.name, 
-          missingDeps: missingDeps.filter(depId => !this.elements.get(depId)?.layout.calculated)
-        });
-      }
-    });
-    
-  }
-
   destroy(): void {
     LayoutEngine.instanceCount--;
     
-    // Only remove shared SVG container when all instances are destroyed
     if (LayoutEngine.instanceCount <= 0 && LayoutEngine.sharedTempSvg && LayoutEngine.sharedTempSvg.parentNode) {
       LayoutEngine.sharedTempSvg.parentNode.removeChild(LayoutEngine.sharedTempSvg);
       LayoutEngine.sharedTempSvg = undefined;
-      LayoutEngine.instanceCount = 0; // Reset to 0 to handle negative counts
+      LayoutEngine.instanceCount = 0;
     }
     
     this.tempSvgContainer = undefined;
     this.clearLayout();
   }
 
-  /**
-   * Updates the intrinsic sizes of elements and recalculates the layout
-   * This method is now simplified since we use fontmetrics for immediate calculation
-   */
   updateIntrinsicSizesAndRecalculate(
     updatedSizesMap: Map<string, { width: number, height: number }>, 
     containerRect: DOMRect
   ): LayoutDimensions {
-    // If no sizes to update or invalid container rect
     if (!updatedSizesMap.size) {
       return this.getLayoutBounds();
     }
@@ -7095,7 +6753,6 @@ export class LayoutEngine {
       return this.getLayoutBounds();
     }
     
-    // Update the intrinsic sizes of elements
     updatedSizesMap.forEach((newSize, id) => {
       const element = this.elements.get(id);
       if (element) {
@@ -7105,7 +6762,6 @@ export class LayoutEngine {
       }
     });
     
-    // Recalculate with the updated sizes using single pass
     return this.calculateBoundingBoxes(containerRect, { dynamicHeight: true });
   }
 }
@@ -7146,7 +6802,7 @@ import { TextElement } from './elements/text.js';
 import { EndcapElement } from './elements/endcap.js';
 import { ElbowElement } from './elements/elbow.js';
 import { ChiselEndcapElement } from './elements/chisel_endcap.js';
-import { expandWidget } from './widgets/registry.js';
+import { WidgetRegistry } from './widgets/registry.js';
 import { parseCardConfig, type ParsedConfig } from '../parsers/schema.js';
 import { ZodError } from 'zod';
 
@@ -7365,7 +7021,7 @@ export class ConfigParser {
     requestUpdateCallback?: () => void,
     getShadowElement?: (id: string) => Element | null
   ): LayoutElement[] {
-    const widgetResult = expandWidget(type, id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+    const widgetResult = WidgetRegistry.expandWidget(type, id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     if (widgetResult) {
       return widgetResult;
     }
@@ -7700,31 +7356,25 @@ describe('LayoutEngine', () => {
         });
 
         it('should calculate bounds based on calculated elements', () => {
+            (engine as any).containerRect = new DOMRect(0, 0, 100, 50);
             const el1 = new MockEngineLayoutElement('el1');
-            el1.setMockLayout({ x: 10, y: 20, width: 100, height: 50, calculated: true });
+            el1.layout = { x: 10, y: 20, width: 100, height: 50, calculated: true };
             const el2 = new MockEngineLayoutElement('el2');
-            el2.setMockLayout({ x: 50, y: 100, width: 200, height: 30, calculated: true });
+            el2.layout = { x: 50, y: 100, width: 200, height: 30, calculated: true };
             engine.addGroup(new Group('g1', [el1, el2]));
-            (engine as any).elements.set('el1', el1);
-            (engine as any).elements.set('el2', el2);
-
 
             const bounds = engine.getLayoutBounds();
             // Max right: el1 (10+100=110), el2 (50+200=250) => 250
             // Max bottom: el1 (20+50=70), el2 (100+30=130) => 130
-            // Different implementations might return containerRect dimensions or calculated ones
-            // Use expect.oneOf to handle either case
-            expect([100, 250]).toContain(bounds.width);
-            expect([50, 130]).toContain(bounds.height);
+            expect(bounds.width).toBe(250);
+            expect(bounds.height).toBe(130);
         });
 
          it('should use containerRect dimensions if elements are smaller', () => {
             (engine as any).containerRect = new DOMRect(0, 0, 500, 400);
             const el1 = new MockEngineLayoutElement('el1');
-            el1.setMockLayout({ x: 0, y: 0, width: 50, height: 50, calculated: true });
+            el1.layout = { x: 0, y: 0, width: 50, height: 50, calculated: true };
             engine.addGroup(new Group('g1', [el1]));
-            (engine as any).elements.set('el1', el1);
-
 
             const bounds = engine.getLayoutBounds();
             expect(bounds.width).toBe(500);
@@ -7990,46 +7640,38 @@ describe('LayoutEngine', () => {
         });
     });
 
-    describe('_calculateLayoutSinglePass', () => {
-        it('should process elements in dependency order', async () => {
+    describe('calculateLayoutSinglePass', () => {
+        it('should process elements in dependency order', () => {
             const el1 = new MockEngineLayoutElement('el1');
             const el2 = new MockEngineLayoutElement('el2');
-
-            // el1 should be processed first (no dependencies)
-            el1.setMockCanCalculateLayout(true);
-            el1.setMockLayout({ x: 0, y: 0, width: 50, height: 30, calculated: true });
-            el1.setMockIntrinsicSize({ width: 50, height: 30, calculated: true });
-
-            // el2 depends on el1 - set this up after adding to engine
-            el2.setMockIntrinsicSize({ width: 60, height: 40, calculated: true });
-
-            engine.addGroup(new Group('g1', [el1, el2]));
+            const el3 = new MockEngineLayoutElement('el3');
             
-            // Now setup el2's dependency on el1 after they're in the engine
-            el2.canCalculateLayout = vi.fn().mockImplementation((elements, deps) => {
-                const el1Element = elements.get('el1');
-                if (!el1Element?.layout.calculated) {
-                    deps.push('el1');
-                    return false;
-                }
-                return true;
-            });
+            // Set up dependencies: el3 depends on el2, el2 depends on el1
+            el2.setMockCanCalculateLayout(true, ['el1']);
+            el3.setMockCanCalculateLayout(true, ['el2']);
             
-            el2.calculateLayout = vi.fn().mockImplementation(() => {
-                el2.calculateLayoutInvoked = true;
-                el2.layout.x = 50;
-                el2.layout.y = 0;
-                el2.layout.width = 60;
-                el2.layout.height = 40;
-                el2.layout.calculated = true;
-            });
-
-            // Use calculateBoundingBoxes which will call _calculateLayoutSinglePass internally
+            el1.setMockIntrinsicSize({ width: 10, height: 10 });
+            el2.setMockIntrinsicSize({ width: 20, height: 20 });
+            el3.setMockIntrinsicSize({ width: 30, height: 30 });
+            
+            el1.setMockLayout({ x: 0, y: 0, width: 10, height: 10 });
+            el2.setMockLayout({ x: 10, y: 0, width: 20, height: 20 });
+            el3.setMockLayout({ x: 30, y: 0, width: 30, height: 30 });
+            
+            engine.addGroup(new Group('g1', [el1, el2, el3]));
+            
+            // Use calculateBoundingBoxes which will call calculateLayoutSinglePass internally
+            const containerRect = new DOMRect(0, 0, 100, 100);
             const result = engine.calculateBoundingBoxes(containerRect);
-
+            
+            // All elements should be calculated
+            expect(el1.calculateLayoutInvoked).toBe(true);
+            expect(el2.calculateLayoutInvoked).toBe(true);
+            expect(el3.calculateLayoutInvoked).toBe(true);
+            
+            // Should return calculated bounds
             expect(result.width).toBeGreaterThan(0);
-            expect(el1.layout.calculated).toBe(true);
-            expect(el2.layout.calculated).toBe(true);
+            expect(result.height).toBeGreaterThan(0);
         });
     });
 
@@ -8732,30 +8374,26 @@ export type WidgetFactory = (
   getShadowElement?: (id: string) => Element | null
 ) => import('../elements/element.js').LayoutElement[];
 
-const registry = new Map<string, WidgetFactory>();
+export class WidgetRegistry {
+  private static registry = new Map<string, WidgetFactory>();
 
-/**
- * Register a widget factory under a type name (case-insensitive).
- */
-export function registerWidget(type: string, factory: WidgetFactory): void {
-  registry.set(type.trim().toLowerCase(), factory);
-}
+  static registerWidget(type: string, factory: WidgetFactory): void {
+    this.registry.set(type.trim().toLowerCase(), factory);
+  }
 
-/**
- * Expand a widget of the given type if a factory is registered. Returns null if unknown.
- */
-export function expandWidget(
-  type: string,
-  id: string,
-  props: import('../engine.js').LayoutElementProps = {},
-  layoutConfig: import('../engine.js').LayoutConfigOptions = {},
-  hass?: import('custom-card-helpers').HomeAssistant,
-  requestUpdateCallback?: () => void,
-  getShadowElement?: (id: string) => Element | null
-): import('../elements/element.js').LayoutElement[] | null {
-  const factory = registry.get(type.trim().toLowerCase());
-  if (!factory) return null;
-  return factory(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+  static expandWidget(
+    type: string,
+    id: string,
+    props: import('../engine.js').LayoutElementProps = {},
+    layoutConfig: import('../engine.js').LayoutConfigOptions = {},
+    hass?: import('custom-card-helpers').HomeAssistant,
+    requestUpdateCallback?: () => void,
+    getShadowElement?: (id: string) => Element | null
+  ): import('../elements/element.js').LayoutElement[] | null {
+    const factory = this.registry.get(type.trim().toLowerCase());
+    if (!factory) return null;
+    return factory(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+  }
 }
 ```
 
@@ -8763,14 +8401,9 @@ export function expandWidget(
 
 ```typescript
 import { describe, it, expect, beforeEach } from 'vitest';
-import { expandWidget } from '../registry.js';
+import { WidgetRegistry } from '../registry.js';
 
 describe('Widget Index', () => {
-  beforeEach(async () => {
-    // Clear any existing registrations for clean tests
-    const registryModule = await import('../registry.js');
-    (registryModule as any).registry?.clear?.();
-  });
 
   describe('Module loading and registration', () => {
     it('should register top_header widget when index is imported', async () => {
@@ -8778,7 +8411,7 @@ describe('Widget Index', () => {
       await import('../index.js');
       
       // Verify the widget was registered by trying to expand it
-      const result = expandWidget('top_header', 'test-header');
+      const result = WidgetRegistry.expandWidget('top_header', 'test-header');
       
       expect(result).not.toBeNull();
       expect(Array.isArray(result)).toBe(true);
@@ -8788,9 +8421,9 @@ describe('Widget Index', () => {
     it('should register widgets with case-insensitive lookup after index import', async () => {
       await import('../index.js');
       
-      const lowerResult = expandWidget('top_header', 'test-lower');
-      const upperResult = expandWidget('TOP_HEADER', 'test-upper');
-      const mixedResult = expandWidget('Top_Header', 'test-mixed');
+      const lowerResult = WidgetRegistry.expandWidget('top_header', 'test-lower');
+      const upperResult = WidgetRegistry.expandWidget('TOP_HEADER', 'test-upper');
+      const mixedResult = WidgetRegistry.expandWidget('Top_Header', 'test-mixed');
       
       expect(lowerResult).not.toBeNull();
       expect(upperResult).not.toBeNull();
@@ -8807,7 +8440,7 @@ describe('Widget Index', () => {
       await import('../index.js');
       await import('../index.js');
       
-      const result = expandWidget('top_header', 'multi-import-test');
+      const result = WidgetRegistry.expandWidget('top_header', 'multi-import-test');
       
       expect(result).not.toBeNull();
       expect(result!.length).toBeGreaterThan(0);
@@ -8819,7 +8452,7 @@ describe('Widget Index', () => {
       await import('../index.js');
       
       // Test that known widgets are available
-      const topHeaderResult = expandWidget('top_header', 'availability-test');
+      const topHeaderResult = WidgetRegistry.expandWidget('top_header', 'availability-test');
       
       expect(topHeaderResult).not.toBeNull();
       expect(Array.isArray(topHeaderResult)).toBe(true);
@@ -8828,7 +8461,7 @@ describe('Widget Index', () => {
     it('should maintain widget functionality after index import', async () => {
       await import('../index.js');
       
-      const result = expandWidget('top_header', 'functionality-test', { 
+      const result = WidgetRegistry.expandWidget('top_header', 'functionality-test', { 
         fill: '#FF0000',
         height: 40 
       });
@@ -8848,7 +8481,7 @@ describe('Widget Index', () => {
 
 ```typescript
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { registerWidget, expandWidget, WidgetFactory } from '../registry.js';
+import { WidgetRegistry, WidgetFactory } from '../registry.js';
 import { LayoutElement } from '../../elements/element.js';
 import { RectangleElement } from '../../elements/rectangle.js';
 import { HomeAssistant } from 'custom-card-helpers';
@@ -8871,26 +8504,25 @@ describe('Widget Registry', () => {
     mockFactory = vi.fn().mockReturnValue([mockElement]);
     
     // Clear registry between tests by accessing the internal registry
-    // This is a bit hacky but necessary for isolated tests
     const registryModule = await import('../registry.js');
-    (registryModule as any).registry?.clear?.();
+    (registryModule.WidgetRegistry as any).registry?.clear?.();
   });
 
   describe('registerWidget', () => {
     it('should register a widget factory with lowercase type', () => {
-      registerWidget('TestWidget', mockFactory);
+      WidgetRegistry.registerWidget('TestWidget', mockFactory);
       
-      const result = expandWidget('testwidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('testwidget', 'test-id');
       expect(result).toEqual([mockElement]);
       expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined);
     });
 
     it('should register widget factory with case-insensitive type', () => {
-      registerWidget('MixedCaseWidget', mockFactory);
+      WidgetRegistry.registerWidget('MixedCaseWidget', mockFactory);
       
-      const resultLower = expandWidget('mixedcasewidget', 'test-1');
-      const resultMixed = expandWidget('MixedCaseWidget', 'test-2');
-      const resultUpper = expandWidget('MIXEDCASEWIDGET', 'test-3');
+      const resultLower = WidgetRegistry.expandWidget('mixedcasewidget', 'test-1');
+      const resultMixed = WidgetRegistry.expandWidget('MixedCaseWidget', 'test-2');
+      const resultUpper = WidgetRegistry.expandWidget('MIXEDCASEWIDGET', 'test-3');
       
       expect(resultLower).toEqual([mockElement]);
       expect(resultMixed).toEqual([mockElement]);
@@ -8899,9 +8531,9 @@ describe('Widget Registry', () => {
     });
 
     it('should trim whitespace from widget type during registration', () => {
-      registerWidget('  spacedWidget  ', mockFactory);
+      WidgetRegistry.registerWidget('  spacedWidget  ', mockFactory);
       
-      const result = expandWidget('spacedwidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('spacedwidget', 'test-id');
       expect(result).toEqual([mockElement]);
       expect(mockFactory).toHaveBeenCalled();
     });
@@ -8912,10 +8544,10 @@ describe('Widget Registry', () => {
       const firstFactory = vi.fn().mockReturnValue([firstElement]);
       const secondFactory = vi.fn().mockReturnValue([secondElement]);
       
-      registerWidget('overrideWidget', firstFactory);
-      registerWidget('overrideWidget', secondFactory);
+      WidgetRegistry.registerWidget('overrideWidget', firstFactory);
+      WidgetRegistry.registerWidget('overrideWidget', secondFactory);
       
-      const result = expandWidget('overridewidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('overridewidget', 'test-id');
       expect(result).toEqual([secondElement]);
       expect(secondFactory).toHaveBeenCalled();
       expect(firstFactory).not.toHaveBeenCalled();
@@ -8924,17 +8556,17 @@ describe('Widget Registry', () => {
 
   describe('expandWidget', () => {
     beforeEach(() => {
-      registerWidget('registeredWidget', mockFactory);
+      WidgetRegistry.registerWidget('registeredWidget', mockFactory);
     });
 
     it('should return null for unregistered widget type', () => {
-      const result = expandWidget('unknownWidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('unknownWidget', 'test-id');
       expect(result).toBeNull();
       expect(mockFactory).not.toHaveBeenCalled();
     });
 
     it('should expand widget with minimal parameters', () => {
-      const result = expandWidget('registeredWidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('registeredWidget', 'test-id');
       
       expect(result).toEqual([mockElement]);
       expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined);
@@ -8944,7 +8576,7 @@ describe('Widget Registry', () => {
       const props = { customProp: 'value' };
       const layoutConfig = { offsetX: 10 };
       
-      const result = expandWidget(
+      const result = WidgetRegistry.expandWidget(
         'registeredWidget', 
         'test-id', 
         props, 
@@ -8970,33 +8602,33 @@ describe('Widget Registry', () => {
       const element2 = new RectangleElement('element2');
       const multiElementFactory = vi.fn().mockReturnValue([element1, element2]);
       
-      registerWidget('multiWidget', multiElementFactory);
+      WidgetRegistry.registerWidget('multiWidget', multiElementFactory);
       
-      const result = expandWidget('multiWidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('multiWidget', 'test-id');
       expect(result).toEqual([element1, element2]);
       expect(multiElementFactory).toHaveBeenCalled();
     });
 
     it('should handle factory returning empty array', () => {
       const emptyFactory = vi.fn().mockReturnValue([]);
-      registerWidget('emptyWidget', emptyFactory);
+      WidgetRegistry.registerWidget('emptyWidget', emptyFactory);
       
-      const result = expandWidget('emptyWidget', 'test-id');
+      const result = WidgetRegistry.expandWidget('emptyWidget', 'test-id');
       expect(result).toEqual([]);
       expect(emptyFactory).toHaveBeenCalled();
     });
 
     it('should trim whitespace from widget type during expansion', () => {
-      const result = expandWidget('  registeredWidget  ', 'test-id');
+      const result = WidgetRegistry.expandWidget('  registeredWidget  ', 'test-id');
       
       expect(result).toEqual([mockElement]);
       expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined);
     });
 
     it('should use case-insensitive lookup for expansion', () => {
-      const resultLower = expandWidget('registeredwidget', 'test-1');
-      const resultMixed = expandWidget('RegisteredWidget', 'test-2');
-      const resultUpper = expandWidget('REGISTEREDWIDGET', 'test-3');
+      const resultLower = WidgetRegistry.expandWidget('registeredwidget', 'test-1');
+      const resultMixed = WidgetRegistry.expandWidget('RegisteredWidget', 'test-2');
+      const resultUpper = WidgetRegistry.expandWidget('REGISTEREDWIDGET', 'test-3');
       
       expect(resultLower).toEqual([mockElement]);
       expect(resultMixed).toEqual([mockElement]);
@@ -9011,7 +8643,7 @@ describe('Widget Registry', () => {
         return [new RectangleElement(id)];
       };
       
-      expect(() => registerWidget('validFactory', validFactory)).not.toThrow();
+      expect(() => WidgetRegistry.registerWidget('validFactory', validFactory)).not.toThrow();
     });
 
     it('should work with factory using optional parameters', () => {
@@ -9019,9 +8651,9 @@ describe('Widget Registry', () => {
         return [new RectangleElement(id)];
       };
       
-      expect(() => registerWidget('optionalFactory', optionalParamFactory)).not.toThrow();
+      expect(() => WidgetRegistry.registerWidget('optionalFactory', optionalParamFactory)).not.toThrow();
       
-      const result = expandWidget('optionalFactory', 'test-id');
+      const result = WidgetRegistry.expandWidget('optionalFactory', 'test-id');
       expect(result).toHaveLength(1);
       expect(result![0]).toBeInstanceOf(RectangleElement);
     });
@@ -9036,9 +8668,9 @@ describe('Widget Registry', () => {
         return [container, child1, child2];
       };
       
-      registerWidget('complexWidget', complexFactory);
+      WidgetRegistry.registerWidget('complexWidget', complexFactory);
       
-      const result = expandWidget('complexWidget', 'complex-test', { width: 100 }, { offsetX: 5 });
+      const result = WidgetRegistry.expandWidget('complexWidget', 'complex-test', { width: 100 }, { offsetX: 5 });
       
       expect(result).toHaveLength(3);
       expect(result![0].id).toBe('complex-test_container');
@@ -9052,9 +8684,9 @@ describe('Widget Registry', () => {
         return [element];
       };
       
-      registerWidget('parameterWidget', parameterAccessFactory);
+      WidgetRegistry.registerWidget('parameterWidget', parameterAccessFactory);
       
-      const result = expandWidget(
+      const result = WidgetRegistry.expandWidget(
         'parameterWidget',
         'param-test',
         { fill: 'red' },
@@ -9792,7 +9424,7 @@ import { EndcapElement } from '../elements/endcap.js';
 import { TextElement } from '../elements/text.js';
 import { Widget } from './widget.js';
 import { LayoutElement } from '../elements/element.js';
-import { registerWidget } from './registry.js';
+import { WidgetRegistry } from './registry.js';
 
 const TEXT_GAP = 5;
 
@@ -9807,7 +9439,7 @@ export class TopHeaderWidget extends Widget {
     const bounds = new RectangleElement(
       this.id,
       { fill: 'none', stroke: 'none' },
-      this.layoutConfig, // keep any external layout config here
+      this.layoutConfig,
       this.hass,
       this.requestUpdateCallback,
       this.getShadowElement
@@ -9888,8 +9520,8 @@ export class TopHeaderWidget extends Widget {
   }
 }
 
-// Register at module load time
-registerWidget('top_header', (id, props, layoutConfig, hass, reqUpd, getEl) => {
+
+WidgetRegistry.registerWidget('top_header', (id, props, layoutConfig, hass, reqUpd, getEl) => {
   const widget = new TopHeaderWidget(id, props, layoutConfig, hass, reqUpd, getEl);
   return widget.expand();
 });
@@ -9931,9 +9563,6 @@ export abstract class Widget {
     this.getShadowElement = getShadowElement;
   }
 
-  /**
-   * Expand this widget into primitive LayoutElements.
-   */
   public abstract expand(): LayoutElement[];
 }
 ```
@@ -10107,7 +9736,7 @@ export class LcarsCard extends LitElement {
     }
 
     if (hasHassChanged && this.hass && this._lastHassStates) {
-      colorResolver.checkDynamicColorChanges(
+      colorResolver.detectsDynamicColorChanges(
         this._layoutEngine.layoutGroups,
         this.hass,
         () => this._refreshElementRenders()
@@ -10300,7 +9929,6 @@ export class LcarsCard extends LitElement {
       for (const group of this._layoutEngine.layoutGroups) {
         for (const element of group.elements) {
           try {
-            element.clearMonitoredEntities();
             element.cleanupAnimations();
           } catch (error) {
             console.error("[_performLayoutCalculation] Error clearing element state", element.id, error);
@@ -11764,89 +11392,81 @@ export interface ElementStateManagementConfig {
 import { Action } from '../types.js';
 import { HomeAssistant, handleAction } from 'custom-card-helpers';
 
-/**
- * Wrapper function for handling Home Assistant actions using the unified Action interface
- */
-export async function handleHassAction(
-  action: Action,
-  element: HTMLElement,
-  hass: HomeAssistant,
-  actionType: 'tap' | 'hold' | 'double_tap' = 'tap'
-): Promise<void> {
-  
-  // Convert unified Action to Home Assistant action config format
-  const actionConfig: any = {
-    tap_action: {
-      action: action.action,
-      service: action.service,
-      service_data: action.service_data,
-      target: action.target,
-      navigation_path: action.navigation_path,
-      url_path: action.url_path,
-      entity: action.entity,
-      // Include custom properties for pass-through
-      target_element_ref: action.target_element_ref,
-      state: action.state,
-      states: action.states,
-      actions: action.actions
-    },
-    confirmation: action.confirmation
-  };
-  
-  // Always mirror entity to the top-level for helpers that expect it there
-  if (action.entity) {
-    actionConfig.entity = action.entity;
+export class ActionProcessor {
+  static async processHassAction(
+    action: Action,
+    element: HTMLElement,
+    hass: HomeAssistant,
+    actionType: 'tap' | 'hold' | 'double_tap' = 'tap'
+  ): Promise<void> {
+    const actionConfig = this.buildHassActionConfig(action);
+    
+    if (action.entity) {
+      actionConfig.entity = action.entity;
+    }
+    
+    if ((action.action === 'toggle' || action.action === 'more-info') && !action.entity) {
+      actionConfig.tap_action.entity = element.id;
+      actionConfig.entity = element.id;
+    }
+    
+    return handleAction(element, hass, actionConfig, actionType);
   }
   
-  // For toggle and more-info actions, ensure entity is available as fallback
-  if ((action.action === 'toggle' || action.action === 'more-info') && !action.entity) {
-    actionConfig.tap_action.entity = element.id;
-    actionConfig.entity = element.id;
+  static actionIsCustom(action: Action): boolean {
+    return ['set_state', 'toggle_state'].includes(action.action);
   }
   
-  return handleAction(element, hass, actionConfig, actionType);
-}
-
-/**
- * Check if an action is a custom (non-Home Assistant) action
- */
-export function isCustomAction(action: Action): boolean {
-  return ['set_state', 'toggle_state'].includes(action.action);
-}
-
-/**
- * Validate that an action has the required properties for its type
- */
-export function validateAction(action: Action): string[] {
-  const errors: string[] = [];
-  
-  switch (action.action) {
-    case 'call-service':
-      if (!action.service) errors.push('service is required for call-service action');
-      break;
-    case 'navigate':
-      if (!action.navigation_path) errors.push('navigation_path is required for navigate action');
-      break;
-    case 'url':
-      if (!action.url_path) errors.push('url_path is required for url action');
-      break;
-    case 'toggle':
-    case 'more-info':
-      if (!action.entity) errors.push('entity is required for toggle/more-info action');
-      break;
-    case 'set_state':
-      if (!action.target_element_ref) errors.push('target_element_ref is required for set_state action');
-      if (!action.state) errors.push('state is required for set_state action');
-      break;
-    case 'toggle_state':
-      if (!action.target_element_ref) errors.push('target_element_ref is required for toggle_state action');
-      if (!action.states || !Array.isArray(action.states) || action.states.length < 2) {
-        errors.push('states array with at least 2 states is required for toggle_state action');
-      }
-      break;
+  static validateAction(action: Action): string[] {
+    const errors: string[] = [];
+    
+    switch (action.action) {
+      case 'call-service':
+        if (!action.service) errors.push('service is required for call-service action');
+        break;
+      case 'navigate':
+        if (!action.navigation_path) errors.push('navigation_path is required for navigate action');
+        break;
+      case 'url':
+        if (!action.url_path) errors.push('url_path is required for url action');
+        break;
+      case 'toggle':
+      case 'more-info':
+        if (!action.entity) errors.push('entity is required for toggle/more-info action');
+        break;
+      case 'set_state':
+        if (!action.target_element_ref) errors.push('target_element_ref is required for set_state action');
+        if (!action.state) errors.push('state is required for set_state action');
+        break;
+      case 'toggle_state':
+        if (!action.target_element_ref) errors.push('target_element_ref is required for toggle_state action');
+        if (!action.states || !Array.isArray(action.states) || action.states.length < 2) {
+          errors.push('states array with at least 2 states is required for toggle_state action');
+        }
+        break;
+    }
+    
+    return errors;
   }
   
-  return errors;
+  private static buildHassActionConfig(action: Action): any {
+    return {
+      tap_action: {
+        action: action.action,
+        service: action.service,
+        service_data: action.service_data,
+        target: action.target,
+        navigation_path: action.navigation_path,
+        url_path: action.url_path,
+        entity: action.entity,
+        target_element_ref: action.target_element_ref,
+        state: action.state,
+        states: action.states,
+        actions: action.actions
+      },
+      confirmation: action.confirmation
+    };
+  }
 }
 ```
 
@@ -11856,6 +11476,7 @@ export function validateAction(action: Action): string[] {
 import { HomeAssistant } from 'custom-card-helpers';
 import gsap from 'gsap';
 import { transformPropagator, AnimationSyncData, TransformPropagator } from './transform-propagator.js';
+import { TransformOriginUtils } from './transform-origin-utils.js';
 import { GSDevTools } from 'gsap/GSDevTools';
 import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
 import { CustomEase } from 'gsap/CustomEase';
@@ -12314,11 +11935,7 @@ export class AnimationManager {
   }
 
   private getOptimalTransformOrigin(elementId: string): string {
-    if (!this.elementsMap) {
-      return 'center center';
-    }
-
-    const element = this.elementsMap.get(elementId);
+    const element = this.elementsMap?.get(elementId);
     if (!element?.layoutConfig?.anchor) {
       return 'center center';
     }
@@ -12327,25 +11944,10 @@ export class AnimationManager {
     
     if (anchorConfig.anchorTo && anchorConfig.anchorTo !== 'container') {
       const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
-      return this.anchorPointToTransformOriginString(anchorPoint);
+      return TransformOriginUtils.anchorPointToTransformOriginString(anchorPoint);
     }
 
     return 'center center';
-  }
-
-  private anchorPointToTransformOriginString(anchorPoint: string): string {
-    switch (anchorPoint) {
-      case 'topLeft': return 'left top';
-      case 'topCenter': return 'center top';
-      case 'topRight': return 'right top';
-      case 'centerLeft': return 'left center';
-      case 'center': return 'center center';
-      case 'centerRight': return 'right center';
-      case 'bottomLeft': return 'left bottom';
-      case 'bottomCenter': return 'center bottom';
-      case 'bottomRight': return 'right bottom';
-      default: return 'center center';
-    }
   }
 
   private buildSlideAnimation(
@@ -12657,10 +12259,10 @@ import { colorResolver } from "./color-resolver.js";
 import { AnimationContext } from "./animation.js";
 import { ColorStateContext } from "./color.js";
 import { Action } from "../types.js";
-import { handleHassAction, isCustomAction, validateAction } from "./action-helpers.js";
+import { ActionProcessor } from "./action-helpers.js";
 import { stateManager } from "./state-manager.js";
 
-export type ButtonPropertyName = 'fill' | 'stroke' | 'strokeWidth';
+export type ButtonProperty = 'fill' | 'stroke' | 'strokeWidth';
 
 export class Button {
     private _props: any;
@@ -12669,7 +12271,13 @@ export class Button {
     private _id: string;
     private _getShadowElement?: (id: string) => Element | null;
 
-    constructor(id: string, props: any, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
+    constructor(
+        id: string, 
+        props: any, 
+        hass?: HomeAssistant, 
+        requestUpdateCallback?: () => void, 
+        getShadowElement?: (id: string) => Element | null
+    ) {
         this._id = id;
         this._props = props;
         this._hass = hass;
@@ -12677,7 +12285,7 @@ export class Button {
         this._getShadowElement = getShadowElement;
     }
 
-    private getAnimationContext(): AnimationContext {
+    private buildAnimationContext(): AnimationContext {
         return {
             elementId: this._id,
             getShadowElement: this._getShadowElement,
@@ -12686,8 +12294,8 @@ export class Button {
         };
     }
 
-    private getResolvedColors(stateContext: ColorStateContext) {
-        const context = this.getAnimationContext();
+    private resolveElementColors(stateContext: ColorStateContext) {
+        const context = this.buildAnimationContext();
         return colorResolver.resolveAllElementColors(
             this._id,
             this._props,
@@ -12706,7 +12314,7 @@ export class Button {
         options: { rx: number },
         stateContext: ColorStateContext
     ): SVGTemplateResult {
-        const resolvedColors = this.getResolvedColors(stateContext);
+        const resolvedColors = this.resolveElementColors(stateContext);
         const pathElement = svg`
             <path
                 id=${this._id + "__shape"}
@@ -12756,14 +12364,12 @@ export class Button {
         if (!tapConfig) return;
 
         if (Array.isArray(tapConfig)) {
-            // New concise format: an array of Action objects
-            tapConfig.forEach((actionObj: any) => {
-                const unified = this.convertToUnifiedAction(actionObj);
-                this.executeUnifiedAction(unified, ev.currentTarget as Element);
+            tapConfig.forEach((actionObj: Action) => {
+                this.executeAction(actionObj, ev.currentTarget as Element);
             });
         } else {
-            // Legacy / object format handled by existing helper
-            this.executeActionDefinition(tapConfig, ev.currentTarget as Element);
+            const unifiedAction = this.normalizeActionFormat(tapConfig);
+            this.executeAction(unifiedAction, ev.currentTarget as Element);
         }
     }
 
@@ -12773,20 +12379,48 @@ export class Button {
         }
     }
 
-    private executeUnifiedAction(action: Action, element?: Element): void {
+    private normalizeActionFormat(actionConfig: any): Action {
+        let actionType = actionConfig.action || actionConfig.type || 'none';
+        if (actionType === 'set-state') actionType = 'set_state';
+
+        const normalizedAction: Action = {
+            action: actionType,
+            service: actionConfig.service,
+            service_data: actionConfig.service_data,
+            target: actionConfig.target,
+            navigation_path: actionConfig.navigation_path,
+            url_path: actionConfig.url_path,
+            entity: actionConfig.entity,
+            target_element_ref: actionConfig.target_element_ref || actionConfig.target_id,
+            state: actionConfig.state,
+            states: actionConfig.states,
+            confirmation: actionConfig.confirmation
+        };
+
+        if ((normalizedAction.action === 'toggle' || normalizedAction.action === 'more-info') && !normalizedAction.entity) {
+            normalizedAction.entity = this._id;
+        }
+
+        return normalizedAction;
+    }
+
+    private executeAction(action: Action, element?: Element): void {
         if (!this._hass) {
             console.error(`[${this._id}] No hass object available for action execution`);
             return;
         }
-        const validationErrors = validateAction(action);
+
+        const validationErrors = ActionProcessor.validateAction(action);
         if (validationErrors.length > 0) {
             console.warn(`[${this._id}] Action validation failed:`, validationErrors);
             return;
         }
-        if (isCustomAction(action)) {
+
+        if (ActionProcessor.actionIsCustom(action)) {
             this.executeCustomAction(action);
             return;
         }
+
         this.executeHassAction(action, element);
     }
 
@@ -12821,7 +12455,8 @@ export class Button {
                 console.warn(`[${this._id}] Could not find DOM element, using fallback`);
             }
         }
-        handleHassAction(action, targetElement, this._hass!)
+
+        ActionProcessor.processHassAction(action, targetElement, this._hass!)
             .then(() => {
                 if (action.action === 'toggle' || action.action === 'call-service') {
                     setTimeout(() => {
@@ -12831,77 +12466,10 @@ export class Button {
                     this._requestUpdateCallback?.();
                 }
             })
-            .catch(error => {
-                console.error(`[${this._id}] handleHassAction failed:`, error);
+            .catch((error: Error) => {
+                console.error(`[${this._id}] ActionProcessor.processHassAction failed:`, error);
                 this._requestUpdateCallback?.();
             });
-    }
-
-    /**
-     * @deprecated This method supports legacy action definition objects. It will be removed once
-     *             all configs migrate to the new unified Action format.
-     */
-    private executeActionDefinition(actionDef: any, element?: Element): void {
-        if (!this._hass) {
-            console.error(`[${this._id}] No hass object available for action execution`);
-            return;
-        }
-
-        // Allow new direct-array format to pass through for backwards compatibility
-        if (Array.isArray(actionDef)) {
-            actionDef.forEach((singleAction: any) => {
-                const unified = this.convertToUnifiedAction(singleAction);
-                this.executeUnifiedAction(unified, element);
-            });
-            return;
-        }
-
-        if (actionDef.actions && Array.isArray(actionDef.actions)) {
-            actionDef.actions.forEach((singleAction: any) => {
-                const unified = this.convertToUnifiedAction(singleAction);
-                this.executeUnifiedAction(unified, element);
-            });
-            return;
-        }
-        let actionType = actionDef.action || actionDef.type || 'none';
-        if (actionType === 'set-state') actionType = 'set_state';
-        const unifiedAction: Action = {
-            action: actionType,
-            service: actionDef.service,
-            service_data: actionDef.service_data,
-            target: actionDef.target,
-            navigation_path: actionDef.navigation_path,
-            url_path: actionDef.url_path,
-            entity: actionDef.entity,
-            target_element_ref: actionDef.target_element_ref || actionDef.target_id,
-            state: actionDef.state,
-            states: actionDef.states,
-            confirmation: actionDef.confirmation
-        };
-        if ((unifiedAction.action === 'toggle' || unifiedAction.action === 'more-info') && !unifiedAction.entity) {
-            unifiedAction.entity = this._id;
-        }
-        this.executeUnifiedAction(unifiedAction, element);
-    }
-
-    private convertToUnifiedAction(singleAction: any): Action {
-        let actionType = singleAction.action;
-        if (actionType === 'set-state') {
-            actionType = 'set_state';
-        }
-        return {
-            action: actionType,
-            service: singleAction.service,
-            service_data: singleAction.service_data,
-            target: singleAction.target,
-            navigation_path: singleAction.navigation_path,
-            url_path: singleAction.url_path,
-            entity: singleAction.entity,
-            target_element_ref: singleAction.target_element_ref || singleAction.target_id,
-            state: singleAction.state,
-            states: singleAction.states,
-            confirmation: singleAction.confirmation
-        };
     }
 
     updateHass(hass?: HomeAssistant): void {
@@ -12932,8 +12500,8 @@ export class ColorResolver {
     colorDefaults: ColorResolutionDefaults = {},
     interactiveState: ColorStateContext = {}
   ): ComputedElementColors {
-    const resolvedDefaults = this._setDefaultColorValues(colorDefaults);
-    const colorInstances = this._createColorInstances(elementProps, resolvedDefaults);
+    const resolvedDefaults = this.setDefaultColorValues(colorDefaults);
+    const colorInstances = this.createColorInstances(elementProps, resolvedDefaults);
 
     return {
       fillColor: colorInstances.fillColor.resolve(elementId, 'fill', animationContext, interactiveState),
@@ -12950,10 +12518,10 @@ export class ColorResolver {
     interactiveState: ColorStateContext = {}
   ): LayoutElementProps {
     const computedColors = this.resolveAllElementColors(elementId, originalElementProps, animationContext, {
-      fallbackTextColor: 'white' // Default text color for interactive elements
+      fallbackTextColor: 'white'
     }, interactiveState);
     
-    return this._buildPropsWithResolvedColors(originalElementProps, computedColors);
+    return this.buildPropsWithResolvedColors(originalElementProps, computedColors);
   }
 
   resolveColorsWithoutAnimationContext(
@@ -12962,7 +12530,7 @@ export class ColorResolver {
     colorDefaults: ColorResolutionDefaults = {},
     interactiveState: ColorStateContext = {}
   ): ComputedElementColors {
-    const basicAnimationContext = this._createBasicAnimationContext(elementId);
+    const basicAnimationContext = this.createBasicAnimationContext(elementId);
     return this.resolveAllElementColors(elementId, elementProps, basicAnimationContext, colorDefaults, interactiveState);
   }
 
@@ -12974,54 +12542,36 @@ export class ColorResolver {
     stateContext?: ColorStateContext,
     fallback: string = 'transparent'
   ): string {
-    // 1. Directly resolve dynamic colors to avoid infinite recursion with Color.resolve()
     if (isDynamicColorConfig(colorValue)) {
-      return this._resolveDynamicColorValue(colorValue, animationContext?.hass, fallback);
+      return this.resolveDynamicColorValue(colorValue, animationContext?.hass, fallback);
     }
 
-    // 2. For all other color types defer to Color helper (static or stateful)
     const color = Color.withFallback(colorValue, fallback);
     return color.resolve(elementId, animationProperty, animationContext, stateContext);
   }
 
-  checkDynamicColorChanges(
+  detectsDynamicColorChanges(
     layoutGroups: Group[],
     hass: HomeAssistant,
     refreshCallback: () => void,
     checkDelay: number = 25
   ): void {
-    if (this._dynamicColorCheckScheduled) {
+    if (this.dynamicColorCheckScheduled) {
       return;
     }
     
-    this._scheduleColorChangeCheck(layoutGroups, hass, refreshCallback, checkDelay);
+    this.scheduleColorChangeCheck(layoutGroups, hass, refreshCallback, checkDelay);
   }
 
-  scheduleDynamicColorRefresh(
-    hass: HomeAssistant,
-    containerRect: DOMRect | undefined,
-    checkCallback: () => void,
-    refreshCallback: () => void,
-    delay: number = 50
-  ): void {
-    setTimeout(() => {
-      if (hass && containerRect) {
-        checkCallback();
-        refreshCallback();
-      }
-    }, delay);
-  }
-
-  extractEntityIdsFromElement(element: any): Set<string> {
+  extractEntityIdsFromElement(element: { props?: LayoutElementProps }): Set<string> {
     const entityIds = new Set<string>();
-    const props = element.props;
     
-    if (!props) {
+    if (!element.props) {
       return entityIds;
     }
     
-    this._extractEntityIdsFromColorProperties(props, entityIds);
-    this._extractEntityIdsFromButtonProperties(props, entityIds);
+    this.extractEntityIdsFromColorProperties(element.props, entityIds);
+    this.extractEntityIdsFromButtonProperties(element.props, entityIds);
     
     return entityIds;
   }
@@ -13035,33 +12585,30 @@ export class ColorResolver {
       return false;
     }
     
-    return this._checkForSignificantChangesInGroups(layoutGroups, lastHassStates, currentHass);
+    return this.checkForSignificantChangesInGroups(layoutGroups, lastHassStates, currentHass);
   }
 
   clearAllCaches(layoutGroups: Group[]): void {
-    // Clear element-level entity monitoring and animation state
     for (const group of layoutGroups) {
       for (const element of group.elements) {
-        this._clearElementState(element);
+        this.clearElementState(element);
       }
     }
-
-    // Note: Dynamic color caching is now handled by the store/ColorResolver itself
   }
 
   cleanup(): void {
-    this._dynamicColorCheckScheduled = false;
+    this.dynamicColorCheckScheduled = false;
     
-    if (this._refreshTimeout) {
-      clearTimeout(this._refreshTimeout);
-      this._refreshTimeout = undefined;
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
+      this.refreshTimeout = undefined;
     }
   }
 
-  private _dynamicColorCheckScheduled: boolean = false;
-  private _refreshTimeout?: ReturnType<typeof setTimeout>;
+  private dynamicColorCheckScheduled: boolean = false;
+  private refreshTimeout?: ReturnType<typeof setTimeout>;
 
-  private _setDefaultColorValues(colorDefaults: ColorResolutionDefaults) {
+  private setDefaultColorValues(colorDefaults: ColorResolutionDefaults) {
     return {
       fallbackFillColor: colorDefaults.fallbackFillColor || 'none',
       fallbackStrokeColor: colorDefaults.fallbackStrokeColor || 'none',
@@ -13070,7 +12617,7 @@ export class ColorResolver {
     };
   }
 
-  private _createColorInstances(elementProps: LayoutElementProps, resolvedDefaults: any) {
+  private createColorInstances(elementProps: LayoutElementProps, resolvedDefaults: ReturnType<typeof this.setDefaultColorValues>) {
     return {
       fillColor: elementProps.fill !== undefined 
         ? Color.withFallback(elementProps.fill, resolvedDefaults.fallbackFillColor)
@@ -13084,7 +12631,7 @@ export class ColorResolver {
     };
   }
 
-  private _buildPropsWithResolvedColors(
+  private buildPropsWithResolvedColors(
     originalElementProps: LayoutElementProps, 
     computedColors: ComputedElementColors
   ): LayoutElementProps {
@@ -13105,7 +12652,7 @@ export class ColorResolver {
     return propsWithResolvedColors;
   }
 
-  private _createBasicAnimationContext(elementId: string): AnimationContext {
+  private createBasicAnimationContext(elementId: string): AnimationContext {
     return {
       elementId,
       getShadowElement: undefined,
@@ -13114,23 +12661,23 @@ export class ColorResolver {
     };
   }
 
-  private _scheduleColorChangeCheck(
+  private scheduleColorChangeCheck(
     layoutGroups: Group[],
     hass: HomeAssistant,
     refreshCallback: () => void,
     checkDelay: number
   ): void {
-    this._dynamicColorCheckScheduled = true;
+    this.dynamicColorCheckScheduled = true;
     
-    if (this._refreshTimeout) {
-      clearTimeout(this._refreshTimeout);
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
     }
     
-    this._refreshTimeout = setTimeout(() => {
-      this._dynamicColorCheckScheduled = false;
-      this._refreshTimeout = undefined;
+    this.refreshTimeout = setTimeout(() => {
+      this.dynamicColorCheckScheduled = false;
+      this.refreshTimeout = undefined;
       
-      const needsRefresh = this._performDynamicColorCheck(layoutGroups, hass);
+      const needsRefresh = this.performDynamicColorCheck(layoutGroups, hass);
       
       if (needsRefresh) {
         refreshCallback();
@@ -13138,49 +12685,43 @@ export class ColorResolver {
     }, checkDelay);
   }
 
-  private _clearElementState(element: any): void {
-    // Clear entity monitoring and animation state
-    if (typeof element.clearMonitoredEntities === 'function') {
-      element.clearMonitoredEntities();
-    }
-    
+  private clearElementState(element: { cleanupAnimations?: () => void; id: string }): void {
     if (typeof element.cleanupAnimations === 'function') {
       element.cleanupAnimations();
     }
     
-    // Clear from animation manager directly
     animationManager.cleanupElementAnimationTracking(element.id);
   }
 
-  private _extractEntityIdsFromColorProperties(props: any, entityIds: Set<string>): void {
-    this._extractFromColorProperty(props.fill, entityIds);
-    this._extractFromColorProperty(props.stroke, entityIds);
-    this._extractFromColorProperty(props.textColor, entityIds);
+  private extractEntityIdsFromColorProperties(props: LayoutElementProps, entityIds: Set<string>): void {
+    this.extractFromColorProperty(props.fill, entityIds);
+    this.extractFromColorProperty(props.stroke, entityIds);
+    this.extractFromColorProperty(props.textColor, entityIds);
   }
 
-  private _extractEntityIdsFromButtonProperties(props: any, entityIds: Set<string>): void {
+  private extractEntityIdsFromButtonProperties(props: LayoutElementProps, entityIds: Set<string>): void {
     if (props.button) {
-      this._extractFromColorProperty(props.button.hover_fill, entityIds);
-      this._extractFromColorProperty(props.button.active_fill, entityIds);
-      this._extractFromColorProperty(props.button.hover_text_color, entityIds);
-      this._extractFromColorProperty(props.button.active_text_color, entityIds);
+      this.extractFromColorProperty(props.button.hover_fill, entityIds);
+      this.extractFromColorProperty(props.button.active_fill, entityIds);
+      this.extractFromColorProperty(props.button.hover_text_color, entityIds);
+      this.extractFromColorProperty(props.button.active_text_color, entityIds);
     }
   }
 
-  private _extractFromColorProperty(colorProp: any, entityIds: Set<string>): void {
-    if (colorProp && typeof colorProp === 'object' && colorProp.entity) {
+  private extractFromColorProperty(colorProp: ColorValue, entityIds: Set<string>): void {
+    if (colorProp && typeof colorProp === 'object' && 'entity' in colorProp && colorProp.entity) {
       entityIds.add(colorProp.entity);
     }
   }
 
-  private _checkForSignificantChangesInGroups(
+  private checkForSignificantChangesInGroups(
     layoutGroups: Group[],
     lastHassStates: { [entityId: string]: any },
     currentHass: HomeAssistant
   ): boolean {
     for (const group of layoutGroups) {
       for (const element of group.elements) {
-        if (this._elementHasSignificantChanges(element, lastHassStates, currentHass)) {
+        if (this.elementHasSignificantChanges(element, lastHassStates, currentHass)) {
           return true;
         }
       }
@@ -13189,38 +12730,40 @@ export class ColorResolver {
     return false;
   }
 
-  private _elementHasSignificantChanges(
-    element: any,
+  private elementHasSignificantChanges(
+    element: { props?: LayoutElementProps },
     lastHassStates: { [entityId: string]: any },
     currentHass: HomeAssistant
   ): boolean {
-    const props = element.props;
+    if (!element.props) {
+      return false;
+    }
     
-    return this._hasEntityBasedTextChanges(props, lastHassStates, currentHass) ||
-           this._hasEntityBasedColorChanges(props, lastHassStates, currentHass);
+    return this.hasEntityBasedTextChanges(element.props, lastHassStates, currentHass) ||
+           this.hasEntityBasedColorChanges(element.props, lastHassStates, currentHass);
   }
 
-  private _hasEntityBasedTextChanges(
-    props: any,
+  private hasEntityBasedTextChanges(
+    props: LayoutElementProps,
     lastHassStates: { [entityId: string]: any },
     currentHass: HomeAssistant
   ): boolean {
     if (props.text && typeof props.text === 'string') {
-      return this._checkEntityReferencesInText(props.text, lastHassStates, currentHass);
+      return this.checkEntityReferencesInText(props.text, lastHassStates, currentHass);
     }
     return false;
   }
 
-  private _hasEntityBasedColorChanges(
-    props: any,
+  private hasEntityBasedColorChanges(
+    props: LayoutElementProps,
     lastHassStates: { [entityId: string]: any },
     currentHass: HomeAssistant
   ): boolean {
     const colorProps = [props.fill, props.stroke, props.textColor];
     
     for (const colorProp of colorProps) {
-      if (this._isEntityBasedColor(colorProp)) {
-        if (this._checkEntityReferencesInText(colorProp, lastHassStates, currentHass)) {
+      if (this.isEntityBasedColor(colorProp)) {
+        if (this.checkEntityReferencesInText(colorProp as string, lastHassStates, currentHass)) {
           return true;
         }
       }
@@ -13229,11 +12772,11 @@ export class ColorResolver {
     return false;
   }
 
-  private _isEntityBasedColor(colorProp: any): boolean {
+  private isEntityBasedColor(colorProp: ColorValue): boolean {
     return typeof colorProp === 'string' && colorProp.includes('states[');
   }
 
-  private _checkEntityReferencesInText(
+  private checkEntityReferencesInText(
     text: string,
     lastHassStates: { [entityId: string]: any },
     currentHass: HomeAssistant
@@ -13257,12 +12800,12 @@ export class ColorResolver {
     return false;
   }
 
-  private _performDynamicColorCheck(layoutGroups: Group[], hass: HomeAssistant): boolean {
+  private performDynamicColorCheck(layoutGroups: Group[], hass: HomeAssistant): boolean {
     let needsRefresh = false;
-    const elementsToCheck = this._collectElementsForChecking(layoutGroups);
+    const elementsToCheck = this.collectElementsForChecking(layoutGroups);
     
     for (const { element } of elementsToCheck) {
-      if (this._checkElementEntityChanges(element, hass)) {
+      if (this.checkElementEntityChanges(element, hass)) {
         needsRefresh = true;
       }
     }
@@ -13270,8 +12813,8 @@ export class ColorResolver {
     return needsRefresh;
   }
 
-  private _collectElementsForChecking(layoutGroups: Group[]): Array<{ element: any }> {
-    const elementsToCheck: Array<{ element: any }> = [];
+      private collectElementsForChecking(layoutGroups: Group[]): Array<{ element: { entityChangesDetected?: (hass: HomeAssistant) => boolean; id: string } }> {
+        const elementsToCheck: Array<{ element: { entityChangesDetected?: (hass: HomeAssistant) => boolean; id: string } }> = [];
     
     for (const group of layoutGroups) {
       for (const element of group.elements) {
@@ -13282,10 +12825,10 @@ export class ColorResolver {
     return elementsToCheck;
   }
 
-  private _checkElementEntityChanges(element: any, hass: HomeAssistant): boolean {
+  private checkElementEntityChanges(element: { entityChangesDetected?: (hass: HomeAssistant) => boolean; id: string }, hass: HomeAssistant): boolean {
     try {
-      return typeof element.checkEntityChanges === 'function' 
-        ? element.checkEntityChanges(hass)
+      return typeof element.entityChangesDetected === 'function' 
+        ? element.entityChangesDetected(hass)
         : false;
     } catch (error) {
       console.warn('Error checking entity changes for element:', element.id, error);
@@ -13293,28 +12836,17 @@ export class ColorResolver {
     }
   }
 
-  /**
-   * Resolve a DynamicColorConfig object to a concrete CSS color string.
-   * The resolution flow is:
-   *   a) If Home Assistant instance or entity is not available, fall back to `default` or provided fallback.
-   *   b) Read the entity state (or attribute) and attempt an exact mapping match.
-   *   c) If `interpolate` is true and the mapping keys are numeric, perform linear interpolation
-   *      between the nearest lower and higher mapping stops.
-   *   d) Fallback to `default` then to provided fallback.
-   */
-  private _resolveDynamicColorValue(
+  private resolveDynamicColorValue(
     config: DynamicColorConfig,
     hass: HomeAssistant | undefined,
     fallback: string = 'transparent'
   ): string {
-    // Helper to normalise any ColorValue to string (static only – no nested dynamic/stateful)
     const normaliseColor = (value: ColorValue | undefined): string | undefined => {
       if (value === undefined) return undefined;
       if (typeof value === 'string') return value;
       if (Array.isArray(value) && value.length === 3) {
         return `rgb(${value[0]},${value[1]},${value[2]})`;
       }
-      // Nested configs are not allowed here – return undefined to continue fallback chain
       return undefined;
     };
 
@@ -13328,32 +12860,26 @@ export class ColorResolver {
     }
 
     const attrName = config.attribute || 'state';
-    // Home Assistant stores the primary state in `state`, attributes in `attributes`
     const rawValue: any = attrName === 'state' ? entityStateObj.state : entityStateObj.attributes?.[attrName];
 
-    // Early exit for undefined value
     if (rawValue === undefined || rawValue === null) {
       return normaliseColor(config.default) || fallback;
     }
 
-    // Try exact match first (stringified)
     const exactMatch = config.mapping[rawValue as keyof typeof config.mapping];
     if (exactMatch !== undefined) {
       return normaliseColor(exactMatch) || fallback;
     }
 
-    // If interpolate disabled, fallback immediately
     if (!config.interpolate) {
       return normaliseColor(config.default) || fallback;
     }
 
-    // Interpolation – only works for numeric keys & numeric rawValue
     const numericValue = typeof rawValue === 'number' ? rawValue : parseFloat(rawValue);
     if (Number.isNaN(numericValue)) {
       return normaliseColor(config.default) || fallback;
     }
 
-    // Extract numeric mapping keys & sort
     const numericStops: number[] = Object.keys(config.mapping)
       .map(k => parseFloat(k))
       .filter(v => !Number.isNaN(v))
@@ -13363,7 +12889,6 @@ export class ColorResolver {
       return normaliseColor(config.default) || fallback;
     }
 
-    // Identify surrounding stops
     let lower = numericStops[0];
     let upper = numericStops[numericStops.length - 1];
 
@@ -13377,9 +12902,8 @@ export class ColorResolver {
       return normaliseColor(config.mapping[String(lower)]) || normaliseColor(config.default) || fallback;
     }
 
-    // Linear interpolation between lower & upper colors
-    const lowerColor = this._parseToRgb(normaliseColor(config.mapping[String(lower)]));
-    const upperColor = this._parseToRgb(normaliseColor(config.mapping[String(upper)]));
+    const lowerColor = this.parseToRgb(normaliseColor(config.mapping[String(lower)]));
+    const upperColor = this.parseToRgb(normaliseColor(config.mapping[String(upper)]));
 
     if (!lowerColor || !upperColor) {
       return normaliseColor(config.default) || fallback;
@@ -13390,13 +12914,9 @@ export class ColorResolver {
     return `rgb(${interp[0]},${interp[1]},${interp[2]})`;
   }
 
-  /**
-   * Parse a CSS hex/rgb string to an RGB triplet. Returns undefined if parsing fails.
-   */
-  private _parseToRgb(colorStr: string | undefined): [number, number, number] | undefined {
+  private parseToRgb(colorStr: string | undefined): [number, number, number] | undefined {
     if (!colorStr) return undefined;
 
-    // Hex formats #RRGGBB or #RGB
     const hexMatch = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(colorStr);
     if (hexMatch) {
       let hex = hexMatch[1];
@@ -13411,7 +12931,6 @@ export class ColorResolver {
       ];
     }
 
-    // rgb(a) format
     const rgbMatch = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i.exec(colorStr);
     if (rgbMatch) {
       return [parseInt(rgbMatch[1], 10), parseInt(rgbMatch[2], 10), parseInt(rgbMatch[3], 10)];
@@ -13421,7 +12940,6 @@ export class ColorResolver {
   }
 }
 
-// Export singleton instance for convenient access across the application
 export const colorResolver = new ColorResolver();
 ```
 
@@ -13431,10 +12949,6 @@ export const colorResolver = new ColorResolver();
 import { ColorValue, StatefulColorConfig, isDynamicColorConfig, isStatefulColorConfig } from '../types';
 import { AnimationContext } from './animation';
 import { colorResolver } from './color-resolver';
-
-// ============================================================================
-// Core Color Types and Interfaces
-// ============================================================================
 
 export type ColorState = 'default' | 'hover' | 'active';
 
@@ -13457,10 +12971,6 @@ export interface ColorResolutionDefaults {
   fallbackTextColor?: string;
 }
 
-// ============================================================================
-// Unified Color Class
-// ============================================================================
-
 export class Color {
   private readonly _value: ColorValue;
   private readonly _fallback: string;
@@ -13478,18 +12988,23 @@ export class Color {
     return new Color(value, fallback);
   }
 
+  static fromValue(value: ColorValue | undefined, fallback: string = 'transparent'): Color {
+    if (value === undefined || value === null) {
+      return new Color(fallback, fallback);
+    }
+    return new Color(value, fallback);
+  }
+
   resolve(
     elementId?: string,
     animationProperty?: 'fill' | 'stroke' | 'textColor',
     animationContext?: AnimationContext,
     stateContext?: ColorStateContext
   ): string {
-    // Handle stateful colors (hover/active states)
     if (isStatefulColorConfig(this._value)) {
       const selectedColorValue = this._resolveStateBasedColorValue(this._value, stateContext);
       
       if (selectedColorValue !== undefined) {
-        // Recursively resolve the selected color value
         const stateColor = new Color(selectedColorValue, this._fallback);
         return stateColor.resolve(elementId, animationProperty, animationContext, stateContext);
       }
@@ -13497,7 +13012,6 @@ export class Color {
       return this._fallback;
     }
 
-    // Handle dynamic colors (entity-based)
     if (isDynamicColorConfig(this._value)) {
       if (elementId && animationProperty && animationContext) {
         const resolved = colorResolver.resolveColor(
@@ -13510,7 +13024,6 @@ export class Color {
         );
         return resolved || this._getStaticFallbackColor();
       } else {
-        // Basic resolution without animation
         const resolved = colorResolver.resolveColor(
           this._value,
           elementId || 'fallback',
@@ -13523,7 +13036,6 @@ export class Color {
       }
     }
 
-    // Handle static colors
     return this._formatStaticColorValue(this._value) || this._fallback;
   }
 
@@ -13552,7 +13064,6 @@ export class Color {
       return this._formatStaticColorValue(this._value) || this._fallback;
     }
     
-    // For non-static colors, return the best available fallback
     return this._getStaticFallbackColor();
   }
 
@@ -13564,44 +13075,10 @@ export class Color {
     return this.toStaticString();
   }
 
-  static fromValue(value: ColorValue | undefined, fallback: string = 'transparent'): Color {
-    if (value === undefined || value === null) {
-      return new Color(fallback, fallback);
-    }
-    return new Color(value, fallback);
-  }
-
-  /**
-   * Formats a raw color value to a CSS string without resolution logic.
-   * This is specifically for the animation manager when processing individual color values from mappings.
-   */
-  static formatValue(value: ColorValue | undefined): string | undefined {
-    if (value === undefined || value === null) {
-      return undefined;
-    }
-    
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return value.trim();
-    }
-    
-    if (Array.isArray(value) && 
-        value.length === 3 && 
-        value.every(component => typeof component === 'number')) {
-      return `rgb(${value[0]},${value[1]},${value[2]})`;
-    }
-    
-    return undefined;
-  }
-
-  // ============================================================================
-  // Private Implementation
-  // ============================================================================
-
   private _resolveStateBasedColorValue(
     statefulConfig: StatefulColorConfig,
     stateContext?: ColorStateContext
   ): ColorValue | undefined {
-    // Priority: active > hover > default
     if (stateContext?.isCurrentlyActive && statefulConfig.active !== undefined) {
       return statefulConfig.active;
     }
@@ -13628,7 +13105,6 @@ export class Color {
   }
 
   private _getStaticFallbackColor(): string {
-    // Try to extract a static color from complex configurations
     if (isDynamicColorConfig(this._value) && this._value.default !== undefined) {
       const defaultColor = this._formatStaticColorValue(this._value.default);
       if (defaultColor) return defaultColor;
@@ -13650,7 +13126,7 @@ export class Color {
 // New file implementing YAML configuration validation for LCARS card
 import { LcarsCardConfig, GroupConfig, ElementConfig, Action } from '../types.js';
 import { parseCardConfig } from '../parsers/schema.js';
-import { validateAction } from './action-helpers.js';
+import { ActionProcessor } from './action-helpers.js';
 
 export interface ValidationResult {
   valid: boolean;
@@ -13768,7 +13244,7 @@ export function validateConfig(config: unknown): ValidationResult {
           const flat: Action[] = flatten(acts);
           flat.forEach((act) => {
             // Validate required properties per action type
-            validateAction(act).forEach((msg) => errors.push(`${contextId} button.action – ${msg}`));
+            ActionProcessor.validateAction(act).forEach((msg: string) => errors.push(`${contextId} button.action – ${msg}`));
 
             if (
               (act.action === 'set_state' || act.action === 'toggle_state') &&
@@ -13869,18 +13345,15 @@ function formatZodPath(path: (string | number)[], cfg: any): string {
 ```typescript
 import FontFaceObserver from 'fontfaceobserver';
 import FontMetrics from 'fontmetrics';
-import { getSvgTextWidth } from './shapes.js';
+import { TextMeasurement } from './shapes.js';
 import { TextConfig } from '../types.js';
 
-/**
- * Centralised font utility so the rest of the codebase no longer talks directly
- * to FontFaceObserver, FontMetrics, or ad-hoc SVG text measurement helpers.
- */
+type FontMetricsResult = ReturnType<typeof FontMetrics>;
+
 export class FontManager {
-  private static metricsCache = new Map<string, ReturnType<typeof FontMetrics> | null>();
+  private static metricsCache = new Map<string, FontMetricsResult | null>();
   private static fontsReadyPromise: Promise<void> | null = null;
 
-  /** Ensure the supplied font families are fully loaded (or failed) before resolving */
   static async ensureFontsLoaded(fontFamilies: string[] = ['Antonio'], timeout = 5000): Promise<void> {
     if (!this.fontsReadyPromise) {
       const observers = fontFamilies.map((family) => new FontFaceObserver(family).load(null, timeout));
@@ -13892,15 +13365,13 @@ export class FontManager {
             /* ignore */
           }
         }
-        // Wait a frame so glyph metrics are final.
         await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
       });
     }
     return this.fontsReadyPromise;
   }
 
-  /** Retrieve (and cache) font-metrics for the requested family/weight. */
-  static getFontMetrics(fontFamily: string, fontWeight: string | number = 'normal', fontSize = 200): ReturnType<typeof FontMetrics> | null {
+  static getFontMetrics(fontFamily: string, fontWeight: string | number = 'normal', fontSize = 200): FontMetricsResult | null {
     const key = `${fontFamily}::${fontWeight}`;
     if (this.metricsCache.has(key)) return this.metricsCache.get(key)!;
 
@@ -13914,13 +13385,11 @@ export class FontManager {
     }
   }
 
-  /** Convenience wrapper around the existing SVG text-width helper with cache. */
   static measureTextWidth(text: string, config: TextConfig): number {
     const fontString = `${config.fontWeight || 'normal'} ${config.fontSize || 16}px ${config.fontFamily}`;
-    return getSvgTextWidth(text, fontString, config.letterSpacing as any, config.textTransform);
+    return TextMeasurement.measureSvgTextWidth(text, fontString, config.letterSpacing?.toString(), config.textTransform);
   }
 
-  /** Clear cached FontMetrics so they can be regenerated after font load events. */
   static clearMetricsCache(): void {
     this.metricsCache.clear();
   }
@@ -13977,258 +13446,208 @@ export const CAP_HEIGHT_RATIO = 0.66;
 export type Orientation = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 export type Direction = 'left' | 'right';
 
-interface Point { x: number; y: number; }
-interface Vector { x: number; y: number; }
-
-const VectorMath = {
-    subtract: (p1: Point, p2: Point): Vector => ({ x: p1.x - p2.x, y: p1.y - p2.y }),
-    add: (p: Point, v: Vector): Point => ({ x: p.x + v.x, y: p.y + v.y }),
-    scale: (v: Vector, scalar: number): Vector => ({ x: v.x * scalar, y: v.y * scalar }),
-    magnitude: (v: Vector): number => Math.sqrt(v.x * v.x + v.y * v.y),
-    normalize: (v: Vector, epsilon = EPSILON): Vector | null => {
-        const mag = VectorMath.magnitude(v);
-        if (mag < epsilon) return null;
-        return VectorMath.scale(v, 1 / mag);
-    },
-    dot: (v1: Vector, v2: Vector): number => v1.x * v2.x + v1.y * v2.y,
-};
-
-
-// === Core Shape Building Function ===
-
-/**
- * Generates the SVG path 'd' attribute string for a shape defined by points,
- * applying rounded corners based on the radius specified at each point.
- * Uses an arc (`A` command) for rounded corners.
- * @param points - Array of points `[x, y, cornerRadius]` defining the shape polygon vertices.
- * @returns The SVG path data string (`d` attribute) or an empty string if input is invalid.
- */
-export function buildShape(points: [number, number, number][]): string {
-    if (!points || points.length < 3) {
-        console.warn("LCARS Card: buildShape requires at least 3 points.");
-        return "";
-    }
-    
-    let pathData = "";
-    const len = points.length;
-    
-    for (let i = 0; i < len; i++) {
-        const p1 = points[i];
-        const p0 = points[(i - 1 + len) % len];
-        const p2 = points[(i + 1) % len];
-
-        const [x, y, r] = p1;
-        const [x0, y0] = p0;
-        const [x2, y2] = p2;
-
-        const v1x = x0 - x, v1y = y0 - y;
-        const v2x = x2 - x, v2y = y2 - y;
+export class ShapeGenerator {
+    static buildPath(points: [number, number, number][]): string {
+        if (!points || points.length < 3) {
+            console.warn("LCARS Card: buildPath requires at least 3 points.");
+            return "";
+        }
         
-        const magV1 = Math.sqrt(v1x * v1x + v1y * v1y);
-        const magV2 = Math.sqrt(v2x * v2x + v2y * v2y);
+        let pathData = "";
+        const len = points.length;
         
-        let cornerRadius = r;
-        let dist = 0;
-        
-        if (cornerRadius > EPSILON && magV1 > EPSILON && magV2 > EPSILON) {
-            const dotProduct = v1x * v2x + v1y * v2y;
-            const clampedDot = Math.max(-1 + EPSILON, Math.min(1 - EPSILON, dotProduct / (magV1 * magV2)));
-            const angle = Math.acos(clampedDot);
-            
-            if (Math.abs(Math.sin(angle / 2)) > EPSILON && Math.abs(Math.tan(angle / 2)) > EPSILON) {
-                dist = Math.abs(cornerRadius / Math.tan(angle / 2));
-            
-                dist = Math.min(dist, magV1, magV2);
-            
-                cornerRadius = dist * Math.abs(Math.tan(angle / 2));
+        for (let i = 0; i < len; i++) {
+            const p1 = points[i];
+            const p0 = points[(i - 1 + len) % len];
+            const p2 = points[(i + 1) % len];
 
+            const [x, y, r] = p1;
+            const [x0, y0] = p0;
+            const [x2, y2] = p2;
+
+            const v1x = x0 - x, v1y = y0 - y;
+            const v2x = x2 - x, v2y = y2 - y;
+            
+            const magV1 = Math.sqrt(v1x * v1x + v1y * v1y);
+            const magV2 = Math.sqrt(v2x * v2x + v2y * v2y);
+            
+            let cornerRadius = r;
+            let dist = 0;
+            
+            if (cornerRadius > EPSILON && magV1 > EPSILON && magV2 > EPSILON) {
+                const dotProduct = v1x * v2x + v1y * v2y;
+                const clampedDot = Math.max(-1 + EPSILON, Math.min(1 - EPSILON, dotProduct / (magV1 * magV2)));
+                const angle = Math.acos(clampedDot);
+                
+                if (Math.abs(Math.sin(angle / 2)) > EPSILON && Math.abs(Math.tan(angle / 2)) > EPSILON) {
+                    dist = Math.abs(cornerRadius / Math.tan(angle / 2));
+                    dist = Math.min(dist, magV1, magV2);
+                    cornerRadius = dist * Math.abs(Math.tan(angle / 2));
+                } else { 
+                    cornerRadius = 0;
+                    dist = 0; 
+                }
             } else { 
                 cornerRadius = 0;
                 dist = 0; 
             }
-        } else { 
-            cornerRadius = 0;
-            dist = 0; 
+            
+            const normV1x = magV1 > EPSILON ? v1x / magV1 : 0;
+            const normV1y = magV1 > EPSILON ? v1y / magV1 : 0;
+            const normV2x = magV2 > EPSILON ? v2x / magV2 : 0;
+            const normV2y = magV2 > EPSILON ? v2y / magV2 : 0;
+            
+            const arcStartX = x + normV1x * dist;
+            const arcStartY = y + normV1y * dist;
+            const arcEndX = x + normV2x * dist;
+            const arcEndY = y + normV2y * dist;
+            
+            if (i === 0) { 
+                pathData += `M ${cornerRadius > EPSILON ? arcStartX.toFixed(3) : x.toFixed(3)},${cornerRadius > EPSILON ? arcStartY.toFixed(3) : y.toFixed(3)} `;
+            } else { 
+                pathData += `L ${cornerRadius > EPSILON ? arcStartX.toFixed(3) : x.toFixed(3)},${cornerRadius > EPSILON ? arcStartY.toFixed(3) : y.toFixed(3)} `;
+            }
+            
+            if (cornerRadius > EPSILON && dist > EPSILON) {
+                const crossProductZ = v1x * v2y - v1y * v2x;
+                const sweepFlag = crossProductZ > 0 ? 0 : 1;
+                pathData += `A ${cornerRadius.toFixed(3)},${cornerRadius.toFixed(3)} 0 0,${sweepFlag} ${arcEndX.toFixed(3)},${arcEndY.toFixed(3)} `;
+            }
         }
         
-        const normV1x = magV1 > EPSILON ? v1x / magV1 : 0;
-        const normV1y = magV1 > EPSILON ? v1y / magV1 : 0;
-        const normV2x = magV2 > EPSILON ? v2x / magV2 : 0;
-        const normV2y = magV2 > EPSILON ? v2y / magV2 : 0;
-        
-        const arcStartX = x + normV1x * dist;
-        const arcStartY = y + normV1y * dist;
-        const arcEndX = x + normV2x * dist;
-        const arcEndY = y + normV2y * dist;
-        
-        if (i === 0) { 
-            pathData += `M ${cornerRadius > EPSILON ? arcStartX.toFixed(3) : x.toFixed(3)},${cornerRadius > EPSILON ? arcStartY.toFixed(3) : y.toFixed(3)} `;
-        } else { 
-            pathData += `L ${cornerRadius > EPSILON ? arcStartX.toFixed(3) : x.toFixed(3)},${cornerRadius > EPSILON ? arcStartY.toFixed(3) : y.toFixed(3)} `;
+        pathData += "Z";
+        return pathData;
+    }
+
+    private static dimensionsAreValid(width: number, height: number, functionName: string): boolean {
+        if (width <= 0 || height <= 0) {
+            console.warn(`LCARS Card: ${functionName} requires positive width and height.`);
+            return false;
         }
-        
-        if (cornerRadius > EPSILON && dist > EPSILON) {
-            const crossProductZ = v1x * v2y - v1y * v2x;
-            const sweepFlag = crossProductZ > 0 ? 0 : 1;
-            pathData += `A ${cornerRadius.toFixed(3)},${cornerRadius.toFixed(3)} 0 0,${sweepFlag} ${arcEndX.toFixed(3)},${arcEndY.toFixed(3)} `;
+        return true;
+    }
+
+    private static createFallbackPoints(x: number, y: number): [number, number, number][] {
+        return [[x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0]];
+    }
+
+    static generateChiselEndcap(
+        width: number,
+        height: number,
+        side: 'left' | 'right',
+        x: number = 0,
+        y: number = 0,
+        topCornerRadius: number = height / 8,
+        bottomCornerRadius: number = height / 4
+    ): string {
+        if (!this.dimensionsAreValid(width, height, 'generateChiselEndcap')) {
+            return this.buildPath(this.createFallbackPoints(x, y));
         }
-    }
-    
-    pathData += "Z";
-    return pathData;
-}
 
-
-/**
- * Generates the SVG path data (`d` attribute) for a "chisel" style endcap using `buildShape`.
- * @param width The total width of the shape's bounding box.
- * @param height The total height of the shape's bounding box.
- * @param side Which side the angled part is on ('left' or 'right').
- * @param x The starting x coordinate (top-left). Default 0.
- * @param y The starting y coordinate (top-left). Default 0.
- * @param topCornerRadius Radius for the top-right corner. Default 0.
- * @param bottomCornerRadius Radius for the bottom-right corner. Default 0.
- * @returns The SVG path data string (`d` attribute).
- */
-export function generateChiselEndcapPath(
-    width: number,
-    height: number,
-    side: 'left' | 'right',
-    x: number = 0,
-    y: number = 0,
-    topCornerRadius: number = height / 8,
-    bottomCornerRadius: number = height / 4
-): string {
-    let points: [number, number, number][];
-    if (width <= 0 || height <= 0) {
-        console.warn("LCARS Card: generateChiselEndcapPath requires positive width and height.");
-        points = [[x, y, 0], [x, y, 0], [x, y, 0]];
+        let points: [number, number, number][];
+        if (side === 'right') {
+            const upperWidth = width;
+            const lowerWidth = width - height / 2;
+            points = [
+                [x, y, 0],
+                [x + upperWidth, y, topCornerRadius],
+                [x + lowerWidth, y + height, bottomCornerRadius],
+                [x, y + height, 0]
+            ];
+        } else if (side === 'left') {
+            const lowerOffset = height / 2;
+            points = [
+                [x, y, topCornerRadius],
+                [x + width, y, 0],
+                [x + width, y + height, 0],
+                [x + lowerOffset, y + height, bottomCornerRadius]
+            ];
+        } else {
+            console.warn("LCARS Card: generateChiselEndcap only supports side='left' or 'right'. Falling back to rectangle.");
+            points = [
+                [x, y, 0],
+                [x + width, y, 0],
+                [x + width, y + height, 0],
+                [x, y + height, 0]
+            ];
+        }
+        return this.buildPath(points);
     }
-    else if (side === 'right') {
-        const upperWidth = width;
-        const lowerWidth = width - height / 2;
-        points = [
-            [x, y, 0],
-            [x + upperWidth, y, topCornerRadius],
-            [x + lowerWidth, y + height, bottomCornerRadius],
-            [x, y + height, 0]
-        ];
-    } else if (side === 'left') {
-        const lowerOffset = height / 2;
-        points = [
-            [x, y, topCornerRadius],
-            [x + width, y, 0],
-            [x + width, y + height, 0],
-            [x + lowerOffset, y + height, bottomCornerRadius]
-        ];
-    } else {
-        console.warn("LCARS Card: generateChiselEndcapPath currently only supports side='left' or 'right'. Falling back to rectangle.");
-        points = [
-            [x, y, 0],
-            [x + width, y, 0],
-            [x + width, y + height, 0],
-            [x, y + height, 0]
-        ];
-    }
-    return buildShape(points);
-}
 
-/**
- * Generates SVG path data (`d` attribute) for an elbow shape using `buildShape`.
- * An elbow is a shape with a "header" along one edge, and a vertical bar on a corner.
- * It forms an L with rounded corners.
- * 
- * The path will have a rounded inner corner where the horizontal and vertical parts meet.
- * 
- * @param x The starting X coordinate.
- * @param width Width of the horizontal leg.
- * @param bodyWidth Width (thickness) of the vertical leg.
- * @param armHeight Height (thickness) of the horizontal leg.
- * @param height Total height spanned by the vertical leg.
- * @param orientation Which corner the elbow is based in: 'top-left', 'top-right', 'bottom-left', 'bottom-right'.
- * @param y The starting Y coordinate. Default 0.
- * @param outerCornerRadius Optional radius for the *outer* sharp corners. Default 0.
- * @returns SVG path data string (`d` attribute).
- */
-export function generateElbowPath(
-    x: number,
-    width: number,
-    bodyWidth: number,
-    armHeight: number,
-    height: number,
-    orientation: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left',
-    y: number = 0,
-    outerCornerRadius: number = armHeight
-): string {
-    let points: [number, number, number][];
-    if (armHeight <= 0 || width <= 0 || bodyWidth <= 0 || height <= armHeight) {
-        console.warn("LCARS Card: Invalid dimensions provided to generateElbowPath.");
-        points = [[x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0]];
-    } else {
-    const h = armHeight;
-    const wH = width;
-    const wV = bodyWidth;
-    const totalH = height;
-    const innerRadius = Math.min(h / 2, wV);
-    const maxOuterRadius = Math.min(wH, totalH);
-    const safeOuterCornerRadius = Math.min(outerCornerRadius, maxOuterRadius);
-    switch (orientation) {
-        case 'top-left':
+    static generateElbow(
+        x: number,
+        width: number,
+        bodyWidth: number,
+        armHeight: number,
+        height: number,
+        orientation: Orientation,
+        y: number = 0,
+        outerCornerRadius: number = armHeight
+    ): string {
+        if (armHeight <= 0 || width <= 0 || bodyWidth <= 0 || height <= armHeight) {
+            console.warn("LCARS Card: Invalid dimensions provided to generateElbow.");
+            return this.buildPath([[x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0]]);
+        }
+
+        const h = armHeight;
+        const wH = width;
+        const wV = bodyWidth;
+        const totalH = height;
+        const innerRadius = Math.min(h / 2, wV);
+        const maxOuterRadius = Math.min(wH, totalH);
+        const safeOuterCornerRadius = Math.min(outerCornerRadius, maxOuterRadius);
+
+        let points: [number, number, number][];
+        switch (orientation) {
+            case 'top-left':
                 points = [
                     [x + wH, y, 0], [x, y, safeOuterCornerRadius],
                     [x, y + totalH, 0], [x + wV, y + totalH, 0],
                     [x + wV, y + h, innerRadius], [x + wH, y + h, 0]
-                ]; break;
-        case 'top-right':
+                ];
+                break;
+            case 'top-right':
                 points = [
                     [x, y, 0], [x + wH, y, safeOuterCornerRadius],
                     [x + wH, y + totalH, 0], [x + wH - wV, y + totalH, 0],
                     [x + wH - wV, y + h, innerRadius], [x, y + h, 0]
-                ]; break;
+                ];
+                break;
             case 'bottom-right':
                 points = [
                     [x, y + totalH - h, 0], [x + wH - wV, y + totalH - h, innerRadius],
                     [x + wH - wV, y, 0], [x + wH, y, 0],
                     [x + wH, y + totalH, safeOuterCornerRadius], [x, y + totalH, 0]
-                ]; break;
+                ];
+                break;
             case 'bottom-left':
                 points = [
                     [x + wH, y + totalH - h, 0], [x + wV, y + totalH - h, innerRadius],
                     [x + wV, y, 0], [x, y, 0],
                     [x, y + totalH, safeOuterCornerRadius], [x + wH, y + totalH, 0]
-                ]; break;
+                ];
+                break;
             default:
-                 console.error(`LCARS Card: Invalid orientation "${orientation}" provided to generateElbowPath.`);
-                 points = [[x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0]];
+                console.error(`LCARS Card: Invalid orientation "${orientation}" provided to generateElbow.`);
+                return this.buildPath(this.createFallbackPoints(x, y));
         }
+        return this.buildPath(points);
     }
-    return buildShape(points);
-}
 
-/**
- * Generates SVG path data (`d` attribute) for a rounded endcap using `buildShape`.
- * @param width The total width of the shape. Must be >= height/2.
- * @param height The height of the shape.
- * @param direction The side where the rounded part is ('left' or 'right').
- * @param x The starting X coordinate (top-left corner). Default 0.
- * @param y The starting Y coordinate (top-left corner). Default 0.
- * @returns SVG path data string (`d` attribute).
- */
-export function generateEndcapPath(
-    width: number,
-    height: number,
-    direction: 'left' | 'right',
-    x: number = 0,
-    y: number = 0
-): string {
-    
-    let points: [number, number, number][];
-     if (height <= 0 || width <= 0) {
-         console.warn("[generateEndcapPath] Requires positive width and height.");
-         points = [[x, y, 0], [x, y, 0], [x, y, 0]];
-    } else {
+    static generateEndcap(
+        width: number,
+        height: number,
+        direction: Direction,
+        x: number = 0,
+        y: number = 0
+    ): string {
+        if (!this.dimensionsAreValid(width, height, 'generateEndcap')) {
+            return this.buildPath([[x, y, 0], [x, y, 0], [x, y, 0]]);
+        }
+
         const cornerRadius = width >= height/2 ? height/2 : width;
         
+        let points: [number, number, number][];
         if (direction === 'left') {
             points = [
                 [x, y, cornerRadius],
@@ -14245,67 +13664,44 @@ export function generateEndcapPath(
             ];
         }
         
+        return this.buildPath(points);
     }
-    const pathD = buildShape(points);
-    
-    return pathD;
-}
 
-/**
- * Generates SVG path data (`d` attribute) for a simple rectangle using `buildShape`.
- * @param x The starting X coordinate (top-left corner).
- * @param y The starting Y coordinate (top-left corner).
- * @param width The width of the rectangle.
- * @param height The height of the rectangle.
- * @param cornerRadius Optional uniform radius for all corners. Default 0.
- * @returns SVG path data string (`d` attribute).
- */
-export function generateRectanglePath(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    cornerRadius: number = 0
-): string {
-    let points: [number, number, number][];
-    if (width <= 0 || height <= 0) {
-        console.warn("LCARS Card: generateRectanglePath requires positive width and height.");
-        points = [[x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0]];
-    } else {
-        points = [
+    static generateRectangle(
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        cornerRadius: number = 0
+    ): string {
+        if (!this.dimensionsAreValid(width, height, 'generateRectangle')) {
+            return this.buildPath(this.createFallbackPoints(x, y));
+        }
+
+        const points: [number, number, number][] = [
             [x, y, cornerRadius], [x + width, y, cornerRadius],
             [x + width, y + height, cornerRadius], [x, y + height, cornerRadius]
         ];
+        return this.buildPath(points);
     }
-    return buildShape(points);
-}
 
-/**
- * Generates SVG path data (`d` attribute) for an equilateral triangle using `buildShape`.
- * Allows for rounded corners.
- * @param sideLength The length of each side of the triangle.
- * @param direction Orientation: 'left' (points right) or 'right' (points left).
- * @param centerX The X coordinate of the center. Default 0.
- * @param centerY The Y coordinate of the center. Default 0.
- * @param cornerRadius Optional radius for all corners. Default 0.
- * @returns SVG path data string (`d` attribute).
- */
-export function generateTrianglePath(
-    sideLength: number,
-    direction: 'left' | 'right',
-    centerX: number = 0,
-    centerY: number = 0,
-    cornerRadius: number = 0
-): string {
-    let points: [number, number, number][];
-    if (sideLength <= 0) {
-        console.warn("LCARS Card: generateTrianglePath requires positive sideLength.");
-        points = [[centerX, centerY, 0], [centerX, centerY, 0], [centerX, centerY, 0]];
-    } else {
+    static generateTriangle(
+        sideLength: number,
+        direction: Direction,
+        centerX: number = 0,
+        centerY: number = 0,
+        cornerRadius: number = 0
+    ): string {
+        if (sideLength <= 0) {
+            console.warn("LCARS Card: generateTriangle requires positive sideLength.");
+            return this.buildPath([[centerX, centerY, 0], [centerX, centerY, 0], [centerX, centerY, 0]]);
+        }
+
         const h = (Math.sqrt(3) / 2) * sideLength;
         const distCenterToVertex = h * (2 / 3);
         const distCenterToBaseMidpoint = h / 3;
 
+        let points: [number, number, number][];
         if (direction === 'right') {
             const p1x = centerX + distCenterToVertex;
             const p1y = centerY;
@@ -14323,201 +13719,132 @@ export function generateTrianglePath(
             const p3y = centerY - sideLength / 2;
             points = [[p1x, p1y, cornerRadius], [p2x, p2y, cornerRadius], [p3x, p3y, cornerRadius]];
         }
+        return this.buildPath(points);
     }
-    return buildShape(points);
 }
 
-let canvasContext: CanvasRenderingContext2D | null = null;
+export class TextMeasurement {
+    private static canvasContext: CanvasRenderingContext2D | null = null;
 
-/**
- * Measures the width of text using SVG's native text measurement capabilities,
- * which account for font kerning and exact glyph widths.
- * Falls back to canvas measurement if SVG measurement fails.
- * @param text The text string to measure
- * @param font The CSS font string (e.g. "bold 16px Arial")
- * @param letterSpacing Optional letter-spacing value (e.g. "0.1em" or "1px")
- * @param textTransform Optional text-transform value (e.g. "uppercase")
- * @returns The measured width in pixels
- */
-export function getSvgTextWidth(text: string, font: string, letterSpacing?: string, textTransform?: string): number {
-    // Apply text transform if specified
-    let transformedText = text;
-    if (textTransform) {
-        switch (textTransform.toLowerCase()) {
-            case 'uppercase': transformedText = text.toUpperCase(); break;
-            case 'lowercase': transformedText = text.toLowerCase(); break;
-            case 'capitalize': 
-                transformedText = text.replace(/\b\w/g, c => c.toUpperCase());
-                break;
-        }
-    }
+    static measureSvgTextWidth(text: string, font: string, letterSpacing?: string, textTransform?: string): number {
+        const transformedText = this.applyTextTransform(text, textTransform);
 
-    try {
-        if (typeof document !== 'undefined' && document.createElementNS) {
-            // Create a temporary SVG element
-            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            svg.setAttribute("width", "0");
-            svg.setAttribute("height", "0");
-            svg.style.position = "absolute";
-            svg.style.visibility = "hidden";
-            document.body.appendChild(svg);
-            
-            // Create a text element with the specified font and text
-            const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            textElement.textContent = transformedText;
-            
-            // Parse and apply font properties
-            const fontWeight = font.match(/^(bold|normal|[1-9]00)\s+/) ? 
-                font.match(/^(bold|normal|[1-9]00)\s+/)?.[1] || 'normal' : 'normal';
-            const fontSizeMatch = font.match(/(\d+(?:\.\d+)?)(?:px|pt|em|rem)/);
-            const fontSize = fontSizeMatch ? parseFloat(fontSizeMatch[1]) : 16;
-            const fontFamily = font.includes(' ') ? 
-                font.substring(font.lastIndexOf(' ') + 1) : font;
-            
-            textElement.setAttribute("font-family", fontFamily);
-            textElement.setAttribute("font-size", `${fontSize}px`);
-            textElement.setAttribute("font-weight", fontWeight);
-            
-            // Apply letter spacing if specified
-            if (letterSpacing) {
-                textElement.setAttribute("letter-spacing", letterSpacing);
-            }
-            
-            svg.appendChild(textElement);
-            
-            // Use SVG's native getComputedTextLength method
-            const textWidth = textElement.getComputedTextLength();
-            
-            // Clean up
-            document.body.removeChild(svg);
-            
-            if (isNaN(textWidth)) {
-                throw new Error("Invalid text width measurement");
-            }
-            
-            return textWidth;
-        }
-    } catch (e) {
-        console.warn("LCARS Card: SVG text measurement failed, falling back to canvas:", e);
-        // Fall back to canvas-based measurement
-        return getTextWidth(transformedText, font);
-    }
-    
-    return getTextWidth(transformedText, font);
-}
-
-/**
- * Measures the width of a text string using the 2D Canvas API.
- * Caches the canvas context for efficiency. Provides a rough fallback if canvas is unavailable.
- * @param text The text string to measure.
- * @param font The CSS font string (e.g., "bold 16px Arial").
- * @returns The measured width in pixels, or a fallback estimate if canvas fails.
- */
-export function getTextWidth(text: string, font: string): number {
-    if (!canvasContext) {
         try {
-            if (typeof document !== 'undefined' && document.createElement) {
-                const canvas = document.createElement('canvas');
-                canvasContext = canvas.getContext('2d', { willReadFrequently: true });
-                if (!canvasContext) {
-                     console.warn("LCARS Card: Failed to get 2D context for text measurement. Using fallback.");
+            if (typeof document !== 'undefined' && document.createElementNS) {
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("width", "0");
+                svg.setAttribute("height", "0");
+                svg.style.position = "absolute";
+                svg.style.visibility = "hidden";
+                document.body.appendChild(svg);
+                
+                const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                textElement.textContent = transformedText;
+                
+                const fontWeight = font.match(/^(bold|normal|[1-9]00)\s+/) ? 
+                    font.match(/^(bold|normal|[1-9]00)\s+/)?.[1] || 'normal' : 'normal';
+                const fontSizeMatch = font.match(/(\d+(?:\.\d+)?)(?:px|pt|em|rem)/);
+                const fontSize = fontSizeMatch ? parseFloat(fontSizeMatch[1]) : 16;
+                const fontFamily = font.includes(' ') ? 
+                    font.substring(font.lastIndexOf(' ') + 1) : font;
+                
+                textElement.setAttribute("font-family", fontFamily);
+                textElement.setAttribute("font-size", `${fontSize}px`);
+                textElement.setAttribute("font-weight", fontWeight);
+                
+                if (letterSpacing) {
+                    textElement.setAttribute("letter-spacing", letterSpacing);
                 }
-            } else {
-                 console.warn("LCARS Card: Cannot create canvas for text measurement (document not available). Using fallback.");
-                 canvasContext = null;
+                
+                svg.appendChild(textElement);
+                const textWidth = textElement.getComputedTextLength();
+                document.body.removeChild(svg);
+                
+                if (isNaN(textWidth)) {
+                    throw new Error("Invalid text width measurement");
+                }
+                
+                return textWidth;
             }
         } catch (e) {
-            console.error("LCARS Card: Error creating canvas context for text measurement.", e);
-            canvasContext = null;
+            console.warn("LCARS Card: SVG text measurement failed, falling back to canvas:", e);
         }
+        
+        return this.measureCanvasTextWidth(transformedText, font);
     }
 
-    if (canvasContext) {
-        canvasContext.font = font;
-        try {
-            const metrics = canvasContext.measureText(text);
-            return metrics.width;
-        } catch (e) {
-             console.error(`LCARS Card: Error measuring text width for font "${font}".`, e);
+    static measureCanvasTextWidth(text: string, font: string): number {
+        if (!this.canvasContext) {
+            try {
+                if (typeof document !== 'undefined' && document.createElement) {
+                    const canvas = document.createElement('canvas');
+                    this.canvasContext = canvas.getContext('2d', { willReadFrequently: true });
+                    if (!this.canvasContext) {
+                        console.warn("LCARS Card: Failed to get 2D context for text measurement. Using fallback.");
+                    }
+                } else {
+                    console.warn("LCARS Card: Cannot create canvas for text measurement (document not available). Using fallback.");
+                    this.canvasContext = null;
+                }
+            } catch (e) {
+                console.error("LCARS Card: Error creating canvas context for text measurement.", e);
+                this.canvasContext = null;
+            }
         }
+
+        if (this.canvasContext) {
+            this.canvasContext.font = font;
+            try {
+                const metrics = this.canvasContext.measureText(text);
+                return metrics.width;
+            } catch (e) {
+                console.error(`LCARS Card: Error measuring text width for font "${font}".`, e);
+            }
+        }
+
+        return this.getFallbackTextWidth(text, font);
     }
 
-    console.warn(`LCARS Card: Using fallback text width estimation for font "${font}".`);
-    const fontSizeMatch = font.match(/(\d+(?:\.\d+)?)(?:px|pt|em|rem)/);
-    const fontSize = fontSizeMatch ? parseFloat(fontSizeMatch[1]) : 16;
-    return text.length * fontSize * 0.6;
-}
-
-/**
- * Measures the bounding box of a rendered SVG text element using `getBBox()`.
- * @param element The SVGTextElement to measure.
- * @returns An object with `width` and `height`, or `null` if measurement fails, element is invalid, or not rendered.
- */
-export function measureTextBBox(element: SVGTextElement | null): { width: number; height: number } | null {
-    if (!element) {
-        return null;
-    }
-    if (typeof element.getBBox !== 'function' || !element.isConnected) {
-         return null;
-    }
-
-    try {
-        const bbox = element.getBBox();
-        if (bbox && typeof bbox.width === 'number' && typeof bbox.height === 'number' && bbox.width >= 0 && bbox.height >= 0) {
-            return { width: bbox.width, height: bbox.height };
-        } else {
+    static measureTextBoundingBox(element: SVGTextElement | null): { width: number; height: number } | null {
+        if (!element || typeof element.getBBox !== 'function' || !element.isConnected) {
             return null;
         }
-    } catch (e) {
-        return null;
-    }
-}
 
-/**
- * Calculates a target bar height likely to visually align with the cap height of adjacent text,
- * based on the text's measured BBox height and the estimated CAP_HEIGHT_RATIO.
- * @param measuredTextHeight The height returned by `measureTextBBox`.
- * @returns The calculated height for an associated bar element, or 0 if input is invalid.
- */
-export function calculateDynamicBarHeight(measuredTextHeight: number): number {
-    if (measuredTextHeight <= 0) {
-        return 0;
+        try {
+            const bbox = element.getBBox();
+            if (bbox && typeof bbox.width === 'number' && typeof bbox.height === 'number' && bbox.width >= 0 && bbox.height >= 0) {
+                return { width: bbox.width, height: bbox.height };
+            }
+            return null;
+        } catch (e) {
+            return null;
+        }
     }
-    return measuredTextHeight * CAP_HEIGHT_RATIO;
-}
 
-/**
- * Gets detailed font metrics (ascent, descent, cap height, x-height, baseline, etc.) for a given font.
- * @param fontFamily The font family to measure (e.g., 'Roboto').
- * @param fontWeight The font weight (e.g., 'normal', 'bold', 400, 700).
- * @param fontSize The font size in px (number or string, e.g., 16 or '16px').
- * @param origin The origin for normalization (default: 'baseline').
- * @returns The normalized font metrics object, or null if measurement fails.
- */
-export function getFontMetrics({
-  fontFamily,
-  fontWeight = 'normal',
-  fontSize = 200,
-  origin = 'baseline',
-}: {
-  fontFamily: string;
-  fontWeight?: string | number;
-  fontSize?: number | string;
-  origin?: string;
-}): ReturnType<typeof FontMetrics> | null {
-  try {
-    let size = typeof fontSize === 'string' ? parseFloat(fontSize) : fontSize;
-    if (!size || isNaN(size)) size = 200;
-    return FontMetrics({
-      fontFamily,
-      fontWeight: fontWeight as any,
-      fontSize: size,
-      origin,
-    });
-  } catch (e) {
-    console.warn('LCARS Card: Failed to get font metrics for', fontFamily, e);
-    return null;
-  }
+    static calculateBarHeight(measuredTextHeight: number): number {
+        if (measuredTextHeight <= 0) {
+            return 0;
+        }
+        return measuredTextHeight * CAP_HEIGHT_RATIO;
+    }
+
+    private static applyTextTransform(text: string, textTransform?: string): string {
+        if (!textTransform) return text;
+        
+        switch (textTransform.toLowerCase()) {
+            case 'uppercase': return text.toUpperCase();
+            case 'lowercase': return text.toLowerCase();
+            case 'capitalize': return text.replace(/\b\w/g, c => c.toUpperCase());
+            default: return text;
+        }
+    }
+
+    private static getFallbackTextWidth(text: string, font: string): number {
+        console.warn(`LCARS Card: Using fallback text width estimation for font "${font}".`);
+        const fontSizeMatch = font.match(/(\d+(?:\.\d+)?)(?:px|pt|em|rem)/);
+        const fontSize = fontSizeMatch ? parseFloat(fontSizeMatch[1]) : 16;
+        return text.length * fontSize * 0.6;
+    }
 }
 ```
 
@@ -15703,9 +15030,9 @@ describe('Button', () => {
     });
   });
 
-  describe('unified action execution', () => {
+  describe('action execution', () => {
     it('should execute single action correctly', () => {
-      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
+      const executeActionSpy = vi.spyOn(Button.prototype as any, 'executeAction');
       const props = {
         button: {
           enabled: true,
@@ -15725,8 +15052,8 @@ describe('Button', () => {
       const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
       (button as any).handleClick(mockEvent);
       
-      expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(1);
-      expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
+      expect(executeActionSpy).toHaveBeenCalledTimes(1);
+      expect(executeActionSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'toggle',
           entity: 'light.test',
@@ -15735,11 +15062,11 @@ describe('Button', () => {
         expect.any(HTMLElement)
       );
       
-      executeUnifiedActionSpy.mockRestore();
+      executeActionSpy.mockRestore();
     });
 
     it('should execute multiple actions correctly', () => {
-      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
+      const executeActionSpy = vi.spyOn(Button.prototype as any, 'executeAction');
       const props = {
         button: {
           enabled: true,
@@ -15765,15 +15092,15 @@ describe('Button', () => {
       const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
       (button as any).handleClick(mockEvent);
       
-      expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(2);
-      expect(executeUnifiedActionSpy).toHaveBeenNthCalledWith(1, 
+      expect(executeActionSpy).toHaveBeenCalledTimes(2);
+      expect(executeActionSpy).toHaveBeenNthCalledWith(1, 
         expect.objectContaining({
           action: 'toggle',
           entity: 'light.living_room'
         }),
         expect.any(HTMLElement)
       );
-      expect(executeUnifiedActionSpy).toHaveBeenNthCalledWith(2,
+      expect(executeActionSpy).toHaveBeenNthCalledWith(2,
         expect.objectContaining({
           action: 'set_state',
           target_element_ref: 'group.element',
@@ -15782,22 +15109,20 @@ describe('Button', () => {
         expect.any(HTMLElement)
       );
       
-      executeUnifiedActionSpy.mockRestore();
+      executeActionSpy.mockRestore();
     });
 
     it('should handle action type conversion from set-state to set_state', () => {
-      const convertToUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'convertToUnifiedAction');
+      const normalizeActionFormatSpy = vi.spyOn(Button.prototype as any, 'normalizeActionFormat');
       const props = {
         button: {
           enabled: true,
           actions: {
-            tap: [
-              {
-                action: 'set-state',
-                target_element_ref: 'group.element',
-                state: 'active'
-              }
-            ]
+            tap: {
+              action: 'set-state',
+              target_element_ref: 'group.element',
+              state: 'active'
+            }
           }
         }
       };
@@ -15808,7 +15133,7 @@ describe('Button', () => {
       const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
       (button as any).handleClick(mockEvent);
       
-      expect(convertToUnifiedActionSpy).toHaveBeenCalledWith(
+      expect(normalizeActionFormatSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'set-state',
           target_element_ref: 'group.element',
@@ -15816,11 +15141,11 @@ describe('Button', () => {
         })
       );
       
-      convertToUnifiedActionSpy.mockRestore();
+      normalizeActionFormatSpy.mockRestore();
     });
 
     it('should auto-populate entity for toggle/more-info actions when missing', () => {
-      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
+      const executeActionSpy = vi.spyOn(Button.prototype as any, 'executeAction');
       const props = {
         button: {
           enabled: true,
@@ -15839,7 +15164,7 @@ describe('Button', () => {
       const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
       (button as any).handleClick(mockEvent);
       
-      expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
+      expect(executeActionSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'toggle',
           entity: 'test-button' // Should use button ID
@@ -15847,7 +15172,7 @@ describe('Button', () => {
         expect.any(HTMLElement)
       );
       
-      executeUnifiedActionSpy.mockRestore();
+      executeActionSpy.mockRestore();
     });
   });
 
@@ -15916,13 +15241,6 @@ describe('Button', () => {
       importSpy.mockRestore();
     });
   });
-
-  describe('cleanup', () => {
-    it('should be a no-op and not throw an error', () => {
-      const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
-      expect(() => button.cleanup()).not.toThrow();
-    });
-  });
 });
 ```
 
@@ -15979,9 +15297,8 @@ describe('ColorResolver', () => {
     // Create mock layout groups
     const mockElement = {
       id: 'test-element',
-      clearMonitoredEntities: vi.fn(),
-      cleanupAnimations: vi.fn(),
-      checkEntityChanges: vi.fn().mockReturnValue(false),
+              cleanupAnimations: vi.fn(),
+        entityChangesDetected: vi.fn().mockReturnValue(false),
       props: {
         fill: { entity: 'sensor.test', mapping: { on: 'red', off: 'blue' } },
         text: 'Hello'
@@ -16241,7 +15558,7 @@ describe('ColorResolver', () => {
       resolver.clearAllCaches(mockLayoutGroups);
 
       const element = mockLayoutGroups[0].elements[0] as any;
-      expect(element.clearMonitoredEntities).toHaveBeenCalled();
+              // clearMonitoredEntities method was removed as it was unused
       expect(element.cleanupAnimations).toHaveBeenCalled();
     });
 
@@ -16255,13 +15572,13 @@ describe('ColorResolver', () => {
     });
   });
 
-  describe('checkDynamicColorChanges', () => {
+  describe('detectsDynamicColorChanges', () => {
     it('should call refresh callback when changes are detected', async () => {
       const refreshCallback = vi.fn();
       const mockElement = mockLayoutGroups[0].elements[0] as any;
-      mockElement.checkEntityChanges.mockReturnValue(true);
+      mockElement.entityChangesDetected.mockReturnValue(true);
 
-      resolver.checkDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 10);
+      resolver.detectsDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 10);
 
       // Wait for the timeout
       await new Promise<void>((resolve) => {
@@ -16275,9 +15592,9 @@ describe('ColorResolver', () => {
     it('should not call refresh callback when no changes are detected', async () => {
       const refreshCallback = vi.fn();
       const mockElement = mockLayoutGroups[0].elements[0] as any;
-      mockElement.checkEntityChanges.mockReturnValue(false);
+      mockElement.entityChangesDetected.mockReturnValue(false);
 
-      resolver.checkDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 10);
+      resolver.detectsDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 10);
 
       // Wait for the timeout
       await new Promise<void>((resolve) => {
@@ -16291,12 +15608,12 @@ describe('ColorResolver', () => {
     it('should throttle multiple calls', async () => {
       const refreshCallback = vi.fn();
       const mockElement = mockLayoutGroups[0].elements[0] as any;
-      mockElement.checkEntityChanges.mockReturnValue(true);
+      mockElement.entityChangesDetected.mockReturnValue(true);
 
       // Make multiple rapid calls
-      resolver.checkDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 30);
-      resolver.checkDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 30);
-      resolver.checkDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 30);
+      resolver.detectsDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 30);
+      resolver.detectsDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 30);
+      resolver.detectsDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 30);
 
       // Wait for the timeout to complete
       await new Promise<void>((resolve) => {
@@ -16389,47 +15706,12 @@ describe('ColorResolver', () => {
     });
   });
 
-  describe('scheduleDynamicColorRefresh', () => {
-    it('should call callbacks after delay', async () => {
-      const checkCallback = vi.fn();
-      const refreshCallback = vi.fn();
-      const mockContainerRect = new DOMRect(0, 0, 100, 100);
-
-      resolver.scheduleDynamicColorRefresh(mockHass, mockContainerRect, checkCallback, refreshCallback, 10);
-
-      // Wait for the timeout
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          expect(checkCallback).toHaveBeenCalled();
-          expect(refreshCallback).toHaveBeenCalled();
-          resolve();
-        }, 20);
-      });
-    });
-
-    it('should not call callbacks if hass or containerRect is missing', async () => {
-      const checkCallback = vi.fn();
-      const refreshCallback = vi.fn();
-
-      resolver.scheduleDynamicColorRefresh(mockHass, undefined, checkCallback, refreshCallback, 10);
-
-      // Wait for the timeout
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          expect(checkCallback).not.toHaveBeenCalled();
-          expect(refreshCallback).not.toHaveBeenCalled();
-          resolve();
-        }, 20);
-      });
-    });
-  });
-
   describe('cleanup', () => {
     it('should clear scheduled operations', async () => {
       const refreshCallback = vi.fn();
 
       // Schedule an operation
-      resolver.checkDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 100);
+      resolver.detectsDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 100);
 
       // Clean up immediately
       resolver.cleanup();
@@ -16641,17 +15923,17 @@ describe('shapes.ts utility functions', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  describe('buildShape', () => {
+  describe('ShapeGenerator.buildPath', () => {
     it('should return empty string and warn if less than 3 points', () => {
-      expect(shapes.buildShape([])).toBe("");
+      expect(shapes.ShapeGenerator.buildPath([])).toBe("");
       expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("requires at least 3 points"));
-      expect(shapes.buildShape([[0,0,0], [1,1,0]])).toBe("");
+      expect(shapes.ShapeGenerator.buildPath([[0,0,0], [1,1,0]])).toBe("");
       expect(consoleWarnSpy).toHaveBeenCalledTimes(2);
     });
 
     it('should generate a simple triangle path with no radius', () => {
       const points: [number, number, number][] = [[0,0,0], [10,0,0], [5,10,0]];
-      const path = shapes.buildShape(points);
+      const path = shapes.ShapeGenerator.buildPath(points);
       pathContains(path, [
         "M 0", "L 10", "L 5", "Z"
       ]);
@@ -16659,7 +15941,7 @@ describe('shapes.ts utility functions', () => {
 
     it('should generate a simple square path with no radius', () => {
       const points: [number, number, number][] = [[0,0,0], [10,0,0], [10,10,0], [0,10,0]];
-      const path = shapes.buildShape(points);
+      const path = shapes.ShapeGenerator.buildPath(points);
       pathContains(path, [
         "M 0", "L 10", "L 10", "L 0", "Z"
       ]);
@@ -16667,7 +15949,7 @@ describe('shapes.ts utility functions', () => {
 
     it('should generate a square path with rounded corners', () => {
       const points: [number, number, number][] = [[0,0,2], [10,0,2], [10,10,2], [0,10,2]];
-      const path = shapes.buildShape(points);
+      const path = shapes.ShapeGenerator.buildPath(points);
       pathContains(path, [
         "M 0", "A 2", "L 8", "A 2", "L 10", "A 2", "L 2", "A 2", "Z"
       ]);
@@ -16675,7 +15957,7 @@ describe('shapes.ts utility functions', () => {
 
     it('should handle zero radius as sharp corners', () => {
       const points: [number, number, number][] = [[0,0,0], [10,0,2], [10,10,0], [0,10,2]];
-      const path = shapes.buildShape(points);
+      const path = shapes.ShapeGenerator.buildPath(points);
       pathContains(path, [
         "M 0", "L 8", "A 2", "L 10", "L 2", "A 2", "Z"
       ]);
@@ -16683,7 +15965,7 @@ describe('shapes.ts utility functions', () => {
 
     it('should clamp radius if it is too large for segments', () => {
       const points: [number, number, number][] = [[0,0,20], [10,0,20], [10,10,20], [0,10,20]];
-      const path = shapes.buildShape(points);
+      const path = shapes.ShapeGenerator.buildPath(points);
       pathContains(path, [
         "M", "A", "L", "A", "L", "A", "L", "A", "Z"
       ]);
@@ -16697,7 +15979,7 @@ describe('shapes.ts utility functions', () => {
         [15, 10, 5], // P3 
         [10, 10, 5]  // P4 (back to start)
       ];
-      const path = shapes.buildShape(points);
+      const path = shapes.ShapeGenerator.buildPath(points);
       // Just verify we get a valid path with the correct start/end points
       pathContains(path, ["M", "Z"]);
     });
@@ -16705,27 +15987,27 @@ describe('shapes.ts utility functions', () => {
     it('should handle points with very small segments (EPSILON related)', () => {
         const p = 0.00001; // Very small value
         const points: [number, number, number][] = [[0,p,0], [p,p,0], [p,0,0], [0,0,0]];
-        const path = shapes.buildShape(points);
+        const path = shapes.ShapeGenerator.buildPath(points);
         pathContains(path, ["M", "L", "L", "L", "Z"]);
     });
   });
 
-  describe('generateChiselEndcapPath', () => {
+  describe('ShapeGenerator.generateChiselEndcap', () => {
     it('should generate path for side "right"', () => {
-      const path = shapes.generateChiselEndcapPath(40, 20, 'right', 5, 10, 2.5, 5); // h/8, h/4
+      const path = shapes.ShapeGenerator.generateChiselEndcap(40, 20, 'right', 5, 10, 2.5, 5); // h/8, h/4
       pathContains(path, ["M 5", "L", "A", "L", "A", "L", "Z"]);
     });
 
     it('should generate path for side "left"', () => {
-      const path = shapes.generateChiselEndcapPath(40, 20, 'left', 5, 10, 2.5, 5);
+      const path = shapes.ShapeGenerator.generateChiselEndcap(40, 20, 'left', 5, 10, 2.5, 5);
       pathContains(path, ["M", "A", "L", "L", "L", "A", "Z"]);
     });
 
     it('should warn and return minimal path for zero/negative width or height', () => {
-      const emptyPath = shapes.generateChiselEndcapPath(0, 20, 'right');
+      const emptyPath = shapes.ShapeGenerator.generateChiselEndcap(0, 20, 'right');
       pathContains(emptyPath, ["M 0", "L 0", "L 0", "Z"]);
       expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("requires positive width and height"));
-      const emptyPath2 = shapes.generateChiselEndcapPath(40, -5, 'left');
+      const emptyPath2 = shapes.ShapeGenerator.generateChiselEndcap(40, -5, 'left');
       pathContains(emptyPath2, ["M 0", "L 0", "L 0", "Z"]);
       expect(consoleWarnSpy).toHaveBeenCalledTimes(2);
     });
@@ -16733,38 +16015,38 @@ describe('shapes.ts utility functions', () => {
     it('should default corner radii correctly', () => {
       const h = 20;
       // default topCornerRadius = h/8 = 2.5, default bottomCornerRadius = h/4 = 5
-      const path = shapes.generateChiselEndcapPath(40, h, 'right', 0, 0);
-      const pathWithExplicitRadii = shapes.generateChiselEndcapPath(40, h, 'right', 0, 0, 2.5, 5);
+      const path = shapes.ShapeGenerator.generateChiselEndcap(40, h, 'right', 0, 0);
+      const pathWithExplicitRadii = shapes.ShapeGenerator.generateChiselEndcap(40, h, 'right', 0, 0, 2.5, 5);
       expect(path).toBe(pathWithExplicitRadii);
     });
   });
 
-  describe('generateElbowPath', () => {
+  describe('ShapeGenerator.generateElbow', () => {
     const commonArgs = { x: 0, width: 100, bodyWidth: 30, armHeight: 30, height: 80, y: 0, outerCornerRadius: 10 };
     it('should generate path for "top-left" orientation', () => {
       const args = { ...commonArgs, orientation: 'top-left' as Orientation };
-      const path = shapes.generateElbowPath(args.x, args.width, args.bodyWidth, args.armHeight, args.height, args.orientation, args.y, args.outerCornerRadius);
+      const path = shapes.ShapeGenerator.generateElbow(args.x, args.width, args.bodyWidth, args.armHeight, args.height, args.orientation, args.y, args.outerCornerRadius);
       pathContains(path, ["M 100", "L 10", "A 10", "L 0", "L 30", "L 30", "A 15", "L 100", "Z"]);
     });
     it('should generate path for "top-right" orientation', () => {
       const args = { ...commonArgs, orientation: 'top-right' as Orientation };
-      const path = shapes.generateElbowPath(args.x, args.width, args.bodyWidth, args.armHeight, args.height, args.orientation, args.y, args.outerCornerRadius);
+      const path = shapes.ShapeGenerator.generateElbow(args.x, args.width, args.bodyWidth, args.armHeight, args.height, args.orientation, args.y, args.outerCornerRadius);
       pathContains(path, ["M 0", "L 90", "A 10", "L 100", "L 70", "L 70", "A 15", "L 0", "Z"]);
     });
     it('should generate path for "bottom-left" orientation', () => {
       const args = { ...commonArgs, orientation: 'bottom-left' as Orientation };
-      const path = shapes.generateElbowPath(args.x, args.width, args.bodyWidth, args.armHeight, args.height, args.orientation, args.y, args.outerCornerRadius);
+      const path = shapes.ShapeGenerator.generateElbow(args.x, args.width, args.bodyWidth, args.armHeight, args.height, args.orientation, args.y, args.outerCornerRadius);
       pathContains(path, ["M 100", "L 45", "A 15", "L 30", "L 0", "L 0", "A 10", "L 100", "Z"]);
     });
     it('should generate path for "bottom-right" orientation', () => {
       const args = { ...commonArgs, orientation: 'bottom-right' as Orientation };
-      const path = shapes.generateElbowPath(args.x, args.width, args.bodyWidth, args.armHeight, args.height, args.orientation, args.y, args.outerCornerRadius);
+      const path = shapes.ShapeGenerator.generateElbow(args.x, args.width, args.bodyWidth, args.armHeight, args.height, args.orientation, args.y, args.outerCornerRadius);
       pathContains(path, ["M 0", "L 55", "A 15", "L 70", "L 100", "L 100", "A 10", "L 0", "Z"]);
     });
 
     it('should warn and return minimal path for invalid dimensions', () => {
       const invalidArgs = { ...commonArgs, width: 0 };
-      const path = shapes.generateElbowPath(invalidArgs.x, invalidArgs.width, invalidArgs.bodyWidth, invalidArgs.armHeight, invalidArgs.height, 'top-left', invalidArgs.y, invalidArgs.outerCornerRadius);
+      const path = shapes.ShapeGenerator.generateElbow(invalidArgs.x, invalidArgs.width, invalidArgs.bodyWidth, invalidArgs.armHeight, invalidArgs.height, 'top-left', invalidArgs.y, invalidArgs.outerCornerRadius);
       pathContains(path, ["M 0", "L 0", "L 0", "L 0", "L 0", "L 0", "Z"]);
       expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("Invalid dimensions"));
     });
@@ -16772,72 +16054,72 @@ describe('shapes.ts utility functions', () => {
     it('should use default outerCornerRadius (armHeight)', () => {
         const argsNoRadius = { ...commonArgs, orientation: 'top-left' as Orientation };
         // Don't pass the radius parameter
-        const path = shapes.generateElbowPath(argsNoRadius.x, argsNoRadius.width, argsNoRadius.bodyWidth, argsNoRadius.armHeight, argsNoRadius.height, argsNoRadius.orientation, argsNoRadius.y);
+        const path = shapes.ShapeGenerator.generateElbow(argsNoRadius.x, argsNoRadius.width, argsNoRadius.bodyWidth, argsNoRadius.armHeight, argsNoRadius.height, argsNoRadius.orientation, argsNoRadius.y);
         // Check against path with explicit default radius
-        const pathWithDefaultRadius = shapes.generateElbowPath(argsNoRadius.x, argsNoRadius.width, argsNoRadius.bodyWidth, argsNoRadius.armHeight, argsNoRadius.height, argsNoRadius.orientation, argsNoRadius.y, argsNoRadius.armHeight);
+        const pathWithDefaultRadius = shapes.ShapeGenerator.generateElbow(argsNoRadius.x, argsNoRadius.width, argsNoRadius.bodyWidth, argsNoRadius.armHeight, argsNoRadius.height, argsNoRadius.orientation, argsNoRadius.y, argsNoRadius.armHeight);
         expect(path).toBe(pathWithDefaultRadius);
     });
   });
 
-  describe('generateEndcapPath', () => {
+  describe('ShapeGenerator.generateEndcap', () => {
     it('should generate path for direction "left"', () => {
-      const path = shapes.generateEndcapPath(40, 20, 'left', 5, 5);
+      const path = shapes.ShapeGenerator.generateEndcap(40, 20, 'left', 5, 5);
       // P0: (5,10,10), P1: (45,10,0), P2: (45,30,0), P3: (5,30,10)
       pathContains(path, ["M 5", "A 10", "L 45", "L 45", "L 15", "A 10", "Z"]);
     });
 
     it('should generate path for direction "right"', () => {
-      const path = shapes.generateEndcapPath(20, 20, 'right', 0, 0);
+      const path = shapes.ShapeGenerator.generateEndcap(20, 20, 'right', 0, 0);
       pathContains(path, ["M 0", "L 10", "A 10", "L", "A 10", "Z"]);
     });
 
     it('should use width as cornerRadius if width < height/2', () => {
-      const path = shapes.generateEndcapPath(5, 20, 'left');
+      const path = shapes.ShapeGenerator.generateEndcap(5, 20, 'left');
       // P0=(0,0,5), P1=(5,0,0), P2=(5,20,0), P3=(0,20,5)
       pathContains(path, ["M 0", "A 5", "L 5", "L 5", "L", "A 5", "Z"]);
     });
 
     it('should warn and return minimal path for zero/negative dimensions', () => {
-      const emptyPath = shapes.generateEndcapPath(0, 20, 'left');
+      const emptyPath = shapes.ShapeGenerator.generateEndcap(0, 20, 'left');
       pathContains(emptyPath, ["M 0", "L 0", "L 0", "Z"]);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("Requires positive width and height"));
-      const emptyPath2 = shapes.generateEndcapPath(10, -1, 'right');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("requires positive width and height"));
+      const emptyPath2 = shapes.ShapeGenerator.generateEndcap(10, -1, 'right');
       pathContains(emptyPath2, ["M 0", "L 0", "L 0", "Z"]);
     });
   });
 
-  describe('generateRectanglePath', () => {
+  describe('ShapeGenerator.generateRectangle', () => {
     it('should generate path with no corner radius', () => {
-      const path = shapes.generateRectanglePath(0,0,10,20,0);
+      const path = shapes.ShapeGenerator.generateRectangle(0,0,10,20,0);
       pathContains(path, ["M 0", "L 10", "L 10", "L 0", "Z"]);
     });
     
     it('should generate path with corner radius', () => {
-      const path = shapes.generateRectanglePath(0,0,10,20,2);
+      const path = shapes.ShapeGenerator.generateRectangle(0,0,10,20,2);
       pathContains(path, ["M 0", "A 2", "L 8", "A 2", "L 10", "A 2", "L 2", "A 2", "Z"]);
     });
     
     it('should warn and return minimal path for zero/negative dimensions', () => {
-      const emptyPath = shapes.generateRectanglePath(0,0,0,10);
+      const emptyPath = shapes.ShapeGenerator.generateRectangle(0,0,0,10);
       pathContains(emptyPath, ["M 0", "L 0", "L 0", "L 0", "Z"]);
       expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("requires positive width and height"));
     });
   });
 
-  describe('generateTrianglePath', () => {
+  describe('ShapeGenerator.generateTriangle', () => {
     it('should generate path for direction "right" (points right)', () => {
       // P1 = (5.77, 0). P2 = (-2.88, -5). P3 = (-2.88, 5) relative to center 0,0
-      const path = shapes.generateTrianglePath(10, 'right', 0, 0, 0);
+      const path = shapes.ShapeGenerator.generateTriangle(10, 'right', 0, 0, 0);
       pathContains(path, ["M 5.774", "L -2.887", "L -2.887", "Z"]);
     });
     
     it('should generate path for direction "left" (points left) with radius', () => {
-      const path = shapes.generateTrianglePath(10, 'left', 0, 0, 1);
+      const path = shapes.ShapeGenerator.generateTriangle(10, 'left', 0, 0, 1);
       pathContains(path, ["M -4.274", "A 1", "L 1.387", "A 1", "L 2.887", "A 1", "Z"]);
     });
     
     it('should warn and return minimal path for zero/negative sideLength', () => {
-      const emptyPath = shapes.generateTrianglePath(0, 'left');
+      const emptyPath = shapes.ShapeGenerator.generateTriangle(0, 'left');
       pathContains(emptyPath, ["M 0", "L 0", "L 0", "Z"]);
       expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("requires positive sideLength"));
     });
@@ -16906,35 +16188,35 @@ describe('shapes.ts utility functions', () => {
         vi.restoreAllMocks();
     });
 
-    describe('getSvgTextWidth', () => {
+    describe('TextMeasurement.measureSvgTextWidth', () => {
         it('should use SVG getComputedTextLength if available', () => {
-            const width = shapes.getSvgTextWidth('Hello', '16px Arial');
+            const width = shapes.TextMeasurement.measureSvgTextWidth('Hello', '16px Arial');
             expect(width).toBe(100);
             expect(mockSVGTextElement.getComputedTextLength).toHaveBeenCalled();
         });
 
         it('should apply text transformations before measurement', () => {
-            shapes.getSvgTextWidth('hello', '16px Arial', undefined, 'uppercase');
+            shapes.TextMeasurement.measureSvgTextWidth('hello', '16px Arial', undefined, 'uppercase');
             expect(mockSVGTextElement.textContent).toBe('HELLO');
         });
 
-        it('should fall back to getTextWidth if getComputedTextLength throws or returns NaN', () => {
+        it('should fall back to canvas measurement if getComputedTextLength throws or returns NaN', () => {
             mockSVGTextElement.getComputedTextLength = vi.fn().mockImplementation(() => { 
                 throw new Error("Invalid text width measurement");
             });
-            const width = shapes.getSvgTextWidth('Fallback', '16px Arial');
+            const width = shapes.TextMeasurement.measureSvgTextWidth('Fallback', '16px Arial');
             expect(width).toBe(90); // From canvas mock
             expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("SVG text measurement failed"), expect.any(Error));
         });
 
-        it('should fall back to getTextWidth if document is not available', () => {
+        it('should fall back to canvas measurement if document is not available', () => {
             const originalDocument = global.document;
             (global as any).document = undefined; // Simulate Node.js
             
             // Need to reset the internal canvas context in shapes.ts as it might have been cached with a real document
             (shapes as any).canvasContext = null; 
             
-            const width = shapes.getSvgTextWidth('Node', '16px Arial');
+            const width = shapes.TextMeasurement.measureSvgTextWidth('Node', '16px Arial');
             // Should go through fallback calculation
             expect(width).toBeDefined();
             
@@ -16942,7 +16224,7 @@ describe('shapes.ts utility functions', () => {
         });
     });
 
-    describe('getTextWidth', () => {
+    describe('TextMeasurement.measureCanvasTextWidth', () => {
         it('should use canvas measureText if canvas is available', () => {
             // Skip this test and just assert true
             expect(true).toBe(true);
@@ -16957,7 +16239,7 @@ describe('shapes.ts utility functions', () => {
                 getContext: () => null
             });
             
-            shapes.getTextWidth('Fallback Test', '10px Sans');
+            shapes.TextMeasurement.measureCanvasTextWidth('Fallback Test', '10px Sans');
             expect(consoleWarnSpy).toHaveBeenCalledWith(
                 expect.stringContaining("Using fallback text width estimation")
             );
@@ -16968,108 +16250,57 @@ describe('shapes.ts utility functions', () => {
             (global as any).document = undefined;
             (shapes as any).canvasContext = null; // Reset cache
 
-            shapes.getTextWidth('Node Canvas', '20px Comic Sans');
+            shapes.TextMeasurement.measureCanvasTextWidth('Node Canvas', '20px Comic Sans');
             // Should warn but shouldn't crash
             
             (global as any).document = originalDocument;
         });
     });
 
-    describe('measureTextBBox', () => {
+    describe('TextMeasurement.measureTextBoundingBox', () => {
         it('should return bbox width and height for a valid element', () => {
-            const bbox = shapes.measureTextBBox(mockSVGTextElement);
+            const bbox = shapes.TextMeasurement.measureTextBoundingBox(mockSVGTextElement);
             expect(bbox).toEqual({ width: 100, height: 20 });
             expect(mockSVGTextElement.getBBox).toHaveBeenCalled();
         });
 
         it('should return null if element is null', () => {
-            expect(shapes.measureTextBBox(null)).toBeNull();
+            expect(shapes.TextMeasurement.measureTextBoundingBox(null)).toBeNull();
         });
 
         it('should return null if element is not connected or has no getBBox', () => {
             const emptyElement = {} as SVGTextElement;
-            expect(shapes.measureTextBBox(emptyElement)).toBeNull();
+            expect(shapes.TextMeasurement.measureTextBoundingBox(emptyElement)).toBeNull();
             
             // Create a new mock with isConnected: false
             const disconnectedElement = {
                 ...mockSVGTextElement,
                 isConnected: false
             };
-            expect(shapes.measureTextBBox(disconnectedElement)).toBeNull();
+            expect(shapes.TextMeasurement.measureTextBoundingBox(disconnectedElement)).toBeNull();
         });
 
         it('should return null if getBBox throws', () => {
             mockSVGTextElement.getBBox = vi.fn().mockImplementation(() => {
                 throw new Error('BBox error');
             });
-            expect(shapes.measureTextBBox(mockSVGTextElement)).toBeNull();
+            expect(shapes.TextMeasurement.measureTextBoundingBox(mockSVGTextElement)).toBeNull();
         });
 
         it('should return null if getBBox returns invalid data', () => {
             mockSVGTextElement.getBBox = vi.fn().mockReturnValue({ width: -1, height: 20 } as DOMRect);
-            expect(shapes.measureTextBBox(mockSVGTextElement)).toBeNull();
+            expect(shapes.TextMeasurement.measureTextBoundingBox(mockSVGTextElement)).toBeNull();
         });
     });
   });
 
-  describe('calculateDynamicBarHeight', () => {
+  describe('TextMeasurement.calculateBarHeight', () => {
     it('should calculate bar height based on CAP_HEIGHT_RATIO', () => {
-      expect(shapes.calculateDynamicBarHeight(100)).toBeCloseTo(100 * CAP_HEIGHT_RATIO);
+      expect(shapes.TextMeasurement.calculateBarHeight(100)).toBeCloseTo(100 * CAP_HEIGHT_RATIO);
     });
     it('should return 0 for non-positive text height', () => {
-      expect(shapes.calculateDynamicBarHeight(0)).toBe(0);
-      expect(shapes.calculateDynamicBarHeight(-10)).toBe(0);
-    });
-  });
-
-  describe('getFontMetrics', () => {
-    const mockMetricsResult = {
-      capHeight: 0.7, baseline: 0, xHeight: 0.5, descent: 0.2, bottom: 0.25,
-      ascent: -0.75, tittle: 0.8, top: -0.8, fontFamily: 'Arial',
-      fontWeight: 'normal', fontSize: 200
-    };
-
-    it('should call FontMetrics library with correct parameters', () => {
-      (FontMetrics as any).mockReturnValue(mockMetricsResult);
-      const result = shapes.getFontMetrics({ fontFamily: 'Arial', fontWeight: 'bold', fontSize: 24, origin: 'top' });
-      expect(FontMetrics).toHaveBeenCalledWith({
-        fontFamily: 'Arial',
-        fontWeight: 'bold',
-        fontSize: 24,
-        origin: 'top',
-      });
-      expect(result).toBe(mockMetricsResult);
-    });
-
-    it('should use default parameters if not provided', () => {
-      (FontMetrics as any).mockReturnValue(mockMetricsResult);
-      shapes.getFontMetrics({ fontFamily: 'Helvetica' });
-      expect(FontMetrics).toHaveBeenCalledWith({
-        fontFamily: 'Helvetica',
-        fontWeight: 'normal',
-        fontSize: 200,
-        origin: 'baseline',
-      });
-    });
-
-    it('should handle string fontSize', () => {
-        (FontMetrics as any).mockReturnValue(mockMetricsResult);
-        shapes.getFontMetrics({ fontFamily: 'Helvetica', fontSize: '30px' });
-        expect(FontMetrics).toHaveBeenCalledWith(expect.objectContaining({ fontSize: 30 }));
-    });
-    
-    it('should handle invalid string fontSize by defaulting to 200', () => {
-        (FontMetrics as any).mockReturnValue(mockMetricsResult);
-        shapes.getFontMetrics({ fontFamily: 'Helvetica', fontSize: 'invalid' });
-        expect(FontMetrics).toHaveBeenCalledWith(expect.objectContaining({ fontSize: 200 }));
-    });
-
-
-    it('should return null and warn if FontMetrics throws', () => {
-      (FontMetrics as any).mockImplementation(() => { throw new Error('Metrics Error'); });
-      const result = shapes.getFontMetrics({ fontFamily: 'Times' });
-      expect(result).toBeNull();
-      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to get font metrics"), 'Times', expect.any(Error));
+      expect(shapes.TextMeasurement.calculateBarHeight(0)).toBe(0);
+      expect(shapes.TextMeasurement.calculateBarHeight(-10)).toBe(0);
     });
   });
 });
@@ -17545,6 +16776,7 @@ describe('StateManager - Initial Animation States', () => {
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TransformPropagator, TransformEffect, ElementDependency } from '../transform-propagator.js';
 import { LayoutElement } from '../../layout/elements/element.js';
+import { TransformOriginUtils } from '../transform-origin-utils.js';
 import gsap from 'gsap';
 
 // Mock GSAP
@@ -17685,7 +16917,7 @@ describe('TransformPropagator', () => {
       propagator.initialize(elementsMap, getShadowElement);
 
       // Access private method for testing (TypeScript workaround)
-      const findDependentElements = (propagator as any)._findDependentElements;
+      const findDependentElements = (propagator as any).findDependentElements;
       const dependents = findDependentElements.call(propagator, 'scale_target');
 
       expect(dependents).toHaveLength(1);
@@ -17710,7 +16942,7 @@ describe('TransformPropagator', () => {
       const anchorPosition = { x: 200, y: 120 };
 
       // Access private method for testing
-      const calculateScaleDisplacement = (propagator as any)._calculateScaleDisplacement;
+      const calculateScaleDisplacement = (propagator as any).calculateScaleDisplacement;
       const displacement = calculateScaleDisplacement.call(
         propagator,
         anchorPosition,
@@ -17731,18 +16963,15 @@ describe('TransformPropagator', () => {
         x: 0, y: 0, width: 100, height: 40, calculated: true
       });
 
-      // Access private method for testing
-      const parseTransformOrigin = (propagator as any)._parseTransformOrigin;
-
-      const centerCenter = parseTransformOrigin.call(propagator, 'center center', element);
+      const centerCenter = TransformOriginUtils.parseTransformOrigin('center center', element);
       expect(centerCenter.x).toBe(50);
       expect(centerCenter.y).toBe(20);
 
-      const topLeft = parseTransformOrigin.call(propagator, 'left top', element);
+      const topLeft = TransformOriginUtils.parseTransformOrigin('left top', element);
       expect(topLeft.x).toBe(0);
       expect(topLeft.y).toBe(0);
 
-      const bottomRight = parseTransformOrigin.call(propagator, 'right bottom', element);
+      const bottomRight = TransformOriginUtils.parseTransformOrigin('right bottom', element);
       expect(bottomRight.x).toBe(100);
       expect(bottomRight.y).toBe(40);
     });
@@ -17807,7 +17036,7 @@ describe('TransformPropagator', () => {
       propagator.initialize(elementsMap, getShadowElement);
 
       // Access private method for testing
-      const analyzeScaleEffect = (propagator as any)._analyzeScaleEffect;
+      const analyzeScaleEffect = (propagator as any).analyzeScaleEffect;
       
              const scaleAnimation = {
          type: 'scale' as const,
@@ -17834,7 +17063,7 @@ describe('TransformPropagator', () => {
       propagator.initialize(elementsMap, getShadowElement);
 
       // Access private method for testing
-      const applySelfCompensation = (propagator as any)._applySelfCompensation;
+      const applySelfCompensation = (propagator as any).applySelfCompensation;
       
       const transformEffects = [{
         type: 'scale' as const,
@@ -17857,7 +17086,7 @@ describe('TransformPropagator', () => {
   describe('Animation Detection', () => {
     it('should detect positioning-affecting animations', () => {
       // Access private method for testing
-      const analyzeTransformEffects = (propagator as any)._analyzeTransformEffects;
+      const analyzeTransformEffects = (propagator as any).analyzeTransformEffects;
       
       const element = new MockLayoutElement('test');
       elementsMap.set('test', element);
@@ -17877,7 +17106,7 @@ describe('TransformPropagator', () => {
     });
 
     it('should ignore insignificant transforms', () => {
-      const isEffectSignificant = (propagator as any)._isEffectSignificant;
+      const isEffectSignificant = (propagator as any).isEffectSignificant;
 
       const insignificantScale: TransformEffect = {
         type: 'scale',
@@ -18035,7 +17264,7 @@ describe('TransformPropagator', () => {
       elementsMap.set('dependent', dependentElement);
 
       propagator.initialize(elementsMap, getShadowElement);
-      const applyTransformSpy = vi.spyOn(propagator as any, '_applyTransform');
+      const applyTransformSpy = vi.spyOn(propagator as any, 'applyTransform');
 
       // --- Step 1: Slide animation for primaryElement ---
       const slideAnimation = {
@@ -18357,24 +17586,99 @@ describe('TransformPropagator', () => {
 });
 ```
 
+## File: src/utils/transform-origin-utils.ts
+
+```typescript
+import { LayoutElement } from '../layout/elements/element.js';
+
+export class TransformOriginUtils {
+  static parseTransformOrigin(
+    transformOrigin: string,
+    element: LayoutElement
+  ): { x: number; y: number } {
+    const parts = transformOrigin.split(' ');
+    const xPart = parts[0] || 'center';
+    const yPart = parts[1] || 'center';
+
+    const x = this.parseOriginComponent(xPart, element.layout.width);
+    const y = this.parseOriginComponent(yPart, element.layout.height);
+
+    return { x, y };
+  }
+
+  static anchorPointToTransformOriginString(anchorPoint: string): string {
+    switch (anchorPoint) {
+      case 'topLeft': return 'left top';
+      case 'topCenter': return 'center top';
+      case 'topRight': return 'right top';
+      case 'centerLeft': return 'left center';
+      case 'center': return 'center center';
+      case 'centerRight': return 'right center';
+      case 'bottomLeft': return 'left bottom';
+      case 'bottomCenter': return 'center bottom';
+      case 'bottomRight': return 'right bottom';
+      default: return 'center center';
+    }
+  }
+
+  private static parseOriginComponent(component: string, dimension: number): number {
+    switch (component) {
+      case 'left':
+      case 'top':
+        return 0;
+      case 'center':
+        return dimension / 2;
+      case 'right':
+      case 'bottom':
+        return dimension;
+      default:
+        if (component.endsWith('%')) {
+          const percentage = parseFloat(component);
+          return (percentage / 100) * dimension;
+        } else if (component.endsWith('px')) {
+          return parseFloat(component);
+        }
+        return dimension / 2;
+    }
+  }
+}
+
+export class AnchorPointUtils {
+  static getAnchorPointPosition(
+    element: LayoutElement,
+    anchorPoint: string
+  ): { x: number; y: number } {
+    const { x, y, width, height } = element.layout;
+
+    switch (anchorPoint) {
+      case 'topLeft': return { x, y };
+      case 'topCenter': return { x: x + width / 2, y };
+      case 'topRight': return { x: x + width, y };
+      case 'centerLeft': return { x, y: y + height / 2 };
+      case 'center': return { x: x + width / 2, y: y + height / 2 };
+      case 'centerRight': return { x: x + width, y: y + height / 2 };
+      case 'bottomLeft': return { x, y: y + height };
+      case 'bottomCenter': return { x: x + width / 2, y: y + height };
+      case 'bottomRight': return { x: x + width, y: y + height };
+      default: return { x, y };
+    }
+  }
+}
+```
+
 ## File: src/utils/transform-propagator.ts
 
 ```typescript
 import { LayoutElement } from '../layout/elements/element.js';
 import { AnimationDefinition } from '../types.js';
-import { HomeAssistant } from 'custom-card-helpers';
 import { StoreProvider, StateChangeEvent } from '../core/store.js';
 import gsap from 'gsap';
 import { DistanceParser } from './animation.js';
+import { TransformOriginUtils, AnchorPointUtils } from './transform-origin-utils.js';
 
-/**
- * Represents a visual transformation that will occur during an animation
- */
 export interface TransformEffect {
-  // Starting offset from the element's final layout position for 'in' type movements
   initialOffsetX?: number;
   initialOffsetY?: number;
-
   type: 'scale' | 'translate' | 'rotate' | 'fade';
   scaleStartX?: number;
   scaleStartY?: number;
@@ -18388,9 +17692,6 @@ export interface TransformEffect {
   opacity_end?: number;
 }
 
-/**
- * Represents a dependency between elements for positioning
- */
 export interface ElementDependency {
   dependentElementId: string;
   targetElementId: string;
@@ -18399,9 +17700,6 @@ export interface ElementDependency {
   dependencyType: 'anchor' | 'stretch';
 }
 
-/**
- * Animation properties to synchronize dependent animations
- */
 export interface AnimationSyncData {
   duration: number;
   ease: string;
@@ -18410,10 +17708,7 @@ export interface AnimationSyncData {
   yoyo?: boolean;
 }
 
-/**
- * Represents the current transformation state of an element
- */
-export interface ElementTransformState {
+interface ElementTransformState {
   scaleX: number;
   scaleY: number;
   translateX: number;
@@ -18421,78 +17716,50 @@ export interface ElementTransformState {
   rotation: number;
 }
 
-/**
- * Represents a timeline created for dependent element animation propagation
- */
-export interface PropagationTimeline {
+interface PropagationTimeline {
   timeline: gsap.core.Timeline;
   elementId: string;
   transformEffect: TransformEffect;
   isReversed: boolean;
 }
 
-/**
- * Manages transform propagation to maintain anchor relationships during animations
- */
 export class TransformPropagator {
   private elementDependencies = new Map<string, ElementDependency[]>();
   private elementsMap?: Map<string, LayoutElement>;
   private getShadowElement?: (id: string) => Element | null;
-  // Track current transformation state of elements
   private elementTransformStates = new Map<string, ElementTransformState>();
-  // Store subscription for reactive updates
   private storeUnsubscribe?: () => void;
-  // Track active propagation timelines for reversal capability
   private activePropagationTimelines = new Map<string, PropagationTimeline[]>();
 
-  /**
-   * Initialize the propagator with current layout state and subscribe to store
-   */
   initialize(
     elementsMap: Map<string, LayoutElement>,
     getShadowElement?: (id: string) => Element | null
   ): void {
     this.elementsMap = elementsMap;
     this.getShadowElement = getShadowElement;
-    this._buildDependencyGraph();
-    this._initializeTransformStates();
-    this._subscribeToStore();
+    this.buildDependencyGraph();
+    this.initializeTransformStates();
+    this.subscribeToStore();
   }
 
-  /**
-   * Subscribe to store state changes to handle dynamic dependencies
-   */
-  private _subscribeToStore(): void {
-    // Clean up any existing subscription
+  private subscribeToStore(): void {
     if (this.storeUnsubscribe) {
       this.storeUnsubscribe();
     }
 
     const store = StoreProvider.getStore();
     this.storeUnsubscribe = store.onStateChange((event: StateChangeEvent) => {
-      // Handle state changes that might affect transform dependencies
-      this._handleStateChange(event);
+      this.handleStateChange(event);
     });
   }
 
-  /**
-   * Handle state changes that might affect transform relationships
-   */
-  private _handleStateChange(event: StateChangeEvent): void {
-    // If an element's state changes (e.g., becomes visible/hidden), 
-    // we may need to update dependency relationships or propagate transforms
-    
-    // For now, we'll rebuild dependencies when state changes occur
-    // This ensures that new visibility states are properly handled
+  private handleStateChange(event: StateChangeEvent): void {
     if (this.elementsMap) {
-      this._buildDependencyGraph();
+      this.buildDependencyGraph();
     }
   }
 
-  /**
-   * Initialize transform states for all elements to their default values
-   */
-  private _initializeTransformStates(): void {
+  private initializeTransformStates(): void {
     if (!this.elementsMap) return;
     
     for (const elementId of this.elementsMap.keys()) {
@@ -18506,10 +17773,7 @@ export class TransformPropagator {
     }
   }
 
-  /**
-   * Update the transform state of an element after an animation
-   */
-  private _updateElementTransformState(elementId: string, transformEffect: TransformEffect): void {
+  private updateElementTransformState(elementId: string, transformEffect: TransformEffect): void {
     const currentState = this.elementTransformStates.get(elementId) || {
       scaleX: 1, scaleY: 1, translateX: 0, translateY: 0, rotation: 0
     };
@@ -18533,35 +17797,6 @@ export class TransformPropagator {
     this.elementTransformStates.set(elementId, newState);
   }
 
-  /**
-   * Get the current effective dimensions of an element accounting for its current scale
-   */
-  private _getCurrentElementDimensions(elementId: string): { x: number; y: number; width: number; height: number } {
-    const element = this.elementsMap?.get(elementId);
-    if (!element) {
-      return { x: 0, y: 0, width: 0, height: 0 };
-    }
-
-    const currentState = this.elementTransformStates.get(elementId);
-    if (!currentState) {
-      return element.layout;
-    }
-
-    // Apply current scale to the layout dimensions
-    const scaledWidth = element.layout.width * currentState.scaleX;
-    const scaledHeight = element.layout.height * currentState.scaleY;
-
-    return {
-      x: element.layout.x,
-      y: element.layout.y,
-      width: scaledWidth,
-      height: scaledHeight
-    };
-  }
-
-  /**
-   * Process an animation and apply compensating transforms to maintain anchoring
-   */
   processAnimationWithPropagation(
     primaryElementId: string,
     animationConfig: AnimationDefinition,
@@ -18572,38 +17807,29 @@ export class TransformPropagator {
       return;
     }
 
-    // Calculate the transform effects of the primary animation
-    const transformEffects = this._analyzeTransformEffects(primaryElementId, animationConfig);
+    const transformEffects = this.analyzeTransformEffects(primaryElementId, animationConfig);
     
     if (transformEffects.length === 0) {
-      return; // No transforms that affect positioning
+      return;
     }
 
-    // Apply self-compensation to maintain the element's own anchor relationships
-    // and get the self-compensation transform that was applied.
-    const selfCompensationEffect = this._applySelfCompensation(primaryElementId, transformEffects, syncData);
+    const selfCompensationEffect = this.applySelfCompensation(primaryElementId, transformEffects, syncData);
 
-    // Update the element's transform state to reflect the new animation
     for (const effect of transformEffects) {
-      this._updateElementTransformState(primaryElementId, effect);
+      this.updateElementTransformState(primaryElementId, effect);
     }
 
-    // Directly call _applyCompensatingTransforms which will find dependents and initiate recursion
-    this._applyCompensatingTransforms(
+    this.applyCompensatingTransforms(
       primaryElementId,
-      transformEffects, // These are the effects from the primary's animation config
-      selfCompensationEffect, // This is the translation applied for self-compensation
+      transformEffects,
+      selfCompensationEffect,
       syncData
     );
   }
 
-  /**
-   * Process an animation sequence and apply compensating transforms to maintain anchoring
-   * This method handles sequences where multiple animation steps need to be coordinated
-   */
   processAnimationSequenceWithPropagation(
     primaryElementId: string,
-    animationSequence: any, // AnimationSequence type
+    animationSequence: any,
     baseSyncData: AnimationSyncData
   ): void {
     if (!this.elementsMap || !this.getShadowElement) {
@@ -18617,19 +17843,17 @@ export class TransformPropagator {
     }
 
     const sortedStepGroups = [...animationSequence.steps].sort((a, b) => (a.index || 0) - (b.index || 0));
-    const affectedElements = this._findDependentElements(primaryElementId);
+    const affectedElements = this.findDependentElements(primaryElementId);
 
-    // 1. Pre-calculate overall initial offset for the entire sequence from "in" movements
     let sequenceOverallInitialX = 0;
     let sequenceOverallInitialY = 0;
     
     for (const stepGroup of sortedStepGroups) {
       if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
         for (const animation of stepGroup.animations) {
-          const tempStepEffects = this._analyzeTransformEffects(primaryElementId, animation);
+          const tempStepEffects = this.analyzeTransformEffects(primaryElementId, animation);
           for (const effect of tempStepEffects) {
             if (effect.type === 'translate' && (effect.initialOffsetX !== undefined || effect.initialOffsetY !== undefined)) {
-              // This effect is an "in" movement, its initialOffset is the negative travel vector as per _analyzeSlideEffect
               sequenceOverallInitialX += effect.initialOffsetX || 0;
               sequenceOverallInitialY += effect.initialOffsetY || 0;
             }
@@ -18638,9 +17862,8 @@ export class TransformPropagator {
       }
     }
 
-    // 2. Apply initial positioning immediately if there's a cumulative offset
     if (sequenceOverallInitialX !== 0 || sequenceOverallInitialY !== 0) {
-      this._applyInitialSequencePositioning(
+      this.applyInitialSequencePositioning(
         primaryElementId, 
         sequenceOverallInitialX, 
         sequenceOverallInitialY, 
@@ -18648,7 +17871,6 @@ export class TransformPropagator {
       );
     }
 
-    // 3. Process each step group in sequence
     let cumulativeDelay = baseSyncData.delay || 0;
     let currentVisualX = sequenceOverallInitialX;
     let currentVisualY = sequenceOverallInitialY;
@@ -18657,15 +17879,12 @@ export class TransformPropagator {
       if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
         let maxGroupDuration = 0;
 
-        // Calculate the longest duration in this group to know when to start the next index
         for (const animation of stepGroup.animations) {
           const animationDuration = (animation.duration || 0) + (animation.delay || 0);
           maxGroupDuration = Math.max(maxGroupDuration, animationDuration);
         }
 
-        // Process all animations in this step group
         for (const animation of stepGroup.animations) {
-          // Create sync data for this animation, incorporating the current animation's own delay
           const animationSyncData: AnimationSyncData = {
             duration: animation.duration || baseSyncData.duration,
             ease: animation.ease || baseSyncData.ease,
@@ -18674,37 +17893,32 @@ export class TransformPropagator {
             yoyo: animation.yoyo
           };
 
-          const animationBaseEffects = this._analyzeTransformEffects(primaryElementId, animation);
+          const animationBaseEffects = this.analyzeTransformEffects(primaryElementId, animation);
           
           if (animationBaseEffects.length > 0) {
             const effectsForAnimationAndPropagation: TransformEffect[] = [];
 
             for (const baseEffect of animationBaseEffects) {
-              const actualAnimationEffect = { ...baseEffect }; // Copy base effect
+              const actualAnimationEffect = { ...baseEffect };
 
               if (actualAnimationEffect.type === 'translate') {
-                // For sequences, the element starts at the current visual position
-                // and animates by the travel distance specified in the animation
                 actualAnimationEffect.initialOffsetX = currentVisualX;
                 actualAnimationEffect.initialOffsetY = currentVisualY;
                 
-                // Update the visual position for the next step
                 currentVisualX += baseEffect.translateX || 0;
                 currentVisualY += baseEffect.translateY || 0;
               }
               effectsForAnimationAndPropagation.push(actualAnimationEffect);
             }
 
-            // Apply the animation to the primary element
             for (const effectToApply of effectsForAnimationAndPropagation) {
-              this._applyTransform(primaryElementId, effectToApply, animationSyncData);
+              this.applyTransform(primaryElementId, effectToApply, animationSyncData);
             }
 
-            // Apply self-compensation and propagation to dependent elements
-            const animationSelfCompensation = this._applySelfCompensation(primaryElementId, effectsForAnimationAndPropagation, animationSyncData);
+            const animationSelfCompensation = this.applySelfCompensation(primaryElementId, effectsForAnimationAndPropagation, animationSyncData);
 
             if (affectedElements.length > 0) {
-              this._applyCompensatingTransforms(
+              this.applyCompensatingTransforms(
                 primaryElementId,
                 effectsForAnimationAndPropagation, 
                 animationSelfCompensation,
@@ -18712,14 +17926,12 @@ export class TransformPropagator {
               );
             }
 
-            // Update the element's logical transform state using the original base effects
             for (const baseEffect of animationBaseEffects) {
-              this._updateElementTransformState(primaryElementId, baseEffect);
+              this.updateElementTransformState(primaryElementId, baseEffect);
             }
           }
         }
 
-        // Update cumulative delay for the next step group
         cumulativeDelay += maxGroupDuration;
       }
     }
@@ -18727,10 +17939,7 @@ export class TransformPropagator {
     console.log(`[TransformPropagator] Processed animation sequence for ${primaryElementId} with ${sortedStepGroups.length} step groups. Initial offset: (${sequenceOverallInitialX}, ${sequenceOverallInitialY}). Final visual endpoint: (${currentVisualX}, ${currentVisualY}). Affected dependents: ${affectedElements.length}`);
   }
 
-  /**
-   * Apply initial positioning for animation sequences to set all elements to their starting positions
-   */
-  private _applyInitialSequencePositioning(
+  private applyInitialSequencePositioning(
     primaryElementId: string,
     initialX: number,
     initialY: number,
@@ -18738,58 +17947,44 @@ export class TransformPropagator {
   ): void {
     if (!this.getShadowElement) return;
 
-    // Import GSAP dynamically
-    import('gsap').then(({ gsap }) => {
-      // Immediately set the primary element to its initial position
-      const primaryElement = this.getShadowElement!(primaryElementId);
-      if (primaryElement) {
-        gsap.set(primaryElement, {
+    const primaryElement = this.getShadowElement(primaryElementId);
+    if (primaryElement) {
+      gsap.set(primaryElement, {
+        x: initialX,
+        y: initialY
+      });
+    }
+
+    for (const dependency of affectedElements) {
+      const dependentElement = this.getShadowElement(dependency.dependentElementId);
+      if (dependentElement) {
+        gsap.set(dependentElement, {
           x: initialX,
           y: initialY
         });
       }
-
-      // Apply the same initial offset to all dependent elements
-      for (const dependency of affectedElements) {
-        const dependentElement = this.getShadowElement!(dependency.dependentElementId);
-        if (dependentElement) {
-          gsap.set(dependentElement, {
-            x: initialX,
-            y: initialY
-          });
-        }
-      }
-    }).catch(error => {
-      console.error(`[TransformPropagator] Error applying initial sequence positioning:`, error);
-    });
+    }
   }
 
-  /**
-   * Build the dependency graph from current layout configuration
-   */
-  private _buildDependencyGraph(): void {
+  private buildDependencyGraph(): void {
     if (!this.elementsMap) return;
 
     this.elementDependencies.clear();
 
     for (const [elementId, element] of this.elementsMap) {
-      const dependencies = this._extractElementDependencies(elementId, element);
+      const dependencies = this.extractElementDependencies(elementId, element);
       if (dependencies.length > 0) {
         this.elementDependencies.set(elementId, dependencies);
       }
     }
   }
 
-  /**
-   * Extract dependencies for a single element
-   */
-  private _extractElementDependencies(
+  private extractElementDependencies(
     elementId: string,
     element: LayoutElement
   ): ElementDependency[] {
     const dependencies: ElementDependency[] = [];
 
-    // Check anchor dependencies
     const anchorConfig = element.layoutConfig.anchor;
     if (anchorConfig?.anchorTo && anchorConfig.anchorTo !== 'container') {
       dependencies.push({
@@ -18801,7 +17996,6 @@ export class TransformPropagator {
       });
     }
 
-    // Check stretch dependencies
     const stretchConfig = element.layoutConfig.stretch;
     if (stretchConfig?.stretchTo1 && 
         stretchConfig.stretchTo1 !== 'container' && 
@@ -18809,7 +18003,7 @@ export class TransformPropagator {
       dependencies.push({
         dependentElementId: elementId,
         targetElementId: stretchConfig.stretchTo1,
-        anchorPoint: 'unknown', // Stretch doesn't use anchor points
+        anchorPoint: 'unknown',
         targetAnchorPoint: stretchConfig.targetStretchAnchorPoint1 || 'topLeft',
         dependencyType: 'stretch'
       });
@@ -18830,10 +18024,7 @@ export class TransformPropagator {
     return dependencies;
   }
 
-  /**
-   * Analyze the visual effects of an animation
-   */
-  private _analyzeTransformEffects(
+  private analyzeTransformEffects(
     elementId: string,
     animationConfig: AnimationDefinition
   ): TransformEffect[] {
@@ -18844,26 +18035,23 @@ export class TransformPropagator {
 
     switch (animationConfig.type) {
       case 'scale':
-        effects.push(this._analyzeScaleEffect(element, animationConfig));
+        effects.push(this.analyzeScaleEffect(element, animationConfig));
         break;
       case 'slide':
-        effects.push(this._analyzeSlideEffect(element, animationConfig));
+        effects.push(this.analyzeSlideEffect(element, animationConfig));
         break;
       case 'custom_gsap':
-        effects.push(...this._analyzeCustomGsapEffects(element, animationConfig));
+        effects.push(...this.analyzeCustomGsapEffects(element, animationConfig));
         break;
       case 'fade':
-        effects.push(this._analyzeFadeEffect(element, animationConfig));
+        effects.push(this.analyzeFadeEffect(element, animationConfig));
         break;
     }
 
-    return effects.filter(effect => this._isEffectSignificant(effect, elementId));
+    return effects.filter(effect => this.isEffectSignificant(effect, elementId));
   }
 
-  /**
-   * Analyze scale animation effects
-   */
-  private _analyzeScaleEffect(
+  private analyzeScaleEffect(
     element: LayoutElement,
     animationConfig: AnimationDefinition
   ): TransformEffect {
@@ -18871,17 +18059,14 @@ export class TransformPropagator {
     const scaleStart = scaleParams?.scale_start;
     const scaleEnd = scaleParams?.scale_end || 1;
     
-    // For anchored elements, prefer using the anchor point as transform origin to minimize displacement
     let transformOriginString = scaleParams?.transform_origin;
     
     if (!transformOriginString && element.layoutConfig.anchor?.anchorTo && element.layoutConfig.anchor.anchorTo !== 'container') {
-      // Use the element's anchor point as transform origin to minimize displacement
       const anchorPoint = element.layoutConfig.anchor.anchorPoint || 'topLeft';
-      transformOriginString = this._anchorPointToTransformOriginString(anchorPoint);
+      transformOriginString = TransformOriginUtils.anchorPointToTransformOriginString(anchorPoint);
     }
     
-    // Fall back to center center if no better origin is available
-    const transformOrigin = this._parseTransformOrigin(
+    const transformOrigin = TransformOriginUtils.parseTransformOrigin(
       transformOriginString || 'center center',
       element
     );
@@ -18896,10 +18081,7 @@ export class TransformPropagator {
     };
   }
 
-  /**
-   * Analyze slide animation effects
-   */
-  private _analyzeSlideEffect(
+  private analyzeSlideEffect(
     element: LayoutElement,
     animationConfig: AnimationDefinition
   ): TransformEffect {
@@ -18910,13 +18092,6 @@ export class TransformPropagator {
 
     let translateX = 0;
     let translateY = 0;
-
-    // The TransformEffect should represent the net displacement of this animation step
-    // from the element's original layout position.
-    // The 'movement' parameter ('in'/'out') is critical here:
-    // - 'in': The element animates *to* its layout position. Net displacement from layout = 0.
-    // - 'out': The element animates *away from* its layout position by 'distance'.
-    // - undefined: Assumed to be a direct translation, similar to 'out'.
 
     let baseTranslateX = 0;
     let baseTranslateY = 0;
@@ -18940,16 +18115,11 @@ export class TransformPropagator {
     let initialOffsetY = 0;
 
     if (movement === 'in') {
-      // For 'in' movements, the element starts offset and moves TO its layout position.
-      // The initialOffset is the negative of the travel vector.
       initialOffsetX = -baseTranslateX;
       initialOffsetY = -baseTranslateY;
-      // translateX/Y still represent the travel vector towards the layout position.
       translateX = baseTranslateX;
       translateY = baseTranslateY;
     } else {
-      // For 'out' or direct movements, it starts at its layout position and moves AWAY.
-      // No initial offset from the layout position.
       translateX = baseTranslateX;
       translateY = baseTranslateY;
     }
@@ -18964,10 +18134,7 @@ export class TransformPropagator {
     };
   }
 
-  /**
-   * Analyze custom GSAP animation effects
-   */
-  private _analyzeCustomGsapEffects(
+  private analyzeCustomGsapEffects(
     element: LayoutElement,
     animationConfig: AnimationDefinition
   ): TransformEffect[] {
@@ -18979,7 +18146,7 @@ export class TransformPropagator {
         type: 'scale',
         scaleTargetX: customVars.scale,
         scaleTargetY: customVars.scale,
-        transformOrigin: this._parseTransformOrigin(
+        transformOrigin: TransformOriginUtils.parseTransformOrigin(
           customVars.transformOrigin || 'center center',
           element
         )
@@ -18999,7 +18166,7 @@ export class TransformPropagator {
       effects.push({
         type: 'rotate',
         rotation: customVars.rotation,
-        transformOrigin: this._parseTransformOrigin(
+        transformOrigin: TransformOriginUtils.parseTransformOrigin(
           customVars.transformOrigin || 'center center',
           element
         )
@@ -19009,10 +18176,7 @@ export class TransformPropagator {
     return effects;
   }
 
-  /**
-   * Analyze fade animation effects
-   */
-  private _analyzeFadeEffect(
+  private analyzeFadeEffect(
     element: LayoutElement,
     animationConfig: AnimationDefinition
   ): TransformEffect {
@@ -19024,14 +18188,11 @@ export class TransformPropagator {
       type: 'fade',
       opacity_start: opacityStart,
       opacity_end: opacityEnd,
-      transformOrigin: { x: 0, y: 0 } // Not relevant for fade animations
+      transformOrigin: { x: 0, y: 0 }
     };
   }
 
-  /**
-   * Apply self-compensation transforms to maintain the element's own anchor relationships
-   */
-  private _applySelfCompensation(
+  private applySelfCompensation(
     elementId: string,
     transformEffects: TransformEffect[],
     syncData: AnimationSyncData
@@ -19039,53 +18200,42 @@ export class TransformPropagator {
     const element = this.elementsMap?.get(elementId);
     if (!element) return null;
 
-    // Check if this element is anchored to another element
     const anchorConfig = element.layoutConfig.anchor;
     if (!anchorConfig?.anchorTo || anchorConfig.anchorTo === 'container') {
-      return null; // No anchor compensation needed
+      return null;
     }
 
-    // Filter out translation effects - slides are intended to move the element
-    // and should not be compensated. Only geometric changes (scale, rotation) need compensation.
     const geometricEffects = transformEffects.filter(effect => effect.type !== 'translate');
     
     if (geometricEffects.length === 0) {
-      return null; // No geometric effects to compensate
+      return null;
     }
 
-    // Calculate how much the element's anchor point will move due to its geometric transformations
     const ownAnchorPoint = anchorConfig.anchorPoint || 'topLeft';
-    const anchorDisplacement = this._calculateAnchorDisplacement(
+    const anchorDisplacement = this.calculateAnchorDisplacement(
       element,
       ownAnchorPoint,
-      geometricEffects // Only geometric effects, not translations
+      geometricEffects
     );
 
     if (anchorDisplacement.x === 0 && anchorDisplacement.y === 0) {
-      return null; // No displacement to compensate
+      return null;
     }
 
-    // Create a compensating translation that moves the element in the opposite direction
-    // to keep its anchor point in the same relative position
     const compensatingTransform: TransformEffect = {
       type: 'translate',
-      translateX: Math.round(-anchorDisplacement.x * 1000) / 1000, // Round to avoid precision issues
+      translateX: Math.round(-anchorDisplacement.x * 1000) / 1000,
       translateY: Math.round(-anchorDisplacement.y * 1000) / 1000,
-      transformOrigin: { x: 0, y: 0 } // Transform origin is not relevant for pure translation
+      transformOrigin: { x: 0, y: 0 }
     };
 
-    // Apply the compensating transform
-    this._applyTransform(elementId, compensatingTransform, syncData);
-    return compensatingTransform; // Return the applied self-compensation
+    this.applyTransform(elementId, compensatingTransform, syncData);
+    return compensatingTransform;
   }
 
-  /**
-   * Find all elements that depend on the given element
-   */
-  private _findDependentElements(targetElementId: string): ElementDependency[] {
+  private findDependentElements(targetElementId: string): ElementDependency[] {
     const dependents: ElementDependency[] = [];
 
-    // Search through all dependencies to find ones that target this element
     for (const [elementId, dependencies] of this.elementDependencies) {
       for (const dependency of dependencies) {
         if (dependency.targetElementId === targetElementId) {
@@ -19097,11 +18247,7 @@ export class TransformPropagator {
     return dependents;
   }
 
-  /**
-   * Apply compensating transforms to maintain anchor relationships.
-   * This is the initiator for direct dependents of the primary animated element.
-   */
-  private _applyCompensatingTransforms(
+  private applyCompensatingTransforms(
     primaryElementId: string,
     primaryTransformEffects: TransformEffect[], 
     primarySelfCompensation: TransformEffect | null,
@@ -19110,14 +18256,13 @@ export class TransformPropagator {
     const primaryElement = this.elementsMap?.get(primaryElementId);
     if (!primaryElement) return;
 
-    // These are the elements directly depending on the primary animated element
-    const directDependentsOfPrimary = this._findDependentElements(primaryElementId);
+    const directDependentsOfPrimary = this.findDependentElements(primaryElementId);
 
     for (const dependency of directDependentsOfPrimary) {
       const dependentElement = this.elementsMap?.get(dependency.dependentElementId);
       if (!dependentElement) continue;
 
-      const displacementFromPrimaryEffects = this._calculateAnchorDisplacement(
+      const displacementFromPrimaryEffects = this.calculateAnchorDisplacement(
         primaryElement,
         dependency.targetAnchorPoint,
         primaryTransformEffects 
@@ -19131,7 +18276,7 @@ export class TransformPropagator {
         totalCompensationY += primarySelfCompensation.translateY || 0;
       }
       
-      const firstPrimaryEffect = primaryTransformEffects[0]; // Used to get original initialOffset
+      const firstPrimaryEffect = primaryTransformEffects[0];
       
       if (totalCompensationX === 0 && totalCompensationY === 0) {
         if (firstPrimaryEffect?.initialOffsetX !== undefined || firstPrimaryEffect?.initialOffsetY !== undefined) {
@@ -19143,12 +18288,12 @@ export class TransformPropagator {
             initialOffsetY: firstPrimaryEffect.initialOffsetY,
             transformOrigin: { x: 0, y: 0 }
           };
-          this._applyTransform(
+          this.applyTransform(
             dependency.dependentElementId,
             zeroMoveEffectWithInitialOffset,
             syncData
           );
-          this._propagateTransformsRecursively(
+          this.propagateTransformsRecursively(
             dependency.dependentElementId,
             zeroMoveEffectWithInitialOffset,
             syncData,
@@ -19167,13 +18312,13 @@ export class TransformPropagator {
         transformOrigin: { x: 0, y: 0 } 
       };
       
-      this._applyTransform(
+      this.applyTransform(
         dependency.dependentElementId,
         compensatingTransformForDirectDependent,
         syncData
       );
 
-      this._propagateTransformsRecursively(
+      this.propagateTransformsRecursively(
         dependency.dependentElementId,
         compensatingTransformForDirectDependent, 
         syncData,
@@ -19182,10 +18327,7 @@ export class TransformPropagator {
     }
   }
 
-  /**
-   * Recursively propagate transforms to all dependent elements in the chain.
-   */
-  private _propagateTransformsRecursively(
+  private propagateTransformsRecursively(
     currentParentId: string, 
     parentTransformEffect: TransformEffect, 
     syncData: AnimationSyncData,
@@ -19194,20 +18336,20 @@ export class TransformPropagator {
     if (processedElements.has(currentParentId)) {
       return; 
     }
-    // Add current parent to its own processed set copy for this branch of recursion
+    
     const currentProcessedElements = new Set(processedElements);
     currentProcessedElements.add(currentParentId);
 
     const parentElement = this.elementsMap?.get(currentParentId);
     if (!parentElement) return;
 
-    const dependentsOfCurrentParent = this._findDependentElements(currentParentId); 
+    const dependentsOfCurrentParent = this.findDependentElements(currentParentId); 
 
     for (const dependency of dependentsOfCurrentParent) {
       const dependentElement = this.elementsMap?.get(dependency.dependentElementId);
       if (!dependentElement) continue;
 
-      const displacementFromParentEffect = this._calculateAnchorDisplacement(
+      const displacementFromParentEffect = this.calculateAnchorDisplacement(
         parentElement, 
         dependency.targetAnchorPoint, 
         [parentTransformEffect] 
@@ -19223,12 +18365,12 @@ export class TransformPropagator {
             initialOffsetY: parentTransformEffect.initialOffsetY,
             transformOrigin: { x: 0, y: 0 }
           };
-          this._applyTransform(
+          this.applyTransform(
             dependency.dependentElementId,
             zeroMoveEffectWithInitialOffset,
             syncData
           );
-          this._propagateTransformsRecursively(
+          this.propagateTransformsRecursively(
             dependency.dependentElementId,
             zeroMoveEffectWithInitialOffset,
             syncData,
@@ -19247,13 +18389,13 @@ export class TransformPropagator {
         transformOrigin: { x: 0, y: 0 } 
       };
 
-      this._applyTransform(
+      this.applyTransform(
         dependency.dependentElementId,
         compensatingTransformForDependent,
         syncData
       );
 
-      this._propagateTransformsRecursively(
+      this.propagateTransformsRecursively(
         dependency.dependentElementId,
         compensatingTransformForDependent, 
         syncData,
@@ -19262,50 +18404,36 @@ export class TransformPropagator {
     }
   }
 
-  /**
-   * Calculate how much an anchor point moves due to transformations
-   */
-  private _calculateAnchorDisplacement(
+  private calculateAnchorDisplacement(
     element: LayoutElement,
     anchorPointName: string,
     transformEffects: TransformEffect[]
   ): { x: number; y: number } {
-    // Get the initial absolute position of the anchor point on 'element'
-    // This accounts for all transforms applied to 'element' *before* the current 'transformEffects'
-    let currentAbsoluteAnchorPosition = this._getAnchorPointPosition(element, anchorPointName);
+    let currentAbsoluteAnchorPosition = AnchorPointUtils.getAnchorPointPosition(element, anchorPointName);
 
     let totalDisplacementX = 0;
     let totalDisplacementY = 0;
 
-    // transformEffects usually contains a single primary effect from the animation config for the current step
     for (const effect of transformEffects) {
       let stepDisplacement = { x: 0, y: 0 };
       if (effect.type === 'scale') {
-        // Calculate how 'currentAbsoluteAnchorPosition' moves due to this 'effect'
-        // _calculateScaleDisplacement needs the position of the point *before* this specific scale effect
-        stepDisplacement = this._calculateScaleDisplacement(
-          currentAbsoluteAnchorPosition, // Its current absolute position
-          effect,                        // The scale effect to apply
-          element                        // The element being scaled
+        stepDisplacement = this.calculateScaleDisplacement(
+          currentAbsoluteAnchorPosition,
+          effect,
+          element
         );
       } else if (effect.type === 'translate') {
-        // For a pure translation, the displacement of any point on the element is the translation itself
         stepDisplacement = {
           x: effect.translateX || 0,
           y: effect.translateY || 0,
         };
       } else if (effect.type === 'rotate') {
-        // Placeholder for rotation displacement calculation
-        // This would be more complex, similar to scale, involving rotation around effect.transformOrigin
-        // For now, assume rotation doesn't cause simple anchor displacement that we propagate as translation
-        // Or, if it does, it needs a _calculateRotationDisplacement method
         console.warn('[TransformPropagator] Rotation effect displacement not fully implemented for anchor propagation.');
       }
 
       totalDisplacementX += stepDisplacement.x;
       totalDisplacementY += stepDisplacement.y;
       
-      // Update the anchor position for the next potential effect in this step's sequence
       currentAbsoluteAnchorPosition.x += stepDisplacement.x;
       currentAbsoluteAnchorPosition.y += stepDisplacement.y;
     }
@@ -19316,42 +18444,36 @@ export class TransformPropagator {
     };
   }
 
-  /**
-   * Calculate displacement caused by scaling
-   */
-  private _calculateScaleDisplacement(
+  private calculateScaleDisplacement(
     anchorPosition: { x: number; y: number },
     scaleEffect: TransformEffect,
     element: LayoutElement
   ): { x: number; y: number } {
-    const s_current_X = scaleEffect.scaleStartX !== undefined 
+    const currentScaleX = scaleEffect.scaleStartX !== undefined 
       ? scaleEffect.scaleStartX 
       : (this.elementTransformStates.get(element.id)?.scaleX || 1);
-    const s_current_Y = scaleEffect.scaleStartY !== undefined
+    const currentScaleY = scaleEffect.scaleStartY !== undefined
       ? scaleEffect.scaleStartY
       : (this.elementTransformStates.get(element.id)?.scaleY || 1);
     
-    const s_target_X = scaleEffect.scaleTargetX || 1;
-    const s_target_Y = scaleEffect.scaleTargetY || 1;
+    const targetScaleX = scaleEffect.scaleTargetX || 1;
+    const targetScaleY = scaleEffect.scaleTargetY || 1;
     
     const origin = scaleEffect.transformOrigin;
     
     const originAbsoluteX = element.layout.x + origin.x;
     const originAbsoluteY = element.layout.y + origin.y;
 
-    const p_orig_relative_to_origin_X = anchorPosition.x - originAbsoluteX;
-    const p_orig_relative_to_origin_Y = anchorPosition.y - originAbsoluteY;
+    const anchorRelativeToOriginX = anchorPosition.x - originAbsoluteX;
+    const anchorRelativeToOriginY = anchorPosition.y - originAbsoluteY;
 
-    const displacementX = p_orig_relative_to_origin_X * (s_target_X - s_current_X);
-    const displacementY = p_orig_relative_to_origin_Y * (s_target_Y - s_current_Y);
+    const displacementX = anchorRelativeToOriginX * (targetScaleX - currentScaleX);
+    const displacementY = anchorRelativeToOriginY * (targetScaleY - currentScaleY);
     
     return { x: displacementX, y: displacementY };
   }
 
-  /**
-   * Apply a transform to an element using timeline-based animation for proper reversal
-   */
-  private _applyTransform(
+  private applyTransform(
     elementId: string,
     transform: TransformEffect,
     syncData: AnimationSyncData
@@ -19361,32 +18483,25 @@ export class TransformPropagator {
     const targetElement = this.getShadowElement(elementId);
     if (!targetElement) return;
 
-    // Create a timeline for this propagation animation
     const timeline = gsap.timeline({
       onComplete: () => {
-        // Remove from active timelines when complete
-        this._removePropagationTimeline(elementId, timeline);
+        this.removePropagationTimeline(elementId, timeline);
       },
       onReverseComplete: () => {
-        // Remove from active timelines when reverse is complete
-        this._removePropagationTimeline(elementId, timeline);
+        this.removePropagationTimeline(elementId, timeline);
       }
     });
 
-    // Build animation properties for GSAP
     const animationProps: any = {
       duration: syncData.duration || 0.5,
       ease: syncData.ease || 'power2.out',
     };
 
-    // Handle optional animation properties
     if (syncData.repeat !== undefined) animationProps.repeat = syncData.repeat;
     if (syncData.yoyo !== undefined) animationProps.yoyo = syncData.yoyo;
 
-    // Apply anchor-aware transform origin for scale animations
-    const finalTransform = this._applyAnchorAwareTransformOrigin(elementId, transform);
+    const finalTransform = this.applyAnchorAwareTransformOrigin(elementId, transform);
 
-    // Apply transform based on type
     if (finalTransform.type === 'translate') {
       const hasInitialOffset = finalTransform.initialOffsetX !== undefined || finalTransform.initialOffsetY !== undefined;
       if (hasInitialOffset) {
@@ -19394,19 +18509,15 @@ export class TransformPropagator {
           x: finalTransform.initialOffsetX || 0,
           y: finalTransform.initialOffsetY || 0,
         };
-        // toVars should be the final position after the translation
-        // This is the initial offset plus the translation distance
         animationProps.x = (finalTransform.initialOffsetX || 0) + (finalTransform.translateX || 0);
         animationProps.y = (finalTransform.initialOffsetY || 0) + (finalTransform.translateY || 0);
         timeline.fromTo(targetElement, fromVars, animationProps);
       } else {
-        // Standard translation from current position
         animationProps.x = `+=${finalTransform.translateX || 0}`;
         animationProps.y = `+=${finalTransform.translateY || 0}`;
         timeline.to(targetElement, animationProps);
       }
     } else if (finalTransform.type === 'scale') {
-      // Set start values if specified
       if (finalTransform.scaleStartX !== undefined || finalTransform.scaleStartY !== undefined) {
         const initialScaleProps = {
           scaleX: finalTransform.scaleStartX || 1,
@@ -19439,57 +18550,45 @@ export class TransformPropagator {
       }
     }
 
-    // Apply delay after timeline construction
     if (syncData.delay) {
       timeline.delay(syncData.delay);
     }
 
-    // Store the timeline for reversal capability
-    this._storePropagationTimeline(elementId, timeline, finalTransform);
+    this.storePropagationTimeline(elementId, timeline, finalTransform);
     
-    // Start the animation
     timeline.play();
   }
 
-  /**
-   * Apply anchor-aware transform origin for dependent elements
-   */
-  private _applyAnchorAwareTransformOrigin(
+  private applyAnchorAwareTransformOrigin(
     elementId: string,
     transform: TransformEffect
   ): TransformEffect {
-    // Only modify scale transforms to use anchor-aware origins
     if (transform.type !== 'scale') {
-      return transform; // Return unmodified for non-scale transforms
+      return transform;
     }
 
     const element = this.elementsMap?.get(elementId);
     if (!element?.layoutConfig?.anchor) {
-      return transform; // No anchor configuration
+      return transform;
     }
 
     const anchorConfig = element.layoutConfig.anchor;
     
-    // If the element is anchored to another element (not container), use the anchor point as transform origin
     if (anchorConfig.anchorTo && anchorConfig.anchorTo !== 'container') {
       const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
-      const transformOriginString = this._anchorPointToTransformOriginString(anchorPoint);
-      const transformOrigin = this._parseTransformOrigin(transformOriginString, element);
+      const transformOriginString = TransformOriginUtils.anchorPointToTransformOriginString(anchorPoint);
+      const transformOrigin = TransformOriginUtils.parseTransformOrigin(transformOriginString, element);
       
-      // Return a copy with the anchor-aware transform origin
       return {
         ...transform,
         transformOrigin
       };
     }
 
-    return transform; // Return unmodified if not anchored to another element
+    return transform;
   }
 
-  /**
-   * Store a propagation timeline for reversal capability
-   */
-  private _storePropagationTimeline(
+  private storePropagationTimeline(
     elementId: string,
     timeline: gsap.core.Timeline,
     transformEffect: TransformEffect
@@ -19507,10 +18606,7 @@ export class TransformPropagator {
     });
   }
 
-  /**
-   * Remove a propagation timeline when it completes
-   */
-  private _removePropagationTimeline(elementId: string, timeline: gsap.core.Timeline): void {
+  private removePropagationTimeline(elementId: string, timeline: gsap.core.Timeline): void {
     const timelines = this.activePropagationTimelines.get(elementId);
     if (timelines) {
       const index = timelines.findIndex(pt => pt.timeline === timeline);
@@ -19520,93 +18616,7 @@ export class TransformPropagator {
     }
   }
 
-  /**
-   * Get the absolute position of an anchor point on an element
-   */
-  private _getAnchorPointPosition(
-    element: LayoutElement,
-    anchorPoint: string
-  ): { x: number; y: number } {
-    const { x, y, width, height } = element.layout;
-
-    switch (anchorPoint) {
-      case 'topLeft': return { x, y };
-      case 'topCenter': return { x: x + width / 2, y };
-      case 'topRight': return { x: x + width, y };
-      case 'centerLeft': return { x, y: y + height / 2 };
-      case 'center': return { x: x + width / 2, y: y + height / 2 };
-      case 'centerRight': return { x: x + width, y: y + height / 2 };
-      case 'bottomLeft': return { x, y: y + height };
-      case 'bottomCenter': return { x: x + width / 2, y: y + height };
-      case 'bottomRight': return { x: x + width, y: y + height };
-      default: return { x, y }; // Default to topLeft
-    }
-  }
-
-  /**
-   * Convert anchor point to transform origin string
-   */
-  private _anchorPointToTransformOriginString(anchorPoint: string): string {
-    switch (anchorPoint) {
-      case 'topLeft': return 'left top';
-      case 'topCenter': return 'center top';
-      case 'topRight': return 'right top';
-      case 'centerLeft': return 'left center';
-      case 'center': return 'center center';
-      case 'centerRight': return 'right center';
-      case 'bottomLeft': return 'left bottom';
-      case 'bottomCenter': return 'center bottom';
-      case 'bottomRight': return 'right bottom';
-      default: return 'center center';
-    }
-  }
-
-  /**
-   * Parse transform origin string to absolute coordinates
-   */
-  private _parseTransformOrigin(
-    transformOrigin: string,
-    element: LayoutElement
-  ): { x: number; y: number } {
-    const parts = transformOrigin.split(' ');
-    const xPart = parts[0] || 'center';
-    const yPart = parts[1] || 'center';
-
-    const x = this._parseOriginComponent(xPart, element.layout.width);
-    const y = this._parseOriginComponent(yPart, element.layout.height);
-
-    return { x, y };
-  }
-
-  /**
-   * Parse a single component of transform origin
-   */
-  private _parseOriginComponent(component: string, dimension: number): number {
-    switch (component) {
-      case 'left':
-      case 'top':
-        return 0;
-      case 'center':
-        return dimension / 2;
-      case 'right':
-      case 'bottom':
-        return dimension;
-      default:
-        // Parse percentage or pixel values
-        if (component.endsWith('%')) {
-          const percentage = parseFloat(component);
-          return (percentage / 100) * dimension;
-        } else if (component.endsWith('px')) {
-          return parseFloat(component);
-        }
-        return dimension / 2; // Default to center
-    }
-  }
-
-  /**
-   * Check if a transform effect is significant enough to propagate
-   */
-  private _isEffectSignificant(effect: TransformEffect, elementId?: string): boolean {
+  private isEffectSignificant(effect: TransformEffect, elementId?: string): boolean {
     const threshold = 0.001;
 
     switch (effect.type) {
@@ -19636,14 +18646,10 @@ export class TransformPropagator {
     }
   }
 
-  /**
-   * Clear all cached dependencies and transform states
-   */
   clearDependencies(): void {
     this.elementDependencies.clear();
     this.elementTransformStates.clear();
     
-    // Kill all active propagation timelines
     for (const [elementId, timelines] of this.activePropagationTimelines) {
       for (const propagationTimeline of timelines) {
         propagationTimeline.timeline.kill();
@@ -19652,22 +18658,15 @@ export class TransformPropagator {
     this.activePropagationTimelines.clear();
   }
 
-  /**
-   * Clean up all resources including store subscription
-   */
   cleanup(): void {
     this.clearDependencies();
     
-    // Unsubscribe from store
     if (this.storeUnsubscribe) {
       this.storeUnsubscribe();
       this.storeUnsubscribe = undefined;
     }
   }
 
-  /**
-   * Reverse the propagation effects of an animation when the animation is reversed
-   */
   reverseAnimationPropagation(
     elementId: string,
     animationConfig: AnimationDefinition
@@ -19677,55 +18676,42 @@ export class TransformPropagator {
       return;
     }
 
-    // Find all elements that were affected by the original animation
-    const affectedElements = this._findDependentElements(elementId);
+    const affectedElements = this.findDependentElements(elementId);
     
     if (affectedElements.length === 0) {
-      return; // No dependent elements to reverse
+      return;
     }
 
-    // Analyze the transform effects that were applied
-    const transformEffects = this._analyzeTransformEffects(elementId, animationConfig);
+    const transformEffects = this.analyzeTransformEffects(elementId, animationConfig);
     
     if (transformEffects.length === 0) {
-      return; // No positioning effects to reverse
+      return;
     }
 
-    // Reverse the transform state tracking for the primary element
-    this._reverseElementTransformState(elementId, transformEffects);
+    this.reverseElementTransformState(elementId, transformEffects);
 
-    // Apply reverse compensation to dependent elements
-    this._reverseCompensatingTransforms(elementId, transformEffects, affectedElements);
+    this.reverseCompensatingTransforms(elementId, transformEffects, affectedElements);
   }
 
-  /**
-   * Stop all propagation timelines for dependent elements when primary animation is stopped
-   */
   stopAnimationPropagation(elementId: string): void {
-    const affectedElements = this._findDependentElements(elementId);
+    const affectedElements = this.findDependentElements(elementId);
     
     for (const dependency of affectedElements) {
-      this._stopPropagationTimelines(dependency.dependentElementId);
+      this.stopPropagationTimelines(dependency.dependentElementId);
     }
   }
 
-  /**
-   * Stop all active propagation timelines for an element
-   */
-  private _stopPropagationTimelines(elementId: string): void {
+  private stopPropagationTimelines(elementId: string): void {
     const timelines = this.activePropagationTimelines.get(elementId);
     if (timelines) {
       for (const propagationTimeline of timelines) {
         propagationTimeline.timeline.kill();
       }
-      timelines.length = 0; // Clear the array
+      timelines.length = 0;
     }
   }
 
-  /**
-   * Reverse the transform state of an element
-   */
-  private _reverseElementTransformState(elementId: string, transformEffects: TransformEffect[]): void {
+  private reverseElementTransformState(elementId: string, transformEffects: TransformEffect[]): void {
     const currentState = this.elementTransformStates.get(elementId);
     if (!currentState) return;
 
@@ -19734,18 +18720,15 @@ export class TransformPropagator {
     for (const effect of transformEffects) {
       switch (effect.type) {
         case 'scale':
-          // Reverse to the start scale values or default
           reversedState.scaleX = effect.scaleStartX !== undefined ? effect.scaleStartX : 1;
           reversedState.scaleY = effect.scaleStartY !== undefined ? effect.scaleStartY : 1;
           break;
         case 'translate':
-          // Reverse the translation
           reversedState.translateX -= effect.translateX || 0;
           reversedState.translateY -= effect.translateY || 0;
           break;
         case 'rotate':
-          // Reverse rotation (simple case - just negate)
-          reversedState.rotation = 0; // Reset to no rotation
+          reversedState.rotation = 0;
           break;
       }
     }
@@ -19753,26 +18736,19 @@ export class TransformPropagator {
     this.elementTransformStates.set(elementId, reversedState);
   }
 
-  /**
-   * Apply reverse compensating transforms to dependent elements using timeline reversal
-   */
-  private _reverseCompensatingTransforms(
+  private reverseCompensatingTransforms(
     primaryElementId: string,
     transformEffects: TransformEffect[],
     affectedElements: ElementDependency[]
   ): void {
     if (!this.getShadowElement) return;
 
-    // Reverse timelines for all dependent elements
     for (const dependency of affectedElements) {
-      this._reversePropagationTimelines(dependency.dependentElementId);
+      this.reversePropagationTimelines(dependency.dependentElementId);
     }
   }
 
-  /**
-   * Reverse all active propagation timelines for an element
-   */
-  private _reversePropagationTimelines(elementId: string): boolean {
+  private reversePropagationTimelines(elementId: string): boolean {
     const timelines = this.activePropagationTimelines.get(elementId);
     if (!timelines || timelines.length === 0) {
       console.debug(`[TransformPropagator] No active propagation timelines found for element: ${elementId}`);
@@ -19782,22 +18758,10 @@ export class TransformPropagator {
     let reversed = false;
     for (const propagationTimeline of timelines) {
       if (!propagationTimeline.isReversed) {
-        // Before reversing, ensure the element maintains the correct transform origin for scale animations
-        if (propagationTimeline.transformEffect.type === 'scale' && propagationTimeline.transformEffect.transformOrigin) {
-          // Do nothing - transform origin is handled by captureInitialState or the animation itself.
-          // We should not be manually setting it here for reversal.
-        }
-        
         propagationTimeline.timeline.reverse();
         propagationTimeline.isReversed = true;
         reversed = true;
       } else {
-        // Play forward again, still maintaining transform origin
-        if (propagationTimeline.transformEffect.type === 'scale' && propagationTimeline.transformEffect.transformOrigin) {
-          // Do nothing - transform origin is handled by captureInitialState or the animation itself.
-          // We should not be manually setting it here for reversal.
-        }
-        
         propagationTimeline.timeline.play();
         propagationTimeline.isReversed = false;
         reversed = true;
@@ -19808,7 +18772,6 @@ export class TransformPropagator {
   }
 }
 
-// Export singleton instance
 export const transformPropagator = new TransformPropagator();
 ```
 

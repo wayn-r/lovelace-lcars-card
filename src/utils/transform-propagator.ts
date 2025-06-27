@@ -1,18 +1,13 @@
 import { LayoutElement } from '../layout/elements/element.js';
 import { AnimationDefinition } from '../types.js';
-import { HomeAssistant } from 'custom-card-helpers';
 import { StoreProvider, StateChangeEvent } from '../core/store.js';
 import gsap from 'gsap';
 import { DistanceParser } from './animation.js';
+import { TransformOriginUtils, AnchorPointUtils } from './transform-origin-utils.js';
 
-/**
- * Represents a visual transformation that will occur during an animation
- */
 export interface TransformEffect {
-  // Starting offset from the element's final layout position for 'in' type movements
   initialOffsetX?: number;
   initialOffsetY?: number;
-
   type: 'scale' | 'translate' | 'rotate' | 'fade';
   scaleStartX?: number;
   scaleStartY?: number;
@@ -26,9 +21,6 @@ export interface TransformEffect {
   opacity_end?: number;
 }
 
-/**
- * Represents a dependency between elements for positioning
- */
 export interface ElementDependency {
   dependentElementId: string;
   targetElementId: string;
@@ -37,9 +29,6 @@ export interface ElementDependency {
   dependencyType: 'anchor' | 'stretch';
 }
 
-/**
- * Animation properties to synchronize dependent animations
- */
 export interface AnimationSyncData {
   duration: number;
   ease: string;
@@ -48,10 +37,7 @@ export interface AnimationSyncData {
   yoyo?: boolean;
 }
 
-/**
- * Represents the current transformation state of an element
- */
-export interface ElementTransformState {
+interface ElementTransformState {
   scaleX: number;
   scaleY: number;
   translateX: number;
@@ -59,78 +45,50 @@ export interface ElementTransformState {
   rotation: number;
 }
 
-/**
- * Represents a timeline created for dependent element animation propagation
- */
-export interface PropagationTimeline {
+interface PropagationTimeline {
   timeline: gsap.core.Timeline;
   elementId: string;
   transformEffect: TransformEffect;
   isReversed: boolean;
 }
 
-/**
- * Manages transform propagation to maintain anchor relationships during animations
- */
 export class TransformPropagator {
   private elementDependencies = new Map<string, ElementDependency[]>();
   private elementsMap?: Map<string, LayoutElement>;
   private getShadowElement?: (id: string) => Element | null;
-  // Track current transformation state of elements
   private elementTransformStates = new Map<string, ElementTransformState>();
-  // Store subscription for reactive updates
   private storeUnsubscribe?: () => void;
-  // Track active propagation timelines for reversal capability
   private activePropagationTimelines = new Map<string, PropagationTimeline[]>();
 
-  /**
-   * Initialize the propagator with current layout state and subscribe to store
-   */
   initialize(
     elementsMap: Map<string, LayoutElement>,
     getShadowElement?: (id: string) => Element | null
   ): void {
     this.elementsMap = elementsMap;
     this.getShadowElement = getShadowElement;
-    this._buildDependencyGraph();
-    this._initializeTransformStates();
-    this._subscribeToStore();
+    this.buildDependencyGraph();
+    this.initializeTransformStates();
+    this.subscribeToStore();
   }
 
-  /**
-   * Subscribe to store state changes to handle dynamic dependencies
-   */
-  private _subscribeToStore(): void {
-    // Clean up any existing subscription
+  private subscribeToStore(): void {
     if (this.storeUnsubscribe) {
       this.storeUnsubscribe();
     }
 
     const store = StoreProvider.getStore();
     this.storeUnsubscribe = store.onStateChange((event: StateChangeEvent) => {
-      // Handle state changes that might affect transform dependencies
-      this._handleStateChange(event);
+      this.handleStateChange(event);
     });
   }
 
-  /**
-   * Handle state changes that might affect transform relationships
-   */
-  private _handleStateChange(event: StateChangeEvent): void {
-    // If an element's state changes (e.g., becomes visible/hidden), 
-    // we may need to update dependency relationships or propagate transforms
-    
-    // For now, we'll rebuild dependencies when state changes occur
-    // This ensures that new visibility states are properly handled
+  private handleStateChange(event: StateChangeEvent): void {
     if (this.elementsMap) {
-      this._buildDependencyGraph();
+      this.buildDependencyGraph();
     }
   }
 
-  /**
-   * Initialize transform states for all elements to their default values
-   */
-  private _initializeTransformStates(): void {
+  private initializeTransformStates(): void {
     if (!this.elementsMap) return;
     
     for (const elementId of this.elementsMap.keys()) {
@@ -144,10 +102,7 @@ export class TransformPropagator {
     }
   }
 
-  /**
-   * Update the transform state of an element after an animation
-   */
-  private _updateElementTransformState(elementId: string, transformEffect: TransformEffect): void {
+  private updateElementTransformState(elementId: string, transformEffect: TransformEffect): void {
     const currentState = this.elementTransformStates.get(elementId) || {
       scaleX: 1, scaleY: 1, translateX: 0, translateY: 0, rotation: 0
     };
@@ -171,35 +126,6 @@ export class TransformPropagator {
     this.elementTransformStates.set(elementId, newState);
   }
 
-  /**
-   * Get the current effective dimensions of an element accounting for its current scale
-   */
-  private _getCurrentElementDimensions(elementId: string): { x: number; y: number; width: number; height: number } {
-    const element = this.elementsMap?.get(elementId);
-    if (!element) {
-      return { x: 0, y: 0, width: 0, height: 0 };
-    }
-
-    const currentState = this.elementTransformStates.get(elementId);
-    if (!currentState) {
-      return element.layout;
-    }
-
-    // Apply current scale to the layout dimensions
-    const scaledWidth = element.layout.width * currentState.scaleX;
-    const scaledHeight = element.layout.height * currentState.scaleY;
-
-    return {
-      x: element.layout.x,
-      y: element.layout.y,
-      width: scaledWidth,
-      height: scaledHeight
-    };
-  }
-
-  /**
-   * Process an animation and apply compensating transforms to maintain anchoring
-   */
   processAnimationWithPropagation(
     primaryElementId: string,
     animationConfig: AnimationDefinition,
@@ -210,38 +136,29 @@ export class TransformPropagator {
       return;
     }
 
-    // Calculate the transform effects of the primary animation
-    const transformEffects = this._analyzeTransformEffects(primaryElementId, animationConfig);
+    const transformEffects = this.analyzeTransformEffects(primaryElementId, animationConfig);
     
     if (transformEffects.length === 0) {
-      return; // No transforms that affect positioning
+      return;
     }
 
-    // Apply self-compensation to maintain the element's own anchor relationships
-    // and get the self-compensation transform that was applied.
-    const selfCompensationEffect = this._applySelfCompensation(primaryElementId, transformEffects, syncData);
+    const selfCompensationEffect = this.applySelfCompensation(primaryElementId, transformEffects, syncData);
 
-    // Update the element's transform state to reflect the new animation
     for (const effect of transformEffects) {
-      this._updateElementTransformState(primaryElementId, effect);
+      this.updateElementTransformState(primaryElementId, effect);
     }
 
-    // Directly call _applyCompensatingTransforms which will find dependents and initiate recursion
-    this._applyCompensatingTransforms(
+    this.applyCompensatingTransforms(
       primaryElementId,
-      transformEffects, // These are the effects from the primary's animation config
-      selfCompensationEffect, // This is the translation applied for self-compensation
+      transformEffects,
+      selfCompensationEffect,
       syncData
     );
   }
 
-  /**
-   * Process an animation sequence and apply compensating transforms to maintain anchoring
-   * This method handles sequences where multiple animation steps need to be coordinated
-   */
   processAnimationSequenceWithPropagation(
     primaryElementId: string,
-    animationSequence: any, // AnimationSequence type
+    animationSequence: any,
     baseSyncData: AnimationSyncData
   ): void {
     if (!this.elementsMap || !this.getShadowElement) {
@@ -255,19 +172,17 @@ export class TransformPropagator {
     }
 
     const sortedStepGroups = [...animationSequence.steps].sort((a, b) => (a.index || 0) - (b.index || 0));
-    const affectedElements = this._findDependentElements(primaryElementId);
+    const affectedElements = this.findDependentElements(primaryElementId);
 
-    // 1. Pre-calculate overall initial offset for the entire sequence from "in" movements
     let sequenceOverallInitialX = 0;
     let sequenceOverallInitialY = 0;
     
     for (const stepGroup of sortedStepGroups) {
       if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
         for (const animation of stepGroup.animations) {
-          const tempStepEffects = this._analyzeTransformEffects(primaryElementId, animation);
+          const tempStepEffects = this.analyzeTransformEffects(primaryElementId, animation);
           for (const effect of tempStepEffects) {
             if (effect.type === 'translate' && (effect.initialOffsetX !== undefined || effect.initialOffsetY !== undefined)) {
-              // This effect is an "in" movement, its initialOffset is the negative travel vector as per _analyzeSlideEffect
               sequenceOverallInitialX += effect.initialOffsetX || 0;
               sequenceOverallInitialY += effect.initialOffsetY || 0;
             }
@@ -276,9 +191,8 @@ export class TransformPropagator {
       }
     }
 
-    // 2. Apply initial positioning immediately if there's a cumulative offset
     if (sequenceOverallInitialX !== 0 || sequenceOverallInitialY !== 0) {
-      this._applyInitialSequencePositioning(
+      this.applyInitialSequencePositioning(
         primaryElementId, 
         sequenceOverallInitialX, 
         sequenceOverallInitialY, 
@@ -286,7 +200,6 @@ export class TransformPropagator {
       );
     }
 
-    // 3. Process each step group in sequence
     let cumulativeDelay = baseSyncData.delay || 0;
     let currentVisualX = sequenceOverallInitialX;
     let currentVisualY = sequenceOverallInitialY;
@@ -295,15 +208,12 @@ export class TransformPropagator {
       if (stepGroup.animations && Array.isArray(stepGroup.animations)) {
         let maxGroupDuration = 0;
 
-        // Calculate the longest duration in this group to know when to start the next index
         for (const animation of stepGroup.animations) {
           const animationDuration = (animation.duration || 0) + (animation.delay || 0);
           maxGroupDuration = Math.max(maxGroupDuration, animationDuration);
         }
 
-        // Process all animations in this step group
         for (const animation of stepGroup.animations) {
-          // Create sync data for this animation, incorporating the current animation's own delay
           const animationSyncData: AnimationSyncData = {
             duration: animation.duration || baseSyncData.duration,
             ease: animation.ease || baseSyncData.ease,
@@ -312,37 +222,32 @@ export class TransformPropagator {
             yoyo: animation.yoyo
           };
 
-          const animationBaseEffects = this._analyzeTransformEffects(primaryElementId, animation);
+          const animationBaseEffects = this.analyzeTransformEffects(primaryElementId, animation);
           
           if (animationBaseEffects.length > 0) {
             const effectsForAnimationAndPropagation: TransformEffect[] = [];
 
             for (const baseEffect of animationBaseEffects) {
-              const actualAnimationEffect = { ...baseEffect }; // Copy base effect
+              const actualAnimationEffect = { ...baseEffect };
 
               if (actualAnimationEffect.type === 'translate') {
-                // For sequences, the element starts at the current visual position
-                // and animates by the travel distance specified in the animation
                 actualAnimationEffect.initialOffsetX = currentVisualX;
                 actualAnimationEffect.initialOffsetY = currentVisualY;
                 
-                // Update the visual position for the next step
                 currentVisualX += baseEffect.translateX || 0;
                 currentVisualY += baseEffect.translateY || 0;
               }
               effectsForAnimationAndPropagation.push(actualAnimationEffect);
             }
 
-            // Apply the animation to the primary element
             for (const effectToApply of effectsForAnimationAndPropagation) {
-              this._applyTransform(primaryElementId, effectToApply, animationSyncData);
+              this.applyTransform(primaryElementId, effectToApply, animationSyncData);
             }
 
-            // Apply self-compensation and propagation to dependent elements
-            const animationSelfCompensation = this._applySelfCompensation(primaryElementId, effectsForAnimationAndPropagation, animationSyncData);
+            const animationSelfCompensation = this.applySelfCompensation(primaryElementId, effectsForAnimationAndPropagation, animationSyncData);
 
             if (affectedElements.length > 0) {
-              this._applyCompensatingTransforms(
+              this.applyCompensatingTransforms(
                 primaryElementId,
                 effectsForAnimationAndPropagation, 
                 animationSelfCompensation,
@@ -350,14 +255,12 @@ export class TransformPropagator {
               );
             }
 
-            // Update the element's logical transform state using the original base effects
             for (const baseEffect of animationBaseEffects) {
-              this._updateElementTransformState(primaryElementId, baseEffect);
+              this.updateElementTransformState(primaryElementId, baseEffect);
             }
           }
         }
 
-        // Update cumulative delay for the next step group
         cumulativeDelay += maxGroupDuration;
       }
     }
@@ -365,10 +268,7 @@ export class TransformPropagator {
     console.log(`[TransformPropagator] Processed animation sequence for ${primaryElementId} with ${sortedStepGroups.length} step groups. Initial offset: (${sequenceOverallInitialX}, ${sequenceOverallInitialY}). Final visual endpoint: (${currentVisualX}, ${currentVisualY}). Affected dependents: ${affectedElements.length}`);
   }
 
-  /**
-   * Apply initial positioning for animation sequences to set all elements to their starting positions
-   */
-  private _applyInitialSequencePositioning(
+  private applyInitialSequencePositioning(
     primaryElementId: string,
     initialX: number,
     initialY: number,
@@ -376,58 +276,44 @@ export class TransformPropagator {
   ): void {
     if (!this.getShadowElement) return;
 
-    // Import GSAP dynamically
-    import('gsap').then(({ gsap }) => {
-      // Immediately set the primary element to its initial position
-      const primaryElement = this.getShadowElement!(primaryElementId);
-      if (primaryElement) {
-        gsap.set(primaryElement, {
+    const primaryElement = this.getShadowElement(primaryElementId);
+    if (primaryElement) {
+      gsap.set(primaryElement, {
+        x: initialX,
+        y: initialY
+      });
+    }
+
+    for (const dependency of affectedElements) {
+      const dependentElement = this.getShadowElement(dependency.dependentElementId);
+      if (dependentElement) {
+        gsap.set(dependentElement, {
           x: initialX,
           y: initialY
         });
       }
-
-      // Apply the same initial offset to all dependent elements
-      for (const dependency of affectedElements) {
-        const dependentElement = this.getShadowElement!(dependency.dependentElementId);
-        if (dependentElement) {
-          gsap.set(dependentElement, {
-            x: initialX,
-            y: initialY
-          });
-        }
-      }
-    }).catch(error => {
-      console.error(`[TransformPropagator] Error applying initial sequence positioning:`, error);
-    });
+    }
   }
 
-  /**
-   * Build the dependency graph from current layout configuration
-   */
-  private _buildDependencyGraph(): void {
+  private buildDependencyGraph(): void {
     if (!this.elementsMap) return;
 
     this.elementDependencies.clear();
 
     for (const [elementId, element] of this.elementsMap) {
-      const dependencies = this._extractElementDependencies(elementId, element);
+      const dependencies = this.extractElementDependencies(elementId, element);
       if (dependencies.length > 0) {
         this.elementDependencies.set(elementId, dependencies);
       }
     }
   }
 
-  /**
-   * Extract dependencies for a single element
-   */
-  private _extractElementDependencies(
+  private extractElementDependencies(
     elementId: string,
     element: LayoutElement
   ): ElementDependency[] {
     const dependencies: ElementDependency[] = [];
 
-    // Check anchor dependencies
     const anchorConfig = element.layoutConfig.anchor;
     if (anchorConfig?.anchorTo && anchorConfig.anchorTo !== 'container') {
       dependencies.push({
@@ -439,7 +325,6 @@ export class TransformPropagator {
       });
     }
 
-    // Check stretch dependencies
     const stretchConfig = element.layoutConfig.stretch;
     if (stretchConfig?.stretchTo1 && 
         stretchConfig.stretchTo1 !== 'container' && 
@@ -447,7 +332,7 @@ export class TransformPropagator {
       dependencies.push({
         dependentElementId: elementId,
         targetElementId: stretchConfig.stretchTo1,
-        anchorPoint: 'unknown', // Stretch doesn't use anchor points
+        anchorPoint: 'unknown',
         targetAnchorPoint: stretchConfig.targetStretchAnchorPoint1 || 'topLeft',
         dependencyType: 'stretch'
       });
@@ -468,10 +353,7 @@ export class TransformPropagator {
     return dependencies;
   }
 
-  /**
-   * Analyze the visual effects of an animation
-   */
-  private _analyzeTransformEffects(
+  private analyzeTransformEffects(
     elementId: string,
     animationConfig: AnimationDefinition
   ): TransformEffect[] {
@@ -482,26 +364,23 @@ export class TransformPropagator {
 
     switch (animationConfig.type) {
       case 'scale':
-        effects.push(this._analyzeScaleEffect(element, animationConfig));
+        effects.push(this.analyzeScaleEffect(element, animationConfig));
         break;
       case 'slide':
-        effects.push(this._analyzeSlideEffect(element, animationConfig));
+        effects.push(this.analyzeSlideEffect(element, animationConfig));
         break;
       case 'custom_gsap':
-        effects.push(...this._analyzeCustomGsapEffects(element, animationConfig));
+        effects.push(...this.analyzeCustomGsapEffects(element, animationConfig));
         break;
       case 'fade':
-        effects.push(this._analyzeFadeEffect(element, animationConfig));
+        effects.push(this.analyzeFadeEffect(element, animationConfig));
         break;
     }
 
-    return effects.filter(effect => this._isEffectSignificant(effect, elementId));
+    return effects.filter(effect => this.isEffectSignificant(effect, elementId));
   }
 
-  /**
-   * Analyze scale animation effects
-   */
-  private _analyzeScaleEffect(
+  private analyzeScaleEffect(
     element: LayoutElement,
     animationConfig: AnimationDefinition
   ): TransformEffect {
@@ -509,17 +388,14 @@ export class TransformPropagator {
     const scaleStart = scaleParams?.scale_start;
     const scaleEnd = scaleParams?.scale_end || 1;
     
-    // For anchored elements, prefer using the anchor point as transform origin to minimize displacement
     let transformOriginString = scaleParams?.transform_origin;
     
     if (!transformOriginString && element.layoutConfig.anchor?.anchorTo && element.layoutConfig.anchor.anchorTo !== 'container') {
-      // Use the element's anchor point as transform origin to minimize displacement
       const anchorPoint = element.layoutConfig.anchor.anchorPoint || 'topLeft';
-      transformOriginString = this._anchorPointToTransformOriginString(anchorPoint);
+      transformOriginString = TransformOriginUtils.anchorPointToTransformOriginString(anchorPoint);
     }
     
-    // Fall back to center center if no better origin is available
-    const transformOrigin = this._parseTransformOrigin(
+    const transformOrigin = TransformOriginUtils.parseTransformOrigin(
       transformOriginString || 'center center',
       element
     );
@@ -534,10 +410,7 @@ export class TransformPropagator {
     };
   }
 
-  /**
-   * Analyze slide animation effects
-   */
-  private _analyzeSlideEffect(
+  private analyzeSlideEffect(
     element: LayoutElement,
     animationConfig: AnimationDefinition
   ): TransformEffect {
@@ -548,13 +421,6 @@ export class TransformPropagator {
 
     let translateX = 0;
     let translateY = 0;
-
-    // The TransformEffect should represent the net displacement of this animation step
-    // from the element's original layout position.
-    // The 'movement' parameter ('in'/'out') is critical here:
-    // - 'in': The element animates *to* its layout position. Net displacement from layout = 0.
-    // - 'out': The element animates *away from* its layout position by 'distance'.
-    // - undefined: Assumed to be a direct translation, similar to 'out'.
 
     let baseTranslateX = 0;
     let baseTranslateY = 0;
@@ -578,16 +444,11 @@ export class TransformPropagator {
     let initialOffsetY = 0;
 
     if (movement === 'in') {
-      // For 'in' movements, the element starts offset and moves TO its layout position.
-      // The initialOffset is the negative of the travel vector.
       initialOffsetX = -baseTranslateX;
       initialOffsetY = -baseTranslateY;
-      // translateX/Y still represent the travel vector towards the layout position.
       translateX = baseTranslateX;
       translateY = baseTranslateY;
     } else {
-      // For 'out' or direct movements, it starts at its layout position and moves AWAY.
-      // No initial offset from the layout position.
       translateX = baseTranslateX;
       translateY = baseTranslateY;
     }
@@ -602,10 +463,7 @@ export class TransformPropagator {
     };
   }
 
-  /**
-   * Analyze custom GSAP animation effects
-   */
-  private _analyzeCustomGsapEffects(
+  private analyzeCustomGsapEffects(
     element: LayoutElement,
     animationConfig: AnimationDefinition
   ): TransformEffect[] {
@@ -617,7 +475,7 @@ export class TransformPropagator {
         type: 'scale',
         scaleTargetX: customVars.scale,
         scaleTargetY: customVars.scale,
-        transformOrigin: this._parseTransformOrigin(
+        transformOrigin: TransformOriginUtils.parseTransformOrigin(
           customVars.transformOrigin || 'center center',
           element
         )
@@ -637,7 +495,7 @@ export class TransformPropagator {
       effects.push({
         type: 'rotate',
         rotation: customVars.rotation,
-        transformOrigin: this._parseTransformOrigin(
+        transformOrigin: TransformOriginUtils.parseTransformOrigin(
           customVars.transformOrigin || 'center center',
           element
         )
@@ -647,10 +505,7 @@ export class TransformPropagator {
     return effects;
   }
 
-  /**
-   * Analyze fade animation effects
-   */
-  private _analyzeFadeEffect(
+  private analyzeFadeEffect(
     element: LayoutElement,
     animationConfig: AnimationDefinition
   ): TransformEffect {
@@ -662,14 +517,11 @@ export class TransformPropagator {
       type: 'fade',
       opacity_start: opacityStart,
       opacity_end: opacityEnd,
-      transformOrigin: { x: 0, y: 0 } // Not relevant for fade animations
+      transformOrigin: { x: 0, y: 0 }
     };
   }
 
-  /**
-   * Apply self-compensation transforms to maintain the element's own anchor relationships
-   */
-  private _applySelfCompensation(
+  private applySelfCompensation(
     elementId: string,
     transformEffects: TransformEffect[],
     syncData: AnimationSyncData
@@ -677,53 +529,42 @@ export class TransformPropagator {
     const element = this.elementsMap?.get(elementId);
     if (!element) return null;
 
-    // Check if this element is anchored to another element
     const anchorConfig = element.layoutConfig.anchor;
     if (!anchorConfig?.anchorTo || anchorConfig.anchorTo === 'container') {
-      return null; // No anchor compensation needed
+      return null;
     }
 
-    // Filter out translation effects - slides are intended to move the element
-    // and should not be compensated. Only geometric changes (scale, rotation) need compensation.
     const geometricEffects = transformEffects.filter(effect => effect.type !== 'translate');
     
     if (geometricEffects.length === 0) {
-      return null; // No geometric effects to compensate
+      return null;
     }
 
-    // Calculate how much the element's anchor point will move due to its geometric transformations
     const ownAnchorPoint = anchorConfig.anchorPoint || 'topLeft';
-    const anchorDisplacement = this._calculateAnchorDisplacement(
+    const anchorDisplacement = this.calculateAnchorDisplacement(
       element,
       ownAnchorPoint,
-      geometricEffects // Only geometric effects, not translations
+      geometricEffects
     );
 
     if (anchorDisplacement.x === 0 && anchorDisplacement.y === 0) {
-      return null; // No displacement to compensate
+      return null;
     }
 
-    // Create a compensating translation that moves the element in the opposite direction
-    // to keep its anchor point in the same relative position
     const compensatingTransform: TransformEffect = {
       type: 'translate',
-      translateX: Math.round(-anchorDisplacement.x * 1000) / 1000, // Round to avoid precision issues
+      translateX: Math.round(-anchorDisplacement.x * 1000) / 1000,
       translateY: Math.round(-anchorDisplacement.y * 1000) / 1000,
-      transformOrigin: { x: 0, y: 0 } // Transform origin is not relevant for pure translation
+      transformOrigin: { x: 0, y: 0 }
     };
 
-    // Apply the compensating transform
-    this._applyTransform(elementId, compensatingTransform, syncData);
-    return compensatingTransform; // Return the applied self-compensation
+    this.applyTransform(elementId, compensatingTransform, syncData);
+    return compensatingTransform;
   }
 
-  /**
-   * Find all elements that depend on the given element
-   */
-  private _findDependentElements(targetElementId: string): ElementDependency[] {
+  private findDependentElements(targetElementId: string): ElementDependency[] {
     const dependents: ElementDependency[] = [];
 
-    // Search through all dependencies to find ones that target this element
     for (const [elementId, dependencies] of this.elementDependencies) {
       for (const dependency of dependencies) {
         if (dependency.targetElementId === targetElementId) {
@@ -735,11 +576,7 @@ export class TransformPropagator {
     return dependents;
   }
 
-  /**
-   * Apply compensating transforms to maintain anchor relationships.
-   * This is the initiator for direct dependents of the primary animated element.
-   */
-  private _applyCompensatingTransforms(
+  private applyCompensatingTransforms(
     primaryElementId: string,
     primaryTransformEffects: TransformEffect[], 
     primarySelfCompensation: TransformEffect | null,
@@ -748,14 +585,13 @@ export class TransformPropagator {
     const primaryElement = this.elementsMap?.get(primaryElementId);
     if (!primaryElement) return;
 
-    // These are the elements directly depending on the primary animated element
-    const directDependentsOfPrimary = this._findDependentElements(primaryElementId);
+    const directDependentsOfPrimary = this.findDependentElements(primaryElementId);
 
     for (const dependency of directDependentsOfPrimary) {
       const dependentElement = this.elementsMap?.get(dependency.dependentElementId);
       if (!dependentElement) continue;
 
-      const displacementFromPrimaryEffects = this._calculateAnchorDisplacement(
+      const displacementFromPrimaryEffects = this.calculateAnchorDisplacement(
         primaryElement,
         dependency.targetAnchorPoint,
         primaryTransformEffects 
@@ -769,7 +605,7 @@ export class TransformPropagator {
         totalCompensationY += primarySelfCompensation.translateY || 0;
       }
       
-      const firstPrimaryEffect = primaryTransformEffects[0]; // Used to get original initialOffset
+      const firstPrimaryEffect = primaryTransformEffects[0];
       
       if (totalCompensationX === 0 && totalCompensationY === 0) {
         if (firstPrimaryEffect?.initialOffsetX !== undefined || firstPrimaryEffect?.initialOffsetY !== undefined) {
@@ -781,12 +617,12 @@ export class TransformPropagator {
             initialOffsetY: firstPrimaryEffect.initialOffsetY,
             transformOrigin: { x: 0, y: 0 }
           };
-          this._applyTransform(
+          this.applyTransform(
             dependency.dependentElementId,
             zeroMoveEffectWithInitialOffset,
             syncData
           );
-          this._propagateTransformsRecursively(
+          this.propagateTransformsRecursively(
             dependency.dependentElementId,
             zeroMoveEffectWithInitialOffset,
             syncData,
@@ -805,13 +641,13 @@ export class TransformPropagator {
         transformOrigin: { x: 0, y: 0 } 
       };
       
-      this._applyTransform(
+      this.applyTransform(
         dependency.dependentElementId,
         compensatingTransformForDirectDependent,
         syncData
       );
 
-      this._propagateTransformsRecursively(
+      this.propagateTransformsRecursively(
         dependency.dependentElementId,
         compensatingTransformForDirectDependent, 
         syncData,
@@ -820,10 +656,7 @@ export class TransformPropagator {
     }
   }
 
-  /**
-   * Recursively propagate transforms to all dependent elements in the chain.
-   */
-  private _propagateTransformsRecursively(
+  private propagateTransformsRecursively(
     currentParentId: string, 
     parentTransformEffect: TransformEffect, 
     syncData: AnimationSyncData,
@@ -832,20 +665,20 @@ export class TransformPropagator {
     if (processedElements.has(currentParentId)) {
       return; 
     }
-    // Add current parent to its own processed set copy for this branch of recursion
+    
     const currentProcessedElements = new Set(processedElements);
     currentProcessedElements.add(currentParentId);
 
     const parentElement = this.elementsMap?.get(currentParentId);
     if (!parentElement) return;
 
-    const dependentsOfCurrentParent = this._findDependentElements(currentParentId); 
+    const dependentsOfCurrentParent = this.findDependentElements(currentParentId); 
 
     for (const dependency of dependentsOfCurrentParent) {
       const dependentElement = this.elementsMap?.get(dependency.dependentElementId);
       if (!dependentElement) continue;
 
-      const displacementFromParentEffect = this._calculateAnchorDisplacement(
+      const displacementFromParentEffect = this.calculateAnchorDisplacement(
         parentElement, 
         dependency.targetAnchorPoint, 
         [parentTransformEffect] 
@@ -861,12 +694,12 @@ export class TransformPropagator {
             initialOffsetY: parentTransformEffect.initialOffsetY,
             transformOrigin: { x: 0, y: 0 }
           };
-          this._applyTransform(
+          this.applyTransform(
             dependency.dependentElementId,
             zeroMoveEffectWithInitialOffset,
             syncData
           );
-          this._propagateTransformsRecursively(
+          this.propagateTransformsRecursively(
             dependency.dependentElementId,
             zeroMoveEffectWithInitialOffset,
             syncData,
@@ -885,13 +718,13 @@ export class TransformPropagator {
         transformOrigin: { x: 0, y: 0 } 
       };
 
-      this._applyTransform(
+      this.applyTransform(
         dependency.dependentElementId,
         compensatingTransformForDependent,
         syncData
       );
 
-      this._propagateTransformsRecursively(
+      this.propagateTransformsRecursively(
         dependency.dependentElementId,
         compensatingTransformForDependent, 
         syncData,
@@ -900,50 +733,36 @@ export class TransformPropagator {
     }
   }
 
-  /**
-   * Calculate how much an anchor point moves due to transformations
-   */
-  private _calculateAnchorDisplacement(
+  private calculateAnchorDisplacement(
     element: LayoutElement,
     anchorPointName: string,
     transformEffects: TransformEffect[]
   ): { x: number; y: number } {
-    // Get the initial absolute position of the anchor point on 'element'
-    // This accounts for all transforms applied to 'element' *before* the current 'transformEffects'
-    let currentAbsoluteAnchorPosition = this._getAnchorPointPosition(element, anchorPointName);
+    let currentAbsoluteAnchorPosition = AnchorPointUtils.getAnchorPointPosition(element, anchorPointName);
 
     let totalDisplacementX = 0;
     let totalDisplacementY = 0;
 
-    // transformEffects usually contains a single primary effect from the animation config for the current step
     for (const effect of transformEffects) {
       let stepDisplacement = { x: 0, y: 0 };
       if (effect.type === 'scale') {
-        // Calculate how 'currentAbsoluteAnchorPosition' moves due to this 'effect'
-        // _calculateScaleDisplacement needs the position of the point *before* this specific scale effect
-        stepDisplacement = this._calculateScaleDisplacement(
-          currentAbsoluteAnchorPosition, // Its current absolute position
-          effect,                        // The scale effect to apply
-          element                        // The element being scaled
+        stepDisplacement = this.calculateScaleDisplacement(
+          currentAbsoluteAnchorPosition,
+          effect,
+          element
         );
       } else if (effect.type === 'translate') {
-        // For a pure translation, the displacement of any point on the element is the translation itself
         stepDisplacement = {
           x: effect.translateX || 0,
           y: effect.translateY || 0,
         };
       } else if (effect.type === 'rotate') {
-        // Placeholder for rotation displacement calculation
-        // This would be more complex, similar to scale, involving rotation around effect.transformOrigin
-        // For now, assume rotation doesn't cause simple anchor displacement that we propagate as translation
-        // Or, if it does, it needs a _calculateRotationDisplacement method
         console.warn('[TransformPropagator] Rotation effect displacement not fully implemented for anchor propagation.');
       }
 
       totalDisplacementX += stepDisplacement.x;
       totalDisplacementY += stepDisplacement.y;
       
-      // Update the anchor position for the next potential effect in this step's sequence
       currentAbsoluteAnchorPosition.x += stepDisplacement.x;
       currentAbsoluteAnchorPosition.y += stepDisplacement.y;
     }
@@ -954,42 +773,36 @@ export class TransformPropagator {
     };
   }
 
-  /**
-   * Calculate displacement caused by scaling
-   */
-  private _calculateScaleDisplacement(
+  private calculateScaleDisplacement(
     anchorPosition: { x: number; y: number },
     scaleEffect: TransformEffect,
     element: LayoutElement
   ): { x: number; y: number } {
-    const s_current_X = scaleEffect.scaleStartX !== undefined 
+    const currentScaleX = scaleEffect.scaleStartX !== undefined 
       ? scaleEffect.scaleStartX 
       : (this.elementTransformStates.get(element.id)?.scaleX || 1);
-    const s_current_Y = scaleEffect.scaleStartY !== undefined
+    const currentScaleY = scaleEffect.scaleStartY !== undefined
       ? scaleEffect.scaleStartY
       : (this.elementTransformStates.get(element.id)?.scaleY || 1);
     
-    const s_target_X = scaleEffect.scaleTargetX || 1;
-    const s_target_Y = scaleEffect.scaleTargetY || 1;
+    const targetScaleX = scaleEffect.scaleTargetX || 1;
+    const targetScaleY = scaleEffect.scaleTargetY || 1;
     
     const origin = scaleEffect.transformOrigin;
     
     const originAbsoluteX = element.layout.x + origin.x;
     const originAbsoluteY = element.layout.y + origin.y;
 
-    const p_orig_relative_to_origin_X = anchorPosition.x - originAbsoluteX;
-    const p_orig_relative_to_origin_Y = anchorPosition.y - originAbsoluteY;
+    const anchorRelativeToOriginX = anchorPosition.x - originAbsoluteX;
+    const anchorRelativeToOriginY = anchorPosition.y - originAbsoluteY;
 
-    const displacementX = p_orig_relative_to_origin_X * (s_target_X - s_current_X);
-    const displacementY = p_orig_relative_to_origin_Y * (s_target_Y - s_current_Y);
+    const displacementX = anchorRelativeToOriginX * (targetScaleX - currentScaleX);
+    const displacementY = anchorRelativeToOriginY * (targetScaleY - currentScaleY);
     
     return { x: displacementX, y: displacementY };
   }
 
-  /**
-   * Apply a transform to an element using timeline-based animation for proper reversal
-   */
-  private _applyTransform(
+  private applyTransform(
     elementId: string,
     transform: TransformEffect,
     syncData: AnimationSyncData
@@ -999,32 +812,25 @@ export class TransformPropagator {
     const targetElement = this.getShadowElement(elementId);
     if (!targetElement) return;
 
-    // Create a timeline for this propagation animation
     const timeline = gsap.timeline({
       onComplete: () => {
-        // Remove from active timelines when complete
-        this._removePropagationTimeline(elementId, timeline);
+        this.removePropagationTimeline(elementId, timeline);
       },
       onReverseComplete: () => {
-        // Remove from active timelines when reverse is complete
-        this._removePropagationTimeline(elementId, timeline);
+        this.removePropagationTimeline(elementId, timeline);
       }
     });
 
-    // Build animation properties for GSAP
     const animationProps: any = {
       duration: syncData.duration || 0.5,
       ease: syncData.ease || 'power2.out',
     };
 
-    // Handle optional animation properties
     if (syncData.repeat !== undefined) animationProps.repeat = syncData.repeat;
     if (syncData.yoyo !== undefined) animationProps.yoyo = syncData.yoyo;
 
-    // Apply anchor-aware transform origin for scale animations
-    const finalTransform = this._applyAnchorAwareTransformOrigin(elementId, transform);
+    const finalTransform = this.applyAnchorAwareTransformOrigin(elementId, transform);
 
-    // Apply transform based on type
     if (finalTransform.type === 'translate') {
       const hasInitialOffset = finalTransform.initialOffsetX !== undefined || finalTransform.initialOffsetY !== undefined;
       if (hasInitialOffset) {
@@ -1032,19 +838,15 @@ export class TransformPropagator {
           x: finalTransform.initialOffsetX || 0,
           y: finalTransform.initialOffsetY || 0,
         };
-        // toVars should be the final position after the translation
-        // This is the initial offset plus the translation distance
         animationProps.x = (finalTransform.initialOffsetX || 0) + (finalTransform.translateX || 0);
         animationProps.y = (finalTransform.initialOffsetY || 0) + (finalTransform.translateY || 0);
         timeline.fromTo(targetElement, fromVars, animationProps);
       } else {
-        // Standard translation from current position
         animationProps.x = `+=${finalTransform.translateX || 0}`;
         animationProps.y = `+=${finalTransform.translateY || 0}`;
         timeline.to(targetElement, animationProps);
       }
     } else if (finalTransform.type === 'scale') {
-      // Set start values if specified
       if (finalTransform.scaleStartX !== undefined || finalTransform.scaleStartY !== undefined) {
         const initialScaleProps = {
           scaleX: finalTransform.scaleStartX || 1,
@@ -1077,57 +879,45 @@ export class TransformPropagator {
       }
     }
 
-    // Apply delay after timeline construction
     if (syncData.delay) {
       timeline.delay(syncData.delay);
     }
 
-    // Store the timeline for reversal capability
-    this._storePropagationTimeline(elementId, timeline, finalTransform);
+    this.storePropagationTimeline(elementId, timeline, finalTransform);
     
-    // Start the animation
     timeline.play();
   }
 
-  /**
-   * Apply anchor-aware transform origin for dependent elements
-   */
-  private _applyAnchorAwareTransformOrigin(
+  private applyAnchorAwareTransformOrigin(
     elementId: string,
     transform: TransformEffect
   ): TransformEffect {
-    // Only modify scale transforms to use anchor-aware origins
     if (transform.type !== 'scale') {
-      return transform; // Return unmodified for non-scale transforms
+      return transform;
     }
 
     const element = this.elementsMap?.get(elementId);
     if (!element?.layoutConfig?.anchor) {
-      return transform; // No anchor configuration
+      return transform;
     }
 
     const anchorConfig = element.layoutConfig.anchor;
     
-    // If the element is anchored to another element (not container), use the anchor point as transform origin
     if (anchorConfig.anchorTo && anchorConfig.anchorTo !== 'container') {
       const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
-      const transformOriginString = this._anchorPointToTransformOriginString(anchorPoint);
-      const transformOrigin = this._parseTransformOrigin(transformOriginString, element);
+      const transformOriginString = TransformOriginUtils.anchorPointToTransformOriginString(anchorPoint);
+      const transformOrigin = TransformOriginUtils.parseTransformOrigin(transformOriginString, element);
       
-      // Return a copy with the anchor-aware transform origin
       return {
         ...transform,
         transformOrigin
       };
     }
 
-    return transform; // Return unmodified if not anchored to another element
+    return transform;
   }
 
-  /**
-   * Store a propagation timeline for reversal capability
-   */
-  private _storePropagationTimeline(
+  private storePropagationTimeline(
     elementId: string,
     timeline: gsap.core.Timeline,
     transformEffect: TransformEffect
@@ -1145,10 +935,7 @@ export class TransformPropagator {
     });
   }
 
-  /**
-   * Remove a propagation timeline when it completes
-   */
-  private _removePropagationTimeline(elementId: string, timeline: gsap.core.Timeline): void {
+  private removePropagationTimeline(elementId: string, timeline: gsap.core.Timeline): void {
     const timelines = this.activePropagationTimelines.get(elementId);
     if (timelines) {
       const index = timelines.findIndex(pt => pt.timeline === timeline);
@@ -1158,93 +945,7 @@ export class TransformPropagator {
     }
   }
 
-  /**
-   * Get the absolute position of an anchor point on an element
-   */
-  private _getAnchorPointPosition(
-    element: LayoutElement,
-    anchorPoint: string
-  ): { x: number; y: number } {
-    const { x, y, width, height } = element.layout;
-
-    switch (anchorPoint) {
-      case 'topLeft': return { x, y };
-      case 'topCenter': return { x: x + width / 2, y };
-      case 'topRight': return { x: x + width, y };
-      case 'centerLeft': return { x, y: y + height / 2 };
-      case 'center': return { x: x + width / 2, y: y + height / 2 };
-      case 'centerRight': return { x: x + width, y: y + height / 2 };
-      case 'bottomLeft': return { x, y: y + height };
-      case 'bottomCenter': return { x: x + width / 2, y: y + height };
-      case 'bottomRight': return { x: x + width, y: y + height };
-      default: return { x, y }; // Default to topLeft
-    }
-  }
-
-  /**
-   * Convert anchor point to transform origin string
-   */
-  private _anchorPointToTransformOriginString(anchorPoint: string): string {
-    switch (anchorPoint) {
-      case 'topLeft': return 'left top';
-      case 'topCenter': return 'center top';
-      case 'topRight': return 'right top';
-      case 'centerLeft': return 'left center';
-      case 'center': return 'center center';
-      case 'centerRight': return 'right center';
-      case 'bottomLeft': return 'left bottom';
-      case 'bottomCenter': return 'center bottom';
-      case 'bottomRight': return 'right bottom';
-      default: return 'center center';
-    }
-  }
-
-  /**
-   * Parse transform origin string to absolute coordinates
-   */
-  private _parseTransformOrigin(
-    transformOrigin: string,
-    element: LayoutElement
-  ): { x: number; y: number } {
-    const parts = transformOrigin.split(' ');
-    const xPart = parts[0] || 'center';
-    const yPart = parts[1] || 'center';
-
-    const x = this._parseOriginComponent(xPart, element.layout.width);
-    const y = this._parseOriginComponent(yPart, element.layout.height);
-
-    return { x, y };
-  }
-
-  /**
-   * Parse a single component of transform origin
-   */
-  private _parseOriginComponent(component: string, dimension: number): number {
-    switch (component) {
-      case 'left':
-      case 'top':
-        return 0;
-      case 'center':
-        return dimension / 2;
-      case 'right':
-      case 'bottom':
-        return dimension;
-      default:
-        // Parse percentage or pixel values
-        if (component.endsWith('%')) {
-          const percentage = parseFloat(component);
-          return (percentage / 100) * dimension;
-        } else if (component.endsWith('px')) {
-          return parseFloat(component);
-        }
-        return dimension / 2; // Default to center
-    }
-  }
-
-  /**
-   * Check if a transform effect is significant enough to propagate
-   */
-  private _isEffectSignificant(effect: TransformEffect, elementId?: string): boolean {
+  private isEffectSignificant(effect: TransformEffect, elementId?: string): boolean {
     const threshold = 0.001;
 
     switch (effect.type) {
@@ -1274,14 +975,10 @@ export class TransformPropagator {
     }
   }
 
-  /**
-   * Clear all cached dependencies and transform states
-   */
   clearDependencies(): void {
     this.elementDependencies.clear();
     this.elementTransformStates.clear();
     
-    // Kill all active propagation timelines
     for (const [elementId, timelines] of this.activePropagationTimelines) {
       for (const propagationTimeline of timelines) {
         propagationTimeline.timeline.kill();
@@ -1290,22 +987,15 @@ export class TransformPropagator {
     this.activePropagationTimelines.clear();
   }
 
-  /**
-   * Clean up all resources including store subscription
-   */
   cleanup(): void {
     this.clearDependencies();
     
-    // Unsubscribe from store
     if (this.storeUnsubscribe) {
       this.storeUnsubscribe();
       this.storeUnsubscribe = undefined;
     }
   }
 
-  /**
-   * Reverse the propagation effects of an animation when the animation is reversed
-   */
   reverseAnimationPropagation(
     elementId: string,
     animationConfig: AnimationDefinition
@@ -1315,55 +1005,42 @@ export class TransformPropagator {
       return;
     }
 
-    // Find all elements that were affected by the original animation
-    const affectedElements = this._findDependentElements(elementId);
+    const affectedElements = this.findDependentElements(elementId);
     
     if (affectedElements.length === 0) {
-      return; // No dependent elements to reverse
+      return;
     }
 
-    // Analyze the transform effects that were applied
-    const transformEffects = this._analyzeTransformEffects(elementId, animationConfig);
+    const transformEffects = this.analyzeTransformEffects(elementId, animationConfig);
     
     if (transformEffects.length === 0) {
-      return; // No positioning effects to reverse
+      return;
     }
 
-    // Reverse the transform state tracking for the primary element
-    this._reverseElementTransformState(elementId, transformEffects);
+    this.reverseElementTransformState(elementId, transformEffects);
 
-    // Apply reverse compensation to dependent elements
-    this._reverseCompensatingTransforms(elementId, transformEffects, affectedElements);
+    this.reverseCompensatingTransforms(elementId, transformEffects, affectedElements);
   }
 
-  /**
-   * Stop all propagation timelines for dependent elements when primary animation is stopped
-   */
   stopAnimationPropagation(elementId: string): void {
-    const affectedElements = this._findDependentElements(elementId);
+    const affectedElements = this.findDependentElements(elementId);
     
     for (const dependency of affectedElements) {
-      this._stopPropagationTimelines(dependency.dependentElementId);
+      this.stopPropagationTimelines(dependency.dependentElementId);
     }
   }
 
-  /**
-   * Stop all active propagation timelines for an element
-   */
-  private _stopPropagationTimelines(elementId: string): void {
+  private stopPropagationTimelines(elementId: string): void {
     const timelines = this.activePropagationTimelines.get(elementId);
     if (timelines) {
       for (const propagationTimeline of timelines) {
         propagationTimeline.timeline.kill();
       }
-      timelines.length = 0; // Clear the array
+      timelines.length = 0;
     }
   }
 
-  /**
-   * Reverse the transform state of an element
-   */
-  private _reverseElementTransformState(elementId: string, transformEffects: TransformEffect[]): void {
+  private reverseElementTransformState(elementId: string, transformEffects: TransformEffect[]): void {
     const currentState = this.elementTransformStates.get(elementId);
     if (!currentState) return;
 
@@ -1372,18 +1049,15 @@ export class TransformPropagator {
     for (const effect of transformEffects) {
       switch (effect.type) {
         case 'scale':
-          // Reverse to the start scale values or default
           reversedState.scaleX = effect.scaleStartX !== undefined ? effect.scaleStartX : 1;
           reversedState.scaleY = effect.scaleStartY !== undefined ? effect.scaleStartY : 1;
           break;
         case 'translate':
-          // Reverse the translation
           reversedState.translateX -= effect.translateX || 0;
           reversedState.translateY -= effect.translateY || 0;
           break;
         case 'rotate':
-          // Reverse rotation (simple case - just negate)
-          reversedState.rotation = 0; // Reset to no rotation
+          reversedState.rotation = 0;
           break;
       }
     }
@@ -1391,26 +1065,19 @@ export class TransformPropagator {
     this.elementTransformStates.set(elementId, reversedState);
   }
 
-  /**
-   * Apply reverse compensating transforms to dependent elements using timeline reversal
-   */
-  private _reverseCompensatingTransforms(
+  private reverseCompensatingTransforms(
     primaryElementId: string,
     transformEffects: TransformEffect[],
     affectedElements: ElementDependency[]
   ): void {
     if (!this.getShadowElement) return;
 
-    // Reverse timelines for all dependent elements
     for (const dependency of affectedElements) {
-      this._reversePropagationTimelines(dependency.dependentElementId);
+      this.reversePropagationTimelines(dependency.dependentElementId);
     }
   }
 
-  /**
-   * Reverse all active propagation timelines for an element
-   */
-  private _reversePropagationTimelines(elementId: string): boolean {
+  private reversePropagationTimelines(elementId: string): boolean {
     const timelines = this.activePropagationTimelines.get(elementId);
     if (!timelines || timelines.length === 0) {
       console.debug(`[TransformPropagator] No active propagation timelines found for element: ${elementId}`);
@@ -1420,22 +1087,10 @@ export class TransformPropagator {
     let reversed = false;
     for (const propagationTimeline of timelines) {
       if (!propagationTimeline.isReversed) {
-        // Before reversing, ensure the element maintains the correct transform origin for scale animations
-        if (propagationTimeline.transformEffect.type === 'scale' && propagationTimeline.transformEffect.transformOrigin) {
-          // Do nothing - transform origin is handled by captureInitialState or the animation itself.
-          // We should not be manually setting it here for reversal.
-        }
-        
         propagationTimeline.timeline.reverse();
         propagationTimeline.isReversed = true;
         reversed = true;
       } else {
-        // Play forward again, still maintaining transform origin
-        if (propagationTimeline.transformEffect.type === 'scale' && propagationTimeline.transformEffect.transformOrigin) {
-          // Do nothing - transform origin is handled by captureInitialState or the animation itself.
-          // We should not be manually setting it here for reversal.
-        }
-        
         propagationTimeline.timeline.play();
         propagationTimeline.isReversed = false;
         reversed = true;
@@ -1446,5 +1101,4 @@ export class TransformPropagator {
   }
 }
 
-// Export singleton instance
 export const transformPropagator = new TransformPropagator(); 

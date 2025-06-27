@@ -102,9 +102,9 @@ describe('Button', () => {
     });
   });
 
-  describe('unified action execution', () => {
+  describe('action execution', () => {
     it('should execute single action correctly', () => {
-      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
+      const executeActionSpy = vi.spyOn(Button.prototype as any, 'executeAction');
       const props = {
         button: {
           enabled: true,
@@ -124,8 +124,8 @@ describe('Button', () => {
       const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
       (button as any).handleClick(mockEvent);
       
-      expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(1);
-      expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
+      expect(executeActionSpy).toHaveBeenCalledTimes(1);
+      expect(executeActionSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'toggle',
           entity: 'light.test',
@@ -134,11 +134,11 @@ describe('Button', () => {
         expect.any(HTMLElement)
       );
       
-      executeUnifiedActionSpy.mockRestore();
+      executeActionSpy.mockRestore();
     });
 
     it('should execute multiple actions correctly', () => {
-      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
+      const executeActionSpy = vi.spyOn(Button.prototype as any, 'executeAction');
       const props = {
         button: {
           enabled: true,
@@ -164,15 +164,15 @@ describe('Button', () => {
       const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
       (button as any).handleClick(mockEvent);
       
-      expect(executeUnifiedActionSpy).toHaveBeenCalledTimes(2);
-      expect(executeUnifiedActionSpy).toHaveBeenNthCalledWith(1, 
+      expect(executeActionSpy).toHaveBeenCalledTimes(2);
+      expect(executeActionSpy).toHaveBeenNthCalledWith(1, 
         expect.objectContaining({
           action: 'toggle',
           entity: 'light.living_room'
         }),
         expect.any(HTMLElement)
       );
-      expect(executeUnifiedActionSpy).toHaveBeenNthCalledWith(2,
+      expect(executeActionSpy).toHaveBeenNthCalledWith(2,
         expect.objectContaining({
           action: 'set_state',
           target_element_ref: 'group.element',
@@ -181,22 +181,20 @@ describe('Button', () => {
         expect.any(HTMLElement)
       );
       
-      executeUnifiedActionSpy.mockRestore();
+      executeActionSpy.mockRestore();
     });
 
     it('should handle action type conversion from set-state to set_state', () => {
-      const convertToUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'convertToUnifiedAction');
+      const normalizeActionFormatSpy = vi.spyOn(Button.prototype as any, 'normalizeActionFormat');
       const props = {
         button: {
           enabled: true,
           actions: {
-            tap: [
-              {
-                action: 'set-state',
-                target_element_ref: 'group.element',
-                state: 'active'
-              }
-            ]
+            tap: {
+              action: 'set-state',
+              target_element_ref: 'group.element',
+              state: 'active'
+            }
           }
         }
       };
@@ -207,7 +205,7 @@ describe('Button', () => {
       const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
       (button as any).handleClick(mockEvent);
       
-      expect(convertToUnifiedActionSpy).toHaveBeenCalledWith(
+      expect(normalizeActionFormatSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'set-state',
           target_element_ref: 'group.element',
@@ -215,11 +213,11 @@ describe('Button', () => {
         })
       );
       
-      convertToUnifiedActionSpy.mockRestore();
+      normalizeActionFormatSpy.mockRestore();
     });
 
     it('should auto-populate entity for toggle/more-info actions when missing', () => {
-      const executeUnifiedActionSpy = vi.spyOn(Button.prototype as any, 'executeUnifiedAction');
+      const executeActionSpy = vi.spyOn(Button.prototype as any, 'executeAction');
       const props = {
         button: {
           enabled: true,
@@ -238,7 +236,7 @@ describe('Button', () => {
       const mockEvent = { stopPropagation: vi.fn(), currentTarget: document.createElement('div') } as any;
       (button as any).handleClick(mockEvent);
       
-      expect(executeUnifiedActionSpy).toHaveBeenCalledWith(
+      expect(executeActionSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'toggle',
           entity: 'test-button' // Should use button ID
@@ -246,7 +244,7 @@ describe('Button', () => {
         expect.any(HTMLElement)
       );
       
-      executeUnifiedActionSpy.mockRestore();
+      executeActionSpy.mockRestore();
     });
   });
 
@@ -313,13 +311,6 @@ describe('Button', () => {
       expect(mockStateManager.executeToggleStateAction).toHaveBeenCalledWith(action);
       
       importSpy.mockRestore();
-    });
-  });
-
-  describe('cleanup', () => {
-    it('should be a no-op and not throw an error', () => {
-      const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
-      expect(() => button.cleanup()).not.toThrow();
     });
   });
 }); 

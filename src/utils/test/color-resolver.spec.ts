@@ -48,9 +48,8 @@ describe('ColorResolver', () => {
     // Create mock layout groups
     const mockElement = {
       id: 'test-element',
-      clearMonitoredEntities: vi.fn(),
-      cleanupAnimations: vi.fn(),
-      checkEntityChanges: vi.fn().mockReturnValue(false),
+              cleanupAnimations: vi.fn(),
+        entityChangesDetected: vi.fn().mockReturnValue(false),
       props: {
         fill: { entity: 'sensor.test', mapping: { on: 'red', off: 'blue' } },
         text: 'Hello'
@@ -310,7 +309,7 @@ describe('ColorResolver', () => {
       resolver.clearAllCaches(mockLayoutGroups);
 
       const element = mockLayoutGroups[0].elements[0] as any;
-      expect(element.clearMonitoredEntities).toHaveBeenCalled();
+              // clearMonitoredEntities method was removed as it was unused
       expect(element.cleanupAnimations).toHaveBeenCalled();
     });
 
@@ -324,13 +323,13 @@ describe('ColorResolver', () => {
     });
   });
 
-  describe('checkDynamicColorChanges', () => {
+  describe('detectsDynamicColorChanges', () => {
     it('should call refresh callback when changes are detected', async () => {
       const refreshCallback = vi.fn();
       const mockElement = mockLayoutGroups[0].elements[0] as any;
-      mockElement.checkEntityChanges.mockReturnValue(true);
+      mockElement.entityChangesDetected.mockReturnValue(true);
 
-      resolver.checkDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 10);
+      resolver.detectsDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 10);
 
       // Wait for the timeout
       await new Promise<void>((resolve) => {
@@ -344,9 +343,9 @@ describe('ColorResolver', () => {
     it('should not call refresh callback when no changes are detected', async () => {
       const refreshCallback = vi.fn();
       const mockElement = mockLayoutGroups[0].elements[0] as any;
-      mockElement.checkEntityChanges.mockReturnValue(false);
+      mockElement.entityChangesDetected.mockReturnValue(false);
 
-      resolver.checkDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 10);
+      resolver.detectsDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 10);
 
       // Wait for the timeout
       await new Promise<void>((resolve) => {
@@ -360,12 +359,12 @@ describe('ColorResolver', () => {
     it('should throttle multiple calls', async () => {
       const refreshCallback = vi.fn();
       const mockElement = mockLayoutGroups[0].elements[0] as any;
-      mockElement.checkEntityChanges.mockReturnValue(true);
+      mockElement.entityChangesDetected.mockReturnValue(true);
 
       // Make multiple rapid calls
-      resolver.checkDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 30);
-      resolver.checkDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 30);
-      resolver.checkDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 30);
+      resolver.detectsDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 30);
+      resolver.detectsDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 30);
+      resolver.detectsDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 30);
 
       // Wait for the timeout to complete
       await new Promise<void>((resolve) => {
@@ -458,47 +457,12 @@ describe('ColorResolver', () => {
     });
   });
 
-  describe('scheduleDynamicColorRefresh', () => {
-    it('should call callbacks after delay', async () => {
-      const checkCallback = vi.fn();
-      const refreshCallback = vi.fn();
-      const mockContainerRect = new DOMRect(0, 0, 100, 100);
-
-      resolver.scheduleDynamicColorRefresh(mockHass, mockContainerRect, checkCallback, refreshCallback, 10);
-
-      // Wait for the timeout
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          expect(checkCallback).toHaveBeenCalled();
-          expect(refreshCallback).toHaveBeenCalled();
-          resolve();
-        }, 20);
-      });
-    });
-
-    it('should not call callbacks if hass or containerRect is missing', async () => {
-      const checkCallback = vi.fn();
-      const refreshCallback = vi.fn();
-
-      resolver.scheduleDynamicColorRefresh(mockHass, undefined, checkCallback, refreshCallback, 10);
-
-      // Wait for the timeout
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          expect(checkCallback).not.toHaveBeenCalled();
-          expect(refreshCallback).not.toHaveBeenCalled();
-          resolve();
-        }, 20);
-      });
-    });
-  });
-
   describe('cleanup', () => {
     it('should clear scheduled operations', async () => {
       const refreshCallback = vi.fn();
 
       // Schedule an operation
-      resolver.checkDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 100);
+      resolver.detectsDynamicColorChanges(mockLayoutGroups, mockHass, refreshCallback, 100);
 
       // Clean up immediately
       resolver.cleanup();

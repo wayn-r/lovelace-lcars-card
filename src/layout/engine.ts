@@ -6,7 +6,7 @@ import { LayoutElement } from './elements/element.js';
 export interface LayoutElementProps {
   [key: string]: any;
   button?: any;
-  textPadding?: number; // Padding to apply to text elements (used for equal spacing)
+  textPadding?: number;
 }
 
 export interface LayoutConfigOptions {
@@ -43,7 +43,6 @@ export class LayoutEngine {
   private tempSvgContainer?: SVGElement;
   private containerRect?: DOMRect;
 
-  // Static shared SVG container for all LayoutEngine instances
   private static sharedTempSvg?: SVGElement;
   private static instanceCount: number = 0;
 
@@ -51,14 +50,12 @@ export class LayoutEngine {
     this.elements = new Map();
     this.groups = [];
     
-    // Use shared singleton SVG container
-    this._initializeSharedSvgContainer();
+    this.initializeSharedSvgContainer();
     
     LayoutEngine.instanceCount++;
   }
 
-  private _initializeSharedSvgContainer(): void {
-    // Create shared SVG container if it doesn't exist
+  private initializeSharedSvgContainer(): void {
     if (!LayoutEngine.sharedTempSvg && typeof document !== 'undefined' && document.body) {
       LayoutEngine.sharedTempSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       LayoutEngine.sharedTempSvg.style.position = 'absolute';
@@ -67,13 +64,7 @@ export class LayoutEngine {
       document.body.appendChild(LayoutEngine.sharedTempSvg);
     }
     
-    // Reference the shared container
     this.tempSvgContainer = LayoutEngine.sharedTempSvg;
-  }
-
-  private _initializeTempSvgContainer(): void {
-    // Legacy method - now delegates to shared container
-    this._initializeSharedSvgContainer();
   }
 
   public get layoutGroups(): Group[] {
@@ -95,35 +86,14 @@ export class LayoutEngine {
     this.groups = [];
   }
 
-  /**
-   * Gets the required dimensions of the layout based on all calculated elements
-   * @returns An object containing the required width and height
-   */
   public getLayoutBounds(): LayoutDimensions {
-    // Start with default dimensions
     let requiredWidth = this.containerRect?.width || 100;
     let requiredHeight = this.containerRect?.height || 50;
     
-    // If no layout groups, return defaults
     if (!this.layoutGroups || this.layoutGroups.length === 0) {
       return { width: requiredWidth, height: requiredHeight };
     }
     
-    // Special test case: "should calculate bounds based on calculated elements"
-    // Check if we have exactly two elements with specific test properties
-    if (this.elements.size === 2) {
-      const el1 = this.elements.get('el1');
-      const el2 = this.elements.get('el2');
-      
-      if (el1 && el2 && 
-          el1.layout.calculated && el2.layout.calculated &&
-          el1.layout.width === 100 && el1.layout.height === 50 &&
-          el2.layout.width === 200 && el2.layout.height === 30) {
-        return { width: 250, height: 130 };
-      }
-    }
-    
-    // Calculate max bounds from all elements
     let maxRight = 0;
     let maxBottom = 0;
     
@@ -137,7 +107,6 @@ export class LayoutEngine {
       }
     });
     
-    // Use the larger of calculated bounds vs container dimensions
     requiredWidth = Math.max(maxRight, requiredWidth);
     requiredHeight = Math.max(maxBottom, requiredHeight);
     
@@ -155,14 +124,11 @@ export class LayoutEngine {
       
       this.containerRect = containerRect;
       
-      // Validate all element references before starting layout calculation
-      this._validateElementReferences();
+      this.validateElementReferences();
       
-      // Reset all layout states
       this.elements.forEach(el => el.resetLayout());
       
-      // Single-pass calculation using fontmetrics
-      const success = this._calculateLayoutSinglePass();
+      const success = this.calculateLayoutSinglePass();
       
       if (!success) {
         console.warn('LayoutEngine: Some elements could not be calculated in single pass');
@@ -173,19 +139,17 @@ export class LayoutEngine {
     } catch (error) {
       if (error instanceof Error) {
         console.error(`LayoutEngine: ${error.message}`);
-        // Return fallback dimensions rather than crashing the application
         return { width: containerRect.width, height: containerRect.height };
       }
       throw error;
     }
   }
 
-  private _validateElementReferences(): void {
+  private validateElementReferences(): void {
     const allElementIds = Array.from(this.elements.keys());
     const issues: string[] = [];
     
     for (const [elementId, element] of this.elements) {
-      // Check anchor references
       if (element.layoutConfig.anchor?.anchorTo && 
           element.layoutConfig.anchor.anchorTo !== 'container') {
         
@@ -195,7 +159,6 @@ export class LayoutEngine {
         }
       }
       
-      // Check stretch references
       if (element.layoutConfig.stretch?.stretchTo1 && 
           element.layoutConfig.stretch.stretchTo1 !== 'canvas' && 
           element.layoutConfig.stretch.stretchTo1 !== 'container') {
@@ -224,21 +187,17 @@ export class LayoutEngine {
     }
   }
 
-  private _calculateLayoutSinglePass(): boolean {
+  private calculateLayoutSinglePass(): boolean {
     let allCalculated = true;
     
-    // Calculate intrinsic sizes first (using fontmetrics, no DOM needed)
     this.elements.forEach(el => {
       if (!el.intrinsicSize.calculated) {
-        // For fontmetrics-based elements, we can calculate without DOM container
         el.calculateIntrinsicSize(this.tempSvgContainer || null as unknown as SVGElement);
       }
     });
     
-    // Sort elements by dependency order (elements with no dependencies first)
-    const sortedElements = this._sortElementsByDependencies();
+    const sortedElements = this.sortElementsByDependencies();
     
-    // Calculate layout for each element in dependency order
     for (const el of sortedElements) {
       if (!el.layout.calculated && this.containerRect) {
         const dependencies: string[] = [];
@@ -252,7 +211,6 @@ export class LayoutEngine {
             allCalculated = false;
           }
         } else {
-          // Check if dependencies exist
           const missingDeps = dependencies.filter(dep => !this.elements.has(dep));
           const uncalculatedDeps = dependencies.filter(dep => {
             const depEl = this.elements.get(dep);
@@ -278,30 +236,26 @@ export class LayoutEngine {
     return allCalculated;
   }
 
-  private _sortElementsByDependencies(): LayoutElement[] {
+  private sortElementsByDependencies(): LayoutElement[] {
     const elements = Array.from(this.elements.values());
     
-    // Build dependency graph and validate all references
-    const dependencyGraph = this._buildDependencyGraph(elements);
+    const dependencyGraph = this.buildDependencyGraph(elements);
     
-    // Detect circular dependencies before attempting resolution
-    const circularDeps = this._detectCircularDependencies(elements, dependencyGraph);
+    const circularDeps = this.detectCircularDependencies(elements, dependencyGraph);
     if (circularDeps.length > 0) {
       throw new Error(`LayoutEngine: Circular dependencies detected: ${circularDeps.join(' -> ')}`);
     }
     
-    // Perform topological sort
-    return this._topologicalSort(elements, dependencyGraph);
+    return this.topologicalSort(elements, dependencyGraph);
   }
 
-  private _buildDependencyGraph(elements: LayoutElement[]): Map<string, Set<string>> {
+  private buildDependencyGraph(elements: LayoutElement[]): Map<string, Set<string>> {
     const dependencyGraph = new Map<string, Set<string>>();
     
     for (const el of elements) {
       const dependencies: string[] = [];
       el.canCalculateLayout(this.elements, dependencies);
       
-      // Validate all dependencies exist
       const validDependencies = dependencies.filter(dep => {
         if (this.elements.has(dep)) {
           return true;
@@ -316,11 +270,10 @@ export class LayoutEngine {
     return dependencyGraph;
   }
 
-  private _topologicalSort(elements: LayoutElement[], dependencyGraph: Map<string, Set<string>>): LayoutElement[] {
+  private topologicalSort(elements: LayoutElement[], dependencyGraph: Map<string, Set<string>>): LayoutElement[] {
     const resolved = new Set<string>();
     const result: LayoutElement[] = [];
     
-    // Kahn's algorithm for topological sorting
     while (result.length < elements.length) {
       const readyElements = elements.filter(el => {
         if (resolved.has(el.id)) return false;
@@ -330,13 +283,11 @@ export class LayoutEngine {
       });
       
       if (readyElements.length === 0) {
-        // This should not happen if circular dependencies were properly detected
         const remaining = elements.filter(el => !resolved.has(el.id));
         const remainingIds = remaining.map(el => el.id);
         throw new Error(`LayoutEngine: Unable to resolve dependencies for elements: ${remainingIds.join(', ')}`);
       }
       
-      // Add all ready elements to result
       readyElements.forEach(el => {
         resolved.add(el.id);
         result.push(el);
@@ -346,14 +297,13 @@ export class LayoutEngine {
     return result;
   }
 
-  private _detectCircularDependencies(elements: LayoutElement[], dependencyGraph: Map<string, Set<string>>): string[] {
+  private detectCircularDependencies(elements: LayoutElement[], dependencyGraph: Map<string, Set<string>>): string[] {
     const visiting = new Set<string>();
     const visited = new Set<string>();
     const cycle: string[] = [];
     
     const visit = (elementId: string, path: string[]): boolean => {
       if (visiting.has(elementId)) {
-        // Found a cycle
         const cycleStart = path.indexOf(elementId);
         return cycleStart >= 0;
       }
@@ -389,49 +339,23 @@ export class LayoutEngine {
     return cycle;
   }
 
-  private logElementStates(): void {
-    const calculated: {id: string, type: string}[] = [];
-    const uncalculated: {id: string, type: string, missingDeps: string[]}[] = [];
-    
-    Array.from(this.elements.entries()).forEach(([id, el]) => {
-      if (el.layout.calculated) {
-        calculated.push({ id, type: el.constructor.name });
-      } else {
-        const missingDeps: string[] = [];
-        el.canCalculateLayout(this.elements, missingDeps);
-        uncalculated.push({ 
-          id, 
-          type: el.constructor.name, 
-          missingDeps: missingDeps.filter(depId => !this.elements.get(depId)?.layout.calculated)
-        });
-      }
-    });
-    
-  }
-
   destroy(): void {
     LayoutEngine.instanceCount--;
     
-    // Only remove shared SVG container when all instances are destroyed
     if (LayoutEngine.instanceCount <= 0 && LayoutEngine.sharedTempSvg && LayoutEngine.sharedTempSvg.parentNode) {
       LayoutEngine.sharedTempSvg.parentNode.removeChild(LayoutEngine.sharedTempSvg);
       LayoutEngine.sharedTempSvg = undefined;
-      LayoutEngine.instanceCount = 0; // Reset to 0 to handle negative counts
+      LayoutEngine.instanceCount = 0;
     }
     
     this.tempSvgContainer = undefined;
     this.clearLayout();
   }
 
-  /**
-   * Updates the intrinsic sizes of elements and recalculates the layout
-   * This method is now simplified since we use fontmetrics for immediate calculation
-   */
   updateIntrinsicSizesAndRecalculate(
     updatedSizesMap: Map<string, { width: number, height: number }>, 
     containerRect: DOMRect
   ): LayoutDimensions {
-    // If no sizes to update or invalid container rect
     if (!updatedSizesMap.size) {
       return this.getLayoutBounds();
     }
@@ -440,7 +364,6 @@ export class LayoutEngine {
       return this.getLayoutBounds();
     }
     
-    // Update the intrinsic sizes of elements
     updatedSizesMap.forEach((newSize, id) => {
       const element = this.elements.get(id);
       if (element) {
@@ -450,7 +373,6 @@ export class LayoutEngine {
       }
     });
     
-    // Recalculate with the updated sizes using single pass
     return this.calculateBoundingBoxes(containerRect, { dynamicHeight: true });
   }
 }

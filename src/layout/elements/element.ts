@@ -1,12 +1,9 @@
 import { LayoutElementProps, LayoutState, IntrinsicSize, LayoutConfigOptions } from "../engine";
 import { HomeAssistant } from "custom-card-helpers";
-import { gsap } from "gsap";
-import { generateRectanglePath, generateEndcapPath, generateElbowPath, generateChiselEndcapPath, getTextWidth, measureTextBBox, getFontMetrics } from '../../utils/shapes.js';
-import { SVGTemplateResult, html, svg } from 'lit';
-import { LcarsButtonElementConfig } from '../../types.js';
+import { SVGTemplateResult, svg } from 'lit';
 import { StretchContext } from '../engine.js';
 import { Button } from '../../utils/button.js';
-import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../../types';
+import { ColorValue } from '../../types';
 import { animationManager, AnimationContext } from '../../utils/animation.js';
 import { colorResolver } from '../../utils/color-resolver.js';
 import { ComputedElementColors, ColorResolutionDefaults } from '../../utils/color.js';
@@ -22,18 +19,17 @@ export abstract class LayoutElement {
     public button?: Button;
     public getShadowElement?: (id: string) => Element | null;
     
-    // Interactive state tracking - available for all elements
-    private _isHovering = false;
-    private _isActive = false;
-    private _hoverTimeout?: ReturnType<typeof setTimeout>;
-    private _activeTimeout?: ReturnType<typeof setTimeout>;
+    private isHovering = false;
+    private isActive = false;
+    private hoverTimeout?: ReturnType<typeof setTimeout>;
+    private activeTimeout?: ReturnType<typeof setTimeout>;
 
-    private readonly _boundHandleMouseEnter: () => void;
-    private readonly _boundHandleMouseLeave: () => void;
-    private readonly _boundHandleMouseDown: () => void;
-    private readonly _boundHandleMouseUp: () => void;
-    private readonly _boundHandleTouchStart: () => void;
-    private readonly _boundHandleTouchEnd: () => void;
+    private readonly boundHandleMouseEnter: () => void;
+    private readonly boundHandleMouseLeave: () => void;
+    private readonly boundHandleMouseDown: () => void;
+    private readonly boundHandleMouseUp: () => void;
+    private readonly boundHandleTouchStart: () => void;
+    private readonly boundHandleTouchEnd: () => void;
 
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this.id = id;
@@ -43,18 +39,15 @@ export abstract class LayoutElement {
         this.requestUpdateCallback = requestUpdateCallback;
         this.getShadowElement = getShadowElement;
 
-        // Bind event handlers once for consistent listener removal
-        this._boundHandleMouseEnter = this._handleMouseEnter.bind(this);
-        this._boundHandleMouseLeave = this._handleMouseLeave.bind(this);
-        this._boundHandleMouseDown = this._handleMouseDown.bind(this);
-        this._boundHandleMouseUp = this._handleMouseUp.bind(this);
-        this._boundHandleTouchStart = this._handleTouchStart.bind(this);
-        this._boundHandleTouchEnd = this._handleTouchEnd.bind(this);
+        this.boundHandleMouseEnter = this.handleMouseEnter.bind(this);
+        this.boundHandleMouseLeave = this.handleMouseLeave.bind(this);
+        this.boundHandleMouseDown = this.handleMouseDown.bind(this);
+        this.boundHandleMouseUp = this.handleMouseUp.bind(this);
+        this.boundHandleTouchStart = this.handleTouchStart.bind(this);
+        this.boundHandleTouchEnd = this.handleTouchEnd.bind(this);
 
-        // Initialize animation state for this element
         animationManager.initializeElementAnimationTracking(id);
 
-        // Initialize button if button config exists
         if (props.button?.enabled) {
             this.button = new Button(id, props, hass, requestUpdateCallback, getShadowElement);
         }
@@ -63,149 +56,124 @@ export abstract class LayoutElement {
         this.intrinsicSize = { width: 0, height: 0, calculated: false };
     }
 
-    // Interactive state management for all elements
-    get isHovering(): boolean {
-        return this._isHovering;
+    get elementIsHovering(): boolean {
+        return this.isHovering;
     }
 
-    set isHovering(value: boolean) {
-        if (this._isHovering !== value) {
-            this._isHovering = value;
+    set elementIsHovering(value: boolean) {
+        if (this.isHovering !== value) {
+            this.isHovering = value;
             
-            // Clear hover timeout if it exists
-            if (this._hoverTimeout) {
-                clearTimeout(this._hoverTimeout);
-                this._hoverTimeout = undefined;
+            if (this.hoverTimeout) {
+                clearTimeout(this.hoverTimeout);
+                this.hoverTimeout = undefined;
             }
             
-            // Request update to re-render with new interactive state
-            this._requestUpdateWithInteractiveState();
+            this.requestUpdateCallback?.();
         }
     }
 
-    get isActive(): boolean {
-        return this._isActive;
+    get elementIsActive(): boolean {
+        return this.isActive;
     }
 
-    set isActive(value: boolean) {
-        if (this._isActive !== value) {
-            this._isActive = value;
+    set elementIsActive(value: boolean) {
+        if (this.isActive !== value) {
+            this.isActive = value;
             
-            // Clear active timeout if it exists
-            if (this._activeTimeout) {
-                clearTimeout(this._activeTimeout);
-                this._activeTimeout = undefined;
+            if (this.activeTimeout) {
+                clearTimeout(this.activeTimeout);
+                this.activeTimeout = undefined;
             }
             
-            // Request update to re-render with new interactive state
-            this._requestUpdateWithInteractiveState();
+            this.requestUpdateCallback?.();
         }
     }
 
-    private _requestUpdateWithInteractiveState(): void {
-        this.requestUpdateCallback?.();
-    }
-
-    /**
-     * Get the current state context for this element
-     */
-    protected _getStateContext() {
+    protected getStateContext() {
         return {
-            isCurrentlyHovering: this._isHovering,
-            isCurrentlyActive: this._isActive
+            isCurrentlyHovering: this.isHovering,
+            isCurrentlyActive: this.isActive
         };
     }
 
-    /**
-     * Check if this element has stateful colors (supports hover/active states)
-     */
-    protected _hasStatefulColors(): boolean {
+    protected statefulColorsExist(): boolean {
         const { fill, stroke, textColor } = this.props;
-        return this._isStatefulColor(fill) || 
-               this._isStatefulColor(stroke) || 
-               this._isStatefulColor(textColor);
+        return this.colorIsStateful(fill) || 
+               this.colorIsStateful(stroke) || 
+               this.colorIsStateful(textColor);
     }
 
-    private _isStatefulColor(color: any): boolean {
+    private colorIsStateful(color: any): boolean {
         return Boolean(color && typeof color === 'object' && 
                       ('default' in color || 'hover' in color || 'active' in color) &&
                       !('entity' in color) && !('mapping' in color));
     }
 
-    /**
-     * Setup event listeners for interactive states (hover/active)
-     * This should be called after the element is rendered in the DOM
-     */
     setupInteractiveListeners(): void {
         if (!this.getShadowElement) {
             return;
         }
 
-        // First clean up any existing listeners
-        this._cleanupInteractiveListeners();
+        this.cleanupInteractiveListeners();
 
         const element = this.getShadowElement(this.id);
         if (!element) {
             return;
         }
 
-        // Check if this element should have interactive behavior
-        const hasInteractiveFeatures = this._hasStatefulColors() || 
-                                     this._hasButtonConfig() ||
-                                     this._hasVisibilityTriggers() ||
-                                     this._hasAnimations();
+        const hasInteractiveFeatures = this.statefulColorsExist() || 
+                                     this.buttonConfigExists() ||
+                                     this.animationsExist();
 
         if (hasInteractiveFeatures) {
-            // Add mouse event listeners
-            element.addEventListener('mouseenter', this._boundHandleMouseEnter);
-            element.addEventListener('mouseleave', this._boundHandleMouseLeave);
-            element.addEventListener('mousedown', this._boundHandleMouseDown);
-            element.addEventListener('mouseup', this._boundHandleMouseUp);
-            
-            // Add touch event listeners for mobile support
-            element.addEventListener('touchstart', this._boundHandleTouchStart);
-            element.addEventListener('touchend', this._boundHandleTouchEnd);
+            element.addEventListener('mouseenter', this.boundHandleMouseEnter);
+            element.addEventListener('mouseleave', this.boundHandleMouseLeave);
+            element.addEventListener('mousedown', this.boundHandleMouseDown);
+            element.addEventListener('mouseup', this.boundHandleMouseUp);
+            element.addEventListener('touchstart', this.boundHandleTouchStart);
+            element.addEventListener('touchend', this.boundHandleTouchEnd);
         }
     }
 
-    private _handleMouseEnter(): void {
-        this.isHovering = true;
+    private handleMouseEnter(): void {
+        this.elementIsHovering = true;
     }
 
-    private _handleMouseLeave(): void {
-        this.isHovering = false;
-        this.isActive = false;
+    private handleMouseLeave(): void {
+        this.elementIsHovering = false;
+        this.elementIsActive = false;
     }
 
-    private _handleMouseDown(): void {
-        this.isActive = true;
+    private handleMouseDown(): void {
+        this.elementIsActive = true;
     }
 
-    private _handleMouseUp(): void {
-        this.isActive = false;
+    private handleMouseUp(): void {
+        this.elementIsActive = false;
     }
 
-    private _handleTouchStart(): void {
-        this.isHovering = true;
-        this.isActive = true;
+    private handleTouchStart(): void {
+        this.elementIsHovering = true;
+        this.elementIsActive = true;
     }
 
-    private _handleTouchEnd(): void {
-        this.isHovering = false;
-        this.isActive = false;
+    private handleTouchEnd(): void {
+        this.elementIsHovering = false;
+        this.elementIsActive = false;
     }
 
-    private _cleanupInteractiveListeners(): void {
+    private cleanupInteractiveListeners(): void {
         const element = this.getShadowElement?.(this.id);
         if (!element) return;
 
-        element.removeEventListener('mouseenter', this._boundHandleMouseEnter);
-        element.removeEventListener('mouseleave', this._boundHandleMouseLeave);
-        element.removeEventListener('mousedown', this._boundHandleMouseDown);
-        element.removeEventListener('mouseup', this._boundHandleMouseUp);
-        element.removeEventListener('touchstart', this._boundHandleTouchStart);
-        element.removeEventListener('touchend', this._boundHandleTouchEnd);
-        element.removeEventListener('touchcancel', this._boundHandleTouchEnd);
+        element.removeEventListener('mouseenter', this.boundHandleMouseEnter);
+        element.removeEventListener('mouseleave', this.boundHandleMouseLeave);
+        element.removeEventListener('mousedown', this.boundHandleMouseDown);
+        element.removeEventListener('mouseup', this.boundHandleMouseUp);
+        element.removeEventListener('touchstart', this.boundHandleTouchStart);
+        element.removeEventListener('touchend', this.boundHandleTouchEnd);
+        element.removeEventListener('touchcancel', this.boundHandleTouchEnd);
     }
 
     resetLayout(): void {
@@ -219,147 +187,91 @@ export abstract class LayoutElement {
     }
 
     canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-        if (!this._checkAnchorDependencies(elementsMap, dependencies)) {
+        return this.checkAnchorDependencies(elementsMap, dependencies) &&
+               this.checkStretchDependencies(elementsMap, dependencies) &&
+               this.checkSpecialDependencies(elementsMap, dependencies);
+    }
+
+    private checkAnchorDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
+        const anchorTo = this.layoutConfig.anchor?.anchorTo;
+        if (!anchorTo || anchorTo === 'container') return true;
+        if (dependencies.includes(anchorTo)) return false;
+
+        const anchorTarget = elementsMap.get(anchorTo);
+        if (!anchorTarget) {
+            console.warn(`Element '${this.id}' anchor target '${anchorTo}' not found in elements map`);
+            dependencies.push(anchorTo);
             return false;
         }
-        if (!this._checkStretchDependencies(elementsMap, dependencies)) {
-            return false;
-        }
-        if (!this._checkSpecialDependencies(elementsMap, dependencies)) {
+
+        if (!anchorTarget.layout.calculated) {
+            dependencies.push(anchorTo);
             return false;
         }
 
         return true;
     }
 
-    private _checkAnchorDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-        if (this.layoutConfig.anchor?.anchorTo && this.layoutConfig.anchor.anchorTo !== 'container') {
-            const anchorTo = this.layoutConfig.anchor.anchorTo;
-            
-            const targetElement = elementsMap.get(anchorTo);
-            
-            if (!targetElement) {
-                console.warn(`Element '${this.id}' anchor target '${anchorTo}' not found in elements map`);
-                dependencies.push(anchorTo);
-                return false;
-            }
-            
-            if (!targetElement.layout.calculated) {
-                // This is the normal case for forward references - target exists but isn't calculated yet
-                dependencies.push(anchorTo);
-                return false;
-            }
-            
-            // Target exists and is calculated
-            return true;
+    private checkStretchDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
+        return this.validateStretchTarget(this.layoutConfig.stretch?.stretchTo1, 'stretch target1', elementsMap, dependencies) &&
+               this.validateStretchTarget(this.layoutConfig.stretch?.stretchTo2, 'stretch target2', elementsMap, dependencies);
+    }
+
+    private validateStretchTarget(stretchTo: string | undefined, targetName: string, elementsMap: Map<string, LayoutElement>, dependencies: string[]): boolean {
+        if (!stretchTo || stretchTo === 'container' || stretchTo === 'canvas') return true;
+        if (dependencies.includes(stretchTo)) return false;
+
+        const stretchTarget = elementsMap.get(stretchTo);
+        if (!stretchTarget) {
+            console.warn(`Element '${this.id}' ${targetName} '${stretchTo}' not found in elements map`);
+            dependencies.push(stretchTo);
+            return false;
         }
-        
+
+        if (!stretchTarget.layout.calculated) {
+            dependencies.push(stretchTo);
+            return false;
+        }
+
         return true;
     }
 
-    private _checkStretchDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-        if (this.layoutConfig.stretch?.stretchTo1 && 
-            this.layoutConfig.stretch.stretchTo1 !== 'canvas' && 
-            this.layoutConfig.stretch.stretchTo1 !== 'container') {
-            
-            const stretchTo1 = this.layoutConfig.stretch.stretchTo1;
-            
-            const targetElement = elementsMap.get(stretchTo1);
-            
-            if (!targetElement) {
-                console.warn(`Element '${this.id}' stretch target1 '${stretchTo1}' not found in elements map`);
-                dependencies.push(stretchTo1);
-                return false;
-            }
-            
-            if (!targetElement.layout.calculated) {
-                // This is the normal case for forward references - target exists but isn't calculated yet
-                dependencies.push(stretchTo1);
-                return false;
-            }
-            
-            // Target exists and is calculated - continue checking
-        }
-        
-        if (this.layoutConfig.stretch?.stretchTo2 && 
-            this.layoutConfig.stretch.stretchTo2 !== 'canvas' && 
-            this.layoutConfig.stretch.stretchTo2 !== 'container') {
-            
-            const stretchTo2 = this.layoutConfig.stretch.stretchTo2;
-            
-            const targetElement = elementsMap.get(stretchTo2);
-            
-            if (!targetElement) {
-                console.warn(`Element '${this.id}' stretch target2 '${stretchTo2}' not found in elements map`);
-                dependencies.push(stretchTo2);
-                return false;
-            }
-            
-            if (!targetElement.layout.calculated) {
-                // This is the normal case for forward references - target exists but isn't calculated yet
-                dependencies.push(stretchTo2);
-                return false;
-            }
-            
-            // Target exists and is calculated
-        }
-        
-        return true;
-    }
-
-    private _checkSpecialDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-        if (this.constructor.name === 'EndcapElement' && 
-            this.layoutConfig.anchor?.anchorTo && 
-            this.layoutConfig.anchor.anchorTo !== 'container' && 
-            !this.props.height) {
-            
-            const anchorTo = this.layoutConfig.anchor.anchorTo;
-            const targetElement = elementsMap.get(anchorTo);
-            
-            if (!targetElement) {
-                console.warn(`LayoutElement: EndcapElement '${this.id}' anchor target '${anchorTo}' not found in elements map`);
-                dependencies.push(anchorTo);
-                return false;
-            }
-            
-            if (!targetElement.layout.calculated) {
-                dependencies.push(anchorTo);
-                return false;
-            }
-        }
+    private checkSpecialDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
         return true;
     }
 
     calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
-        const { width: containerWidth, height: containerHeight } = containerRect;
-        let elementWidth = this._calculateElementWidth(containerWidth);
-        let elementHeight = this._calculateElementHeight(containerHeight);
+        if (this.layout.calculated) return;
 
-        let { x, y } = this._calculateInitialPosition(elementsMap, containerWidth, containerHeight, elementWidth, elementHeight);
+        const containerWidth = containerRect.width;
+        const containerHeight = containerRect.height;
 
-        if (this.layoutConfig.stretch) {
-            const stretchContext: StretchContext = {
-                x,
-                y,
-                width: elementWidth,
-                height: elementHeight,
-                elementsMap,
-                containerWidth,
-                containerHeight
-            };
-            
-            this._applyStretchConfigurations(stretchContext);
-            
-            x = stretchContext.x;
-            y = stretchContext.y;
-            elementWidth = stretchContext.width;
-            elementHeight = stretchContext.height;
-        }
+        const elementWidth = this.calculateElementWidth(containerWidth);
+        const elementHeight = this.calculateElementHeight(containerHeight);
 
-        this._finalizeLayout(x, y, elementWidth, elementHeight);
+        const initialPosition = this.calculateInitialPosition(
+            elementsMap,
+            containerWidth,
+            containerHeight,
+            elementWidth,
+            elementHeight
+        );
+
+        const context: StretchContext = {
+            elementsMap,
+            containerWidth,
+            containerHeight,
+            x: initialPosition.x,
+            y: initialPosition.y,
+            width: elementWidth,
+            height: elementHeight
+        };
+
+        this.applyStretchConfigurations(context);
+        this.finalizeLayout(context.x, context.y, context.width, context.height);
     }
 
-    private _calculateElementWidth(containerWidth: number): number {
+    private calculateElementWidth(containerWidth: number): number {
         let width = this.intrinsicSize.width;
         if (typeof this.layoutConfig.width === 'string' && this.layoutConfig.width.endsWith('%')) {
             width = containerWidth * (parseFloat(this.layoutConfig.width) / 100);
@@ -367,7 +279,7 @@ export abstract class LayoutElement {
         return width;
     }
 
-    private _calculateElementHeight(containerHeight: number): number {
+    private calculateElementHeight(containerHeight: number): number {
         let height = this.intrinsicSize.height;
         if (typeof this.layoutConfig.height === 'string' && this.layoutConfig.height.endsWith('%')) {
             height = containerHeight * (parseFloat(this.layoutConfig.height) / 100);
@@ -375,58 +287,59 @@ export abstract class LayoutElement {
         return height;
     }
 
-    private _calculateInitialPosition(
+    private calculateInitialPosition(
         elementsMap: Map<string, LayoutElement>, 
         containerWidth: number, 
         containerHeight: number,
         elementWidth: number,
         elementHeight: number
     ): { x: number, y: number } {
-        let x = 0;
-        let y = 0;
-
         const anchorConfig = this.layoutConfig.anchor;
         const anchorTo = anchorConfig?.anchorTo;
         const anchorPoint = anchorConfig?.anchorPoint || 'topLeft';
         const targetAnchorPoint = anchorConfig?.targetAnchorPoint || 'topLeft';
 
+        let x = 0;
+        let y = 0;
+
         if (!anchorTo || anchorTo === 'container') {
-            const { x: elementX, y: elementY } = this._anchorToContainer(
-                anchorPoint, 
-                targetAnchorPoint, 
-                elementWidth, 
-                elementHeight, 
-                containerWidth, 
+            const { x: elementX, y: elementY } = this.anchorToContainer(
+                anchorPoint,
+                targetAnchorPoint,
+                elementWidth,
+                elementHeight,
+                containerWidth,
                 containerHeight
             );
             x = elementX;
             y = elementY;
         } else {
-            const result = this._anchorToElement(
-                anchorTo, 
-                anchorPoint, 
-                targetAnchorPoint, 
-                elementWidth, 
-                elementHeight, 
+            const result = this.anchorToElement(
+                anchorTo,
+                anchorPoint,
+                targetAnchorPoint,
+                elementWidth,
+                elementHeight,
                 elementsMap
             );
-            
+
             if (!result) {
-                this.layout.calculated = false;
-                return { x, y };
+                console.warn(`Anchor target '${anchorTo}' not found or not calculated yet.`);
+                x = 0;
+                y = 0;
+            } else {
+                x = result.x;
+                y = result.y;
             }
-            
-            x = result.x;
-            y = result.y;
         }
 
-        x += this._parseOffset(this.layoutConfig.offsetX, containerWidth);
-        y += this._parseOffset(this.layoutConfig.offsetY, containerHeight);
+        x += this.parseOffset(this.layoutConfig.offsetX, containerWidth);
+        y += this.parseOffset(this.layoutConfig.offsetY, containerHeight);
 
         return { x, y };
     }
 
-    private _anchorToContainer(
+    private anchorToContainer(
         anchorPoint: string, 
         targetAnchorPoint: string, 
         elementWidth: number, 
@@ -434,16 +347,16 @@ export abstract class LayoutElement {
         containerWidth: number, 
         containerHeight: number
     ): { x: number, y: number } {
-        const elementAnchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
-        const containerTargetPos = this._getRelativeAnchorPosition(targetAnchorPoint, containerWidth, containerHeight); 
-
-        const x = containerTargetPos.x - elementAnchorPos.x;
-        const y = containerTargetPos.y - elementAnchorPos.y;
-
-        return { x, y };
+        const targetPos = this.getRelativeAnchorPosition(targetAnchorPoint, containerWidth, containerHeight);
+        const elementAnchorPos = this.getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
+        
+        return {
+            x: targetPos.x - elementAnchorPos.x,
+            y: targetPos.y - elementAnchorPos.y
+        };
     }
 
-    private _anchorToElement(
+    private anchorToElement(
         anchorTo: string,
         anchorPoint: string,
         targetAnchorPoint: string,
@@ -453,39 +366,39 @@ export abstract class LayoutElement {
     ): { x: number, y: number } | null {
         const targetElement = elementsMap.get(anchorTo);
         if (!targetElement || !targetElement.layout.calculated) {
-            console.warn(`[${this.id}] Anchor target '${anchorTo}' not found or not calculated yet.`);
             return null;
         }
 
-        const elementAnchorPos = this._getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
-        const targetElementPos = targetElement._getRelativeAnchorPosition(targetAnchorPoint);
+        const targetLayout = targetElement.layout;
+        const targetPos = this.getRelativeAnchorPosition(targetAnchorPoint, targetLayout.width, targetLayout.height);
+        const elementAnchorPos = this.getRelativeAnchorPosition(anchorPoint, elementWidth, elementHeight);
 
-        const x = targetElement.layout.x + targetElementPos.x - elementAnchorPos.x;
-        const y = targetElement.layout.y + targetElementPos.y - elementAnchorPos.y;
-
-        return { x, y };
+        return {
+            x: targetLayout.x + targetPos.x - elementAnchorPos.x,
+            y: targetLayout.y + targetPos.y - elementAnchorPos.y
+        };
     }
 
-    private _applyStretchConfigurations(context: StretchContext): void {
+    private applyStretchConfigurations(context: StretchContext): void {
         const stretchConfig = this.layoutConfig.stretch;
         if (!stretchConfig) return;
-        
-        this._processSingleStretch(
-            stretchConfig.stretchTo1, 
-            stretchConfig.targetStretchAnchorPoint1, 
+
+        this.processSingleStretch(
+            stretchConfig.stretchTo1,
+            stretchConfig.targetStretchAnchorPoint1,
             stretchConfig.stretchPadding1,
             context
         );
 
-        this._processSingleStretch(
-            stretchConfig.stretchTo2, 
-            stretchConfig.targetStretchAnchorPoint2, 
+        this.processSingleStretch(
+            stretchConfig.stretchTo2,
+            stretchConfig.targetStretchAnchorPoint2,
             stretchConfig.stretchPadding2,
             context
         );
     }
 
-    private _finalizeLayout(x: number, y: number, width: number, height: number): void {
+    private finalizeLayout(x: number, y: number, width: number, height: number): void {
         this.layout.x = x;
         this.layout.y = y;
         this.layout.width = Math.max(1, width);
@@ -493,103 +406,119 @@ export abstract class LayoutElement {
         this.layout.calculated = true;
     }
 
-    private _processSingleStretch(
+    private processSingleStretch(
         stretchTo: string | undefined, 
         targetStretchAnchorPoint: string | undefined, 
         stretchPadding: number | undefined,
         context: StretchContext
     ): void {
         if (!stretchTo || !targetStretchAnchorPoint) return;
-        
-        const padding = stretchPadding ?? 0;
-        const isHorizontal = this._isHorizontalStretch(targetStretchAnchorPoint);
-        
+
+        const padding = stretchPadding || 0;
+        const isHorizontal = this.stretchIsHorizontal(targetStretchAnchorPoint);
+
         if (isHorizontal) {
-            this._applyHorizontalStretch(context, stretchTo, targetStretchAnchorPoint, padding);
+            this.applyHorizontalStretch(context, stretchTo, targetStretchAnchorPoint, padding);
         } else {
-            this._applyVerticalStretch(context, stretchTo, targetStretchAnchorPoint, padding);
+            this.applyVerticalStretch(context, stretchTo, targetStretchAnchorPoint, padding);
         }
     }
 
-    private _isHorizontalStretch(targetStretchAnchorPoint: string): boolean {
-        return ['left', 'right'].some(dir => targetStretchAnchorPoint.toLowerCase().includes(dir));
+    private stretchIsHorizontal(targetStretchAnchorPoint: string): boolean {
+        return ['left', 'right', 'centerLeft', 'centerRight'].includes(targetStretchAnchorPoint);
     }
 
-    private _applyHorizontalStretch(
+    private applyHorizontalStretch(
         context: StretchContext,
         stretchTo: string,
         targetStretchAnchorPoint: string,
         padding: number
     ): void {
-        const { x: stretchedX, size: stretchedWidth } = this._applyStretch(
-            context.x, 
-            context.width, 
-            true,
-            stretchTo,
-            targetStretchAnchorPoint,
-            padding,
-            context.elementsMap,
+        const targetCoord = this.getTargetCoordinate(
+            stretchTo, 
+            targetStretchAnchorPoint, 
+            true, 
+            context.elementsMap, 
             context.containerWidth
         );
-        
-        if (stretchedX !== undefined) context.x = stretchedX;
-        context.width = stretchedWidth;
+
+        if (targetCoord !== null) {
+            const result = this.applyStretch(
+                context.x, 
+                context.width, 
+                true,
+                stretchTo,
+                targetStretchAnchorPoint,
+                padding,
+                context.elementsMap,
+                context.containerWidth
+            );
+            context.x = result.x !== undefined ? result.x : context.x;
+            context.width = result.size;
+        }
     }
 
-    private _applyVerticalStretch(
+    private applyVerticalStretch(
         context: StretchContext,
         stretchTo: string,
         targetStretchAnchorPoint: string,
         padding: number
     ): void {
-        const { y: stretchedY, size: stretchedHeight } = this._applyStretch(
-            context.y, 
-            context.height, 
-            false,
-            stretchTo,
-            targetStretchAnchorPoint,
-            padding,
-            context.elementsMap,
+        const targetCoord = this.getTargetCoordinate(
+            stretchTo, 
+            targetStretchAnchorPoint, 
+            false, 
+            context.elementsMap, 
             context.containerHeight
         );
-        
-        if (stretchedY !== undefined) context.y = stretchedY;
-        context.height = stretchedHeight;
+
+        if (targetCoord !== null) {
+            const result = this.applyStretch(
+                context.y, 
+                context.height, 
+                false,
+                stretchTo,
+                targetStretchAnchorPoint,
+                padding,
+                context.elementsMap,
+                context.containerHeight
+            );
+            context.y = result.y !== undefined ? result.y : context.y;
+            context.height = result.size;
+        }
     }
 
-    private _getTargetCoordinate(
+    private getTargetCoordinate(
         stretchTargetId: string, 
         targetAnchorPoint: string, 
         isHorizontal: boolean,
         elementsMap: Map<string, LayoutElement>,
         containerSize: number
     ): number | null {
-        if (stretchTargetId === 'container') {
-            return this._getContainerEdgeCoordinate(targetAnchorPoint, isHorizontal, containerSize);
+        if (stretchTargetId === 'container' || stretchTargetId === 'canvas') {
+            return this.getContainerEdgeCoordinate(targetAnchorPoint, isHorizontal, containerSize);
         } else {
-            return this._getElementEdgeCoordinate(stretchTargetId, targetAnchorPoint, isHorizontal, elementsMap);
+            return this.getElementEdgeCoordinate(stretchTargetId, targetAnchorPoint, isHorizontal, elementsMap);
         }
     }
 
-    private _getContainerEdgeCoordinate(
+    private getContainerEdgeCoordinate(
         targetAnchorPoint: string, 
         isHorizontal: boolean, 
         containerSize: number
     ): number {
-        if (isHorizontal) {
-            if (targetAnchorPoint === 'left' || targetAnchorPoint.includes('Left')) return 0;
-            if (targetAnchorPoint === 'right' || targetAnchorPoint.includes('Right')) return containerSize;
-            if (targetAnchorPoint === 'center' || targetAnchorPoint.includes('Center')) return containerSize / 2;
-            return containerSize;
-        } else {
-            if (targetAnchorPoint === 'top' || targetAnchorPoint.includes('Top')) return 0;
-            if (targetAnchorPoint === 'bottom' || targetAnchorPoint.includes('Bottom')) return containerSize;
-            if (targetAnchorPoint === 'center' || targetAnchorPoint.includes('Center')) return containerSize / 2;
-            return containerSize;
-        }
+        const mappedAnchorPoint = this.mapSimpleDirectionToAnchorPoint(targetAnchorPoint, isHorizontal);
+        
+        const position = this.getRelativeAnchorPosition(
+            mappedAnchorPoint, 
+            isHorizontal ? containerSize : 0, 
+            isHorizontal ? 0 : containerSize
+        );
+        
+        return isHorizontal ? position.x : position.y;
     }
 
-    private _getElementEdgeCoordinate(
+    private getElementEdgeCoordinate(
         stretchTargetId: string,
         targetAnchorPoint: string,
         isHorizontal: boolean,
@@ -597,32 +526,31 @@ export abstract class LayoutElement {
     ): number | null {
         const targetElement = elementsMap.get(stretchTargetId);
         if (!targetElement || !targetElement.layout.calculated) {
-            console.warn(`[${this.id}] Stretch target '${stretchTargetId}' not found or not calculated yet.`);
-            return null; 
+            console.warn(`Stretch target '${stretchTargetId}' not found or not calculated yet.`);
+            return null;
         }
+
+        const targetLayout = targetElement.layout;
+        const mappedAnchorPoint = this.mapSimpleDirectionToAnchorPoint(targetAnchorPoint, isHorizontal);
+        const relativePos = this.getRelativeAnchorPosition(mappedAnchorPoint, targetLayout.width, targetLayout.height);
         
-        const anchorPointToUse = this._mapSimpleDirectionToAnchorPoint(targetAnchorPoint, isHorizontal);
-        const targetRelativePos = targetElement._getRelativeAnchorPosition(anchorPointToUse);
-        
-        return isHorizontal
-            ? targetElement.layout.x + targetRelativePos.x
-            : targetElement.layout.y + targetRelativePos.y;
+        return isHorizontal 
+            ? targetLayout.x + relativePos.x 
+            : targetLayout.y + relativePos.y;
     }
 
-    private _mapSimpleDirectionToAnchorPoint(direction: string, isHorizontal: boolean): string {
-        if (isHorizontal) {
-            if (direction === 'left') return 'centerLeft';
-            if (direction === 'right') return 'centerRight';
-            if (direction === 'center') return 'center';
-        } else {
-            if (direction === 'top') return 'topCenter';
-            if (direction === 'bottom') return 'bottomCenter';
-            if (direction === 'center') return 'center';
-        }
-        return direction;
+    private mapSimpleDirectionToAnchorPoint(direction: string, isHorizontal: boolean): string {
+        const mapping: Record<string, string> = {
+            'left': 'centerLeft',
+            'right': 'centerRight',
+            'top': 'topCenter',
+            'bottom': 'bottomCenter'
+        };
+        
+        return mapping[direction] || direction;
     }
 
-    private _applyStretch(
+    private applyStretch(
         initialPosition: number, 
         initialSize: number, 
         isHorizontal: boolean,
@@ -632,30 +560,29 @@ export abstract class LayoutElement {
         elementsMap: Map<string, LayoutElement>,
         containerSize: number
     ): { x?: number, y?: number, size: number } {
-        
-        const targetCoord = this._getTargetCoordinate(
+        const targetCoord = this.getTargetCoordinate(
             stretchTo, 
             targetAnchorPoint, 
-            isHorizontal, 
-            elementsMap, 
+            isHorizontal,
+            elementsMap,
             containerSize
         );
 
         if (targetCoord === null) {
-            return isHorizontal ? { x: initialPosition, size: initialSize } : { y: initialPosition, size: initialSize };
+            return { size: initialSize };
         }
 
-        const myAnchorPoint = this._getAnchorAwareStretchEdge(initialPosition, initialSize, targetCoord, isHorizontal);
-        const myRelativePos = this._getRelativeAnchorPosition(myAnchorPoint, initialSize, initialSize);
+        const myAnchorPoint = this.getAnchorAwareStretchEdge(initialPosition, initialSize, targetCoord, isHorizontal);
+        const myRelativePos = this.getRelativeAnchorPosition(myAnchorPoint, initialSize, initialSize);
         const currentCoord = initialPosition + (isHorizontal ? myRelativePos.x : myRelativePos.y);
         
         let delta = targetCoord - currentCoord;
-        delta = this._applyPadding(delta, myAnchorPoint, padding, containerSize);
-        
-        const result = this._applyStretchToEdge(
-            initialPosition, 
-            initialSize, 
-            delta, 
+        delta = this.applyPadding(delta, myAnchorPoint, padding, containerSize);
+
+        const result = this.applyStretchToEdge(
+            initialPosition,
+            initialSize,
+            delta,
             myAnchorPoint, 
             isHorizontal
         );
@@ -663,13 +590,13 @@ export abstract class LayoutElement {
         return result;
     }
 
-    private _applyPadding(
+    private applyPadding(
         delta: number, 
         anchorPoint: string, 
         padding: number, 
         containerSize: number
     ): number {
-        const paddingOffset = this._parseOffset(padding, containerSize);
+        const paddingOffset = this.parseOffset(padding, containerSize);
         
         if (anchorPoint.includes('Left') || anchorPoint.includes('Top')) {
             return delta - paddingOffset;
@@ -678,7 +605,7 @@ export abstract class LayoutElement {
         }
     }
 
-    private _applyStretchToEdge(
+    private applyStretchToEdge(
         initialPosition: number,
         initialSize: number,
         delta: number,
@@ -687,7 +614,7 @@ export abstract class LayoutElement {
     ): { x?: number, y?: number, size: number } {
         let newPosition = initialPosition;
         let newSize = initialSize;
-        
+
         if (isHorizontal) {
             if (anchorPoint === 'centerRight') {
                 newSize += delta;
@@ -721,78 +648,65 @@ export abstract class LayoutElement {
         }
     }
 
-    private _getAnchorAwareStretchEdge(
+    private getAnchorAwareStretchEdge(
         initialPosition: number, 
         initialSize: number, 
         targetCoord: number, 
         isHorizontal: boolean
     ): string {
-        // Check if this element has an anchor configuration
         const anchorConfig = this.layoutConfig.anchor;
         
         if (anchorConfig?.anchorTo && anchorConfig.anchorTo !== 'container') {
-            // Element is anchored to another element - preserve the anchored edge
             const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
-            
+
             if (isHorizontal) {
-                // If anchored on the right side, stretch from left
                 if (anchorPoint.includes('Right')) {
                     return 'centerLeft';
                 }
-                // If anchored on the left side, stretch from right  
                 if (anchorPoint.includes('Left')) {
                     return 'centerRight';
                 }
-                // If anchored in center, use target-based logic
-                return this._getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
+                return this.getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
             } else {
-                // If anchored at the bottom, stretch from top
                 if (anchorPoint.includes('bottom')) {
                     return 'topCenter';
                 }
-                // If anchored at the top, stretch from bottom
                 if (anchorPoint.includes('top')) {
                     return 'bottomCenter';
                 }
-                // If anchored in center, use target-based logic
-                return this._getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
+                return this.getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
             }
         }
         
-        // For elements anchored to container or without anchors, use target-based logic
-        return this._getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
+        return this.getTargetBasedStretchEdge(initialPosition, targetCoord, isHorizontal);
     }
 
-    private _getTargetBasedStretchEdge(
+    private getTargetBasedStretchEdge(
         initialPosition: number,
         targetCoord: number,
         isHorizontal: boolean
     ): string {
-        // Determine stretch direction based on target position relative to element position
-        // This works regardless of element size and is more predictable
-        if (isHorizontal) {
-            return targetCoord > initialPosition ? 'centerRight' : 'centerLeft';
-        } else {
-            return targetCoord > initialPosition ? 'bottomCenter' : 'topCenter';
-        }
+        return targetCoord > initialPosition ? 
+            (isHorizontal ? 'centerRight' : 'bottomCenter') : 
+            (isHorizontal ? 'centerLeft' : 'topCenter');
     }
 
-    private _parseOffset(offset: string | number | undefined, containerDimension: number): number {
+    private parseOffset(offset: string | number | undefined, containerDimension: number): number {
         if (offset === undefined) return 0;
         if (typeof offset === 'number') return offset;
-        if (typeof offset === 'string') {
-            if (offset.endsWith('%')) {
-                return (parseFloat(offset) / 100) * containerDimension;
-            }
-            return parseFloat(offset);
+        
+        if (typeof offset === 'string' && offset.endsWith('%')) {
+            const percentage = parseFloat(offset.slice(0, -1));
+            return (percentage / 100) * containerDimension;
         }
-        return 0;
+        
+        return parseFloat(offset as string) || 0;
     }
 
-    _getRelativeAnchorPosition(anchorPoint: string, width?: number, height?: number): { x: number; y: number } {
+    public getRelativeAnchorPosition(anchorPoint: string, width?: number, height?: number): { x: number; y: number } {
         const w = width !== undefined ? width : this.layout.width;
         const h = height !== undefined ? height : this.layout.height;
-        
+
         switch (anchorPoint) {
             case 'topLeft': return { x: 0, y: 0 };
             case 'topCenter': return { x: w / 2, y: 0 };
@@ -803,51 +717,25 @@ export abstract class LayoutElement {
             case 'bottomLeft': return { x: 0, y: h };
             case 'bottomCenter': return { x: w / 2, y: h };
             case 'bottomRight': return { x: w, y: h };
-            default: 
+            default:
                 console.warn(`Unknown anchor point: ${anchorPoint}. Defaulting to topLeft.`);
                 return { x: 0, y: 0 };
         }
     }
 
-    /**
-     * Abstract method for elements to render their basic shape/path
-     * Elements should implement this to return just their shape without text
-     */
     protected abstract renderShape(): SVGTemplateResult | null;
 
-    /**
-     * Renders the complete element, including its shape and any associated text,
-     * wrapped in a group element with the main element ID. This group is the target
-     * for all interactive event listeners.
-     */
     render(): SVGTemplateResult | null {
-        if (!this.layout.calculated) {
-            return null;
-        }
+        if (!this.layout.calculated) return null;
 
-        // TextElement is a special case that handles its own rendering, as it IS the text.
-        if (this.constructor.name === 'TextElement') {
-            return this.renderShape();
-        }
-
+        const colors = this.resolveElementColors();
         const shape = this.renderShape();
 
-        // The _renderText method handles the logic for rendering text for both button and non-button elements.
-        const textElement = this._hasText() 
-            ? this._renderText(
-                this._getTextPosition().x, 
-                this._getTextPosition().y, 
-                this._resolveElementColors()
-              )
-            : null;
+        if (!shape) return null;
 
-        // If there's no shape and no text, render nothing.
-        if (!shape && !textElement) {
-            return null;
-        }
+        const textPosition = this.getTextPosition();
+        const textElement = this.renderText(textPosition.x, textPosition.y, colors);
 
-        // Consistently wrap the element's shape and text in a single <g> tag.
-        // This ensures a reliable target for attaching interactive event listeners.
         return svg`
             <g id="${this.id}">
                 ${shape}
@@ -861,10 +749,7 @@ export abstract class LayoutElement {
         animationManager.animateElementProperty(this.id, property, value, duration, this.getShadowElement);
     }
 
-    /**
-     * Resolve and animate color if it's dynamic, return color for template
-     */
-    protected _resolveDynamicColorWithAnimation(colorConfig: ColorValue, property: 'fill' | 'stroke' = 'fill'): string | undefined {
+    protected resolveDynamicColorWithAnimation(colorConfig: ColorValue, property: 'fill' | 'stroke' = 'fill'): string | undefined {
         const context: AnimationContext = {
             elementId: this.id,
             getShadowElement: this.getShadowElement,
@@ -875,11 +760,7 @@ export abstract class LayoutElement {
         return colorResolver.resolveColor(colorConfig, this.id, property, context, undefined, 'transparent');
     }
 
-    /**
-     * Resolve all element colors (fill, stroke, strokeWidth) with animation support
-     * This is the preferred method for getting all colors at once
-     */
-    protected _resolveElementColors(options: ColorResolutionDefaults = {}): ComputedElementColors {
+    protected resolveElementColors(options: ColorResolutionDefaults = {}): ComputedElementColors {
         const context: AnimationContext = {
             elementId: this.id,
             getShadowElement: this.getShadowElement,
@@ -887,17 +768,12 @@ export abstract class LayoutElement {
             requestUpdateCallback: this.requestUpdateCallback
         };
         
-        // Pass the element's current interactive state context
-        const stateContext = this._getStateContext();
+        const stateContext = this.getStateContext();
         
         return colorResolver.resolveAllElementColors(this.id, this.props, context, options, stateContext);
     }
 
-    /**
-     * Create resolved props for button elements
-     * This handles the common pattern where buttons need a modified props object
-     */
-    protected _createResolvedPropsForButton(): any {
+    protected createResolvedPropsForButton(): any {
         const context: AnimationContext = {
             elementId: this.id,
             getShadowElement: this.getShadowElement,
@@ -905,37 +781,29 @@ export abstract class LayoutElement {
             requestUpdateCallback: this.requestUpdateCallback
         };
         
-        // Pass the element's current interactive state context
-        const stateContext = this._getStateContext();
+        const stateContext = this.getStateContext();
         
         return colorResolver.createButtonPropsWithResolvedColors(this.id, this.props, context, stateContext);
     }
 
-    /**
-     * Resolve a color value that might be static or dynamic (entity-based)
-     */
-    protected _resolveDynamicColor(colorConfig: ColorValue): string | undefined {
+    protected resolveDynamicColor(colorConfig: ColorValue): string | undefined {
         return colorResolver.resolveColor(colorConfig, this.id, undefined, undefined, undefined, 'transparent');
     }
 
-    /**
-     * Check if any monitored entities have changed and trigger update if needed
-     */
-    public checkEntityChanges(hass: HomeAssistant): boolean {
+    public entityChangesDetected(hass: HomeAssistant): boolean {
         if (!hass) return false;
 
         let changed = false;
 
-        // Cache object for last resolved dynamic colours (per element instance)
-        if (!(this as any)._lastResolvedDynamicColors) {
-            (this as any)._lastResolvedDynamicColors = {
+        if (!(this as any).lastResolvedDynamicColors) {
+            (this as any).lastResolvedDynamicColors = {
                 fill: undefined,
                 stroke: undefined,
                 textColor: undefined
             };
         }
 
-        const cache = (this as any)._lastResolvedDynamicColors as Record<string, string | undefined>;
+        const cache = (this as any).lastResolvedDynamicColors as Record<string, string | undefined>;
 
         const animationContext: any = {
             elementId: this.id,
@@ -944,13 +812,12 @@ export abstract class LayoutElement {
             requestUpdateCallback: this.requestUpdateCallback
         };
 
-        const stateContext = this._getStateContext();
+        const stateContext = this.getStateContext();
 
         const checkProp = (propName: 'fill' | 'stroke' | 'textColor') => {
             const value = (this.props as any)[propName];
             if (value === undefined) return;
 
-            // Only evaluate dynamic or stateful configs – static colours cannot change
             if (typeof value === 'object') {
                 const resolved = colorResolver.resolveColor(value, this.id, propName as any, animationContext, stateContext, 'transparent');
                 if (cache[propName] !== resolved) {
@@ -967,17 +834,6 @@ export abstract class LayoutElement {
         return changed;
     }
 
-    /**
-     * Clear monitored entities (called before recalculating dynamic colors)
-     */
-    public clearMonitoredEntities(): void {
-        // Entity monitoring is now handled by ColorResolver
-        // This is a placeholder for backward compatibility
-    }
-
-    /**
-     * Clean up any ongoing animations
-     */
     public cleanupAnimations(): void {
         animationManager.stopAllAnimationsForElement(this.id);
     }
@@ -989,59 +845,43 @@ export abstract class LayoutElement {
         }
     }
 
-    /**
-     * Clean up all element resources including interactive listeners
-     */
     cleanup(): void {
-        this._cleanupInteractiveListeners();
+        this.cleanupInteractiveListeners();
         
-        // Clear any pending timeouts
-        if (this._hoverTimeout) {
-            clearTimeout(this._hoverTimeout);
-            this._hoverTimeout = undefined;
+        if (this.hoverTimeout) {
+            clearTimeout(this.hoverTimeout);
+            this.hoverTimeout = undefined;
         }
-        if (this._activeTimeout) {
-            clearTimeout(this._activeTimeout);
-            this._activeTimeout = undefined;
+        if (this.activeTimeout) {
+            clearTimeout(this.activeTimeout);
+            this.activeTimeout = undefined;
         }
         
-        // Clean up button if it exists
         if (this.button) {
             this.button.cleanup();
         }
         
-        // Clean up animations
         this.cleanupAnimations();
     }
 
-    /**
-     * Checks if the element has text to render
-     */
-    protected _hasNonButtonText(): boolean {
+    protected nonButtonTextExists(): boolean {
         return Boolean(this.props.text && this.props.text.trim() !== '');
     }
 
-    /**
-     * Renders text for non-button elements with standard positioning
-     * @param x - X position for text
-     * @param y - Y position for text  
-     * @param colors - Resolved colors for the element
-     * @returns SVG text element or null if no text
-     */
-    protected _renderNonButtonText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
-        if (!this._hasNonButtonText()) return null;
+    protected renderNonButtonText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
+        if (!this.nonButtonTextExists()) return null;
 
         return svg`
           <text
-            x=${x}
-            y=${y}
-            fill=${colors.textColor}
-            font-family=${this.props.fontFamily || 'sans-serif'}
-            font-size=${`${this.props.fontSize || 16}px`}
-            font-weight=${this.props.fontWeight || 'normal'}
-            letter-spacing=${this.props.letterSpacing || 'normal'}
-            text-anchor=${this.props.textAnchor || 'middle'}
-            dominant-baseline=${this.props.dominantBaseline || 'middle'}
+            x="${x}"
+            y="${y}"
+            fill="${colors.textColor}"
+            font-family="${this.props.fontFamily || 'sans-serif'}"
+            font-size="${this.props.fontSize || 16}px"
+            font-weight="${this.props.fontWeight || 'normal'}"
+            letter-spacing="${this.props.letterSpacing || 'normal'}"
+            text-anchor="${this.props.textAnchor || 'middle'}"
+            dominant-baseline="${this.props.dominantBaseline || 'middle'}"
             style="pointer-events: none; text-transform: ${this.props.textTransform || 'none'};"
           >
             ${this.props.text}
@@ -1049,77 +889,48 @@ export abstract class LayoutElement {
         `;
     }
 
-    /**
-     * Gets the default text position for standard elements
-     * Considers textAnchor to position text relative to element edges
-     * @returns Object with x and y coordinates for text positioning
-     */
-    protected _getDefaultTextPosition(): { x: number, y: number } {
+    protected getDefaultTextPosition(): { x: number, y: number } {
         const { x, y, width, height } = this.layout;
         const textAnchor = this.props.textAnchor || 'middle';
         
         let textX: number;
         
-        // Calculate X position based on textAnchor
         switch (textAnchor) {
             case 'start':
-                // Left-align text to the left edge of the element
                 textX = x;
                 break;
             case 'end':
-                // Right-align text to the right edge of the element  
                 textX = x + width;
                 break;
             case 'middle':
             default:
-                // Center text in the middle of the element
                 textX = x + width / 2;
                 break;
         }
         
-        // Y position remains centered vertically
         return {
             x: textX,
             y: y + height / 2
         };
     }
 
-    /**
-     * Gets the text position for the element, allowing custom positioning logic
-     * This method can be overridden by specific elements like Elbow
-     * @returns Object with x and y coordinates for text positioning
-     */
-    protected _getTextPosition(): { x: number, y: number } {
-        return this._getDefaultTextPosition();
+    protected getTextPosition(): { x: number, y: number } {
+        return this.getDefaultTextPosition();
     }
 
-    /**
-     * Checks if the element has text to render
-     */
-    protected _hasText(): boolean {
-        return this._hasNonButtonText();
+    protected textExists(): boolean {
+        return this.nonButtonTextExists();
     }
 
-    /**
-     * Renders text for the element
-     * @param x - X position for text
-     * @param y - Y position for text
-     * @param colors - Resolved colors for the element
-     * @returns SVG text element or null if no text
-     */
-    protected _renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
-        return this._renderNonButtonText(x, y, colors);
+    protected renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
+        return this.renderNonButtonText(x, y, colors);
     }
 
-    private _hasButtonConfig(): boolean {
+    private buttonConfigExists(): boolean {
         return Boolean(this.props.button?.enabled);
     }
 
-    private _hasVisibilityTriggers(): boolean {
-        return Boolean(this.props.visibility_triggers);
-    }
-
-    private _hasAnimations(): boolean {
+    private animationsExist(): boolean {
         return Boolean(this.props.animations);
     }
 } 

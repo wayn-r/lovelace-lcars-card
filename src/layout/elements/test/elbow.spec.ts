@@ -15,17 +15,19 @@ vi.mock('../../../utils/button.js', () => ({
 }));
 
 vi.mock('../../../utils/shapes.js', () => ({
-  generateElbowPath: vi.fn().mockImplementation(
-    (x, elbowWidth, bodyWidth, armHeight, height, orientation, y, outerCornerRadius) => 
-      `MOCK_PATH_elbow_${orientation}_${elbowWidth}x${height}_body${bodyWidth}_arm${armHeight}_at_${x},${y}_r${outerCornerRadius}`
-  )
+  ShapeGenerator: {
+    generateElbow: vi.fn().mockImplementation(
+      (x, elbowWidth, bodyWidth, armHeight, height, orientation, y, outerCornerRadius) => 
+        `MOCK_PATH_elbow_${orientation}_${elbowWidth}x${height}_body${bodyWidth}_arm${armHeight}_at_${x},${y}_r${outerCornerRadius}`
+    )
+  }
 }));
 
 // Import mocked modules after mock setup
 import { ElbowElement } from '../elbow';
 import { Button } from '../../../utils/button.js';
 import { LayoutElement } from '../element.js';
-import { generateElbowPath } from '../../../utils/shapes.js';
+import { ShapeGenerator } from '../../../utils/shapes.js';
 import { svg, SVGTemplateResult } from 'lit';
 import { HomeAssistant } from 'custom-card-helpers';
 
@@ -208,7 +210,7 @@ describe('ElbowElement', () => {
 
     it('should return null if generateElbowPath returns null', () => {
       elbowElement.layout = { x: 5, y: 10, width: 40, height: 20, calculated: true };
-      (generateElbowPath as any).mockReturnValueOnce(null as unknown as string);
+      (ShapeGenerator.generateElbow as any).mockReturnValueOnce(null as unknown as string);
       expect(elbowElement.render()).toBeNull();
     });
 
@@ -220,7 +222,7 @@ describe('ElbowElement', () => {
 
         const defaultBodyWidth = 30;
         const defaultArmHeight = 30;
-        expect(generateElbowPath).toHaveBeenCalledWith(5, 100, defaultBodyWidth, defaultArmHeight, 80, 'top-left', 10, defaultArmHeight);
+        expect(ShapeGenerator.generateElbow).toHaveBeenCalledWith(5, 100, defaultBodyWidth, defaultArmHeight, 80, 'top-left', 10, defaultArmHeight);
         const attrs = getPathAttributes(result);
         expect(attrs?.id).toBe('el-render');
         expect(attrs?.fill).toBe('none');
@@ -237,7 +239,7 @@ describe('ElbowElement', () => {
         const result = elbowElement.render();
         expect(result).toMatchSnapshot();
 
-        expect(generateElbowPath).toHaveBeenCalledWith(0, 120, 40, 20, 90, 'bottom-right', 0, 20);
+        expect(ShapeGenerator.generateElbow).toHaveBeenCalledWith(0, 120, 40, 20, 90, 'bottom-right', 0, 20);
         const attrs = getPathAttributes(result);
         expect(attrs?.fill).toBe('red');
         expect(attrs?.stroke).toBe('blue');
@@ -250,7 +252,7 @@ describe('ElbowElement', () => {
           elbowElement.layout = { x: 10, y: 20, width: 100, height: 100, calculated: true };
           const result = elbowElement.render();
           expect(result).toMatchSnapshot();
-          expect(generateElbowPath).toHaveBeenCalledWith(10, 100, 30, 30, 100, orientation, 20, 30);
+          expect(ShapeGenerator.generateElbow).toHaveBeenCalledWith(10, 100, 30, 30, 100, orientation, 20, 30);
         });
       });
     });
@@ -261,7 +263,7 @@ describe('ElbowElement', () => {
       const propsBodyWidth = 35, propsArmHeight = 25, propsElbowWidth = 100;
 
       beforeEach(() => {
-        vi.mocked(generateElbowPath).mockReturnValue(mockPathData);
+        vi.mocked(ShapeGenerator.generateElbow).mockReturnValue(mockPathData);
         const props = {
           button: { enabled: true },
           bodyWidth: propsBodyWidth,
@@ -274,7 +276,7 @@ describe('ElbowElement', () => {
 
       it('should call button.createButton with correct pathData and dimensions', () => {
         elbowElement.render();
-        expect(generateElbowPath).toHaveBeenCalledWith(layoutX, propsElbowWidth, propsBodyWidth, propsArmHeight, layoutHeight, 'top-left', layoutY, propsArmHeight);
+        expect(ShapeGenerator.generateElbow).toHaveBeenCalledWith(layoutX, propsElbowWidth, propsBodyWidth, propsArmHeight, layoutHeight, 'top-left', layoutY, propsArmHeight);
         expect(elbowElement.button?.createButton).toHaveBeenCalledTimes(1);
         expect(elbowElement.button?.createButton).toHaveBeenCalledWith(
           mockPathData, layoutX, layoutY, layoutWidth, layoutHeight, // Note: layoutWidth, not propsElbowWidth
@@ -305,7 +307,7 @@ describe('ElbowElement', () => {
       elbowElement.render();
       
       // Should use stretchedWidth (200) not configuredWidth (100) for elbow path generation
-      expect(generateElbowPath).toHaveBeenCalledWith(10, stretchedWidth, 30, 25, 80, 'top-left', 15, 25);
+      expect(ShapeGenerator.generateElbow).toHaveBeenCalledWith(10, stretchedWidth, 30, 25, 80, 'top-left', 15, 25);
     });
 
     it('should use configured width when no stretch configuration is present', () => {
@@ -327,7 +329,7 @@ describe('ElbowElement', () => {
       elbowElement.render();
       
       // Should use configuredWidth (100) not layoutWidth (200) for elbow path generation
-      expect(generateElbowPath).toHaveBeenCalledWith(10, configuredWidth, 30, 25, 80, 'top-left', 15, 25);
+      expect(ShapeGenerator.generateElbow).toHaveBeenCalledWith(10, configuredWidth, 30, 25, 80, 'top-left', 15, 25);
     });
   });
 
@@ -345,7 +347,7 @@ describe('ElbowElement', () => {
     it('should position text in arm when elbowTextPosition is "arm"', () => {
       elbowElement.props.elbowTextPosition = 'arm';
       elbowElement.props.orientation = 'top-left'; // arm is at top for top orientations
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of arm (horizontal part extending from left body)
       expect(position.x).toBe(75); // x + bodyWidth + (width - bodyWidth) / 2 = 10 + 30 + (100-30)/2 = 75
@@ -355,7 +357,7 @@ describe('ElbowElement', () => {
     it('should position text in body when elbowTextPosition is "body" for top-left orientation', () => {
       elbowElement.props.elbowTextPosition = 'body';
       elbowElement.props.orientation = 'top-left';
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of body (vertical part)
       expect(position.x).toBe(25); // x + bodyWidth / 2 = 10 + 30/2
@@ -365,7 +367,7 @@ describe('ElbowElement', () => {
     it('should position text in body when elbowTextPosition is "body" for top-right orientation', () => {
       elbowElement.props.elbowTextPosition = 'body';
       elbowElement.props.orientation = 'top-right';
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of body on the right side
       expect(position.x).toBe(95); // x + width - bodyWidth / 2 = 10 + 100 - 30/2 = 95
@@ -375,7 +377,7 @@ describe('ElbowElement', () => {
     it('should position text in body when elbowTextPosition is "body" for bottom-left orientation', () => {
       elbowElement.props.elbowTextPosition = 'body';
       elbowElement.props.orientation = 'bottom-left';
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of body (upper part for bottom orientation)
       expect(position.x).toBe(25); // x + bodyWidth / 2 = 10 + 30/2
@@ -385,7 +387,7 @@ describe('ElbowElement', () => {
     it('should position text in body when elbowTextPosition is "body" for bottom-right orientation', () => {
       elbowElement.props.elbowTextPosition = 'body';
       elbowElement.props.orientation = 'bottom-right';
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of body on the right side (upper part for bottom orientation)
       expect(position.x).toBe(95); // x + width - bodyWidth / 2 = 10 + 100 - 30/2 = 95
@@ -394,7 +396,7 @@ describe('ElbowElement', () => {
 
     it('should default to arm positioning when elbowTextPosition is not specified', () => {
       // Don't set elbowTextPosition, default orientation is top-left
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should default to arm positioning (extending from left body)
       expect(position.x).toBe(75); // x + bodyWidth + (width - bodyWidth) / 2 = 10 + 30 + (100-30)/2 = 75
@@ -404,7 +406,7 @@ describe('ElbowElement', () => {
     it('should position text in arm correctly for bottom orientations', () => {
       elbowElement.props.elbowTextPosition = 'arm';
       elbowElement.props.orientation = 'bottom-left'; // arm is at bottom for bottom orientations
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of arm at the bottom (extending from left body)
       expect(position.x).toBe(75); // x + bodyWidth + (width - bodyWidth) / 2 = 10 + 30 + (100-30)/2 = 75
@@ -414,7 +416,7 @@ describe('ElbowElement', () => {
     it('should position text in arm correctly for right-side orientations', () => {
       elbowElement.props.elbowTextPosition = 'arm';
       elbowElement.props.orientation = 'top-right'; // arm is at top, body on right
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should position at center of arm (extending from right body to left)
       expect(position.x).toBe(45); // x + (width - bodyWidth) / 2 = 10 + (100-30)/2 = 45
@@ -429,7 +431,7 @@ describe('ElbowElement', () => {
       elbowElement.props.elbowTextPosition = 'arm';
       elbowElement.props.orientation = 'top-left'; // Specify orientation for clarity
       
-      const position = (elbowElement as any)._getTextPosition();
+      const position = (elbowElement as any).getTextPosition();
       
       // Should use stretched width for arm positioning (extending from left body)
       expect(position.x).toBe(100); // x + bodyWidth + (stretchedWidth - bodyWidth) / 2 = 10 + 30 + (150-30)/2 = 100

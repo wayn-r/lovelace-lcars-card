@@ -20,18 +20,18 @@ exports[`ElbowElement > render > Non-Button Rendering > should render a basic el
       "_$litType$": 2,
       "strings": [
         "
-          <path
-            id="",
+            <path
+                id="",
         "__shape"
-            d=",
+                d=",
         "
-            fill=",
+                fill=",
         "
-            stroke=",
+                stroke=",
         "
-            stroke-width=",
+                stroke-width=",
         "
-          />
+            />
         ",
       ],
       "values": [
@@ -67,18 +67,18 @@ exports[`ElbowElement > render > Non-Button Rendering > should render correctly 
       "_$litType$": 2,
       "strings": [
         "
-          <path
-            id="",
+            <path
+                id="",
         "__shape"
-            d=",
+                d=",
         "
-            fill=",
+                fill=",
         "
-            stroke=",
+                stroke=",
         "
-            stroke-width=",
+                stroke-width=",
         "
-          />
+            />
         ",
       ],
       "values": [
@@ -114,18 +114,18 @@ exports[`ElbowElement > render > Non-Button Rendering > should render correctly 
       "_$litType$": 2,
       "strings": [
         "
-          <path
-            id="",
+            <path
+                id="",
         "__shape"
-            d=",
+                d=",
         "
-            fill=",
+                fill=",
         "
-            stroke=",
+                stroke=",
         "
-            stroke-width=",
+                stroke-width=",
         "
-          />
+            />
         ",
       ],
       "values": [
@@ -161,18 +161,18 @@ exports[`ElbowElement > render > Non-Button Rendering > should render correctly 
       "_$litType$": 2,
       "strings": [
         "
-          <path
-            id="",
+            <path
+                id="",
         "__shape"
-            d=",
+                d=",
         "
-            fill=",
+                fill=",
         "
-            stroke=",
+                stroke=",
         "
-            stroke-width=",
+                stroke-width=",
         "
-          />
+            />
         ",
       ],
       "values": [
@@ -208,18 +208,18 @@ exports[`ElbowElement > render > Non-Button Rendering > should render correctly 
       "_$litType$": 2,
       "strings": [
         "
-          <path
-            id="",
+            <path
+                id="",
         "__shape"
-            d=",
+                d=",
         "
-            fill=",
+                fill=",
         "
-            stroke=",
+                stroke=",
         "
-            stroke-width=",
+                stroke-width=",
         "
-          />
+            />
         ",
       ],
       "values": [
@@ -255,18 +255,18 @@ exports[`ElbowElement > render > Non-Button Rendering > should render with speci
       "_$litType$": 2,
       "strings": [
         "
-          <path
-            id="",
+            <path
+                id="",
         "__shape"
-            d=",
+                d=",
         "
-            fill=",
+                fill=",
         "
-            stroke=",
+                stroke=",
         "
-            stroke-width=",
+                stroke-width=",
         "
-          />
+            />
         ",
       ],
       "values": [

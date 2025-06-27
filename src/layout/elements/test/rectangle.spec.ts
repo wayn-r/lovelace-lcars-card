@@ -14,9 +14,26 @@ vi.mock('../../../utils/button.js', () => {
   };
 });
 
+vi.mock('../../../utils/shapes.js', () => ({
+  ShapeGenerator: {
+    generateRectangle: vi.fn().mockImplementation(
+      (x, y, width, height, rx) => {
+        // Generate the path data that matches the actual implementation
+        if (rx === 0) {
+          // No corner radius - simple rectangle path
+          return `M ${x.toFixed(3)},${y.toFixed(3)} L ${(x + width).toFixed(3)},${y.toFixed(3)} L ${(x + width).toFixed(3)},${(y + height).toFixed(3)} L ${x.toFixed(3)},${(y + height).toFixed(3)} Z`;
+        } else {
+          // With corner radius - create arcs
+          return `M ${x.toFixed(3)},${(y + rx).toFixed(3)} A ${rx.toFixed(3)},${rx.toFixed(3)} 0 0,1 ${(x + rx).toFixed(3)},${y.toFixed(3)} L ${(x + width - rx).toFixed(3)},${y.toFixed(3)} A ${rx.toFixed(3)},${rx.toFixed(3)} 0 0,1 ${(x + width).toFixed(3)},${(y + rx).toFixed(3)} L ${(x + width).toFixed(3)},${(y + height - rx).toFixed(3)} A ${rx.toFixed(3)},${rx.toFixed(3)} 0 0,1 ${(x + width - rx).toFixed(3)},${(y + height).toFixed(3)} L ${(x + rx).toFixed(3)},${(y + height).toFixed(3)} A ${rx.toFixed(3)},${rx.toFixed(3)} 0 0,1 ${x.toFixed(3)},${(y + height - rx).toFixed(3)} Z`;
+        }
+      }
+    )
+  }
+}));
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RectangleElement } from '../rectangle';
-import { generateRectanglePath } from '../../../utils/shapes';
+import { ShapeGenerator } from '../../../utils/shapes';
 import { svg, SVGTemplateResult } from 'lit';
 import { Button } from '../../../utils/button.js';
 
@@ -168,7 +185,7 @@ describe('RectangleElement', () => {
         expect(result).toMatchSnapshot();
 
         const attrs = getPathAttributesFromResult(result);
-        expect(attrs?.d).toBe(generateRectanglePath(0, 0, 10, 10, 0));
+        expect(attrs?.d).toBe(ShapeGenerator.generateRectangle(0, 0, 10, 10, 0));
         expect(attrs?.fill).toBe('none');
         expect(attrs?.stroke).toBe('none');
         expect(attrs?.['stroke-width']).toBe('0');
@@ -184,7 +201,7 @@ describe('RectangleElement', () => {
         expect(result).toMatchSnapshot();
 
         const attrs = getPathAttributesFromResult(result);
-        expect(attrs?.d).toBe(generateRectanglePath(1, 2, 30, 40, 7));
+        expect(attrs?.d).toBe(ShapeGenerator.generateRectangle(1, 2, 30, 40, 7));
         expect(attrs?.fill).toBe('rgba(255,0,0,0.5)');
         expect(attrs?.stroke).toBe('#00FF00');
         expect(attrs?.['stroke-width']).toBe('3.5');
@@ -199,7 +216,7 @@ describe('RectangleElement', () => {
         const result = rectangleElement.render();
         expect(result).toMatchSnapshot();
         const attrs = getPathAttributesFromResult(result);
-        expect(attrs?.d).toBe(generateRectanglePath(0, 0, 20, 20, 4));
+        expect(attrs?.d).toBe(ShapeGenerator.generateRectangle(0, 0, 20, 20, 4));
       });
 
       it('should prioritize rx over cornerRadius if both are present', () => {
@@ -211,7 +228,7 @@ describe('RectangleElement', () => {
         const result = rectangleElement.render();
         expect(result).toMatchSnapshot();
         const attrs = getPathAttributesFromResult(result);
-        expect(attrs?.d).toBe(generateRectanglePath(0, 0, 25, 25, 6));
+        expect(attrs?.d).toBe(ShapeGenerator.generateRectangle(0, 0, 25, 25, 6));
       });
 
       it('should handle zero dimensions (width=0 or height=0) by rendering a minimal path', () => {
@@ -237,7 +254,7 @@ describe('RectangleElement', () => {
         rectangleElement.render();
 
         expect(mockCreateButton).toHaveBeenCalledTimes(1);
-        const expectedPathD = generateRectanglePath(10, 10, 100, 30, 0);
+        const expectedPathD = ShapeGenerator.generateRectangle(10, 10, 100, 30, 0);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 10, 10, 100, 30,
           { rx: 0 },
@@ -254,7 +271,7 @@ describe('RectangleElement', () => {
         rectangleElement.render();
 
         expect(mockCreateButton).toHaveBeenCalledTimes(1);
-        const expectedPathD = generateRectanglePath(0, 0, 80, 40, 8);
+        const expectedPathD = ShapeGenerator.generateRectangle(0, 0, 80, 40, 8);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 0, 0, 80, 40,
           { rx: 8 },
@@ -271,7 +288,7 @@ describe('RectangleElement', () => {
         rectangleElement.render();
 
         expect(mockCreateButton).toHaveBeenCalledTimes(1);
-        const expectedPathD = generateRectanglePath(0, 0, 70, 35, 6);
+        const expectedPathD = ShapeGenerator.generateRectangle(0, 0, 70, 35, 6);
         expect(mockCreateButton).toHaveBeenCalledWith(
           expectedPathD, 0, 0, 70, 35,
           { rx: 6 },

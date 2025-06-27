@@ -21,14 +21,13 @@ describe('Element Interactive States', () => {
       const props: LayoutElementProps = {
         fill: {
           default: '#FF0000',
-          hover: '#00FF00',
-          active: '#0000FF'
+          hover: '#00FF00'
         }
       };
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      expect((element as any)._hasStatefulColors()).toBe(true);
+      expect((element as any).statefulColorsExist()).toBe(true);
     });
 
     it('should detect when element does not have stateful colors', () => {
@@ -38,7 +37,7 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      expect((element as any)._hasStatefulColors()).toBe(false);
+      expect((element as any).statefulColorsExist()).toBe(false);
     });
 
     it('should setup interactive listeners for elements with stateful colors', () => {
@@ -87,10 +86,10 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      expect(element.isHovering).toBe(false);
+      expect(element.elementIsHovering).toBe(false);
       
-      element.isHovering = true;
-      expect(element.isHovering).toBe(true);
+      element.elementIsHovering = true;
+      expect(element.elementIsHovering).toBe(true);
     });
 
     it('should track active state', () => {
@@ -103,10 +102,10 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      expect(element.isActive).toBe(false);
+      expect(element.elementIsActive).toBe(false);
       
-      element.isActive = true;
-      expect(element.isActive).toBe(true);
+      element.elementIsActive = true;
+      expect(element.elementIsActive).toBe(true);
     });
 
     it('should provide correct state context', () => {
@@ -120,10 +119,10 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      element.isHovering = true;
-      element.isActive = true;
+      element.elementIsHovering = true;
+      element.elementIsActive = true;
       
-      const stateContext = (element as any)._getStateContext();
+      const stateContext = (element as any).getStateContext();
       
       expect(stateContext).toEqual({
         isCurrentlyHovering: true,
@@ -141,7 +140,7 @@ describe('Element Interactive States', () => {
 
       const element = new RectangleElement('test', props, {}, mockHass, mockRequestUpdateCallback, mockGetShadowElement);
       
-      element.isHovering = true;
+      element.elementIsHovering = true;
       
       // Should have called update immediately for responsive interactivity
       expect(mockRequestUpdateCallback).toHaveBeenCalled();
@@ -164,21 +163,21 @@ describe('Element Interactive States', () => {
       
       // Simulate mouse enter
       mockElement.dispatchEvent(new Event('mouseenter'));
-      expect(element.isHovering).toBe(true);
+      expect(element.elementIsHovering).toBe(true);
       
       // Simulate mouse down
       mockElement.dispatchEvent(new Event('mousedown'));
-      expect(element.isActive).toBe(true);
+      expect(element.elementIsActive).toBe(true);
       
       // Simulate mouse up
       mockElement.dispatchEvent(new Event('mouseup'));
-      expect(element.isActive).toBe(false);
-      expect(element.isHovering).toBe(true); // Still hovering
+      expect(element.elementIsActive).toBe(false);
+      expect(element.elementIsHovering).toBe(true); // Still hovering
       
       // Simulate mouse leave
       mockElement.dispatchEvent(new Event('mouseleave'));
-      expect(element.isHovering).toBe(false);
-      expect(element.isActive).toBe(false); // Should cancel active on leave
+      expect(element.elementIsHovering).toBe(false);
+      expect(element.elementIsActive).toBe(false); // Should cancel active on leave
     });
 
     it('should handle touch events correctly', () => {
@@ -196,13 +195,13 @@ describe('Element Interactive States', () => {
       
       // Simulate touch start
       mockElement.dispatchEvent(new Event('touchstart'));
-      expect(element.isHovering).toBe(true);
-      expect(element.isActive).toBe(true);
+      expect(element.elementIsHovering).toBe(true);
+      expect(element.elementIsActive).toBe(true);
       
       // Simulate touch end
       mockElement.dispatchEvent(new Event('touchend'));
-      expect(element.isHovering).toBe(false);
-      expect(element.isActive).toBe(false);
+      expect(element.elementIsHovering).toBe(false);
+      expect(element.elementIsActive).toBe(false);
     });
   });
 

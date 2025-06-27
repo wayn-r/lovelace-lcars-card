@@ -6,7 +6,7 @@ import { TextElement } from './elements/text.js';
 import { EndcapElement } from './elements/endcap.js';
 import { ElbowElement } from './elements/elbow.js';
 import { ChiselEndcapElement } from './elements/chisel_endcap.js';
-import { expandWidget } from './widgets/registry.js';
+import { WidgetRegistry } from './widgets/registry.js';
 import { parseCardConfig, type ParsedConfig } from '../parsers/schema.js';
 import { ZodError } from 'zod';
 
@@ -225,7 +225,7 @@ export class ConfigParser {
     requestUpdateCallback?: () => void,
     getShadowElement?: (id: string) => Element | null
   ): LayoutElement[] {
-    const widgetResult = expandWidget(type, id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+    const widgetResult = WidgetRegistry.expandWidget(type, id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     if (widgetResult) {
       return widgetResult;
     }

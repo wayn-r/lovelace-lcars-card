@@ -31,8 +31,5 @@ export abstract class Widget {
     this.getShadowElement = getShadowElement;
   }
 
-  /**
-   * Expand this widget into primitive LayoutElements.
-   */
   public abstract expand(): LayoutElement[];
 } 

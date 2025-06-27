@@ -3,7 +3,7 @@ import { EndcapElement } from '../elements/endcap.js';
 import { TextElement } from '../elements/text.js';
 import { Widget } from './widget.js';
 import { LayoutElement } from '../elements/element.js';
-import { registerWidget } from './registry.js';
+import { WidgetRegistry } from './registry.js';
 
 const TEXT_GAP = 5;
 
@@ -18,7 +18,7 @@ export class TopHeaderWidget extends Widget {
     const bounds = new RectangleElement(
       this.id,
       { fill: 'none', stroke: 'none' },
-      this.layoutConfig, // keep any external layout config here
+      this.layoutConfig,
       this.hass,
       this.requestUpdateCallback,
       this.getShadowElement
@@ -99,8 +99,8 @@ export class TopHeaderWidget extends Widget {
   }
 }
 
-// Register at module load time
-registerWidget('top_header', (id, props, layoutConfig, hass, reqUpd, getEl) => {
+
+WidgetRegistry.registerWidget('top_header', (id, props, layoutConfig, hass, reqUpd, getEl) => {
   const widget = new TopHeaderWidget(id, props, layoutConfig, hass, reqUpd, getEl);
   return widget.expand();
 }); 

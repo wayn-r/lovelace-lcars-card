@@ -1,12 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { expandWidget } from '../registry.js';
+import { WidgetRegistry } from '../registry.js';
 
 describe('Widget Index', () => {
-  beforeEach(async () => {
-    // Clear any existing registrations for clean tests
-    const registryModule = await import('../registry.js');
-    (registryModule as any).registry?.clear?.();
-  });
 
   describe('Module loading and registration', () => {
     it('should register top_header widget when index is imported', async () => {
@@ -14,7 +9,7 @@ describe('Widget Index', () => {
       await import('../index.js');
       
       // Verify the widget was registered by trying to expand it
-      const result = expandWidget('top_header', 'test-header');
+      const result = WidgetRegistry.expandWidget('top_header', 'test-header');
       
       expect(result).not.toBeNull();
       expect(Array.isArray(result)).toBe(true);
@@ -24,9 +19,9 @@ describe('Widget Index', () => {
     it('should register widgets with case-insensitive lookup after index import', async () => {
       await import('../index.js');
       
-      const lowerResult = expandWidget('top_header', 'test-lower');
-      const upperResult = expandWidget('TOP_HEADER', 'test-upper');
-      const mixedResult = expandWidget('Top_Header', 'test-mixed');
+      const lowerResult = WidgetRegistry.expandWidget('top_header', 'test-lower');
+      const upperResult = WidgetRegistry.expandWidget('TOP_HEADER', 'test-upper');
+      const mixedResult = WidgetRegistry.expandWidget('Top_Header', 'test-mixed');
       
       expect(lowerResult).not.toBeNull();
       expect(upperResult).not.toBeNull();
@@ -43,7 +38,7 @@ describe('Widget Index', () => {
       await import('../index.js');
       await import('../index.js');
       
-      const result = expandWidget('top_header', 'multi-import-test');
+      const result = WidgetRegistry.expandWidget('top_header', 'multi-import-test');
       
       expect(result).not.toBeNull();
       expect(result!.length).toBeGreaterThan(0);
@@ -55,7 +50,7 @@ describe('Widget Index', () => {
       await import('../index.js');
       
       // Test that known widgets are available
-      const topHeaderResult = expandWidget('top_header', 'availability-test');
+      const topHeaderResult = WidgetRegistry.expandWidget('top_header', 'availability-test');
       
       expect(topHeaderResult).not.toBeNull();
       expect(Array.isArray(topHeaderResult)).toBe(true);
@@ -64,7 +59,7 @@ describe('Widget Index', () => {
     it('should maintain widget functionality after index import', async () => {
       await import('../index.js');
       
-      const result = expandWidget('top_header', 'functionality-test', { 
+      const result = WidgetRegistry.expandWidget('top_header', 'functionality-test', { 
         fill: '#FF0000',
         height: 40 
       });

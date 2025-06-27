@@ -295,31 +295,25 @@ describe('LayoutEngine', () => {
         });
 
         it('should calculate bounds based on calculated elements', () => {
+            (engine as any).containerRect = new DOMRect(0, 0, 100, 50);
             const el1 = new MockEngineLayoutElement('el1');
-            el1.setMockLayout({ x: 10, y: 20, width: 100, height: 50, calculated: true });
+            el1.layout = { x: 10, y: 20, width: 100, height: 50, calculated: true };
             const el2 = new MockEngineLayoutElement('el2');
-            el2.setMockLayout({ x: 50, y: 100, width: 200, height: 30, calculated: true });
+            el2.layout = { x: 50, y: 100, width: 200, height: 30, calculated: true };
             engine.addGroup(new Group('g1', [el1, el2]));
-            (engine as any).elements.set('el1', el1);
-            (engine as any).elements.set('el2', el2);
-
 
             const bounds = engine.getLayoutBounds();
             // Max right: el1 (10+100=110), el2 (50+200=250) => 250
             // Max bottom: el1 (20+50=70), el2 (100+30=130) => 130
-            // Different implementations might return containerRect dimensions or calculated ones
-            // Use expect.oneOf to handle either case
-            expect([100, 250]).toContain(bounds.width);
-            expect([50, 130]).toContain(bounds.height);
+            expect(bounds.width).toBe(250);
+            expect(bounds.height).toBe(130);
         });
 
          it('should use containerRect dimensions if elements are smaller', () => {
             (engine as any).containerRect = new DOMRect(0, 0, 500, 400);
             const el1 = new MockEngineLayoutElement('el1');
-            el1.setMockLayout({ x: 0, y: 0, width: 50, height: 50, calculated: true });
+            el1.layout = { x: 0, y: 0, width: 50, height: 50, calculated: true };
             engine.addGroup(new Group('g1', [el1]));
-            (engine as any).elements.set('el1', el1);
-
 
             const bounds = engine.getLayoutBounds();
             expect(bounds.width).toBe(500);
@@ -585,46 +579,38 @@ describe('LayoutEngine', () => {
         });
     });
 
-    describe('_calculateLayoutSinglePass', () => {
-        it('should process elements in dependency order', async () => {
+    describe('calculateLayoutSinglePass', () => {
+        it('should process elements in dependency order', () => {
             const el1 = new MockEngineLayoutElement('el1');
             const el2 = new MockEngineLayoutElement('el2');
-
-            // el1 should be processed first (no dependencies)
-            el1.setMockCanCalculateLayout(true);
-            el1.setMockLayout({ x: 0, y: 0, width: 50, height: 30, calculated: true });
-            el1.setMockIntrinsicSize({ width: 50, height: 30, calculated: true });
-
-            // el2 depends on el1 - set this up after adding to engine
-            el2.setMockIntrinsicSize({ width: 60, height: 40, calculated: true });
-
-            engine.addGroup(new Group('g1', [el1, el2]));
+            const el3 = new MockEngineLayoutElement('el3');
             
-            // Now setup el2's dependency on el1 after they're in the engine
-            el2.canCalculateLayout = vi.fn().mockImplementation((elements, deps) => {
-                const el1Element = elements.get('el1');
-                if (!el1Element?.layout.calculated) {
-                    deps.push('el1');
-                    return false;
-                }
-                return true;
-            });
+            // Set up dependencies: el3 depends on el2, el2 depends on el1
+            el2.setMockCanCalculateLayout(true, ['el1']);
+            el3.setMockCanCalculateLayout(true, ['el2']);
             
-            el2.calculateLayout = vi.fn().mockImplementation(() => {
-                el2.calculateLayoutInvoked = true;
-                el2.layout.x = 50;
-                el2.layout.y = 0;
-                el2.layout.width = 60;
-                el2.layout.height = 40;
-                el2.layout.calculated = true;
-            });
-
-            // Use calculateBoundingBoxes which will call _calculateLayoutSinglePass internally
+            el1.setMockIntrinsicSize({ width: 10, height: 10 });
+            el2.setMockIntrinsicSize({ width: 20, height: 20 });
+            el3.setMockIntrinsicSize({ width: 30, height: 30 });
+            
+            el1.setMockLayout({ x: 0, y: 0, width: 10, height: 10 });
+            el2.setMockLayout({ x: 10, y: 0, width: 20, height: 20 });
+            el3.setMockLayout({ x: 30, y: 0, width: 30, height: 30 });
+            
+            engine.addGroup(new Group('g1', [el1, el2, el3]));
+            
+            // Use calculateBoundingBoxes which will call calculateLayoutSinglePass internally
+            const containerRect = new DOMRect(0, 0, 100, 100);
             const result = engine.calculateBoundingBoxes(containerRect);
-
+            
+            // All elements should be calculated
+            expect(el1.calculateLayoutInvoked).toBe(true);
+            expect(el2.calculateLayoutInvoked).toBe(true);
+            expect(el3.calculateLayoutInvoked).toBe(true);
+            
+            // Should return calculated bounds
             expect(result.width).toBeGreaterThan(0);
-            expect(el1.layout.calculated).toBe(true);
-            expect(el2.layout.calculated).toBe(true);
+            expect(result.height).toBeGreaterThan(0);
         });
     });
 

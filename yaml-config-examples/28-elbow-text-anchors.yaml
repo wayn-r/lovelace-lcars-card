@@ -31,7 +31,7 @@ groups:
           bodyWidth: 80
           armHeight: 25
         text:
-          content: TL
+          content: ELBOW TL
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: arm
@@ -51,7 +51,7 @@ groups:
           bodyWidth: 80
           armHeight: 25
         text:
-          content: BL
+          content: ELBOW BL
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: body
@@ -70,7 +70,7 @@ groups:
           bodyWidth: 80
           armHeight: 25
         text:
-          content: BR
+          content: ELBOW BR
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: arm
@@ -89,7 +89,7 @@ groups:
           bodyWidth: 80
           armHeight: 25
         text:
-          content: TR
+          content: ELBOW TR
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: body
@@ -110,7 +110,7 @@ groups:
           bodyWidth: 80
           armHeight: 25
         text:
-          content: TL
+          content: ELBOW TL
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: arm
@@ -131,7 +131,7 @@ groups:
           bodyWidth: 80
           armHeight: 25
         text:
-          content: BL
+          content: ELBOW BL
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: body
@@ -151,7 +151,7 @@ groups:
           bodyWidth: 80
           armHeight: 25
         text:
-          content: BR
+          content: ELBOW BR
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: arm
@@ -171,7 +171,7 @@ groups:
           bodyWidth: 80
           armHeight: 25
         text:
-          content: TR
+          content: ELBOW TR
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: body
@@ -193,7 +193,7 @@ groups:
           bodyWidth: 80
           armHeight: 25
         text:
-          content: TL
+          content: ELBOW TL
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: arm
@@ -214,7 +214,7 @@ groups:
           bodyWidth: 80
           armHeight: 25
         text:
-          content: BL
+          content: ELBOW BL
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: body
@@ -234,7 +234,7 @@ groups:
           bodyWidth: 80
           armHeight: 25
         text:
-          content: BR
+          content: ELBOW BR
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: arm
@@ -254,7 +254,7 @@ groups:
           bodyWidth: 80
           armHeight: 25
         text:
-          content: TR
+          content: ELBOW TR
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: body

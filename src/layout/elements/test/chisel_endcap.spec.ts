@@ -21,8 +21,10 @@ vi.mock('../../../utils/button.js', () => {
 // Mock the shapes utility - IMPORTANT: add .js extension to match the import in the actual file
 vi.mock('../../../utils/shapes.js', () => {
   return {
-    generateChiselEndcapPath: vi.fn().mockImplementation((width, height, direction, offsetX, offsetY): string | null => 
-      `MOCK_PATH_chisel_${direction}_${width}x${height}_at_${offsetX},${offsetY}`)
+    ShapeGenerator: {
+      generateChiselEndcap: vi.fn().mockImplementation((width, height, direction, offsetX, offsetY): string | null => 
+        `MOCK_PATH_chisel_${direction}_${width}x${height}_at_${offsetX},${offsetY}`)
+    }
   };
 });
 
@@ -31,7 +33,7 @@ import { ChiselEndcapElement } from '../chisel_endcap';
 import { Button } from '../../../utils/button.js';
 import { LayoutElement } from '../element.js';
 import { RectangleElement } from '../rectangle';
-import { generateChiselEndcapPath } from '../../../utils/shapes.js';
+import { ShapeGenerator } from '../../../utils/shapes.js';
 import { svg, SVGTemplateResult } from 'lit';
 
 describe('ChiselEndcapElement', () => {
@@ -307,7 +309,7 @@ describe('ChiselEndcapElement', () => {
     it('should return null if generateChiselEndcapPath returns null', () => {
       chiselEndcapElement.layout = { x: 5, y: 10, width: 40, height: 20, calculated: true };
       // Use any to bypass type checking, since we're deliberately testing a null return
-      (generateChiselEndcapPath as any).mockReturnValueOnce(null);
+      (ShapeGenerator.generateChiselEndcap as any).mockReturnValueOnce(null);
       expect(chiselEndcapElement.render()).toBeNull();
     });
 
@@ -317,7 +319,7 @@ describe('ChiselEndcapElement', () => {
         const result = chiselEndcapElement.render();
         expect(result).toMatchSnapshot();
 
-        expect(generateChiselEndcapPath).toHaveBeenCalledWith(40, 20, 'right', 5, 10);
+        expect(ShapeGenerator.generateChiselEndcap).toHaveBeenCalledWith(40, 20, 'right', 5, 10);
         const attrs = getPathAttributes(result);
         expect(attrs?.id).toBe('ce-render');
         expect(attrs?.fill).toBe('none');
@@ -331,7 +333,7 @@ describe('ChiselEndcapElement', () => {
         const result = chiselEndcapElement.render();
         expect(result).toMatchSnapshot();
         
-        expect(generateChiselEndcapPath).toHaveBeenCalledWith(40, 20, 'left', 5, 10);
+        expect(ShapeGenerator.generateChiselEndcap).toHaveBeenCalledWith(40, 20, 'left', 5, 10);
       });
 
       it('should render with specified fill, stroke, strokeWidth from props', () => {
@@ -350,7 +352,7 @@ describe('ChiselEndcapElement', () => {
     describe('Button Rendering', () => {
       const mockPathData = 'MOCK_BUTTON_PATH';
       beforeEach(() => {
-        (generateChiselEndcapPath as any).mockReturnValue(mockPathData);
+        (ShapeGenerator.generateChiselEndcap as any).mockReturnValue(mockPathData);
         const props = { button: { enabled: true } };
         chiselEndcapElement = new ChiselEndcapElement('ce-render-btn', props, {}, mockHass, mockRequestUpdate);
         chiselEndcapElement.layout = { x: 10, y: 15, width: 60, height: 30, calculated: true };
@@ -359,7 +361,7 @@ describe('ChiselEndcapElement', () => {
       it('should call button.createButton with correct parameters for direction "right"', () => {
         chiselEndcapElement.render();
 
-        expect(generateChiselEndcapPath).toHaveBeenCalledWith(60, 30, 'right', 10, 15);
+        expect(ShapeGenerator.generateChiselEndcap).toHaveBeenCalledWith(60, 30, 'right', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
           { rx: 0 },
@@ -371,7 +373,7 @@ describe('ChiselEndcapElement', () => {
         chiselEndcapElement.props.direction = 'left';
         chiselEndcapElement.render();
 
-        expect(generateChiselEndcapPath).toHaveBeenCalledWith(60, 30, 'left', 10, 15);
+        expect(ShapeGenerator.generateChiselEndcap).toHaveBeenCalledWith(60, 30, 'left', 10, 15);
         expect(mockCreateButton).toHaveBeenCalledWith(
           mockPathData, 10, 15, 60, 30,
           { rx: 0 },

@@ -2,10 +2,6 @@ import { ColorValue, StatefulColorConfig, isDynamicColorConfig, isStatefulColorC
 import { AnimationContext } from './animation';
 import { colorResolver } from './color-resolver';
 
-// ============================================================================
-// Core Color Types and Interfaces
-// ============================================================================
-
 export type ColorState = 'default' | 'hover' | 'active';
 
 export interface ColorStateContext {
@@ -27,10 +23,6 @@ export interface ColorResolutionDefaults {
   fallbackTextColor?: string;
 }
 
-// ============================================================================
-// Unified Color Class
-// ============================================================================
-
 export class Color {
   private readonly _value: ColorValue;
   private readonly _fallback: string;
@@ -48,18 +40,23 @@ export class Color {
     return new Color(value, fallback);
   }
 
+  static fromValue(value: ColorValue | undefined, fallback: string = 'transparent'): Color {
+    if (value === undefined || value === null) {
+      return new Color(fallback, fallback);
+    }
+    return new Color(value, fallback);
+  }
+
   resolve(
     elementId?: string,
     animationProperty?: 'fill' | 'stroke' | 'textColor',
     animationContext?: AnimationContext,
     stateContext?: ColorStateContext
   ): string {
-    // Handle stateful colors (hover/active states)
     if (isStatefulColorConfig(this._value)) {
       const selectedColorValue = this._resolveStateBasedColorValue(this._value, stateContext);
       
       if (selectedColorValue !== undefined) {
-        // Recursively resolve the selected color value
         const stateColor = new Color(selectedColorValue, this._fallback);
         return stateColor.resolve(elementId, animationProperty, animationContext, stateContext);
       }
@@ -67,7 +64,6 @@ export class Color {
       return this._fallback;
     }
 
-    // Handle dynamic colors (entity-based)
     if (isDynamicColorConfig(this._value)) {
       if (elementId && animationProperty && animationContext) {
         const resolved = colorResolver.resolveColor(
@@ -80,7 +76,6 @@ export class Color {
         );
         return resolved || this._getStaticFallbackColor();
       } else {
-        // Basic resolution without animation
         const resolved = colorResolver.resolveColor(
           this._value,
           elementId || 'fallback',
@@ -93,7 +88,6 @@ export class Color {
       }
     }
 
-    // Handle static colors
     return this._formatStaticColorValue(this._value) || this._fallback;
   }
 
@@ -122,7 +116,6 @@ export class Color {
       return this._formatStaticColorValue(this._value) || this._fallback;
     }
     
-    // For non-static colors, return the best available fallback
     return this._getStaticFallbackColor();
   }
 
@@ -134,44 +127,10 @@ export class Color {
     return this.toStaticString();
   }
 
-  static fromValue(value: ColorValue | undefined, fallback: string = 'transparent'): Color {
-    if (value === undefined || value === null) {
-      return new Color(fallback, fallback);
-    }
-    return new Color(value, fallback);
-  }
-
-  /**
-   * Formats a raw color value to a CSS string without resolution logic.
-   * This is specifically for the animation manager when processing individual color values from mappings.
-   */
-  static formatValue(value: ColorValue | undefined): string | undefined {
-    if (value === undefined || value === null) {
-      return undefined;
-    }
-    
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return value.trim();
-    }
-    
-    if (Array.isArray(value) && 
-        value.length === 3 && 
-        value.every(component => typeof component === 'number')) {
-      return `rgb(${value[0]},${value[1]},${value[2]})`;
-    }
-    
-    return undefined;
-  }
-
-  // ============================================================================
-  // Private Implementation
-  // ============================================================================
-
   private _resolveStateBasedColorValue(
     statefulConfig: StatefulColorConfig,
     stateContext?: ColorStateContext
   ): ColorValue | undefined {
-    // Priority: active > hover > default
     if (stateContext?.isCurrentlyActive && statefulConfig.active !== undefined) {
       return statefulConfig.active;
     }
@@ -198,7 +157,6 @@ export class Color {
   }
 
   private _getStaticFallbackColor(): string {
-    // Try to extract a static color from complex configurations
     if (isDynamicColorConfig(this._value) && this._value.default !== undefined) {
       const defaultColor = this._formatStaticColorValue(this._value.default);
       if (defaultColor) return defaultColor;

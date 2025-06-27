@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TransformPropagator, TransformEffect, ElementDependency } from '../transform-propagator.js';
 import { LayoutElement } from '../../layout/elements/element.js';
+import { TransformOriginUtils } from '../transform-origin-utils.js';
 import gsap from 'gsap';
 
 // Mock GSAP
@@ -141,7 +142,7 @@ describe('TransformPropagator', () => {
       propagator.initialize(elementsMap, getShadowElement);
 
       // Access private method for testing (TypeScript workaround)
-      const findDependentElements = (propagator as any)._findDependentElements;
+      const findDependentElements = (propagator as any).findDependentElements;
       const dependents = findDependentElements.call(propagator, 'scale_target');
 
       expect(dependents).toHaveLength(1);
@@ -166,7 +167,7 @@ describe('TransformPropagator', () => {
       const anchorPosition = { x: 200, y: 120 };
 
       // Access private method for testing
-      const calculateScaleDisplacement = (propagator as any)._calculateScaleDisplacement;
+      const calculateScaleDisplacement = (propagator as any).calculateScaleDisplacement;
       const displacement = calculateScaleDisplacement.call(
         propagator,
         anchorPosition,
@@ -187,18 +188,15 @@ describe('TransformPropagator', () => {
         x: 0, y: 0, width: 100, height: 40, calculated: true
       });
 
-      // Access private method for testing
-      const parseTransformOrigin = (propagator as any)._parseTransformOrigin;
-
-      const centerCenter = parseTransformOrigin.call(propagator, 'center center', element);
+      const centerCenter = TransformOriginUtils.parseTransformOrigin('center center', element);
       expect(centerCenter.x).toBe(50);
       expect(centerCenter.y).toBe(20);
 
-      const topLeft = parseTransformOrigin.call(propagator, 'left top', element);
+      const topLeft = TransformOriginUtils.parseTransformOrigin('left top', element);
       expect(topLeft.x).toBe(0);
       expect(topLeft.y).toBe(0);
 
-      const bottomRight = parseTransformOrigin.call(propagator, 'right bottom', element);
+      const bottomRight = TransformOriginUtils.parseTransformOrigin('right bottom', element);
       expect(bottomRight.x).toBe(100);
       expect(bottomRight.y).toBe(40);
     });
@@ -263,7 +261,7 @@ describe('TransformPropagator', () => {
       propagator.initialize(elementsMap, getShadowElement);
 
       // Access private method for testing
-      const analyzeScaleEffect = (propagator as any)._analyzeScaleEffect;
+      const analyzeScaleEffect = (propagator as any).analyzeScaleEffect;
       
              const scaleAnimation = {
          type: 'scale' as const,
@@ -290,7 +288,7 @@ describe('TransformPropagator', () => {
       propagator.initialize(elementsMap, getShadowElement);
 
       // Access private method for testing
-      const applySelfCompensation = (propagator as any)._applySelfCompensation;
+      const applySelfCompensation = (propagator as any).applySelfCompensation;
       
       const transformEffects = [{
         type: 'scale' as const,
@@ -313,7 +311,7 @@ describe('TransformPropagator', () => {
   describe('Animation Detection', () => {
     it('should detect positioning-affecting animations', () => {
       // Access private method for testing
-      const analyzeTransformEffects = (propagator as any)._analyzeTransformEffects;
+      const analyzeTransformEffects = (propagator as any).analyzeTransformEffects;
       
       const element = new MockLayoutElement('test');
       elementsMap.set('test', element);
@@ -333,7 +331,7 @@ describe('TransformPropagator', () => {
     });
 
     it('should ignore insignificant transforms', () => {
-      const isEffectSignificant = (propagator as any)._isEffectSignificant;
+      const isEffectSignificant = (propagator as any).isEffectSignificant;
 
       const insignificantScale: TransformEffect = {
         type: 'scale',
@@ -491,7 +489,7 @@ describe('TransformPropagator', () => {
       elementsMap.set('dependent', dependentElement);
 
       propagator.initialize(elementsMap, getShadowElement);
-      const applyTransformSpy = vi.spyOn(propagator as any, '_applyTransform');
+      const applyTransformSpy = vi.spyOn(propagator as any, 'applyTransform');
 
       // --- Step 1: Slide animation for primaryElement ---
       const slideAnimation = {

@@ -1,7 +1,7 @@
 // New file implementing YAML configuration validation for LCARS card
 import { LcarsCardConfig, GroupConfig, ElementConfig, Action } from '../types.js';
 import { parseCardConfig } from '../parsers/schema.js';
-import { validateAction } from './action-helpers.js';
+import { ActionProcessor } from './action-helpers.js';
 
 export interface ValidationResult {
   valid: boolean;
@@ -119,7 +119,7 @@ export function validateConfig(config: unknown): ValidationResult {
           const flat: Action[] = flatten(acts);
           flat.forEach((act) => {
             // Validate required properties per action type
-            validateAction(act).forEach((msg) => errors.push(`${contextId} button.action – ${msg}`));
+            ActionProcessor.validateAction(act).forEach((msg: string) => errors.push(`${contextId} button.action – ${msg}`));
 
             if (
               (act.action === 'set_state' || act.action === 'toggle_state') &&

@@ -4,10 +4,10 @@ import { colorResolver } from "./color-resolver.js";
 import { AnimationContext } from "./animation.js";
 import { ColorStateContext } from "./color.js";
 import { Action } from "../types.js";
-import { handleHassAction, isCustomAction, validateAction } from "./action-helpers.js";
+import { ActionProcessor } from "./action-helpers.js";
 import { stateManager } from "./state-manager.js";
 
-export type ButtonPropertyName = 'fill' | 'stroke' | 'strokeWidth';
+export type ButtonProperty = 'fill' | 'stroke' | 'strokeWidth';
 
 export class Button {
     private _props: any;
@@ -16,7 +16,13 @@ export class Button {
     private _id: string;
     private _getShadowElement?: (id: string) => Element | null;
 
-    constructor(id: string, props: any, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
+    constructor(
+        id: string, 
+        props: any, 
+        hass?: HomeAssistant, 
+        requestUpdateCallback?: () => void, 
+        getShadowElement?: (id: string) => Element | null
+    ) {
         this._id = id;
         this._props = props;
         this._hass = hass;
@@ -24,7 +30,7 @@ export class Button {
         this._getShadowElement = getShadowElement;
     }
 
-    private getAnimationContext(): AnimationContext {
+    private buildAnimationContext(): AnimationContext {
         return {
             elementId: this._id,
             getShadowElement: this._getShadowElement,
@@ -33,8 +39,8 @@ export class Button {
         };
     }
 
-    private getResolvedColors(stateContext: ColorStateContext) {
-        const context = this.getAnimationContext();
+    private resolveElementColors(stateContext: ColorStateContext) {
+        const context = this.buildAnimationContext();
         return colorResolver.resolveAllElementColors(
             this._id,
             this._props,
@@ -53,7 +59,7 @@ export class Button {
         options: { rx: number },
         stateContext: ColorStateContext
     ): SVGTemplateResult {
-        const resolvedColors = this.getResolvedColors(stateContext);
+        const resolvedColors = this.resolveElementColors(stateContext);
         const pathElement = svg`
             <path
                 id=${this._id + "__shape"}
@@ -103,14 +109,12 @@ export class Button {
         if (!tapConfig) return;
 
         if (Array.isArray(tapConfig)) {
-            // New concise format: an array of Action objects
-            tapConfig.forEach((actionObj: any) => {
-                const unified = this.convertToUnifiedAction(actionObj);
-                this.executeUnifiedAction(unified, ev.currentTarget as Element);
+            tapConfig.forEach((actionObj: Action) => {
+                this.executeAction(actionObj, ev.currentTarget as Element);
             });
         } else {
-            // Legacy / object format handled by existing helper
-            this.executeActionDefinition(tapConfig, ev.currentTarget as Element);
+            const unifiedAction = this.normalizeActionFormat(tapConfig);
+            this.executeAction(unifiedAction, ev.currentTarget as Element);
         }
     }
 
@@ -120,20 +124,48 @@ export class Button {
         }
     }
 
-    private executeUnifiedAction(action: Action, element?: Element): void {
+    private normalizeActionFormat(actionConfig: any): Action {
+        let actionType = actionConfig.action || actionConfig.type || 'none';
+        if (actionType === 'set-state') actionType = 'set_state';
+
+        const normalizedAction: Action = {
+            action: actionType,
+            service: actionConfig.service,
+            service_data: actionConfig.service_data,
+            target: actionConfig.target,
+            navigation_path: actionConfig.navigation_path,
+            url_path: actionConfig.url_path,
+            entity: actionConfig.entity,
+            target_element_ref: actionConfig.target_element_ref || actionConfig.target_id,
+            state: actionConfig.state,
+            states: actionConfig.states,
+            confirmation: actionConfig.confirmation
+        };
+
+        if ((normalizedAction.action === 'toggle' || normalizedAction.action === 'more-info') && !normalizedAction.entity) {
+            normalizedAction.entity = this._id;
+        }
+
+        return normalizedAction;
+    }
+
+    private executeAction(action: Action, element?: Element): void {
         if (!this._hass) {
             console.error(`[${this._id}] No hass object available for action execution`);
             return;
         }
-        const validationErrors = validateAction(action);
+
+        const validationErrors = ActionProcessor.validateAction(action);
         if (validationErrors.length > 0) {
             console.warn(`[${this._id}] Action validation failed:`, validationErrors);
             return;
         }
-        if (isCustomAction(action)) {
+
+        if (ActionProcessor.actionIsCustom(action)) {
             this.executeCustomAction(action);
             return;
         }
+
         this.executeHassAction(action, element);
     }
 
@@ -168,7 +200,8 @@ export class Button {
                 console.warn(`[${this._id}] Could not find DOM element, using fallback`);
             }
         }
-        handleHassAction(action, targetElement, this._hass!)
+
+        ActionProcessor.processHassAction(action, targetElement, this._hass!)
             .then(() => {
                 if (action.action === 'toggle' || action.action === 'call-service') {
                     setTimeout(() => {
@@ -178,77 +211,10 @@ export class Button {
                     this._requestUpdateCallback?.();
                 }
             })
-            .catch(error => {
-                console.error(`[${this._id}] handleHassAction failed:`, error);
+            .catch((error: Error) => {
+                console.error(`[${this._id}] ActionProcessor.processHassAction failed:`, error);
                 this._requestUpdateCallback?.();
             });
-    }
-
-    /**
-     * @deprecated This method supports legacy action definition objects. It will be removed once
-     *             all configs migrate to the new unified Action format.
-     */
-    private executeActionDefinition(actionDef: any, element?: Element): void {
-        if (!this._hass) {
-            console.error(`[${this._id}] No hass object available for action execution`);
-            return;
-        }
-
-        // Allow new direct-array format to pass through for backwards compatibility
-        if (Array.isArray(actionDef)) {
-            actionDef.forEach((singleAction: any) => {
-                const unified = this.convertToUnifiedAction(singleAction);
-                this.executeUnifiedAction(unified, element);
-            });
-            return;
-        }
-
-        if (actionDef.actions && Array.isArray(actionDef.actions)) {
-            actionDef.actions.forEach((singleAction: any) => {
-                const unified = this.convertToUnifiedAction(singleAction);
-                this.executeUnifiedAction(unified, element);
-            });
-            return;
-        }
-        let actionType = actionDef.action || actionDef.type || 'none';
-        if (actionType === 'set-state') actionType = 'set_state';
-        const unifiedAction: Action = {
-            action: actionType,
-            service: actionDef.service,
-            service_data: actionDef.service_data,
-            target: actionDef.target,
-            navigation_path: actionDef.navigation_path,
-            url_path: actionDef.url_path,
-            entity: actionDef.entity,
-            target_element_ref: actionDef.target_element_ref || actionDef.target_id,
-            state: actionDef.state,
-            states: actionDef.states,
-            confirmation: actionDef.confirmation
-        };
-        if ((unifiedAction.action === 'toggle' || unifiedAction.action === 'more-info') && !unifiedAction.entity) {
-            unifiedAction.entity = this._id;
-        }
-        this.executeUnifiedAction(unifiedAction, element);
-    }
-
-    private convertToUnifiedAction(singleAction: any): Action {
-        let actionType = singleAction.action;
-        if (actionType === 'set-state') {
-            actionType = 'set_state';
-        }
-        return {
-            action: actionType,
-            service: singleAction.service,
-            service_data: singleAction.service_data,
-            target: singleAction.target,
-            navigation_path: singleAction.navigation_path,
-            url_path: singleAction.url_path,
-            entity: singleAction.entity,
-            target_element_ref: singleAction.target_element_ref || singleAction.target_id,
-            state: singleAction.state,
-            states: singleAction.states,
-            confirmation: singleAction.confirmation
-        };
     }
 
     updateHass(hass?: HomeAssistant): void {

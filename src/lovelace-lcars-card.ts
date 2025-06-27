@@ -164,7 +164,7 @@ export class LcarsCard extends LitElement {
     }
 
     if (hasHassChanged && this.hass && this._lastHassStates) {
-      colorResolver.checkDynamicColorChanges(
+      colorResolver.detectsDynamicColorChanges(
         this._layoutEngine.layoutGroups,
         this.hass,
         () => this._refreshElementRenders()
@@ -357,7 +357,6 @@ export class LcarsCard extends LitElement {
       for (const group of this._layoutEngine.layoutGroups) {
         for (const element of group.elements) {
           try {
-            element.clearMonitoredEntities();
             element.cleanupAnimations();
           } catch (error) {
             console.error("[_performLayoutCalculation] Error clearing element state", element.id, error);
