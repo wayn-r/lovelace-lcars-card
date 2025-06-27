@@ -1,7 +1,6 @@
 ```text
 lovelace-lcars-card/
 ├── .claude/
-│   └── settings.local.json
 ├── .cursor/
 │   └── rules/
 ├── .gitignore
@@ -88,199 +87,10 @@ lovelace-lcars-card/
 │       │   └── transform-propagator.spec.ts
 │       └── transform-propagator.ts
 ├── test-results/
-│   ├── .last-run.json
-│   ├── config-examples-1-basic-card-structure-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-11-simple--a1bda-ation-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-12-toggle--82a5c-ncies-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-13-conditi-3410a-state-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-14-state-m-f9629-roach-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-15-hass-in-f1175-ement-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-16-anchoring-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-17-stretching-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-18-sequent-66b25-ation-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-19-onLoad-animation-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-20-onShowH-8c0f4-ation-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-21-onState-3250d-ation-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-22-visibility-rules-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-24-custom--eda4b-tions-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-25-endcap-text-anchors-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-26-chisel--ab0a8-chors-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-27-rectang-9982d-chors-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-28-elbow-text-anchors-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-3-dynamic-color-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-5-lcars-shape-elements-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-6-complex--30648-ility-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-7-button-a-76888-tions-baseline-interactions-chromium/
-│   │   └── video.webm
-│   ├── config-examples-8-animations-baseline-interactions-chromium/
-│   │   └── video.webm
-│   └── config-examples-9-text-styling-baseline-interactions-chromium/
-│       └── video.webm
 ├── tests/
 │   └── e2e/
 │       ├── config-examples.spec.ts
 │       ├── config-examples.spec.ts-snapshots/
-│       │   ├── 1-basic-card-structure-00-initial-chromium-linux.png
-│       │   ├── 11-simple-state-group-for-navigation-00-initial-chromium-linux.png
-│       │   ├── 11-simple-state-group-for-navigation-01-nav-button-a-mouse-hover-chromium-linux.png
-│       │   ├── 11-simple-state-group-for-navigation-02-nav-button-a-mouse-click-chromium-linux.png
-│       │   ├── 11-simple-state-group-for-navigation-03-nav-button-a-mouse-away-chromium-linux.png
-│       │   ├── 11-simple-state-group-for-navigation-04-nav-button-a-final-state-chromium-linux.png
-│       │   ├── 12-toggle-with-dependencies-00-initial-chromium-linux.png
-│       │   ├── 12-toggle-with-dependencies-01-nav-button-a-mouse-hover-chromium-linux.png
-│       │   ├── 12-toggle-with-dependencies-02-nav-button-a-mouse-click-chromium-linux.png
-│       │   ├── 12-toggle-with-dependencies-03-nav-button-a-mouse-away-chromium-linux.png
-│       │   ├── 12-toggle-with-dependencies-04-nav-button-a-final-state-chromium-linux.png
-│       │   ├── 12-toggle-with-dependencies-05-nav-button-b-mouse-hover-chromium-linux.png
-│       │   ├── 12-toggle-with-dependencies-06-nav-button-b-mouse-click-chromium-linux.png
-│       │   ├── 12-toggle-with-dependencies-07-nav-button-b-mouse-away-chromium-linux.png
-│       │   ├── 12-toggle-with-dependencies-08-nav-button-b-final-state-chromium-linux.png
-│       │   ├── 12-toggle-with-dependencies-09-nav-button-c-mouse-hover-chromium-linux.png
-│       │   ├── 12-toggle-with-dependencies-10-nav-button-c-mouse-click-chromium-linux.png
-│       │   ├── 12-toggle-with-dependencies-11-nav-button-c-mouse-away-chromium-linux.png
-│       │   ├── 12-toggle-with-dependencies-12-nav-button-c-final-state-chromium-linux.png
-│       │   ├── 13-conditional-actions-based-on-state-00-initial-chromium-linux.png
-│       │   ├── 13-conditional-actions-based-on-state-01-controls-dynamic-button-mouse-hover-chromium-linux.png
-│       │   ├── 13-conditional-actions-based-on-state-02-controls-dynamic-button-mouse-click-chromium-linux.png
-│       │   ├── 13-conditional-actions-based-on-state-03-controls-dynamic-button-mouse-away-chromium-linux.png
-│       │   ├── 13-conditional-actions-based-on-state-04-controls-dynamic-button-final-state-chromium-linux.png
-│       │   ├── 14-state-machine-approach-00-initial-chromium-linux.png
-│       │   ├── 14-state-machine-approach-01-nav-button-a-mouse-hover-chromium-linux.png
-│       │   ├── 14-state-machine-approach-02-nav-button-a-mouse-click-chromium-linux.png
-│       │   ├── 14-state-machine-approach-03-nav-button-a-mouse-away-chromium-linux.png
-│       │   ├── 14-state-machine-approach-04-nav-button-a-final-state-chromium-linux.png
-│       │   ├── 14-state-machine-approach-05-nav-button-b-mouse-hover-chromium-linux.png
-│       │   ├── 14-state-machine-approach-06-nav-button-b-mouse-click-chromium-linux.png
-│       │   ├── 14-state-machine-approach-07-nav-button-b-mouse-away-chromium-linux.png
-│       │   ├── 14-state-machine-approach-08-nav-button-b-final-state-chromium-linux.png
-│       │   ├── 14-state-machine-approach-09-nav-button-c-mouse-hover-chromium-linux.png
-│       │   ├── 14-state-machine-approach-10-nav-button-c-mouse-click-chromium-linux.png
-│       │   ├── 14-state-machine-approach-11-nav-button-c-mouse-away-chromium-linux.png
-│       │   ├── 14-state-machine-approach-12-nav-button-c-final-state-chromium-linux.png
-│       │   ├── 15-hass-integration-with-state-management-00-initial-chromium-linux.png
-│       │   ├── 15-hass-integration-with-state-management-01-nav-living-room-btn-mouse-hover-chromium-linux.png
-│       │   ├── 15-hass-integration-with-state-management-02-nav-living-room-btn-mouse-click-chromium-linux.png
-│       │   ├── 15-hass-integration-with-state-management-03-nav-living-room-btn-mouse-away-chromium-linux.png
-│       │   ├── 15-hass-integration-with-state-management-04-nav-living-room-btn-final-state-chromium-linux.png
-│       │   ├── 15-hass-integration-with-state-management-05-living-room-lights-control-mouse-hover-chromium-linux.png
-│       │   ├── 15-hass-integration-with-state-management-06-living-room-lights-control-mouse-click-chromium-linux.png
-│       │   ├── 15-hass-integration-with-state-management-07-living-room-lights-control-mouse-away-chromium-linux.png
-│       │   ├── 15-hass-integration-with-state-management-08-living-room-lights-control-final-state-chromium-linux.png
-│       │   ├── 15-hass-integration-with-state-management-09-living-room-temperature-display-mouse-hover-chromium-linux.png
-│       │   ├── 15-hass-integration-with-state-management-10-living-room-temperature-display-mouse-click-chromium-linux.png
-│       │   ├── 15-hass-integration-with-state-management-11-living-room-temperature-display-mouse-away-chromium-linux.png
-│       │   ├── 15-hass-integration-with-state-management-12-living-room-temperature-display-final-state-chromium-linux.png
-│       │   ├── 16-anchoring-00-initial-chromium-linux.png
-│       │   ├── 17-stretching-00-initial-chromium-linux.png
-│       │   ├── 18-sequential-animation-and-propogation-00-initial-chromium-linux.png
-│       │   ├── 19-onLoad-animation-00-initial-chromium-linux.png
-│       │   ├── 20-onShowHide-animation-00-initial-chromium-linux.png
-│       │   ├── 20-onShowHide-animation-01-show-hide-panel-group-panel-trigger-button-mouse-hover-chromium-linux.png
-│       │   ├── 20-onShowHide-animation-02-show-hide-panel-group-panel-trigger-button-mouse-click-chromium-linux.png
-│       │   ├── 20-onShowHide-animation-03-show-hide-panel-group-panel-trigger-button-mouse-away-chromium-linux.png
-│       │   ├── 20-onShowHide-animation-04-show-hide-panel-group-panel-trigger-button-final-state-chromium-linux.png
-│       │   ├── 21-onStateChange-animation-00-initial-chromium-linux.png
-│       │   ├── 21-onStateChange-animation-01-state-change-group-state-trigger-button-mouse-hover-chromium-linux.png
-│       │   ├── 21-onStateChange-animation-02-state-change-group-state-trigger-button-mouse-click-chromium-linux.png
-│       │   ├── 21-onStateChange-animation-03-state-change-group-state-trigger-button-mouse-away-chromium-linux.png
-│       │   ├── 21-onStateChange-animation-04-state-change-group-state-trigger-button-final-state-chromium-linux.png
-│       │   ├── 22-visibility-rules-00-initial-chromium-linux.png
-│       │   ├── 22-visibility-rules-01-controller-toggle-button-mouse-hover-chromium-linux.png
-│       │   ├── 22-visibility-rules-02-controller-toggle-button-mouse-click-chromium-linux.png
-│       │   ├── 22-visibility-rules-03-controller-toggle-button-mouse-away-chromium-linux.png
-│       │   ├── 22-visibility-rules-04-controller-toggle-button-final-state-chromium-linux.png
-│       │   ├── 24-custom-state-animations-00-initial-chromium-linux.png
-│       │   ├── 24-custom-state-animations-01-controls-alert-toggle-mouse-hover-chromium-linux.png
-│       │   ├── 24-custom-state-animations-02-controls-alert-toggle-mouse-click-chromium-linux.png
-│       │   ├── 24-custom-state-animations-03-controls-alert-toggle-mouse-away-chromium-linux.png
-│       │   ├── 24-custom-state-animations-04-controls-alert-toggle-final-state-chromium-linux.png
-│       │   ├── 25-endcap-text-anchors-00-initial-chromium-linux.png
-│       │   ├── 26-chisel-endcap-text-anchors-00-initial-chromium-linux.png
-│       │   ├── 27-rectangle-text-anchors-00-initial-chromium-linux.png
-│       │   ├── 28-elbow-text-anchors-00-initial-chromium-linux.png
-│       │   ├── 3-dynamic-color-00-initial-chromium-linux.png
-│       │   ├── 3-dynamic-color-01-stateful-description-stateful-test-mouse-hover-chromium-linux.png
-│       │   ├── 3-dynamic-color-02-stateful-description-stateful-test-mouse-click-chromium-linux.png
-│       │   ├── 3-dynamic-color-03-stateful-description-stateful-test-mouse-away-chromium-linux.png
-│       │   ├── 3-dynamic-color-04-stateful-description-stateful-test-final-state-chromium-linux.png
-│       │   ├── 5-lcars-shape-elements-00-initial-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-00-initial-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-01-main-controls-menu-trigger-mouse-hover-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-02-main-controls-menu-trigger-mouse-click-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-03-main-controls-menu-trigger-mouse-away-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-04-main-controls-menu-trigger-final-state-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-05-menu-items-option-1-mouse-hover-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-06-menu-items-option-1-mouse-click-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-07-menu-items-option-1-mouse-away-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-08-menu-items-option-1-final-state-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-09-menu-items-option-2-mouse-hover-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-10-menu-items-option-2-mouse-click-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-11-menu-items-option-2-mouse-away-chromium-linux.png
-│       │   ├── 6-complex-actions-and-visibility-12-menu-items-option-2-final-state-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-00-initial-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-01-action-buttons-light-toggle-mouse-hover-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-02-action-buttons-light-toggle-mouse-click-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-03-action-buttons-light-toggle-mouse-away-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-04-action-buttons-light-toggle-final-state-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-05-action-buttons-climate-control-mouse-hover-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-06-action-buttons-climate-control-mouse-click-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-07-action-buttons-climate-control-mouse-away-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-08-action-buttons-climate-control-final-state-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-09-action-buttons-security-button-mouse-hover-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-10-action-buttons-security-button-mouse-click-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-11-action-buttons-security-button-mouse-away-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-12-action-buttons-security-button-final-state-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-13-action-buttons-emergency-button-mouse-hover-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-14-action-buttons-emergency-button-mouse-click-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-15-action-buttons-emergency-button-mouse-away-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-16-action-buttons-emergency-button-final-state-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-17-action-buttons-mode-switch-mouse-hover-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-18-action-buttons-mode-switch-mouse-click-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-19-action-buttons-mode-switch-mouse-away-chromium-linux.png
-│       │   ├── 7-button-actions-and-confirmations-20-action-buttons-mode-switch-final-state-chromium-linux.png
-│       │   ├── 8-animations-00-initial-chromium-linux.png
-│       │   ├── 8-animations-01-sliding-panel-group-sliding-panel-trigger-button-mouse-hover-chromium-linux.png
-│       │   ├── 8-animations-02-sliding-panel-group-sliding-panel-trigger-button-mouse-click-chromium-linux.png
-│       │   ├── 8-animations-03-sliding-panel-group-sliding-panel-trigger-button-mouse-away-chromium-linux.png
-│       │   ├── 8-animations-04-sliding-panel-group-sliding-panel-trigger-button-final-state-chromium-linux.png
-│       │   ├── 8-animations-05-scale-target-group-scale-trigger-button-mouse-hover-chromium-linux.png
-│       │   ├── 8-animations-06-scale-target-group-scale-trigger-button-mouse-click-chromium-linux.png
-│       │   ├── 8-animations-07-scale-target-group-scale-trigger-button-mouse-away-chromium-linux.png
-│       │   ├── 8-animations-08-scale-target-group-scale-trigger-button-final-state-chromium-linux.png
-│       │   ├── 8-animations-09-multi-action-group-multi-trigger-button-mouse-hover-chromium-linux.png
-│       │   ├── 8-animations-10-multi-action-group-multi-trigger-button-mouse-click-chromium-linux.png
-│       │   ├── 8-animations-11-multi-action-group-multi-trigger-button-mouse-away-chromium-linux.png
-│       │   ├── 8-animations-12-multi-action-group-multi-trigger-button-final-state-chromium-linux.png
-│       │   ├── 8-animations-13-multi-action-group-reset-button-mouse-hover-chromium-linux.png
-│       │   ├── 8-animations-14-multi-action-group-reset-button-mouse-click-chromium-linux.png
-│       │   ├── 8-animations-15-multi-action-group-reset-button-mouse-away-chromium-linux.png
-│       │   ├── 8-animations-16-multi-action-group-reset-button-final-state-chromium-linux.png
-│       │   ├── 9-text-styling-00-initial-chromium-linux.png
-│       │   ├── 9-text-styling-01-text-examples-cutout-button-mouse-hover-chromium-linux.png
-│       │   ├── 9-text-styling-02-text-examples-cutout-button-mouse-click-chromium-linux.png
-│       │   ├── 9-text-styling-03-text-examples-cutout-button-mouse-away-chromium-linux.png
-│       │   └── 9-text-styling-04-text-examples-cutout-button-final-state-chromium-linux.png
 │       ├── test-harness.html
 │       └── test-helpers.ts
 ├── tsconfig.json
@@ -295,20 +105,6 @@ lovelace-lcars-card/
 ```
 
 # Codebase Files
-
-## File: .claude/settings.local.json
-
-```json
-{
-  "permissions": {
-    "allow": [
-      "Bash(rg:*)",
-      "Bash(npm test)"
-    ],
-    "deny": []
-  }
-}
-```
 
 ## File: CHANGELOG.md
 
@@ -10203,6 +9999,7 @@ export class LcarsCard extends LitElement {
   private _containerRect?: DOMRect;
   private _lastConfig?: LcarsCardConfig;
   private _lastHassStates?: { [entityId: string]: any };
+  private _needsReinitialization = false;
 
   static styles = [editorStyles];
 
@@ -10256,6 +10053,10 @@ export class LcarsCard extends LitElement {
     this._resizeObserver = new ResizeObserver((entries) => {
       this._handleResize(entries);
     });
+
+    if (this._needsReinitialization && this._config && this._containerRect) {
+      this._scheduleReinitialization();
+    }
   }
   
   public firstUpdated() {
@@ -10338,6 +10139,15 @@ export class LcarsCard extends LitElement {
     }
   }
 
+  private _scheduleReinitialization(): void {
+    requestAnimationFrame(() => {
+      if (this._config && this._containerRect) {
+        this._needsReinitialization = false;
+        this._performLayoutCalculation(this._containerRect);
+      }
+    });
+  }
+
   private _tryCalculateInitialLayout(): void {
     if (this._containerRect && this._layoutElementTemplates.length > 0) {
       return;
@@ -10375,6 +10185,8 @@ export class LcarsCard extends LitElement {
         element.cleanup();
       }
     }
+
+    this._needsReinitialization = true;
     
     super.disconnectedCallback();
   }
@@ -19998,15 +19810,6 @@ export class TransformPropagator {
 
 // Export singleton instance
 export const transformPropagator = new TransformPropagator();
-```
-
-## File: test-results/.last-run.json
-
-```json
-{
-  "status": "passed",
-  "failedTests": []
-}
 ```
 
 ## File: tests/e2e/config-examples.spec.ts

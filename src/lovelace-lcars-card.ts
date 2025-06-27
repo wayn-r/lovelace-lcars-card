@@ -56,6 +56,7 @@ export class LcarsCard extends LitElement {
   private _containerRect?: DOMRect;
   private _lastConfig?: LcarsCardConfig;
   private _lastHassStates?: { [entityId: string]: any };
+  private _needsReinitialization = false;
 
   static styles = [editorStyles];
 
@@ -109,6 +110,10 @@ export class LcarsCard extends LitElement {
     this._resizeObserver = new ResizeObserver((entries) => {
       this._handleResize(entries);
     });
+
+    if (this._needsReinitialization && this._config && this._containerRect) {
+      this._scheduleReinitialization();
+    }
   }
   
   public firstUpdated() {
@@ -191,6 +196,15 @@ export class LcarsCard extends LitElement {
     }
   }
 
+  private _scheduleReinitialization(): void {
+    requestAnimationFrame(() => {
+      if (this._config && this._containerRect) {
+        this._needsReinitialization = false;
+        this._performLayoutCalculation(this._containerRect);
+      }
+    });
+  }
+
   private _tryCalculateInitialLayout(): void {
     if (this._containerRect && this._layoutElementTemplates.length > 0) {
       return;
@@ -228,6 +242,8 @@ export class LcarsCard extends LitElement {
         element.cleanup();
       }
     }
+
+    this._needsReinitialization = true;
     
     super.disconnectedCallback();
   }
