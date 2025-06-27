@@ -43,8 +43,12 @@ groups: <array>                  # Required: Defines groups of elements. Element
           fill: <color_property>     # Color of the text.
           fontFamily: <string>       # e.g., "Antonio, Arial, sans-serif". Default: "Antonio".
           fontSize: <number>         # Font size in pixels. Default: 16.
+                                     #   Note: If layout.height is specified as a number, it will be used
+                                     #   to calculate fontSize automatically and supersede this value.
           fontWeight: <string|number>  # e.g., "normal", "bold", 400, 700. Default: "normal".
           letterSpacing: <string|number>  # e.g., "1px", 0.5. Default: "normal".
+                                     #   Note: If layout.width is specified as a number, it will be used
+                                     #   to calculate letterSpacing automatically and supersede this value.
           textAnchor: <string>       # SVG text-anchor: "start", "middle", "end". Default: "start".
           dominantBaseline: <string>  # SVG dominant-baseline. Default: "auto".
           textTransform: <string>    # CSS text-transform. Default: "none".
@@ -59,7 +63,13 @@ groups: <array>                  # Required: Defines groups of elements. Element
 
         layout:                    # Optional: Defines positioning and sizing.
           width: <number | string_percentage>    # e.g., 100 or "50%"
+                                                 #   Note: For text elements, numeric width values will
+                                                 #   automatically calculate letterSpacing to fit the text
+                                                 #   within the specified width, superseding text.letterSpacing.
           height: <number | string_percentage>   # e.g., 30 or "25%"
+                                                 #   Note: For text elements, numeric height values will
+                                                 #   automatically calculate fontSize to fit the text
+                                                 #   within the specified height, superseding text.fontSize.
           offsetX: <number | string_percentage>  # e.g., 10 or "-5%"
           offsetY: <number | string_percentage>  # e.g., 10 or "-5%"
 

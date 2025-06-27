@@ -119,9 +119,11 @@ describe('TextElement', () => {
   });
 
   describe('calculateIntrinsicSize', () => {
-    it('should use props.width and props.height if provided', () => {
+    it('should use props.width and props.height if provided (explicit dimensions path)', () => {
       textElement.props.width = 150;
       textElement.props.height = 80;
+      // No fontSize to trigger explicit dimensions path
+      delete textElement.props.fontSize;
 
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
@@ -130,13 +132,15 @@ describe('TextElement', () => {
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 
-    it('should calculate size using fontmetrics if available', () => {
+    it('should calculate fontSize from layoutConfig.height when specified', () => {
       const props = {
         text: 'Test',
-        height: 20, // Provide height without fontSize to trigger getFontMetrics call
         fontFamily: 'Arial'
       };
-      textElement = new TextElement('txt-metrics', props);
+      const layoutConfig = {
+        height: 20 // Height in layoutConfig should trigger fontSize calculation
+      };
+      textElement = new TextElement('txt-layout-height', props, layoutConfig);
 
       (FontManager.getFontMetrics as any).mockReturnValue({
         top: -0.8,
@@ -149,10 +153,35 @@ describe('TextElement', () => {
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
       expect(FontManager.getFontMetrics).toHaveBeenCalledWith('Arial', 'normal');
+      expect(textElement.props.fontSize).toBe(20 / 0.7); // height / capHeightRatio
       expect(FontManager.measureTextWidth).toHaveBeenCalledWith('Test', expect.objectContaining({
         fontFamily: 'Arial',
-        fontWeight: 'normal'
+        fontWeight: 'normal',
+        fontSize: 20 / 0.7
       }));
+      expect(textElement.intrinsicSize.calculated).toBe(true);
+    });
+
+    it('should maintain backwards compatibility with props.height (top_header case)', () => {
+      const props = {
+        text: 'Test',
+        height: 20, // Height in props for backwards compatibility
+        fontFamily: 'Arial'
+      };
+      textElement = new TextElement('txt-props-height', props);
+
+      (FontManager.getFontMetrics as any).mockReturnValue({
+        top: -0.8,
+        bottom: 0.2,
+        ascent: -0.75,
+        descent: 0.25,
+        capHeight: 0.7
+      });
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      expect(FontManager.getFontMetrics).toHaveBeenCalledWith('Arial', 'normal');
+      expect(textElement.props.fontSize).toBe(20 / 0.7); // height / capHeightRatio
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 

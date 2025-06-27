@@ -8,7 +8,7 @@ groups:
         appearance:
           fill: "#CC6600"
         text:
-          left_content: Dynamic Color Configuration
+          left_content: dynamic color configuration
           right_content: example
           fill: "#99CCFF"
           fontSize: 18
@@ -32,7 +32,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetY: 20
           anchor:
             to: nav_header.main_header
@@ -59,7 +58,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: static_hex_description.static_hex_fill_expect
@@ -86,7 +84,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: static_hex_description.static_hex_text_expect
@@ -120,7 +117,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetY: 20
           anchor:
             to: static_hex_description.static_hex_test
@@ -150,7 +146,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: static_rgb_description.rgb_fill_expect
@@ -180,7 +175,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: static_rgb_description.rgb_text_expect
@@ -216,7 +210,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetY: 20
           anchor:
             to: static_rgb_description.static_rgb_test
@@ -243,7 +236,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_description.dynamic_fill_on_expect
@@ -270,7 +262,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_description.dynamic_fill_off_expect
@@ -285,7 +276,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetY: 5
           anchor:
             to: dynamic_description.dynamic_example_line1
@@ -312,7 +302,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_description.dynamic_fill_unavail_expect
@@ -339,7 +328,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_description.dynamic_fill_default_expect
@@ -354,7 +342,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetY: 5
           anchor:
             to: dynamic_description.dynamic_example_line2
@@ -377,11 +364,10 @@ groups:
         appearance:
           fill: "#FF9900"
         text:
-          content: "when on, #99CCFF"
+          content: "when on, #FFFFFF"
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_description.dynamic_text_on_expect
@@ -390,7 +376,7 @@ groups:
       - id: dynamic_text_off_expect
         type: rectangle
         appearance:
-          fill: "#99CCFF"
+          fill: "#FFFFFF"
         layout:
           width: 15
           height: 15
@@ -408,7 +394,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_description.dynamic_text_off_expect
@@ -435,7 +420,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_description.dynamic_text_default_expect
@@ -457,7 +441,7 @@ groups:
             entity: light.kitchen_sink_light
             mapping:
               "on": "#000000"
-              "off": "#99CCFF"
+              "off": "#FFFFFF"
             default: "#CCCCCC"
           fontFamily: Antonio
         layout:
@@ -479,7 +463,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetY: 20
           anchor:
             to: dynamic_description.dynamic_test
@@ -506,7 +489,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_interpolation_description.interp_fill_0_expect
@@ -521,7 +503,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetY: 5
           anchor:
             to: dynamic_interpolation_description.interp_example_line1
@@ -548,7 +529,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_interpolation_description.interp_fill_128_expect
@@ -575,7 +555,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_interpolation_description.interp_fill_255_expect
@@ -590,7 +569,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetY: 5
           anchor:
             to: dynamic_interpolation_description.interp_example_line2
@@ -613,11 +591,10 @@ groups:
         appearance:
           fill: "#FF9900"
         text:
-          content: "as default. Text should render #99CCFF"
+          content: "as default. Text should render #FFFFFF"
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_interpolation_description.interp_fill_default_expect
@@ -626,7 +603,7 @@ groups:
       - id: interp_text_0_expect
         type: rectangle
         appearance:
-          fill: "#99CCFF"
+          fill: "#FFFFFF"
         layout:
           width: 15
           height: 15
@@ -644,7 +621,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_interpolation_description.interp_text_0_expect
@@ -659,7 +635,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetY: 5
           anchor:
             to: dynamic_interpolation_description.interp_example_line3
@@ -682,11 +657,10 @@ groups:
         appearance:
           fill: "#FF9900"
         text:
-          content: "at brightness 255, and #99CCFF"
+          content: "at brightness 255, and #FFFFFF"
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_interpolation_description.interp_text_255_expect
@@ -695,7 +669,7 @@ groups:
       - id: interp_text_default_expect
         type: rectangle
         appearance:
-          fill: "#99CCFF"
+          fill: "#FFFFFF"
         layout:
           width: 15
           height: 15
@@ -713,7 +687,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: dynamic_interpolation_description.interp_text_default_expect
@@ -737,10 +710,10 @@ groups:
             entity: light.kitchen_sink_light
             attribute: brightness
             mapping:
-              "0": "#99CCFF"
+              "0": "#FFFFFF"
               "255": "#000000"
             interpolate: true
-            default: "#99CCFF"
+            default: "#FFFFFF"
           fontFamily: Antonio
         layout:
           width: 150
@@ -761,7 +734,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetY: 20
           anchor:
             to: dynamic_interpolation_description.dynamic_interpolation_test
@@ -788,7 +760,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: stateful_description.stateful_fill_default_expect
@@ -815,7 +786,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: stateful_description.stateful_fill_hover_expect
@@ -830,7 +800,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetY: 5
           anchor:
             to: stateful_description.stateful_example_line1
@@ -857,7 +826,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: stateful_description.stateful_fill_active_expect
@@ -868,11 +836,10 @@ groups:
         appearance:
           fill: "#FF9900"
         text:
-          content: "#99CCFF"
+          content: "#FFFFFF"
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetY: 5
           anchor:
             to: stateful_description.stateful_example_line2
@@ -881,7 +848,7 @@ groups:
       - id: stateful_text_expect
         type: rectangle
         appearance:
-          fill: "#99CCFF"
+          fill: "#FFFFFF"
         layout:
           width: 15
           height: 15
@@ -899,7 +866,6 @@ groups:
           fill: "#99CCFF"
           fontFamily: Antonio
         layout:
-          height: 30
           offsetX: 5
           anchor:
             to: stateful_description.stateful_text_expect

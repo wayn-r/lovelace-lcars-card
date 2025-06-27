@@ -2,10 +2,11 @@ import { LayoutElement } from "./element.js";
 import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant } from "custom-card-helpers";
 import { svg, SVGTemplateResult } from "lit";
-import { TextMeasurement } from "../../utils/shapes.js";
+import { TextMeasurement, CAP_HEIGHT_RATIO } from "../../utils/shapes.js";
 import { FontManager } from "../../utils/font-manager.js";
 
-const CAP_HEIGHT_RATIO = 0.66; 
+const MIN_LETTER_SPACING = -4;
+const MAX_LETTER_SPACING = 20;
 
 export class TextElement extends LayoutElement {
     private _cachedMetrics: any = null;
@@ -15,55 +16,105 @@ export class TextElement extends LayoutElement {
     }
   
     calculateIntrinsicSize(container: SVGElement): void {
-        if (this.hasExplicitDimensions()) {
-            this.setExplicitDimensions();
+        if (this.dimensionsAreExplicit()) {
+            this.applyExplicitDimensions();
             return;
         }
         
         const text = this.props.text || '';
         const fontFamily = this.props.fontFamily || 'Arial';
         const fontWeight = this.props.fontWeight || 'normal';
-        const fontSize = this.calculateOptimalFontSize(fontFamily, fontWeight);
-
+        
+        const fontSize = this.resolveFontSize(fontFamily, fontWeight);
+        const letterSpacing = this.resolveLetterSpacing(text, fontSize, fontFamily, fontWeight);
+        
         this.intrinsicSize.width = FontManager.measureTextWidth(text, {
             fontFamily,
             fontWeight,
             fontSize,
-            letterSpacing: this.props.letterSpacing as any,
+            letterSpacing: letterSpacing as any,
             textTransform: this.props.textTransform as any,
         });
 
-        this.intrinsicSize.height = this.props.height || fontSize * 1.2;
+        const layoutHeight = this.extractNumericHeight();
+        this.intrinsicSize.height = layoutHeight || fontSize * 1.2;
         this.intrinsicSize.calculated = true;
     }
 
-    private hasExplicitDimensions(): boolean {
+    private dimensionsAreExplicit(): boolean {
         return Boolean(this.props.width && this.props.height && !this.props.fontSize);
     }
 
-    private setExplicitDimensions(): void {
+    private applyExplicitDimensions(): void {
         this.intrinsicSize.width = this.props.width!;
         this.intrinsicSize.height = this.props.height!;
         this.intrinsicSize.calculated = true;
     }
 
-    private calculateOptimalFontSize(fontFamily: string, fontWeight: string): number {
-        let fontSize = this.props.fontSize || 16;
-
-        if (this.props.height && !this.props.fontSize) {
-            const metrics = FontManager.getFontMetrics(fontFamily, fontWeight as any);
-            if (metrics) {
-                const capHeightRatio = Math.abs(metrics.capHeight) || CAP_HEIGHT_RATIO;
-                fontSize = this.props.height / capHeightRatio;
-            } else {
-                fontSize = this.props.height * 0.8;
-            }
+    private resolveFontSize(fontFamily: string, fontWeight: string): number {
+        const layoutHeight = this.extractNumericHeight();
+        
+        if (layoutHeight) {
+            const fontSize = this.calculateFontSizeFromHeight(layoutHeight, fontFamily, fontWeight);
             this.props.fontSize = fontSize;
+            return fontSize;
         }
-
-        return fontSize;
+        
+        if (this.props.height && !this.props.fontSize) {
+            const fontSize = this.calculateFontSizeFromHeight(this.props.height, fontFamily, fontWeight);
+            this.props.fontSize = fontSize;
+            return fontSize;
+        }
+        
+        return this.props.fontSize || 16;
     }
-  
+
+    private resolveLetterSpacing(text: string, fontSize: number, fontFamily: string, fontWeight: string): string | number {
+        const layoutWidth = this.extractNumericWidth();
+        
+        if (layoutWidth && text.length > 1) {
+            const letterSpacing = this.calculateLetterSpacingForWidth(layoutWidth, fontSize, text, fontFamily, fontWeight);
+            this.props.letterSpacing = letterSpacing;
+            return letterSpacing;
+        }
+        
+        return this.props.letterSpacing || 'normal';
+    }
+
+    private extractNumericHeight(): number | null {
+        return typeof this.layoutConfig.height === 'number' ? this.layoutConfig.height : null;
+    }
+
+    private extractNumericWidth(): number | null {
+        return typeof this.layoutConfig.width === 'number' ? this.layoutConfig.width : null;
+    }
+
+    private calculateFontSizeFromHeight(heightPx: number, fontFamily: string, fontWeight: string): number {
+        const metrics = FontManager.getFontMetrics(fontFamily, fontWeight as any);
+        if (metrics) {
+            const capHeightRatio = Math.abs(metrics.capHeight) || CAP_HEIGHT_RATIO;
+            return heightPx / capHeightRatio;
+        } else {
+            return heightPx * 0.8;
+        }
+    }
+
+    private calculateLetterSpacingForWidth(widthPx: number, fontSize: number, text: string, fontFamily: string, fontWeight: string): number {
+        const baseWidth = FontManager.measureTextWidth(text, {
+            fontFamily,
+            fontWeight,
+            fontSize,
+            letterSpacing: 'normal',
+            textTransform: this.props.textTransform as any,
+        });
+        
+        const gapCount = Math.max(text.length - 1, 1);
+        const totalGapAdjustment = widthPx - baseWidth;
+        const spacingPx = totalGapAdjustment / gapCount;
+        
+        return Math.max(MIN_LETTER_SPACING, Math.min(MAX_LETTER_SPACING, spacingPx));
+    }
+
     renderShape(): SVGTemplateResult | null {
         if (!this.layout.calculated) {
             return null;

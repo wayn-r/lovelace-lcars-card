@@ -36,6 +36,7 @@ lovelace-lcars-card/
 │   │   │   │   ├── element.spec.ts
 │   │   │   │   ├── endcap.spec.ts
 │   │   │   │   ├── rectangle.spec.ts
+│   │   │   │   ├── text-sizing.spec.ts
 │   │   │   │   └── text.spec.ts
 │   │   │   └── text.ts
 │   │   ├── engine.ts
@@ -100,7 +101,8 @@ lovelace-lcars-card/
 └── yaml-dont-run/
     ├── 10-complete-dashboard.yaml
     ├── 2-navigation-panel.yaml
-    └── 23-url-and-more-info-actions.yaml
+    ├── 23-url-and-more-info-actions.yaml
+    └── working-config.yaml
 ```
 
 # Codebase Files
@@ -5169,6 +5171,348 @@ describe('RectangleElement', () => {
 });
 ```
 
+## File: src/layout/elements/test/text-sizing.spec.ts
+
+```typescript
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { TextElement } from '../text.js';
+import { FontManager } from '../../../utils/font-manager.js';
+
+// Mock FontManager
+vi.mock('../../../utils/font-manager.js', () => ({
+  FontManager: {
+    getFontMetrics: vi.fn(),
+    measureTextWidth: vi.fn(),
+  },
+}));
+
+describe('TextElement - Height/Width Override Behavior', () => {
+  let mockSvgContainer: SVGElement;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    
+    // Create mock SVG container
+    mockSvgContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg') as SVGElement;
+    
+    // Setup default FontManager mocks
+    (FontManager.getFontMetrics as any).mockReturnValue({
+      capHeight: 0.7,
+      top: -0.8,
+      bottom: 0.2,
+      ascent: -0.75,
+      descent: 0.25
+    });
+    
+    (FontManager.measureTextWidth as any).mockReturnValue(100);
+  });
+
+  describe('Height overrides fontSize', () => {
+    it('should calculate fontSize from layout.height when specified as number', () => {
+      const textElement = new TextElement(
+        'height-override-test',
+        { text: 'Test Text', fontFamily: 'Arial' },
+        { height: 35 } // Numeric height in layoutConfig
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      // Expected fontSize = height / capHeightRatio = 35 / 0.7 = 50
+      expect(textElement.props.fontSize).toBe(35 / 0.7);
+      expect(FontManager.getFontMetrics).toHaveBeenCalledWith('Arial', 'normal');
+    });
+
+    it('should use fallback calculation when getFontMetrics returns null', () => {
+      (FontManager.getFontMetrics as any).mockReturnValue(null);
+      
+      const textElement = new TextElement(
+        'height-fallback-test',
+        { text: 'Test Text' },
+        { height: 40 }
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      // Expected fontSize = height * 0.8 = 40 * 0.8 = 32
+      expect(textElement.props.fontSize).toBe(32);
+    });
+
+    it('should preserve explicit fontSize when layout.height is percentage string', () => {
+      const textElement = new TextElement(
+        'percentage-height-test',
+        { text: 'Test Text', fontSize: 18 },
+        { height: '50%' } // Percentage height should not override
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      expect(textElement.props.fontSize).toBe(18); // Should preserve original
+    });
+
+    it('should preserve explicit fontSize when no layout.height specified', () => {
+      const textElement = new TextElement(
+        'no-height-test',
+        { text: 'Test Text', fontSize: 24 },
+        {} // No height specified
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      expect(textElement.props.fontSize).toBe(24);
+    });
+
+    it('should maintain backwards compatibility with props.height (top_header case)', () => {
+      const textElement = new TextElement(
+        'props-height-test',
+        { text: 'Test Text', height: 30, fontFamily: 'Antonio' }, // Height in props
+        {} // No layout height
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      // Should still use props.height for fontSize calculation
+      expect(textElement.props.fontSize).toBe(30 / 0.7);
+      expect(FontManager.getFontMetrics).toHaveBeenCalledWith('Antonio', 'normal');
+    });
+  });
+
+  describe('Width overrides letterSpacing', () => {
+    beforeEach(() => {
+      // Mock measureTextWidth to return different values for different calls
+      (FontManager.measureTextWidth as any)
+        .mockReturnValueOnce(80) // Base width with normal spacing
+        .mockReturnValue(120); // Final width measurement
+    });
+
+    it('should calculate letterSpacing from layout.width when specified as number', () => {
+      const textElement = new TextElement(
+        'width-override-test',
+        { text: 'HELLO', fontSize: 16, fontFamily: 'Arial' },
+        { width: 120 } // Numeric width in layoutConfig
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      // Expected calculation:
+      // baseWidth = 80, targetWidth = 120, gapCount = 4 (5 chars - 1)
+      // spacingPx = (120 - 80) / 4 = 10
+      expect(textElement.props.letterSpacing).toBe(10);
+      
+      // Should measure with normal spacing first, then with calculated spacing
+      expect(FontManager.measureTextWidth).toHaveBeenCalledWith('HELLO', {
+        fontFamily: 'Arial',
+        fontWeight: 'normal',
+        fontSize: 16,
+        letterSpacing: 'normal',
+        textTransform: undefined,
+      });
+    });
+
+    it('should clamp letterSpacing to reasonable bounds', () => {
+      // Test maximum clamp
+      (FontManager.measureTextWidth as any).mockReturnValueOnce(50);
+      
+      const textElement = new TextElement(
+        'width-clamp-max-test',
+        { text: 'AB', fontSize: 16 },
+        { width: 1000 } // Very wide target
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      // spacingPx = (1000 - 50) / 1 = 950, but should be clamped to MAX_LETTER_SPACING (20)
+      expect(textElement.props.letterSpacing).toBe(20);
+    });
+
+    it('should clamp negative letterSpacing to minimum bound', () => {
+      // Test minimum clamp
+      (FontManager.measureTextWidth as any).mockReturnValueOnce(200);
+      
+      const textElement = new TextElement(
+        'width-clamp-min-test',
+        { text: 'WIDE', fontSize: 16 },
+        { width: 50 } // Very narrow target
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      // spacingPx = (50 - 200) / 3 = -50, but should be clamped to MIN_LETTER_SPACING (-4)
+      expect(textElement.props.letterSpacing).toBe(-4);
+    });
+
+    it('should preserve explicit letterSpacing when layout.width is percentage string', () => {
+      const textElement = new TextElement(
+        'percentage-width-test',
+        { text: 'Test Text', letterSpacing: '2px' },
+        { width: '75%' } // Percentage width should not override
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      expect(textElement.props.letterSpacing).toBe('2px'); // Should preserve original
+    });
+
+    it('should preserve explicit letterSpacing when no layout.width specified', () => {
+      const textElement = new TextElement(
+        'no-width-test',
+        { text: 'Test Text', letterSpacing: '1px' },
+        {} // No width specified
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      expect(textElement.props.letterSpacing).toBe('1px');
+    });
+
+    it('should skip letterSpacing calculation for single character text', () => {
+      const textElement = new TextElement(
+        'single-char-test',
+        { text: 'A', letterSpacing: 'normal' },
+        { width: 100 }
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      // Should preserve original letterSpacing for single character
+      expect(textElement.props.letterSpacing).toBe('normal');
+    });
+
+    it('should skip letterSpacing calculation for empty text', () => {
+      const textElement = new TextElement(
+        'empty-text-test',
+        { text: '', letterSpacing: 'normal' },
+        { width: 100 }
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      // Should preserve original letterSpacing for empty text
+      expect(textElement.props.letterSpacing).toBe('normal');
+    });
+  });
+
+  describe('Combined height and width overrides', () => {
+    beforeEach(() => {
+      (FontManager.measureTextWidth as any)
+        .mockReturnValueOnce(90) // Base width measurement
+        .mockReturnValue(110); // Final width measurement
+    });
+
+    it('should apply both fontSize and letterSpacing overrides together', () => {
+      const textElement = new TextElement(
+        'combined-override-test',
+        { text: 'TEST', fontFamily: 'Arial' },
+        { height: 28, width: 110 }
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      // Height should calculate fontSize
+      expect(textElement.props.fontSize).toBe(28 / 0.7);
+      
+      // Width should calculate letterSpacing
+      // gapCount = 3, spacingPx = (110 - 90) / 3 = 6.67 (approximately)
+      expect(textElement.props.letterSpacing).toBeCloseTo(6.67, 1);
+    });
+
+    it('should use calculated fontSize in letterSpacing calculation', () => {
+      const textElement = new TextElement(
+        'fontSize-in-spacing-test',
+        { text: 'HELLO', fontFamily: 'Arial' },
+        { height: 35, width: 150 }
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      const expectedFontSize = 35 / 0.7;
+      
+      // Should use the calculated fontSize (not original) in measureTextWidth call
+      expect(FontManager.measureTextWidth).toHaveBeenCalledWith('HELLO', expect.objectContaining({
+        fontSize: expectedFontSize,
+        letterSpacing: 'normal',
+      }));
+    });
+  });
+
+  describe('Intrinsic size calculation', () => {
+    it('should set intrinsicSize.height to layout.height when specified', () => {
+      const textElement = new TextElement(
+        'intrinsic-height-test',
+        { text: 'Test' },
+        { height: 42 }
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      expect(textElement.intrinsicSize.height).toBe(42);
+    });
+
+    it('should use fontSize * 1.2 for intrinsicSize.height when no layout.height', () => {
+      const textElement = new TextElement(
+        'intrinsic-height-fallback-test',
+        { text: 'Test', fontSize: 20 },
+        {}
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      expect(textElement.intrinsicSize.height).toBe(24); // 20 * 1.2
+    });
+
+    it('should measure text width with final calculated letterSpacing', () => {
+      (FontManager.measureTextWidth as any)
+        .mockReturnValueOnce(60) // Base measurement
+        .mockReturnValue(80); // Final measurement with spacing
+      
+      const textElement = new TextElement(
+        'final-width-test',
+        { text: 'ABC', fontSize: 16 },
+        { width: 80 }
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      expect(textElement.intrinsicSize.width).toBe(80);
+      
+      // Should be called twice: once for base measurement, once for final
+      expect(FontManager.measureTextWidth).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Edge cases and regression tests', () => {
+    it('should handle explicit dimensions path correctly', () => {
+      const textElement = new TextElement(
+        'explicit-dims-test',
+        { width: 200, height: 50, text: 'Test' }, // Props width/height without fontSize
+        {}
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      // Should use explicit dimensions path
+      expect(textElement.intrinsicSize.width).toBe(200);
+      expect(textElement.intrinsicSize.height).toBe(50);
+      expect(textElement.intrinsicSize.calculated).toBe(true);
+    });
+
+    it('should handle textTransform in width calculations', () => {
+      const textElement = new TextElement(
+        'text-transform-test',
+        { text: 'hello', textTransform: 'uppercase' },
+        { width: 100 }
+      );
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      // Should pass textTransform to measureTextWidth
+      expect(FontManager.measureTextWidth).toHaveBeenCalledWith('hello', expect.objectContaining({
+        textTransform: 'uppercase',
+      }));
+    });
+  });
+});
+```
+
 ## File: src/layout/elements/test/text.spec.ts
 
 ```typescript
@@ -5293,9 +5637,11 @@ describe('TextElement', () => {
   });
 
   describe('calculateIntrinsicSize', () => {
-    it('should use props.width and props.height if provided', () => {
+    it('should use props.width and props.height if provided (explicit dimensions path)', () => {
       textElement.props.width = 150;
       textElement.props.height = 80;
+      // No fontSize to trigger explicit dimensions path
+      delete textElement.props.fontSize;
 
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
@@ -5304,13 +5650,15 @@ describe('TextElement', () => {
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 
-    it('should calculate size using fontmetrics if available', () => {
+    it('should calculate fontSize from layoutConfig.height when specified', () => {
       const props = {
         text: 'Test',
-        height: 20, // Provide height without fontSize to trigger getFontMetrics call
         fontFamily: 'Arial'
       };
-      textElement = new TextElement('txt-metrics', props);
+      const layoutConfig = {
+        height: 20 // Height in layoutConfig should trigger fontSize calculation
+      };
+      textElement = new TextElement('txt-layout-height', props, layoutConfig);
 
       (FontManager.getFontMetrics as any).mockReturnValue({
         top: -0.8,
@@ -5323,10 +5671,35 @@ describe('TextElement', () => {
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
       expect(FontManager.getFontMetrics).toHaveBeenCalledWith('Arial', 'normal');
+      expect(textElement.props.fontSize).toBe(20 / 0.7); // height / capHeightRatio
       expect(FontManager.measureTextWidth).toHaveBeenCalledWith('Test', expect.objectContaining({
         fontFamily: 'Arial',
-        fontWeight: 'normal'
+        fontWeight: 'normal',
+        fontSize: 20 / 0.7
       }));
+      expect(textElement.intrinsicSize.calculated).toBe(true);
+    });
+
+    it('should maintain backwards compatibility with props.height (top_header case)', () => {
+      const props = {
+        text: 'Test',
+        height: 20, // Height in props for backwards compatibility
+        fontFamily: 'Arial'
+      };
+      textElement = new TextElement('txt-props-height', props);
+
+      (FontManager.getFontMetrics as any).mockReturnValue({
+        top: -0.8,
+        bottom: 0.2,
+        ascent: -0.75,
+        descent: 0.25,
+        capHeight: 0.7
+      });
+
+      textElement.calculateIntrinsicSize(mockSvgContainer);
+
+      expect(FontManager.getFontMetrics).toHaveBeenCalledWith('Arial', 'normal');
+      expect(textElement.props.fontSize).toBe(20 / 0.7); // height / capHeightRatio
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 
@@ -5577,10 +5950,11 @@ import { LayoutElement } from "./element.js";
 import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant } from "custom-card-helpers";
 import { svg, SVGTemplateResult } from "lit";
-import { TextMeasurement } from "../../utils/shapes.js";
+import { TextMeasurement, CAP_HEIGHT_RATIO } from "../../utils/shapes.js";
 import { FontManager } from "../../utils/font-manager.js";
 
-const CAP_HEIGHT_RATIO = 0.66; 
+const MIN_LETTER_SPACING = -4;
+const MAX_LETTER_SPACING = 20;
 
 export class TextElement extends LayoutElement {
     private _cachedMetrics: any = null;
@@ -5590,55 +5964,105 @@ export class TextElement extends LayoutElement {
     }
   
     calculateIntrinsicSize(container: SVGElement): void {
-        if (this.hasExplicitDimensions()) {
-            this.setExplicitDimensions();
+        if (this.dimensionsAreExplicit()) {
+            this.applyExplicitDimensions();
             return;
         }
         
         const text = this.props.text || '';
         const fontFamily = this.props.fontFamily || 'Arial';
         const fontWeight = this.props.fontWeight || 'normal';
-        const fontSize = this.calculateOptimalFontSize(fontFamily, fontWeight);
-
+        
+        const fontSize = this.resolveFontSize(fontFamily, fontWeight);
+        const letterSpacing = this.resolveLetterSpacing(text, fontSize, fontFamily, fontWeight);
+        
         this.intrinsicSize.width = FontManager.measureTextWidth(text, {
             fontFamily,
             fontWeight,
             fontSize,
-            letterSpacing: this.props.letterSpacing as any,
+            letterSpacing: letterSpacing as any,
             textTransform: this.props.textTransform as any,
         });
 
-        this.intrinsicSize.height = this.props.height || fontSize * 1.2;
+        const layoutHeight = this.extractNumericHeight();
+        this.intrinsicSize.height = layoutHeight || fontSize * 1.2;
         this.intrinsicSize.calculated = true;
     }
 
-    private hasExplicitDimensions(): boolean {
+    private dimensionsAreExplicit(): boolean {
         return Boolean(this.props.width && this.props.height && !this.props.fontSize);
     }
 
-    private setExplicitDimensions(): void {
+    private applyExplicitDimensions(): void {
         this.intrinsicSize.width = this.props.width!;
         this.intrinsicSize.height = this.props.height!;
         this.intrinsicSize.calculated = true;
     }
 
-    private calculateOptimalFontSize(fontFamily: string, fontWeight: string): number {
-        let fontSize = this.props.fontSize || 16;
-
-        if (this.props.height && !this.props.fontSize) {
-            const metrics = FontManager.getFontMetrics(fontFamily, fontWeight as any);
-            if (metrics) {
-                const capHeightRatio = Math.abs(metrics.capHeight) || CAP_HEIGHT_RATIO;
-                fontSize = this.props.height / capHeightRatio;
-            } else {
-                fontSize = this.props.height * 0.8;
-            }
+    private resolveFontSize(fontFamily: string, fontWeight: string): number {
+        const layoutHeight = this.extractNumericHeight();
+        
+        if (layoutHeight) {
+            const fontSize = this.calculateFontSizeFromHeight(layoutHeight, fontFamily, fontWeight);
             this.props.fontSize = fontSize;
+            return fontSize;
         }
-
-        return fontSize;
+        
+        if (this.props.height && !this.props.fontSize) {
+            const fontSize = this.calculateFontSizeFromHeight(this.props.height, fontFamily, fontWeight);
+            this.props.fontSize = fontSize;
+            return fontSize;
+        }
+        
+        return this.props.fontSize || 16;
     }
-  
+
+    private resolveLetterSpacing(text: string, fontSize: number, fontFamily: string, fontWeight: string): string | number {
+        const layoutWidth = this.extractNumericWidth();
+        
+        if (layoutWidth && text.length > 1) {
+            const letterSpacing = this.calculateLetterSpacingForWidth(layoutWidth, fontSize, text, fontFamily, fontWeight);
+            this.props.letterSpacing = letterSpacing;
+            return letterSpacing;
+        }
+        
+        return this.props.letterSpacing || 'normal';
+    }
+
+    private extractNumericHeight(): number | null {
+        return typeof this.layoutConfig.height === 'number' ? this.layoutConfig.height : null;
+    }
+
+    private extractNumericWidth(): number | null {
+        return typeof this.layoutConfig.width === 'number' ? this.layoutConfig.width : null;
+    }
+
+    private calculateFontSizeFromHeight(heightPx: number, fontFamily: string, fontWeight: string): number {
+        const metrics = FontManager.getFontMetrics(fontFamily, fontWeight as any);
+        if (metrics) {
+            const capHeightRatio = Math.abs(metrics.capHeight) || CAP_HEIGHT_RATIO;
+            return heightPx / capHeightRatio;
+        } else {
+            return heightPx * 0.8;
+        }
+    }
+
+    private calculateLetterSpacingForWidth(widthPx: number, fontSize: number, text: string, fontFamily: string, fontWeight: string): number {
+        const baseWidth = FontManager.measureTextWidth(text, {
+            fontFamily,
+            fontWeight,
+            fontSize,
+            letterSpacing: 'normal',
+            textTransform: this.props.textTransform as any,
+        });
+        
+        const gapCount = Math.max(text.length - 1, 1);
+        const totalGapAdjustment = widthPx - baseWidth;
+        const spacingPx = totalGapAdjustment / gapCount;
+        
+        return Math.max(MIN_LETTER_SPACING, Math.min(MAX_LETTER_SPACING, spacingPx));
+    }
+
     renderShape(): SVGTemplateResult | null {
         if (!this.layout.calculated) {
             return null;

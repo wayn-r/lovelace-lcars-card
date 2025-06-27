@@ -1,0 +1,185 @@
+type: custom:lovelace-lcars-card
+card_title: Text Size Override Example
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Text Size Overrides
+          right_content: Example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+
+  - group_id: "height_override_examples"
+    elements:
+      # Traditional text with explicit fontSize
+      - id: "traditional_text"
+        type: "text"
+        text:
+          content: "Traditional: fontSize 16"
+          fill: "#FF9900"
+          fontSize: 16
+          fontFamily: "Antonio"
+        layout:
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+          offsetY: 10
+
+      # Text using height override (no fontSize specified)
+      - id: "height_override_text"
+        type: "text"
+        text:
+          content: "Height Override: 30px height"
+          fill: "#99CCFF"
+          fontFamily: "Antonio"
+          # No fontSize specified - will be calculated from layout.height
+        layout:
+          height: 30  # This will calculate fontSize automatically
+          anchor:
+            to: height_override_examples.traditional_text
+            element_point: topLeft
+            target_point: bottomLeft
+          offsetY: 5
+
+      # Text using larger height override
+      - id: "large_height_text"
+        type: "text"
+        text:
+          content: "Large Height: 50px"
+          fill: "#FFCC00"
+          fontFamily: "Antonio"
+        layout:
+          height: 50  # Larger height = larger calculated fontSize
+          anchor:
+            to: height_override_examples.height_override_text
+            element_point: topLeft
+            target_point: bottomLeft
+          offsetY: 5
+
+  - group_id: "width_override_examples"
+    elements:
+      # Traditional text with explicit letterSpacing
+      - id: "traditional_spacing"
+        type: "text"
+        text:
+          content: "NORMAL SPACING"
+          fill: "#FF9900"
+          fontSize: 16
+          letterSpacing: "normal"
+          fontFamily: "Antonio"
+        layout:
+          anchor:
+            to: height_override_examples.large_height_text
+            element_point: topLeft
+            target_point: bottomLeft
+          offsetY: 20
+
+      # Text using width override for tight spacing
+      - id: "tight_width_text"
+        type: "text"
+        text:
+          content: "COMPRESSED TEXT"
+          fill: "#99CCFF"
+          fontSize: 16
+          fontFamily: "Antonio"
+          # letterSpacing will be calculated from layout.width
+        layout:
+          width: 120  # Narrow width = tight letter spacing
+          anchor:
+            to: width_override_examples.traditional_spacing
+            element_point: topLeft
+            target_point: bottomLeft
+          offsetY: 5
+
+      # Text using width override for expanded spacing
+      - id: "expanded_width_text"
+        type: "text"
+        text:
+          content: "EXPANDED TEXT"
+          fill: "#FFCC00"
+          fontSize: 16
+          fontFamily: "Antonio"
+        layout:
+          width: 300  # Wide width = expanded letter spacing
+          anchor:
+            to: width_override_examples.tight_width_text
+            element_point: topLeft
+            target_point: bottomLeft
+          offsetY: 5
+
+  - group_id: "combined_override_examples"
+    elements:
+      # Text using both height and width overrides
+      - id: "combined_override_text"
+        type: "text"
+        text:
+          content: "BOTH OVERRIDES"
+          fill: "#FF6600"
+          fontFamily: "Antonio"
+          # Both fontSize and letterSpacing calculated from layout
+        layout:
+          height: 35   # Calculates fontSize
+          width: 250   # Calculates letterSpacing
+          anchor:
+            to: width_override_examples.expanded_width_text
+            element_point: topLeft
+            target_point: bottomLeft
+          offsetY: 20
+
+      # Button with text size overrides
+      - id: "button_with_overrides"
+        type: "rectangle"
+        appearance:
+          fill: "#336699"
+        text:
+          content: "BUTTON TEXT"
+          fill: "#FFFFFF"
+          fontFamily: "Antonio"
+          # Size calculated from layout dimensions
+        layout:
+          height: 40   # Button height drives text fontSize
+          width: 180   # Button width drives text letterSpacing
+          anchor:
+            to: combined_override_examples.combined_override_text
+            element_point: topLeft
+            target_point: bottomLeft
+          offsetY: 10
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: none
+
+  - group_id: "comparison_examples"
+    elements:
+      # Show percentage dimensions don't override (backwards compatibility)
+      - id: "percentage_dimensions"
+        type: "text"
+        text:
+          content: "Percentage: keeps explicit fontSize 14"
+          fill: "#CCCCCC"
+          fontSize: 14
+          letterSpacing: "1px"
+          fontFamily: "Antonio"
+        layout:
+          height: "25%"  # Percentage doesn't override fontSize
+          width: "50%"   # Percentage doesn't override letterSpacing
+          anchor:
+            to: combined_override_examples.button_with_overrides
+            element_point: topLeft
+            target_point: bottomLeft
+          offsetY: 20 

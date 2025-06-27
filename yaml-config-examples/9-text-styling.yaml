@@ -21,55 +21,46 @@ groups:
             to: container
             element_point: topLeft
             target_point: topLeft
-  - group_id: "text_examples"
+  - group_id: text_examples
     elements:
-      # Basic text element
-      - id: "simple_text"
-        type: "text"
+      - id: simple_text
+        type: text
         text:
-          content: "STARFLEET COMMAND"
+          content: STARFLEET COMMAND
           fill: "#FF9900"
           fontSize: 24
-          fontWeight: "bold"
-          fontFamily: "Antonio, Arial, sans-serif"
+          fontWeight: bold
+          fontFamily: Antonio, Arial, sans-serif
         layout:
-          width: 300
-          height: 30
           offsetY: 5
           anchor:
             to: nav_header.main_header
             element_point: topLeft
             target_point: bottomLeft
-      
-      # Text with advanced styling
-      - id: "styled_text"
-        type: "text"
+      - id: styled_text
+        type: text
         text:
-          content: "OPERATIONAL STATUS"
+          content: OPERATIONAL STATUS
           fill: "#FFFFFF"
           fontSize: 18
-          letterSpacing: "2px"
-          textTransform: "uppercase"
-          textAnchor: "middle"
-          dominantBaseline: "central"
+          letterSpacing: 2px
+          textTransform: uppercase
+          textAnchor: middle
+          dominantBaseline: central
         layout:
-          width: 250
-          height: 25
           anchor:
             to: text_examples.simple_text
             element_point: topLeft
             target_point: bottomLeft
-      
-      # Button with cutout text
-      - id: "cutout_button"
-        type: "rectangle"
+      - id: cutout_button
+        type: rectangle
         appearance:
           fill: "#CC6600"
         text:
-          content: "TACTICAL"
+          content: TACTICAL
           fill: "#000000"
           fontSize: 16
-          fontWeight: "bold"
+          fontWeight: bold
           cutout: true
         layout:
           width: 120
