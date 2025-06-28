@@ -167,7 +167,8 @@ export class TextElement extends LayoutElement {
             textY = this.calculateFallbackTextY(y, height, dominantBaseline);
         }
 
-        return { textX, textY };
+        const offsetPosition = this.applyTextOffsets({ x: textX, y: textY });
+        return { textX: offsetPosition.x, textY: offsetPosition.y };
     }
 
     private getCachedOrFreshMetrics(): any {

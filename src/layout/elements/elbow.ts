@@ -41,13 +41,16 @@ export class ElbowElement extends LayoutElement {
         
         const elbowWidth = this.calculateEffectiveElbowWidth(width);
         
+        let calculatedPosition: { x: number, y: number };
         if (elbowTextPosition === 'arm') {
-            return this.calculateArmTextPosition(x, y, height, orientation, bodyWidth, armHeight, elbowWidth, textAnchor);
+            calculatedPosition = this.calculateArmTextPosition(x, y, height, orientation, bodyWidth, armHeight, elbowWidth, textAnchor);
         } else if (elbowTextPosition === 'body') {
-            return this.calculateBodyTextPosition(x, y, height, orientation, bodyWidth, armHeight, elbowWidth, textAnchor);
+            calculatedPosition = this.calculateBodyTextPosition(x, y, height, orientation, bodyWidth, armHeight, elbowWidth, textAnchor);
         } else {
-            return this.calculateArmTextPosition(x, y, height, orientation, bodyWidth, armHeight, elbowWidth, textAnchor);
+            calculatedPosition = this.calculateArmTextPosition(x, y, height, orientation, bodyWidth, armHeight, elbowWidth, textAnchor);
         }
+        
+        return this.applyTextOffsets(calculatedPosition);
     }
 
     private calculateEffectiveElbowWidth(layoutWidth: number): number {

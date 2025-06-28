@@ -31,6 +31,8 @@ interface ElementProps {
   elbowTextPosition?: 'arm' | 'body';
   leftContent?: string;
   rightContent?: string;
+  textOffsetX?: number | string;
+  textOffsetY?: number | string;
   button?: {
     enabled?: boolean;
     actions?: unknown;
@@ -163,6 +165,8 @@ export class ConfigParser {
     if (text.elbow_text_position !== undefined) props.elbowTextPosition = text.elbow_text_position;
     if (text.left_content !== undefined) props.leftContent = text.left_content;
     if (text.right_content !== undefined) props.rightContent = text.right_content;
+    if (text.offsetX !== undefined) props.textOffsetX = text.offsetX;
+    if (text.offsetY !== undefined) props.textOffsetY = text.offsetY;
   }
 
   private static mapButtonProps(element: any, props: ElementProps): void {

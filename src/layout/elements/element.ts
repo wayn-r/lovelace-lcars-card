@@ -7,6 +7,7 @@ import { ColorValue } from '../../types';
 import { animationManager, AnimationContext } from '../../utils/animation.js';
 import { colorResolver } from '../../utils/color-resolver.js';
 import { ComputedElementColors, ColorResolutionDefaults } from '../../utils/color.js';
+import { OffsetCalculator } from '../../utils/offset-calculator.js';
 
 export abstract class LayoutElement {
     id: string;
@@ -333,8 +334,8 @@ export abstract class LayoutElement {
             }
         }
 
-        x += this.parseOffset(this.layoutConfig.offsetX, containerWidth);
-        y += this.parseOffset(this.layoutConfig.offsetY, containerHeight);
+        x += this.parseLayoutOffset(this.layoutConfig.offsetX, containerWidth);
+        y += this.parseLayoutOffset(this.layoutConfig.offsetY, containerHeight);
 
         return { x, y };
     }
@@ -596,7 +597,7 @@ export abstract class LayoutElement {
         padding: number, 
         containerSize: number
     ): number {
-        const paddingOffset = this.parseOffset(padding, containerSize);
+        const paddingOffset = this.parseLayoutOffset(padding, containerSize);
         
         if (anchorPoint.includes('Left') || anchorPoint.includes('Top')) {
             return delta - paddingOffset;
@@ -691,17 +692,7 @@ export abstract class LayoutElement {
             (isHorizontal ? 'centerLeft' : 'topCenter');
     }
 
-    private parseOffset(offset: string | number | undefined, containerDimension: number): number {
-        if (offset === undefined) return 0;
-        if (typeof offset === 'number') return offset;
-        
-        if (typeof offset === 'string' && offset.endsWith('%')) {
-            const percentage = parseFloat(offset.slice(0, -1));
-            return (percentage / 100) * containerDimension;
-        }
-        
-        return parseFloat(offset as string) || 0;
-    }
+
 
     public getRelativeAnchorPosition(anchorPoint: string, width?: number, height?: number): { x: number; y: number } {
         const w = width !== undefined ? width : this.layout.width;
@@ -915,7 +906,30 @@ export abstract class LayoutElement {
     }
 
     protected getTextPosition(): { x: number, y: number } {
-        return this.getDefaultTextPosition();
+        const defaultPosition = this.getDefaultTextPosition();
+        return this.applyTextOffsets(defaultPosition);
+    }
+
+    protected applyTextOffsets(position: { x: number; y: number }): { x: number; y: number } {
+        return OffsetCalculator.applyTextOffsets(
+            position,
+            this.props.textOffsetX,
+            this.props.textOffsetY,
+            this.layout.width,
+            this.layout.height
+        );
+    }
+
+    private parseLayoutOffset(offset: string | number | undefined, containerDimension: number): number {
+        if (offset === undefined) return 0;
+        if (typeof offset === 'number') return offset;
+        
+        if (typeof offset === 'string' && offset.endsWith('%')) {
+            const percentage = parseFloat(offset.slice(0, -1));
+            return (percentage / 100) * containerDimension;
+        }
+        
+        return parseFloat(offset as string) || 0;
     }
 
     protected hasText(): boolean {

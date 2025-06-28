@@ -49,6 +49,8 @@ const textSchema = z.object({
   elbow_text_position: z.enum(['arm', 'body']).optional(),
   left_content: z.string().optional(),
   right_content: z.string().optional(),
+  offsetX: z.union([z.number(), z.string()]).optional(),
+  offsetY: z.union([z.number(), z.string()]).optional(),
 });
 
 // -----------------------------------------------------------------------------

@@ -1,0 +1,413 @@
+type: custom:lovelace-lcars-card
+card_title: Text Offset Examples
+groups:
+  - group_id: main_header
+    elements:
+      - id: title_header
+        type: top_header
+        appearance:
+          fill: "#663399"
+        text:
+          left_content: TEXT OFFSET Example
+          right_content: visual test
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+            
+  - group_id: control
+    elements:
+      - id: control_label
+        type: text
+        text:
+          content: CONTROL (no offset)
+          fill: "#FFCC00"
+          fontSize: 24
+          fontFamily: Antonio
+          textTransform: uppercase
+        layout:
+          offsetY: 10
+          offsetX: 10
+          anchor:
+            to: main_header.title_header
+            element_point: topLeft
+            target_point: bottomLeft
+            
+      - id: control_rect
+        type: rectangle
+        appearance:
+          fill: "#0099CC"
+          stroke: "#FFFFFF"
+          strokeWidth: 1
+        text:
+          content: CENTER
+          fill: "#FFFFFF"
+          fontSize: 16
+          fontFamily: Antonio
+          textAnchor: middle
+        layout:
+          width: 120
+          height: 40
+          offsetY: 10
+          anchor:
+            to: control.control_label
+            element_point: topLeft
+            target_point: bottomLeft
+
+  - group_id: pixel_offsets
+    elements:
+      - id: pixel_label
+        type: text
+        text:
+          content: PIXEL OFFSETS
+          fill: "#FFCC00"
+          fontSize: 24
+          fontFamily: Antonio
+          textTransform: uppercase
+        layout:
+          offsetY: 20
+          anchor:
+            to: control.control_rect
+            element_point: topLeft
+            target_point: bottomLeft
+            
+      - id: offset_right
+        type: rectangle
+        appearance:
+          fill: "#CC6600"
+          stroke: "#FFFFFF"
+          strokeWidth: 1
+        text:
+          content: RIGHT +10px
+          fill: "#FFFFFF"
+          fontSize: 14
+          fontFamily: Antonio
+          textAnchor: middle
+          offsetX: 10
+        layout:
+          width: 120
+          height: 40
+          offsetY: 5
+          anchor:
+            to: pixel_offsets.pixel_label
+            element_point: topLeft
+            target_point: bottomLeft
+            
+      - id: offset_left
+        type: rectangle
+        appearance:
+          fill: "#CC6600"
+          stroke: "#FFFFFF"
+          strokeWidth: 1
+        text:
+          content: LEFT -10px
+          fill: "#FFFFFF"
+          fontSize: 14
+          fontFamily: Antonio
+          textAnchor: middle
+          offsetX: -10
+        layout:
+          width: 120
+          height: 40
+          offsetX: 5
+          anchor:
+            to: pixel_offsets.offset_right
+            element_point: topLeft
+            target_point: topRight
+            
+      - id: offset_down
+        type: rectangle
+        appearance:
+          fill: "#009933"
+          stroke: "#FFFFFF"
+          strokeWidth: 1
+        text:
+          content: DOWN +8px
+          fill: "#FFFFFF"
+          fontSize: 14
+          fontFamily: Antonio
+          textAnchor: middle
+          offsetY: 8
+        layout:
+          width: 120
+          height: 40
+          offsetY: 5
+          anchor:
+            to: pixel_offsets.offset_right
+            element_point: topLeft
+            target_point: bottomLeft
+            
+      - id: offset_up
+        type: rectangle
+        appearance:
+          fill: "#009933"
+          stroke: "#FFFFFF"
+          strokeWidth: 1
+        text:
+          content: UP -8px
+          fill: "#FFFFFF"
+          fontSize: 14
+          fontFamily: Antonio
+          textAnchor: middle
+          offsetY: -8
+        layout:
+          width: 120
+          height: 40
+          offsetX: 5
+          anchor:
+            to: pixel_offsets.offset_down
+            element_point: topLeft
+            target_point: topRight
+            
+  - group_id: percentage_offsets
+    elements:
+      - id: percent_label
+        type: text
+        text:
+          content: PERCENTAGE OFFSETS
+          fill: "#FFCC00"
+          fontSize: 24
+          fontFamily: Antonio
+          textTransform: uppercase
+        layout:
+          offsetY: 20
+          anchor:
+            to: pixel_offsets.offset_down
+            element_point: topLeft
+            target_point: bottomLeft
+            
+      - id: percent_right
+        type: rectangle
+        appearance:
+          fill: "#9933CC"
+          stroke: "#FFFFFF"
+          strokeWidth: 1
+        text:
+          content: RIGHT +15%
+          fill: "#FFFFFF"
+          fontSize: 14
+          fontFamily: Antonio
+          textAnchor: middle
+          offsetX: "15%"
+        layout:
+          width: 120
+          height: 40
+          offsetY: 5
+          anchor:
+            to: percentage_offsets.percent_label
+            element_point: topLeft
+            target_point: bottomLeft
+            
+      - id: percent_left
+        type: rectangle
+        appearance:
+          fill: "#9933CC"
+          stroke: "#FFFFFF"
+          strokeWidth: 1
+        text:
+          content: LEFT -15%
+          fill: "#FFFFFF"
+          fontSize: 14
+          fontFamily: Antonio
+          textAnchor: middle
+          offsetX: "-15%"
+        layout:
+          width: 120
+          height: 40
+          offsetX: 5
+          anchor:
+            to: percentage_offsets.percent_right
+            element_point: topLeft
+            target_point: topRight
+            
+      - id: percent_down
+        type: rectangle
+        appearance:
+          fill: "#CC3333"
+          stroke: "#FFFFFF"
+          strokeWidth: 1
+        text:
+          content: DOWN +25%
+          fill: "#FFFFFF"
+          fontSize: 14
+          fontFamily: Antonio
+          textAnchor: middle
+          offsetY: 25%
+        layout:
+          width: 120
+          height: 40
+          offsetY: 5
+          anchor:
+            to: percentage_offsets.percent_right
+            element_point: topLeft
+            target_point: bottomLeft
+            
+      - id: percent_up
+        type: rectangle
+        appearance:
+          fill: "#CC3333"
+          stroke: "#FFFFFF"
+          strokeWidth: 1
+        text:
+          content: UP -25%
+          fill: "#FFFFFF"
+          fontSize: 14
+          fontFamily: Antonio
+          textAnchor: middle
+          offsetY: "-25%"
+        layout:
+          width: 120
+          height: 40
+          offsetX: 5
+          anchor:
+            to: percentage_offsets.percent_down
+            element_point: topLeft
+            target_point: topRight
+            
+  - group_id: mixed_offsets
+    elements:
+      - id: mixed_label
+        type: text
+        text:
+          content: MIXED OFFSETS
+          fill: "#FFCC00"
+          fontSize: 24
+          fontFamily: Antonio
+          textTransform: uppercase
+        layout:
+          offsetY: 20
+          anchor:
+            to: percentage_offsets.percent_down
+            element_point: topLeft
+            target_point: bottomLeft
+            
+      - id: mixed_1
+        type: rectangle
+        appearance:
+          fill: "#006666"
+          stroke: "#FFFFFF"
+          strokeWidth: 1
+        text:
+          content: 12px, -20%
+          fill: "#FFFFFF"
+          fontSize: 14
+          fontFamily: Antonio
+          textAnchor: middle
+          offsetX: 12
+          offsetY: "-20%"
+        layout:
+          width: 120
+          height: 40
+          offsetY: 5
+          anchor:
+            to: mixed_offsets.mixed_label
+            element_point: topLeft
+            target_point: bottomLeft
+            
+      - id: mixed_2
+        type: rectangle
+        appearance:
+          fill: "#006666"
+          stroke: "#FFFFFF"
+          strokeWidth: 1
+        text:
+          content: "-8%, +6px"
+          fill: "#FFFFFF"
+          fontSize: 14
+          fontFamily: Antonio
+          textAnchor: middle
+          offsetX: "-8%"
+          offsetY: 6
+        layout:
+          width: 120
+          height: 40
+          offsetX: 5
+          anchor:
+            to: mixed_offsets.mixed_1
+            element_point: topLeft
+            target_point: topRight
+            
+  - group_id: anchor_combinations
+    elements:
+      - id: anchor_label
+        type: text
+        text:
+          content: TEXT ANCHOR + OFFSET
+          fill: "#FFCC00"
+          fontSize: 24
+          fontFamily: Antonio
+          textTransform: uppercase
+        layout:
+          offsetY: 20
+          anchor:
+            to: mixed_offsets.mixed_1
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: anchor_start
+        type: rectangle
+        appearance:
+          fill: "#996633"
+          stroke: "#FFFFFF"
+          strokeWidth: 1
+        text:
+          content: START +5px
+          fill: "#FFFFFF"
+          fontSize: 14
+          fontFamily: Antonio
+          textAnchor: start
+          offsetX: 5
+        layout:
+          width: 120
+          height: 40
+          offsetY: 5
+          anchor:
+            to: anchor_combinations.anchor_label
+            element_point: topLeft
+            target_point: bottomLeft
+            
+      - id: anchor_end
+        type: rectangle
+        appearance:
+          fill: "#996633"
+          stroke: "#FFFFFF"
+          strokeWidth: 1
+        text:
+          content: END -5px
+          fill: "#FFFFFF"
+          fontSize: 14
+          fontFamily: Antonio
+          textAnchor: end
+          offsetX: -5
+        layout:
+          width: 120
+          height: 40
+          offsetX: 5
+          anchor:
+            to: anchor_combinations.anchor_start
+            element_point: topLeft
+            target_point: topRight
+  - group_id: info_panel
+    elements:
+      - id: info_text
+        type: text
+        text:
+          content: >-
+            Text offsets allow precise positioning within elements. Positive
+            values move right/down, negative values move left/up. Percentages
+            are relative to element dimensions.
+          fill: "#99CCFF"
+          fontSize: 18
+          fontFamily: Antonio
+        layout:
+          offsetY: 20
+          anchor:
+            to: anchor_combinations.anchor_start
+            element_point: topLeft
+            target_point: bottomLeft

@@ -7,6 +7,8 @@ export interface LayoutElementProps {
   [key: string]: any;
   button?: any;
   textPadding?: number;
+  textOffsetX?: number | string;
+  textOffsetY?: number | string;
 }
 
 export interface LayoutConfigOptions {

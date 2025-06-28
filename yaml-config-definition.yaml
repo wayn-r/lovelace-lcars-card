@@ -54,6 +54,8 @@ groups: <array>                  # Required: Defines groups of elements. Element
           textTransform: <string>    # CSS text-transform. Default: "none".
           cutout: <boolean>          # For buttonized elements: True for "cut-out" text. Default: false.
           elbow_text_position: <string>  # For 'elbow' (buttonized): "arm" or "body". Default: "arm".
+          offsetX: <number | string_percentage>  # Optional: Horizontal text offset. e.g., 10 or "5%". Default: 0.
+          offsetY: <number | string_percentage>  # Optional: Vertical text offset. e.g., -5 or "10%". Default: 0.
 
           # --- Specific to 'top_header' type ---
           left_content: <string>     # Text for the left side of the top_header.
