@@ -76,7 +76,7 @@ groups:
           armHeight: 40
           fill: "#0099CC"
         layout:
-          width: 300
+          width: 145
           height: 55
           offsetY: 5
           anchor:
@@ -93,6 +93,7 @@ groups:
           textTransform: uppercase
           textAnchor: end
           fontSize: 22
+          offsetX: -5
         appearance:
           fill: "#0099CC"
         layout:
@@ -101,5 +102,62 @@ groups:
           offsetY: 5
           anchor:
             to: sub-header.elbow
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: sickbay
+        type: rectangle
+        text:
+          content: sickbay
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fontSize: 22
+          offsetX: -5
+        appearance:
+          fill: "#0099CC"
+        layout:
+          width: 130
+          height: 40
+          offsetY: 5
+          anchor:
+            to: buttons.environmental
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: ship_map
+        type: rectangle
+        text:
+          content: ship map
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fontSize: 22
+          offsetX: -5
+        appearance:
+          fill: "#0099CC"
+        layout:
+          width: 130
+          height: 40
+          offsetY: 5
+          anchor:
+            to: buttons.sickbay
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: sensors
+        type: rectangle
+        text:
+          content: sensors
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fontSize: 22
+          offsetX: -5
+        appearance:
+          fill: "#0099CC"
+        layout:
+          width: 130
+          height: 40
+          offsetY: 5
+          anchor:
+            to: buttons.ship_map
             element_point: topLeft
             target_point: bottomLeft

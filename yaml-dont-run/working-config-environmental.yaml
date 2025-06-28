@@ -1,0 +1,559 @@
+type: custom:lovelace-lcars-card
+title: USS Enterprise NCC-1701-D
+groups:
+  - group_id: top-header
+    elements:
+      - id: top-header
+        type: top_header
+        text:
+          left_content: U.S.S. HERCULES / WILLEMETTE CLASS
+          right_content: NCC-1901
+          fontWeight: bold
+          fill: "#7addee"
+        appearance:
+          fill: "#04bfd8"
+        layout:
+          width: 100%
+          height: 30
+          offsetX: 0
+          offsetY: 5
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: sub-header
+    elements:
+      - id: right-endcap
+        type: endcap
+        appearance:
+          fill: "#3ad9e7"
+          direction: right
+        layout:
+          height: 40
+          width: 10%
+          offsetY: 10
+          anchor:
+            to: top-header.top-header
+            element_point: topRight
+            target_point: bottomRight
+      - id: header
+        type: text
+        text:
+          content: evansville • IN
+          fill: "#5ca8ea"
+          text_anchor: end
+          textTransform: uppercase
+          fontFamily: Antonio
+          fontWeight: bold
+        layout:
+          height: 40
+          offsetX: -5
+          anchor:
+            to: sub-header.right-endcap
+            element_point: topRight
+            target_point: topLeft
+      - id: header-bar
+        type: rectangle
+        appearance:
+          fill: "#3ad9e7"
+        layout:
+          offsetX: 5
+          anchor:
+            to: sub-header.elbow
+            element_point: topLeft
+            target_point: topRight
+          stretch:
+            target1:
+              id: sub-header.header
+              edge: left
+              padding: -5
+            target2:
+              id: sub-header.right-endcap
+              edge: bottom
+      - id: elbow
+        type: elbow
+        appearance:
+          orientation: top-left
+          bodyWidth: 130
+          armHeight: 40
+          fill: "#12a4e3"
+        layout:
+          width: 145
+          height: 55
+          offsetY: 10
+          anchor:
+            to: top-header.top-header
+            element_point: topLeft
+            target_point: bottomLeft
+  - group_id: environmental-header
+    elements:
+      - id: elbow
+        type: elbow
+        appearance:
+          orientation: bottom-left
+          bodyWidth: 130
+          armHeight: 15
+          fill: "#5ca8ea"
+        text:
+          content: environmental
+          fontFamily: Antonio
+          textTransform: uppercase
+          elbow_text_position: body
+          textAnchor: end
+          fontSize: 22
+          offsetX: -5
+          offsetY: -40
+          fill: "#000000"
+        layout:
+          width: 145
+          height: 190
+          offsetY: 5
+          anchor:
+            to: sub-header.elbow
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: bar-1
+        type: rectangle
+        appearance:
+          fill: "#044ea9"
+        layout:
+          width: 10%
+          height: 15
+          offsetX: 5
+          anchor:
+            to: environmental-header.elbow
+            element_point: bottomLeft
+            target_point: bottomRight
+      - id: bar-2
+        type: rectangle
+        appearance:
+          fill: "#5ca8ea"
+        layout:
+          width: 60%
+          height: 15
+          offsetX: 5
+          anchor:
+            to: environmental-header.bar-1
+            element_point: bottomLeft
+            target_point: bottomRight
+      - id: bar-3
+        type: rectangle
+        appearance:
+          fill: "#86c8ff"
+        layout:
+          width: 25%
+          height: 15
+          offsetX: 5
+          anchor:
+            to: environmental-header.bar-2
+            element_point: bottomLeft
+            target_point: bottomRight
+      - id: bar-4
+        type: rectangle
+        appearance:
+          fill: "#12a4e3"
+        layout:
+          width: 300
+          height: 15
+          offsetX: 5
+          anchor:
+            to: environmental-header.bar-3
+            element_point: bottomLeft
+            target_point: bottomRight
+          stretch:
+            target1:
+              id: container
+              edge: right
+      - id: current-condition-value
+        type: text
+        appearance:
+          fill: "#3ad9e7"
+        text:
+          content: sunny
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+        layout:
+          height: 25
+          offsetX: 10
+          anchor:
+            to: environmental-header.current-condition-label
+            element_point: topLeft
+            target_point: topRight
+      - id: current-condition-label
+        type: rectangle
+        appearance:
+          fill: "#5ca8ea"
+        text:
+          content: current conditions
+          fontSize: 20
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fill: "#000000"
+          offsetX: -5
+          offsetY: 3
+        layout:
+          height: 25
+          width: 170
+          offsetY: -160
+          anchor:
+            to: environmental-header.bar-2
+            element_point: bottomLeft
+            target_point: topRight
+      - id: current-condition-label-2
+        type: rectangle
+        appearance:
+          fill: "#5ca8ea"
+        layout:
+          height: 25
+          width: 8
+          offsetX: -3
+          anchor:
+            to: environmental-header.current-condition-label
+            element_point: topRight
+            target_point: topLeft
+      - id: current-temp-value
+        type: text
+        appearance:
+          fill: "#5ca8ea"
+        text:
+          content: 103F (97F)
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+        layout:
+          height: 25
+          offsetX: 10
+          anchor:
+            to: environmental-header.current-temp-label
+            element_point: topLeft
+            target_point: topRight
+      - id: current-temp-label
+        type: rectangle
+        appearance:
+          fill: "#12a4e3"
+        text:
+          content: temperature (actual)
+          fontSize: 20
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fill: "#000000"
+          offsetX: -5
+          offsetY: 3
+        layout:
+          height: 25
+          width: 170
+          offsetY: 5
+          anchor:
+            to: environmental-header.current-condition-label
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: current-temp-label-2
+        type: rectangle
+        appearance:
+          fill: "#12a4e3"
+        layout:
+          height: 25
+          width: 8
+          offsetX: -3
+          anchor:
+            to: environmental-header.current-temp-label
+            element_point: topRight
+            target_point: topLeft
+      - id: precipitation-chance-value
+        type: text
+        appearance:
+          fill: "#5ca8ea"
+        text:
+          content: 10%
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+        layout:
+          height: 25
+          offsetX: 10
+          anchor:
+            to: environmental-header.precipitation-chance-label
+            element_point: topLeft
+            target_point: topRight
+      - id: precipitation-chance-label
+        type: rectangle
+        appearance:
+          fill: "#12a4e3"
+        text:
+          content: precipitation chance
+          fontSize: 20
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fill: "#000000"
+          offsetX: -5
+          offsetY: 3
+        layout:
+          height: 25
+          width: 170
+          offsetY: 5
+          anchor:
+            to: environmental-header.current-temp-label
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: precipitation-chance-label-2
+        type: rectangle
+        appearance:
+          fill: "#12a4e3"
+        layout:
+          height: 25
+          width: 8
+          offsetX: -3
+          anchor:
+            to: environmental-header.precipitation-chance-label
+            element_point: topRight
+            target_point: topLeft
+      - id: uv-index-value
+        type: text
+        appearance:
+          fill: "#044ea9"
+        text:
+          content: 30%
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+        layout:
+          height: 25
+          offsetX: 10
+          anchor:
+            to: environmental-header.uv-index-label
+            element_point: topLeft
+            target_point: topRight
+      - id: uv-index-label
+        type: rectangle
+        appearance:
+          fill: "#225782"
+        text:
+          content: uv index
+          fontSize: 20
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fill: "#000000"
+          offsetX: -5
+          offsetY: 3
+        layout:
+          height: 25
+          width: 170
+          offsetY: 5
+          anchor:
+            to: environmental-header.precipitation-chance-label
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: uv-index-label-2
+        type: rectangle
+        appearance:
+          fill: "#225782"
+        layout:
+          height: 25
+          width: 8
+          offsetX: -3
+          anchor:
+            to: environmental-header.uv-index-label
+            element_point: topRight
+            target_point: topLeft
+      - id: air-quality-index-value
+        type: text
+        appearance:
+          fill: "#044ea9"
+        text:
+          content: "100"
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+        layout:
+          height: 25
+          offsetX: 10
+          anchor:
+            to: environmental-header.air-quality-index-label
+            element_point: topLeft
+            target_point: topRight
+      - id: air-quality-index-label
+        type: rectangle
+        appearance:
+          fill: "#225782"
+        text:
+          content: air quality index
+          fontSize: 20
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fill: "#000000"
+          offsetX: -5
+          offsetY: 3
+        layout:
+          height: 25
+          width: 170
+          offsetY: 5
+          anchor:
+            to: environmental-header.uv-index-label
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: air-quality-index-label-2
+        type: rectangle
+        appearance:
+          fill: "#225782"
+        layout:
+          height: 25
+          width: 8
+          offsetX: -3
+          anchor:
+            to: environmental-header.air-quality-index-label
+            element_point: topRight
+            target_point: topLeft
+      - id: wind-value
+        type: text
+        appearance:
+          fill: "#04bfd8"
+        text:
+          content: 15 (NNW)
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+        layout:
+          height: 25
+          offsetX: 10
+          anchor:
+            to: environmental-header.wind-label
+            element_point: topLeft
+            target_point: topRight
+      - id: wind-label
+        type: rectangle
+        appearance:
+          fill: "#04bfd8"
+        text:
+          content: wind speed (direction)
+          fontSize: 20
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fill: "#000000"
+          offsetX: -5
+          offsetY: 3
+        layout:
+          height: 25
+          width: 170
+          offsetY: 5
+          anchor:
+            to: environmental-header.air-quality-index-label
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: wind-label-2
+        type: rectangle
+        appearance:
+          fill: "#04bfd8"
+        layout:
+          height: 25
+          width: 8
+          offsetX: -3
+          anchor:
+            to: environmental-header.wind-label
+            element_point: topRight
+            target_point: topLeft
+  - group_id: environmental-buttons
+    elements:
+      - id: main
+        type: elbow
+        text:
+          content: main
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fontSize: 22
+          offsetX: -5
+          offsetY: 18
+          elbow_text_position: body
+          fill: "#000000"
+        appearance:
+          fill:
+            hover: "#00CCFF"
+            default: "#00ffff"
+            active: "#0066AA"
+            orientation: top-left
+          bodyWidth: 130
+          armHeight: 15
+        layout:
+          width: 145
+          height: 80
+          offsetY: 10
+          anchor:
+            to: environmental-header.elbow
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: sickbay
+        type: rectangle
+        text:
+          content: sickbay
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fontSize: 22
+          offsetX: -5
+          fill: "#000000"
+        appearance:
+          fill:
+            hover: "#00CCFF"
+            default: "#7addee"
+            active: "#0066AA"
+        layout:
+          width: 130
+          height: 40
+          offsetY: 5
+          anchor:
+            to: environmental-buttons.main
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: ship_map
+        type: rectangle
+        text:
+          content: ship map
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fontSize: 22
+          offsetX: -5
+          fill: "#000000"
+        appearance:
+          fill:
+            hover: "#00CCFF"
+            default: "#9ec9ce"
+            active: "#0066AA"
+        layout:
+          width: 130
+          height: 40
+          offsetY: 5
+          anchor:
+            to: environmental-buttons.sickbay
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: sensors
+        type: rectangle
+        text:
+          content: sensors
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fontSize: 22
+          offsetX: -5
+          fill: "#000000"
+        appearance:
+          fill:
+            hover: "#00CCFF"
+            default: "#9ec9ce"
+            active: "#0066AA"
+        layout:
+          width: 130
+          height: 40
+          offsetY: 5
+          anchor:
+            to: environmental-buttons.ship_map
+            element_point: topLeft
+            target_point: bottomLeft

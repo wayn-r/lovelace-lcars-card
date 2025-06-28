@@ -105,7 +105,8 @@ lovelace-lcars-card/
     ├── 10-complete-dashboard.yaml
     ├── 2-navigation-panel.yaml
     ├── 23-url-and-more-info-actions.yaml
-    └── working-config.yaml
+    ├── working-config-environmental.yaml
+    └── working-config-main.yaml
 ```
 
 # Codebase Files
