@@ -46,6 +46,7 @@ const textSchema = z.object({
   textAnchor: z.enum(['start', 'middle', 'end']).optional(),
   dominantBaseline: z.string().optional(),
   textTransform: z.string().optional(),
+  cutout: z.boolean().optional(),
   elbow_text_position: z.enum(['arm', 'body']).optional(),
   left_content: z.string().optional(),
   right_content: z.string().optional(),

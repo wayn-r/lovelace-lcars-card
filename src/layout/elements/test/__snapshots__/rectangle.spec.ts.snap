@@ -5,14 +5,14 @@ exports[`RectangleElement > render > Non-Button Rendering > should handle corner
   "_$litType$": 2,
   "strings": [
     "
-            <g id="",
+                <g id="",
     "">
-                ",
+                    ",
     "
-                ",
+                    ",
     "
-            </g>
-        ",
+                </g>
+            ",
   ],
   "values": [
     "rect-cornerRadius",
@@ -52,14 +52,14 @@ exports[`RectangleElement > render > Non-Button Rendering > should handle zero d
   "_$litType$": 2,
   "strings": [
     "
-            <g id="",
+                <g id="",
     "">
-                ",
+                    ",
     "
-                ",
+                    ",
     "
-            </g>
-        ",
+                </g>
+            ",
   ],
   "values": [
     "rect-zero-w",
@@ -107,14 +107,14 @@ exports[`RectangleElement > render > Non-Button Rendering > should handle zero d
   "_$litType$": 2,
   "strings": [
     "
-            <g id="",
+                <g id="",
     "">
-                ",
+                    ",
     "
-                ",
+                    ",
     "
-            </g>
-        ",
+                </g>
+            ",
   ],
   "values": [
     "rect-zero-h",
@@ -162,14 +162,14 @@ exports[`RectangleElement > render > Non-Button Rendering > should prioritize rx
   "_$litType$": 2,
   "strings": [
     "
-            <g id="",
+                <g id="",
     "">
-                ",
+                    ",
     "
-                ",
+                    ",
     "
-            </g>
-        ",
+                </g>
+            ",
   ],
   "values": [
     "rect-rx-priority",
@@ -209,14 +209,14 @@ exports[`RectangleElement > render > Non-Button Rendering > should render a basi
   "_$litType$": 2,
   "strings": [
     "
-            <g id="",
+                <g id="",
     "">
-                ",
+                    ",
     "
-                ",
+                    ",
     "
-            </g>
-        ",
+                </g>
+            ",
   ],
   "values": [
     "rect-default-props",
@@ -256,14 +256,14 @@ exports[`RectangleElement > render > Non-Button Rendering > should render with s
   "_$litType$": 2,
   "strings": [
     "
-            <g id="",
+                <g id="",
     "">
-                ",
+                    ",
     "
-                ",
+                    ",
     "
-            </g>
-        ",
+                </g>
+            ",
   ],
   "values": [
     "rect-styled",

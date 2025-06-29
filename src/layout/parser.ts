@@ -28,6 +28,7 @@ interface ElementProps {
   textAnchor?: 'start' | 'middle' | 'end';
   dominantBaseline?: string;
   textTransform?: string;
+  cutout?: boolean;
   elbowTextPosition?: 'arm' | 'body';
   leftContent?: string;
   rightContent?: string;
@@ -162,6 +163,7 @@ export class ConfigParser {
     if (text.textAnchor !== undefined) props.textAnchor = text.textAnchor;
     if (text.dominantBaseline !== undefined) props.dominantBaseline = text.dominantBaseline;
     if (text.textTransform !== undefined) props.textTransform = text.textTransform;
+    if (text.cutout !== undefined) props.cutout = text.cutout;
     if (text.elbow_text_position !== undefined) props.elbowTextPosition = text.elbow_text_position;
     if (text.left_content !== undefined) props.leftContent = text.left_content;
     if (text.right_content !== undefined) props.rightContent = text.right_content;

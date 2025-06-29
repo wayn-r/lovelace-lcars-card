@@ -5,14 +5,14 @@ exports[`ElbowElement > render > Non-Button Rendering > should render a basic el
   "_$litType$": 2,
   "strings": [
     "
-            <g id="",
+                <g id="",
     "">
-                ",
+                    ",
     "
-                ",
+                    ",
     "
-            </g>
-        ",
+                </g>
+            ",
   ],
   "values": [
     "el-render",
@@ -52,14 +52,14 @@ exports[`ElbowElement > render > Non-Button Rendering > should render correctly 
   "_$litType$": 2,
   "strings": [
     "
-            <g id="",
+                <g id="",
     "">
-                ",
+                    ",
     "
-                ",
+                    ",
     "
-            </g>
-        ",
+                </g>
+            ",
   ],
   "values": [
     "el-render",
@@ -99,14 +99,14 @@ exports[`ElbowElement > render > Non-Button Rendering > should render correctly 
   "_$litType$": 2,
   "strings": [
     "
-            <g id="",
+                <g id="",
     "">
-                ",
+                    ",
     "
-                ",
+                    ",
     "
-            </g>
-        ",
+                </g>
+            ",
   ],
   "values": [
     "el-render",
@@ -146,14 +146,14 @@ exports[`ElbowElement > render > Non-Button Rendering > should render correctly 
   "_$litType$": 2,
   "strings": [
     "
-            <g id="",
+                <g id="",
     "">
-                ",
+                    ",
     "
-                ",
+                    ",
     "
-            </g>
-        ",
+                </g>
+            ",
   ],
   "values": [
     "el-render",
@@ -193,14 +193,14 @@ exports[`ElbowElement > render > Non-Button Rendering > should render correctly 
   "_$litType$": 2,
   "strings": [
     "
-            <g id="",
+                <g id="",
     "">
-                ",
+                    ",
     "
-                ",
+                    ",
     "
-            </g>
-        ",
+                </g>
+            ",
   ],
   "values": [
     "el-render",
@@ -240,14 +240,14 @@ exports[`ElbowElement > render > Non-Button Rendering > should render with speci
   "_$litType$": 2,
   "strings": [
     "
-            <g id="",
+                <g id="",
     "">
-                ",
+                    ",
     "
-                ",
+                    ",
     "
-            </g>
-        ",
+                </g>
+            ",
   ],
   "values": [
     "el-render",

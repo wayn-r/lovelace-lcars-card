@@ -8,6 +8,7 @@ lovelace-lcars-card/
 ├── TODO.md
 ├── component-diagram.mmd
 ├── dist/
+├── entity-text-details-widget-requirements.md
 ├── flatten-codebase.js
 ├── git-history-diff.js
 ├── notepads/
@@ -124,24 +125,107 @@ lovelace-lcars-card/
 
 ```markdown
 ## BUGS
+### Elements
+- percentage height/width doesn't seem to be working for elbows
+- text needs to be vertically centered properly by default inside elements
+- text attributes in elements need edge constraint handling
+
+### YAML Config
+- this runs extremely slow when the config gets complex
+    - the current solution is to develop widgets that encompass most details, but this isn't helpful for users that want to make their own dashboards
+
 ## TODOs:
+### Widgets
+- implement notification widget from old version
+- implement environmental header weather widget (temp, current conditions, etc)
+    - this should have:
+        - an empty leading rectangle, 
+        - a rectangle with the stat header inside, and 
+            - this should be clickable to open the referenced entity
+        - the data
+            - the data should be clickable to update the units
+- implement the environmental header widget which will contain:
+    - environmental header weather widgets
+    - an environmentals configured version of the notification widget
+    - an icon for current conditions (minimal iconography-styled radar maybe in the future?)
 
-### Tests
-- Implement a way to automate testing to ensure updates don't break existing functionality.
-
-### Components
-- implement headerbar as a standalone element
-- implement pill element
+### Appearance
+- theming support
 
 ### Layout
+- anchor logic needs reworked to adapt for multiple-element anchor positioning
+    - for example, an element should be able to anchor on some side of one element and another side of another
+    - this allows for smooth, cascaded origin points
+
 - implement text features:
     - cutout and dominantBaseline not implemented
     - fontWeight doesn't seem to work with smaller values - that might be inherent to fontWeight
     - textTransform only seems to work with uppercase and lowercase; integrate css logic or add other transforms
 - determine an appropriate way to handle groups of elements that curve into other groups of elements. visually, these look like they might be the same concept to group into a larger section
+```
 
-### Animation
-- add interpolated fade transition between stateful fill changes
+## File: entity-text-details-widget-requirements.md
+
+```markdown
+# Requirements for `entity-text-details` Widget
+
+## General Layout
+The widget will have 3 reusable components:
+- a small, leading rectangle for aesthetic purposes
+- a second rectangle containing entity or attribute name (configurable)
+- a text element containing entity or attribute data (configurable)
+
+### Leading Rectangle Details
+the leading rectangle should default to:
+- 8px wide (configurable by user)
+- height not independently configurable
+
+### Entity or Attribute Label Rectangle Details
+this element will be another rectangle that anchors:
+- to: leading rectangle
+- element_point: topLeft
+- target_point: topRight
+- offsetX: 3px (configurable by user)
+
+this element will contain text as:
+- the name of the entity or attribute selected by the user, or
+- a configurable string
+
+the text:
+- height will be configurable independently of the total widget height
+- font, weight, and fill will be configurable
+- default height will be 20
+    - user configurability should override this even if they use fontSize (which is normally superceded by using the height attribute)
+
+the rectangle's height will not be independently configurable
+
+### Entity or Attribute Data Text Details
+this element will be a text element that anchors:
+- to: label rectangle
+- element_point: topLeft
+- target_point: topRight
+- offsetX: 10px (configurable by user)
+
+this element will display:
+- the data of the entity or attribute selected by the user, or
+- a configurable string
+
+configurability:
+- height will not be independently configurable
+- the font family, weight, and fill will be configurable
+
+## General Configurability
+
+the height will be configurable for the widget as a whole which will set the height of:
+- leading rectangle,
+- entity/attribute label rectangle, and
+- entity/attribute text element
+
+the default height will be 25
+
+## Default Interactivity
+the entity/attribute label should default to opening the entity/attribute "more-info" when clicked
+this should have the option to be overridden if the user sets an action-config for it
 ```
 
 ## File: flatten-codebase.js
@@ -2115,8 +2199,6 @@ export abstract class LayoutElement {
             (isHorizontal ? 'centerLeft' : 'topCenter');
     }
 
-
-
     public getRelativeAnchorPosition(anchorPoint: string, width?: number, height?: number): { x: number; y: number } {
         const w = width !== undefined ? width : this.layout.width;
         const h = height !== undefined ? height : this.layout.height;
@@ -2142,20 +2224,53 @@ export abstract class LayoutElement {
     render(): SVGTemplateResult | null {
         if (!this.layout.calculated) return null;
 
-        const colors = this.resolveElementColors();
         const shape = this.renderShape();
-
         if (!shape) return null;
 
-        const textPosition = this.getTextPosition();
-        const textElement = this.renderText(textPosition.x, textPosition.y, colors);
+        if (this.props.cutout && this.hasText()) {
+            const textPosition = this.getTextPosition();
+            const maskId = `${this.id}__cutout-mask`;
 
-        return svg`
-            <g id="${this.id}">
-                ${shape}
-                ${textElement}
-            </g>
-        `;
+            const textForMask = svg`<text
+                x="${textPosition.x}"
+                y="${textPosition.y}"
+                fill="black"
+                font-family="${this.props.fontFamily || 'sans-serif'}"
+                font-size="${this.props.fontSize || 16}px"
+                font-weight="${this.props.fontWeight || 'normal'}"
+                letter-spacing="${this.props.letterSpacing || 'normal'}"
+                text-anchor="${this.props.textAnchor || 'middle'}"
+                dominant-baseline="${this.props.dominantBaseline || 'middle'}"
+                style="pointer-events: none; text-transform: ${this.props.textTransform || 'none'};"
+            >
+                ${this.props.text}
+            </text>`;
+
+            return svg`
+                <g id="${this.id}">
+                    <defs>
+                        <mask id="${maskId}">
+                            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                            ${textForMask}
+                        </mask>
+                    </defs>
+                    <g mask="url(#${maskId})">
+                        ${shape}
+                    </g>
+                </g>
+            `;
+        } else {
+            const colors = this.resolveElementColors();
+            const textPosition = this.getTextPosition();
+            const textElement = this.renderText(textPosition.x, textPosition.y, colors);
+
+            return svg`
+                <g id="${this.id}">
+                    ${shape}
+                    ${textElement}
+                </g>
+            `;
+        }
     }
 
     animate(property: string, value: any, duration: number = 0.5): void {
@@ -2278,12 +2393,12 @@ export abstract class LayoutElement {
         this.cleanupAnimations();
     }
 
-    protected hasNonButtonText(): boolean {
+    protected hasText(): boolean {
         return Boolean(this.props.text && this.props.text.trim() !== '');
     }
 
-    protected renderNonButtonText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
-        if (!this.hasNonButtonText()) return null;
+    protected renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
+        if (!this.hasText()) return null;
 
         return svg`
           <text
@@ -2353,14 +2468,6 @@ export abstract class LayoutElement {
         }
         
         return parseFloat(offset as string) || 0;
-    }
-
-    protected hasText(): boolean {
-        return this.hasNonButtonText();
-    }
-
-    protected renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
-        return this.renderNonButtonText(x, y, colors);
     }
 
     private hasButtonConfig(): boolean {
@@ -6803,6 +6910,7 @@ interface ElementProps {
   textAnchor?: 'start' | 'middle' | 'end';
   dominantBaseline?: string;
   textTransform?: string;
+  cutout?: boolean;
   elbowTextPosition?: 'arm' | 'body';
   leftContent?: string;
   rightContent?: string;
@@ -6937,6 +7045,7 @@ export class ConfigParser {
     if (text.textAnchor !== undefined) props.textAnchor = text.textAnchor;
     if (text.dominantBaseline !== undefined) props.dominantBaseline = text.dominantBaseline;
     if (text.textTransform !== undefined) props.textTransform = text.textTransform;
+    if (text.cutout !== undefined) props.cutout = text.cutout;
     if (text.elbow_text_position !== undefined) props.elbowTextPosition = text.elbow_text_position;
     if (text.left_content !== undefined) props.leftContent = text.left_content;
     if (text.right_content !== undefined) props.rightContent = text.right_content;
@@ -10246,6 +10355,7 @@ const textSchema = z.object({
   textAnchor: z.enum(['start', 'middle', 'end']).optional(),
   dominantBaseline: z.string().optional(),
   textTransform: z.string().optional(),
+  cutout: z.boolean().optional(),
   elbow_text_position: z.enum(['arm', 'body']).optional(),
   left_content: z.string().optional(),
   right_content: z.string().optional(),

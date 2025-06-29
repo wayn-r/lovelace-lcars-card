@@ -692,8 +692,6 @@ export abstract class LayoutElement {
             (isHorizontal ? 'centerLeft' : 'topCenter');
     }
 
-
-
     public getRelativeAnchorPosition(anchorPoint: string, width?: number, height?: number): { x: number; y: number } {
         const w = width !== undefined ? width : this.layout.width;
         const h = height !== undefined ? height : this.layout.height;
@@ -719,20 +717,53 @@ export abstract class LayoutElement {
     render(): SVGTemplateResult | null {
         if (!this.layout.calculated) return null;
 
-        const colors = this.resolveElementColors();
         const shape = this.renderShape();
-
         if (!shape) return null;
 
-        const textPosition = this.getTextPosition();
-        const textElement = this.renderText(textPosition.x, textPosition.y, colors);
+        if (this.props.cutout && this.hasText()) {
+            const textPosition = this.getTextPosition();
+            const maskId = `${this.id}__cutout-mask`;
 
-        return svg`
-            <g id="${this.id}">
-                ${shape}
-                ${textElement}
-            </g>
-        `;
+            const textForMask = svg`<text
+                x="${textPosition.x}"
+                y="${textPosition.y}"
+                fill="black"
+                font-family="${this.props.fontFamily || 'sans-serif'}"
+                font-size="${this.props.fontSize || 16}px"
+                font-weight="${this.props.fontWeight || 'normal'}"
+                letter-spacing="${this.props.letterSpacing || 'normal'}"
+                text-anchor="${this.props.textAnchor || 'middle'}"
+                dominant-baseline="${this.props.dominantBaseline || 'middle'}"
+                style="pointer-events: none; text-transform: ${this.props.textTransform || 'none'};"
+            >
+                ${this.props.text}
+            </text>`;
+
+            return svg`
+                <g id="${this.id}">
+                    <defs>
+                        <mask id="${maskId}">
+                            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                            ${textForMask}
+                        </mask>
+                    </defs>
+                    <g mask="url(#${maskId})">
+                        ${shape}
+                    </g>
+                </g>
+            `;
+        } else {
+            const colors = this.resolveElementColors();
+            const textPosition = this.getTextPosition();
+            const textElement = this.renderText(textPosition.x, textPosition.y, colors);
+
+            return svg`
+                <g id="${this.id}">
+                    ${shape}
+                    ${textElement}
+                </g>
+            `;
+        }
     }
 
     animate(property: string, value: any, duration: number = 0.5): void {
@@ -855,12 +886,12 @@ export abstract class LayoutElement {
         this.cleanupAnimations();
     }
 
-    protected hasNonButtonText(): boolean {
+    protected hasText(): boolean {
         return Boolean(this.props.text && this.props.text.trim() !== '');
     }
 
-    protected renderNonButtonText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
-        if (!this.hasNonButtonText()) return null;
+    protected renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
+        if (!this.hasText()) return null;
 
         return svg`
           <text
@@ -930,14 +961,6 @@ export abstract class LayoutElement {
         }
         
         return parseFloat(offset as string) || 0;
-    }
-
-    protected hasText(): boolean {
-        return this.hasNonButtonText();
-    }
-
-    protected renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
-        return this.renderNonButtonText(x, y, colors);
     }
 
     private hasButtonConfig(): boolean {
