@@ -164,6 +164,7 @@ const entityTextLabelSchema = z.object({
   fontWeight: z.union([z.string(), z.number()]).optional(),
   fill: colorValueSchema.optional(),
   offsetX: z.number().optional(),
+  textTransform: z.string().optional(),
 });
 
 const entityTextValueSchema = z.object({
@@ -172,6 +173,7 @@ const entityTextValueSchema = z.object({
   fontWeight: z.union([z.string(), z.number()]).optional(),
   fill: colorValueSchema.optional(),
   offsetX: z.number().optional(),
+  textTransform: z.string().optional(),
 });
 
 // -----------------------------------------------------------------------------

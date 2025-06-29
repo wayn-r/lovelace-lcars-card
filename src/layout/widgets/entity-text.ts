@@ -16,6 +16,7 @@ export interface EntityTextLabelConfig {
   fontWeight?: string | number;
   fill?: ColorValue;
   offsetX?: number;
+  textTransform?: string;
 }
 
 export interface EntityTextValueConfig {
@@ -24,6 +25,7 @@ export interface EntityTextValueConfig {
   fontWeight?: string | number;
   fill?: ColorValue;
   offsetX?: number;
+  textTransform?: string;
 }
 
 export interface EntityTextAppearanceConfig {
@@ -99,10 +101,11 @@ export class EntityTextWidget extends Widget {
         text: labelText,
         fontFamily: labelConfig.fontFamily || 'Antonio',
         fontWeight: labelConfig.fontWeight || 'normal',
-        textTransform: 'uppercase',
+        textTransform: labelConfig.textTransform || 'uppercase',
         fontSize: labelConfig.height || EntityTextWidget.DEFAULT_LABEL_HEIGHT,
         textAnchor: 'end',
         textOffsetX: -5,
+        textColor: labelConfig.fill,
         cutout: true
       },
       {
@@ -131,9 +134,10 @@ export class EntityTextWidget extends Widget {
         fill: valueConfig.fill || '#FFFFFF',
         fontFamily: valueConfig.fontFamily || 'Antonio',
         fontWeight: valueConfig.fontWeight || 'normal',
-        height: height
+        textTransform: valueConfig.textTransform || 'uppercase'
       },
       {
+        height: height,
         anchor: {
           anchorTo: labelRect.id,
           anchorPoint: 'topLeft',

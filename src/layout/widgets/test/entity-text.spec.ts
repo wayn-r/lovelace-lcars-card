@@ -104,7 +104,7 @@ describe('EntityTextWidget', () => {
       
       expect(leadingRect.props.height).toBe(40);
       expect(labelRect.props.height).toBe(40);
-      expect(valueText.props.height).toBe(40);
+      expect(valueText.layoutConfig.height).toBe(40);
     });
   });
 

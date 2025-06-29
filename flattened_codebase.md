@@ -8425,6 +8425,7 @@ export interface EntityTextLabelConfig {
   fontWeight?: string | number;
   fill?: ColorValue;
   offsetX?: number;
+  textTransform?: string;
 }
 
 export interface EntityTextValueConfig {
@@ -8433,6 +8434,7 @@ export interface EntityTextValueConfig {
   fontWeight?: string | number;
   fill?: ColorValue;
   offsetX?: number;
+  textTransform?: string;
 }
 
 export interface EntityTextAppearanceConfig {
@@ -8506,12 +8508,14 @@ export class EntityTextWidget extends Widget {
         width: labelConfig.width || EntityTextWidget.DEFAULT_LABEL_WIDTH,
         height: height,
         text: labelText,
-        textColor: labelConfig.fill || '#FFFFFF',
         fontFamily: labelConfig.fontFamily || 'Antonio',
         fontWeight: labelConfig.fontWeight || 'normal',
+        textTransform: labelConfig.textTransform || 'uppercase',
         fontSize: labelConfig.height || EntityTextWidget.DEFAULT_LABEL_HEIGHT,
         textAnchor: 'end',
-        textOffsetX: -5
+        textOffsetX: -5,
+        textColor: labelConfig.fill,
+        cutout: true
       },
       {
         anchor: {
@@ -8539,9 +8543,10 @@ export class EntityTextWidget extends Widget {
         fill: valueConfig.fill || '#FFFFFF',
         fontFamily: valueConfig.fontFamily || 'Antonio',
         fontWeight: valueConfig.fontWeight || 'normal',
-        height: height
+        textTransform: valueConfig.textTransform || 'uppercase'
       },
       {
+        height: height,
         anchor: {
           anchorTo: labelRect.id,
           anchorPoint: 'topLeft',
@@ -8821,7 +8826,7 @@ describe('EntityTextWidget', () => {
       
       expect(leadingRect.props.height).toBe(40);
       expect(labelRect.props.height).toBe(40);
-      expect(valueText.props.height).toBe(40);
+      expect(valueText.layoutConfig.height).toBe(40);
     });
   });
 
@@ -11137,6 +11142,7 @@ const entityTextLabelSchema = z.object({
   fontWeight: z.union([z.string(), z.number()]).optional(),
   fill: colorValueSchema.optional(),
   offsetX: z.number().optional(),
+  textTransform: z.string().optional(),
 });
 
 const entityTextValueSchema = z.object({
@@ -11145,6 +11151,7 @@ const entityTextValueSchema = z.object({
   fontWeight: z.union([z.string(), z.number()]).optional(),
   fill: colorValueSchema.optional(),
   offsetX: z.number().optional(),
+  textTransform: z.string().optional(),
 });
 
 // -----------------------------------------------------------------------------

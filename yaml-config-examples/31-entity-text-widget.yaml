@@ -1,0 +1,67 @@
+type: custom:lovelace-lcars-card
+card_title: Entity Text Widget
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Entity Text widget
+          right_content: example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: widgets
+    elements:
+      - id: widget_1
+        type: entity-text-widget
+        entity: light.kitchen_sink_light
+        label:
+          fontFamily: Antonio
+        value:
+          fontFamily: Antonio
+          fill: "#0099FF"
+        layout:
+          height: 30
+          offsetY: 10
+          offsetX: 5
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: widget_2
+        type: entity-text-widget
+        entity: light.kitchen_sink_light
+        label:
+          content: Sink Light
+          height: 15
+          fontFamily: Antonio
+          fontWeight: Bold
+          fill: "#00CC99"
+          offsetX: 8
+          width: 100
+        value:
+          content: im a light
+          fontFamily: Antonio
+          fontWeight: bold
+          offsetX: 15
+          fill: "#00CC99"
+        appearance:
+          fill: "#0099CC"
+        layout:
+          height: 50
+          offsetY: 5
+          anchor:
+            to: widgets.widget_1
+            element_point: topLeft
+            target_point: bottomLeft
