@@ -6,6 +6,7 @@ import { WidgetRegistry } from './registry.js';
 import { Button } from '../../utils/button.js';
 import { EntityValueResolver } from '../../utils/entity-value-resolver.js';
 import { ColorValue } from '../../types.js';
+import { HomeAssistant } from 'custom-card-helpers';
 
 export interface EntityTextLabelConfig {
   content?: string;
@@ -31,7 +32,7 @@ export interface EntityTextAppearanceConfig {
 
 export class EntityTextWidget extends Widget {
   private static readonly LEADING_RECT_WIDTH = 8;
-  private static readonly DEFAULT_LABEL_WIDTH = 80;
+  private static readonly DEFAULT_LABEL_WIDTH = 200;
   private static readonly DEFAULT_LABEL_HEIGHT = 20;
   private static readonly DEFAULT_HEIGHT = 25;
   private static readonly DEFAULT_LABEL_OFFSET_X = 3;
@@ -99,9 +100,7 @@ export class EntityTextWidget extends Widget {
         textColor: labelConfig.fill || '#FFFFFF',
         fontFamily: labelConfig.fontFamily || 'Antonio',
         fontWeight: labelConfig.fontWeight || 'normal',
-        fontSize: labelConfig.height || EntityTextWidget.DEFAULT_LABEL_HEIGHT,
-        textAnchor: 'middle',
-        dominantBaseline: 'middle'
+        fontSize: labelConfig.height || EntityTextWidget.DEFAULT_LABEL_HEIGHT
       },
       {
         anchor: {
@@ -118,13 +117,14 @@ export class EntityTextWidget extends Widget {
   }
 
   private createValueText(labelRect: RectangleElement, height: number): TextElement {
-    const valueText = this.resolveValueText();
     const valueConfig = this.getValueConfig();
 
-    return new TextElement(
+    const textContent = valueConfig.content || this.resolveValueText();
+
+    const valueText = new TextElement(
       `${this.id}_value_text`,
       {
-        text: valueText,
+        text: textContent,
         fill: valueConfig.fill || '#FFFFFF',
         fontFamily: valueConfig.fontFamily || 'Antonio',
         fontWeight: valueConfig.fontWeight || 'normal',
@@ -142,6 +142,45 @@ export class EntityTextWidget extends Widget {
       this.requestUpdateCallback,
       this.getShadowElement
     );
+
+    // Inject dynamic text updating when content is resolved from an entity.
+    if (!valueConfig.content) {
+      const entityId = this.props.entity || '';
+      const attribute = this.props.attribute || 'state';
+
+      valueText.updateHass = function (this: typeof valueText, hass?: HomeAssistant): void {
+        TextElement.prototype.updateHass.call(this, hass);
+
+        const newValue = EntityValueResolver.resolveEntityValue(
+          { entity: entityId, attribute, fallback: 'Unavailable' },
+          hass
+        );
+
+        if (newValue !== (this as unknown as TextElement).props.text) {
+          (this as unknown as TextElement).props.text = newValue;
+          this.requestUpdateCallback?.();
+        }
+      } as any;
+
+      // Add entity change detection to integrate with ColorResolver's change detection system
+      valueText.entityChangesDetected = function (this: typeof valueText, hass: HomeAssistant): boolean {
+        const newValue = EntityValueResolver.resolveEntityValue(
+          { entity: entityId, attribute, fallback: 'Unavailable' },
+          hass
+        );
+
+        const hasChanged = newValue !== (this as unknown as TextElement).props.text;
+        
+        if (hasChanged) {
+          (this as unknown as TextElement).props.text = newValue;
+          return true;
+        }
+
+        return false;
+      } as any;
+    }
+
+    return valueText;
   }
 
   private getLabelConfig(): EntityTextLabelConfig {
@@ -172,15 +211,9 @@ export class EntityTextWidget extends Widget {
   }
 
   private resolveValueText(): string {
-    const valueConfig = this.getValueConfig();
-    
-    if (valueConfig.content) {
-      return valueConfig.content;
-    }
-
     const entityId = this.props.entity || '';
     const attribute = this.props.attribute || 'state';
-    
+
     return EntityValueResolver.resolveEntityValue(
       {
         entity: entityId,

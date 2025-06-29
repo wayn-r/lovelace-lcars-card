@@ -12,13 +12,11 @@ export class EntityValueResolver {
     hass?: HomeAssistant
   ): string {
     if (!hass || !config.entity) {
-      console.debug(`[EntityValueResolver] Missing HASS (${!!hass}) or entity ID (${config.entity})`);
       return config.fallback || 'Unknown';
     }
 
     const entityStateObj = hass.states[config.entity];
     if (!entityStateObj) {
-      console.debug(`[EntityValueResolver] Entity '${config.entity}' not found in HASS states. Available entities:`, Object.keys(hass.states).slice(0, 10));
       return config.fallback || 'Unavailable';
     }
 
@@ -26,10 +24,6 @@ export class EntityValueResolver {
     const rawValue = attribute === 'state' 
       ? entityStateObj.state 
       : entityStateObj.attributes?.[attribute];
-
-    if (rawValue === null || rawValue === undefined) {
-      console.debug(`[EntityValueResolver] Attribute '${attribute}' not found for entity '${config.entity}'. Available attributes:`, Object.keys(entityStateObj.attributes || {}));
-    }
 
     return this.formatEntityValue(rawValue, config.fallback);
   }
@@ -40,16 +34,10 @@ export class EntityValueResolver {
     fallback?: string
   ): string {
     if (!hass || !entityId) {
-      console.debug(`[EntityValueResolver] Missing HASS (${!!hass}) or entity ID (${entityId}) for friendly name resolution`);
       return fallback || entityId;
     }
 
     const entityStateObj = hass.states[entityId];
-    if (!entityStateObj) {
-      console.debug(`[EntityValueResolver] Entity '${entityId}' not found for friendly name resolution. Available entities:`, Object.keys(hass.states).slice(0, 10));
-      return fallback || entityId;
-    }
-
     return entityStateObj?.attributes?.friendly_name || fallback || entityId;
   }
 

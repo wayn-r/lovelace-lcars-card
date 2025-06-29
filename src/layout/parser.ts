@@ -42,6 +42,11 @@ interface ElementProps {
   visibility_triggers?: unknown;
   state_management?: unknown;
   animations?: unknown;
+  entity?: string;
+  attribute?: string;
+  label?: any;
+  value?: any;
+  appearance?: any;
 }
 
 interface LayoutConfig {
@@ -122,6 +127,7 @@ export class ConfigParser {
     this.mapTextProps(element, props);
     this.mapButtonProps(element, props);
     this.mapConfigurationProps(element, props);
+    this.mapWidgetProps(element, props);
     
     return props;
   }
@@ -185,6 +191,14 @@ export class ConfigParser {
     if (element.visibility_triggers !== undefined) props.visibility_triggers = element.visibility_triggers;
     if (element.state_management !== undefined) props.state_management = element.state_management;
     if (element.animations !== undefined) props.animations = element.animations;
+  }
+
+  private static mapWidgetProps(element: any, props: ElementProps): void {
+    if (element.entity !== undefined) props.entity = element.entity;
+    if (element.attribute !== undefined) props.attribute = element.attribute;
+    if (element.label !== undefined) props.label = element.label;
+    if (element.value !== undefined) props.value = element.value;
+    if (element.appearance !== undefined) props.appearance = element.appearance;
   }
 
   private static convertLayoutConfig(layout?: any): LayoutConfig {

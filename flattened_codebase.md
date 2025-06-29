@@ -6975,6 +6975,11 @@ interface ElementProps {
   visibility_triggers?: unknown;
   state_management?: unknown;
   animations?: unknown;
+  entity?: string;
+  attribute?: string;
+  label?: any;
+  value?: any;
+  appearance?: any;
 }
 
 interface LayoutConfig {
@@ -7055,6 +7060,7 @@ export class ConfigParser {
     this.mapTextProps(element, props);
     this.mapButtonProps(element, props);
     this.mapConfigurationProps(element, props);
+    this.mapWidgetProps(element, props);
     
     return props;
   }
@@ -7118,6 +7124,14 @@ export class ConfigParser {
     if (element.visibility_triggers !== undefined) props.visibility_triggers = element.visibility_triggers;
     if (element.state_management !== undefined) props.state_management = element.state_management;
     if (element.animations !== undefined) props.animations = element.animations;
+  }
+
+  private static mapWidgetProps(element: any, props: ElementProps): void {
+    if (element.entity !== undefined) props.entity = element.entity;
+    if (element.attribute !== undefined) props.attribute = element.attribute;
+    if (element.label !== undefined) props.label = element.label;
+    if (element.value !== undefined) props.value = element.value;
+    if (element.appearance !== undefined) props.appearance = element.appearance;
   }
 
   private static convertLayoutConfig(layout?: any): LayoutConfig {
@@ -8510,6 +8524,7 @@ import { WidgetRegistry } from './registry.js';
 import { Button } from '../../utils/button.js';
 import { EntityValueResolver } from '../../utils/entity-value-resolver.js';
 import { ColorValue } from '../../types.js';
+import { HomeAssistant } from 'custom-card-helpers';
 
 export interface EntityTextLabelConfig {
   content?: string;
@@ -8535,7 +8550,7 @@ export interface EntityTextAppearanceConfig {
 
 export class EntityTextWidget extends Widget {
   private static readonly LEADING_RECT_WIDTH = 8;
-  private static readonly DEFAULT_LABEL_WIDTH = 80;
+  private static readonly DEFAULT_LABEL_WIDTH = 200;
   private static readonly DEFAULT_LABEL_HEIGHT = 20;
   private static readonly DEFAULT_HEIGHT = 25;
   private static readonly DEFAULT_LABEL_OFFSET_X = 3;
@@ -8603,9 +8618,7 @@ export class EntityTextWidget extends Widget {
         textColor: labelConfig.fill || '#FFFFFF',
         fontFamily: labelConfig.fontFamily || 'Antonio',
         fontWeight: labelConfig.fontWeight || 'normal',
-        fontSize: labelConfig.height || EntityTextWidget.DEFAULT_LABEL_HEIGHT,
-        textAnchor: 'middle',
-        dominantBaseline: 'middle'
+        fontSize: labelConfig.height || EntityTextWidget.DEFAULT_LABEL_HEIGHT
       },
       {
         anchor: {
@@ -8622,13 +8635,14 @@ export class EntityTextWidget extends Widget {
   }
 
   private createValueText(labelRect: RectangleElement, height: number): TextElement {
-    const valueText = this.resolveValueText();
     const valueConfig = this.getValueConfig();
 
-    return new TextElement(
+    const textContent = valueConfig.content || this.resolveValueText();
+
+    const valueText = new TextElement(
       `${this.id}_value_text`,
       {
-        text: valueText,
+        text: textContent,
         fill: valueConfig.fill || '#FFFFFF',
         fontFamily: valueConfig.fontFamily || 'Antonio',
         fontWeight: valueConfig.fontWeight || 'normal',
@@ -8646,6 +8660,45 @@ export class EntityTextWidget extends Widget {
       this.requestUpdateCallback,
       this.getShadowElement
     );
+
+    // Inject dynamic text updating when content is resolved from an entity.
+    if (!valueConfig.content) {
+      const entityId = this.props.entity || '';
+      const attribute = this.props.attribute || 'state';
+
+      valueText.updateHass = function (this: typeof valueText, hass?: HomeAssistant): void {
+        TextElement.prototype.updateHass.call(this, hass);
+
+        const newValue = EntityValueResolver.resolveEntityValue(
+          { entity: entityId, attribute, fallback: 'Unavailable' },
+          hass
+        );
+
+        if (newValue !== (this as unknown as TextElement).props.text) {
+          (this as unknown as TextElement).props.text = newValue;
+          this.requestUpdateCallback?.();
+        }
+      } as any;
+
+      // Add entity change detection to integrate with ColorResolver's change detection system
+      valueText.entityChangesDetected = function (this: typeof valueText, hass: HomeAssistant): boolean {
+        const newValue = EntityValueResolver.resolveEntityValue(
+          { entity: entityId, attribute, fallback: 'Unavailable' },
+          hass
+        );
+
+        const hasChanged = newValue !== (this as unknown as TextElement).props.text;
+        
+        if (hasChanged) {
+          (this as unknown as TextElement).props.text = newValue;
+          return true;
+        }
+
+        return false;
+      } as any;
+    }
+
+    return valueText;
   }
 
   private getLabelConfig(): EntityTextLabelConfig {
@@ -8676,15 +8729,9 @@ export class EntityTextWidget extends Widget {
   }
 
   private resolveValueText(): string {
-    const valueConfig = this.getValueConfig();
-    
-    if (valueConfig.content) {
-      return valueConfig.content;
-    }
-
     const entityId = this.props.entity || '';
     const attribute = this.props.attribute || 'state';
-    
+
     return EntityValueResolver.resolveEntityValue(
       {
         entity: entityId,
@@ -14212,13 +14259,11 @@ export class EntityValueResolver {
     hass?: HomeAssistant
   ): string {
     if (!hass || !config.entity) {
-      console.debug(`[EntityValueResolver] Missing HASS (${!!hass}) or entity ID (${config.entity})`);
       return config.fallback || 'Unknown';
     }
 
     const entityStateObj = hass.states[config.entity];
     if (!entityStateObj) {
-      console.debug(`[EntityValueResolver] Entity '${config.entity}' not found in HASS states. Available entities:`, Object.keys(hass.states).slice(0, 10));
       return config.fallback || 'Unavailable';
     }
 
@@ -14226,10 +14271,6 @@ export class EntityValueResolver {
     const rawValue = attribute === 'state' 
       ? entityStateObj.state 
       : entityStateObj.attributes?.[attribute];
-
-    if (rawValue === null || rawValue === undefined) {
-      console.debug(`[EntityValueResolver] Attribute '${attribute}' not found for entity '${config.entity}'. Available attributes:`, Object.keys(entityStateObj.attributes || {}));
-    }
 
     return this.formatEntityValue(rawValue, config.fallback);
   }
@@ -14240,16 +14281,10 @@ export class EntityValueResolver {
     fallback?: string
   ): string {
     if (!hass || !entityId) {
-      console.debug(`[EntityValueResolver] Missing HASS (${!!hass}) or entity ID (${entityId}) for friendly name resolution`);
       return fallback || entityId;
     }
 
     const entityStateObj = hass.states[entityId];
-    if (!entityStateObj) {
-      console.debug(`[EntityValueResolver] Entity '${entityId}' not found for friendly name resolution. Available entities:`, Object.keys(hass.states).slice(0, 10));
-      return fallback || entityId;
-    }
-
     return entityStateObj?.attributes?.friendly_name || fallback || entityId;
   }
 
