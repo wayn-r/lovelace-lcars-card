@@ -97,10 +97,13 @@ export class EntityTextWidget extends Widget {
         width: labelConfig.width || EntityTextWidget.DEFAULT_LABEL_WIDTH,
         height: height,
         text: labelText,
-        textColor: labelConfig.fill || '#FFFFFF',
         fontFamily: labelConfig.fontFamily || 'Antonio',
         fontWeight: labelConfig.fontWeight || 'normal',
-        fontSize: labelConfig.height || EntityTextWidget.DEFAULT_LABEL_HEIGHT
+        textTransform: 'uppercase',
+        fontSize: labelConfig.height || EntityTextWidget.DEFAULT_LABEL_HEIGHT,
+        textAnchor: 'end',
+        textOffsetX: -5,
+        cutout: true
       },
       {
         anchor: {
