@@ -8,7 +8,7 @@ lovelace-lcars-card/
 ├── TODO.md
 ├── component-diagram.mmd
 ├── dist/
-├── entity-text-details-widget-requirements.md
+├── entity-text-widget-requirements.md
 ├── flatten-codebase.js
 ├── git-history-diff.js
 ├── notepads/
@@ -47,9 +47,11 @@ lovelace-lcars-card/
 │   │   │   ├── engine.spec.ts
 │   │   │   └── parser.spec.ts
 │   │   └── widgets/
+│   │       ├── entity-text.ts
 │   │       ├── index.ts
 │   │       ├── registry.ts
 │   │       ├── test/
+│   │       │   ├── entity-text.spec.ts
 │   │       │   ├── index.spec.ts
 │   │       │   ├── registry.spec.ts
 │   │       │   ├── top_header.spec.ts
@@ -71,6 +73,7 @@ lovelace-lcars-card/
 │       ├── color-resolver.ts
 │       ├── color.ts
 │       ├── config-validator.ts
+│       ├── entity-value-resolver.ts
 │       ├── font-manager.ts
 │       ├── fontfaceobserver.d.ts
 │       ├── fontmetrics.d.ts
@@ -83,6 +86,7 @@ lovelace-lcars-card/
 │       │   ├── button.spec.ts
 │       │   ├── color-resolver.spec.ts
 │       │   ├── color.spec.ts
+│       │   ├── entity-value-resolver.spec.ts
 │       │   ├── offset-calculator.spec.ts
 │       │   ├── shapes.spec.ts
 │       │   ├── state-manager.spec.ts
@@ -91,11 +95,14 @@ lovelace-lcars-card/
 │       └── transform-propagator.ts
 ├── test-results/
 ├── tests/
-│   └── e2e/
-│       ├── config-examples.spec.ts
-│       ├── config-examples.spec.ts-snapshots/
-│       ├── test-harness.html
-│       └── test-helpers.ts
+│   ├── e2e/
+│   │   ├── config-examples.spec.ts
+│   │   ├── config-examples.spec.ts-snapshots/
+│   │   ├── test-harness.html
+│   │   └── test-helpers.ts
+│   └── unit/
+│       ├── utils/
+│       └── widgets/
 ├── tsconfig.json
 ├── vite.config.ts
 ├── vitest.config.ts
@@ -164,10 +171,10 @@ lovelace-lcars-card/
 - determine an appropriate way to handle groups of elements that curve into other groups of elements. visually, these look like they might be the same concept to group into a larger section
 ```
 
-## File: entity-text-details-widget-requirements.md
+## File: entity-text-widget-requirements.md
 
 ```markdown
-# Requirements for `entity-text-details` Widget
+# Requirements for `entity-text` Widget
 
 ## General Layout
 The widget will have 3 reusable components:
@@ -177,7 +184,7 @@ The widget will have 3 reusable components:
 
 ### Leading Rectangle Details
 the leading rectangle should default to:
-- 8px wide (configurable by user)
+- 8px wide
 - height not independently configurable
 
 ### Entity or Attribute Label Rectangle Details
@@ -190,6 +197,8 @@ this element will be another rectangle that anchors:
 this element will contain text as:
 - the name of the entity or attribute selected by the user, or
 - a configurable string
+
+the width should default to 80px (configurable by user)
 
 the text:
 - height will be configurable independently of the total widget height
@@ -222,6 +231,48 @@ the height will be configurable for the widget as a whole which will set the hei
 - entity/attribute text element
 
 the default height will be 25
+
+### Configuration Example
+Minimal Implementation
+```yaml
+type: custom:lovelace-lcars-card
+card_title: Entity Text Widget Example
+groups:
+  - group_id: main_display
+    elements:
+      - id: widget
+        type: entity-text-widget
+        entity: light.kitchen_sink_light
+```
+
+Implementation with Configurables Changed
+```yaml
+type: custom:lovelace-lcars-card
+card_title: Entity Text Widget Example
+groups:
+  - group_id: main_display
+    elements:
+      - id: widget
+        type: entity-text-widget
+        entity: light.kitchen_sink_light
+        label:
+          content: Sink Light
+          height: 20
+          fontFamily: Antonio
+          fontWeight: Bold
+          fill: "#00CC99"
+          offsetX: 8
+          width: 100
+        value:
+          content: im a light
+          fontFamily: Antonio
+          fontWeight: narrow
+          offsetX: 15
+        appearance:
+          fill: "#0099CC"
+        layout:
+          height: 30
+```
 
 ## Default Interactivity
 the entity/attribute label should default to opening the entity/attribute "more-info" when clicked
@@ -8448,10 +8499,242 @@ describe('parseConfig', () => {
 });
 ```
 
+## File: src/layout/widgets/entity-text.ts
+
+```typescript
+import { RectangleElement } from '../elements/rectangle.js';
+import { TextElement } from '../elements/text.js';
+import { Widget } from './widget.js';
+import { LayoutElement } from '../elements/element.js';
+import { WidgetRegistry } from './registry.js';
+import { Button } from '../../utils/button.js';
+import { EntityValueResolver } from '../../utils/entity-value-resolver.js';
+import { ColorValue } from '../../types.js';
+
+export interface EntityTextLabelConfig {
+  content?: string;
+  width?: number;
+  height?: number;
+  fontFamily?: string;
+  fontWeight?: string | number;
+  fill?: ColorValue;
+  offsetX?: number;
+}
+
+export interface EntityTextValueConfig {
+  content?: string;
+  fontFamily?: string;
+  fontWeight?: string | number;
+  fill?: ColorValue;
+  offsetX?: number;
+}
+
+export interface EntityTextAppearanceConfig {
+  fill?: ColorValue;
+}
+
+export class EntityTextWidget extends Widget {
+  private static readonly LEADING_RECT_WIDTH = 8;
+  private static readonly DEFAULT_LABEL_WIDTH = 80;
+  private static readonly DEFAULT_LABEL_HEIGHT = 20;
+  private static readonly DEFAULT_HEIGHT = 25;
+  private static readonly DEFAULT_LABEL_OFFSET_X = 3;
+  private static readonly DEFAULT_VALUE_OFFSET_X = 10;
+
+  public expand(): LayoutElement[] {
+    const height = this.layoutConfig.height || EntityTextWidget.DEFAULT_HEIGHT;
+
+    const bounds = this.createBoundsElement();
+    const leadingRect = this.createLeadingRectangle(bounds, height);
+    const labelRect = this.createLabelRectangle(leadingRect, height);
+    const valueText = this.createValueText(labelRect, height);
+
+    this.addDefaultLabelInteraction(labelRect);
+
+    return [bounds, leadingRect, labelRect, valueText];
+  }
+
+  private createBoundsElement(): RectangleElement {
+    return new RectangleElement(
+      this.id,
+      { fill: 'none', stroke: 'none' },
+      this.layoutConfig,
+      this.hass,
+      this.requestUpdateCallback,
+      this.getShadowElement
+    );
+  }
+
+  private createLeadingRectangle(bounds: RectangleElement, height: number): RectangleElement {
+    const appearanceConfig = this.getAppearanceConfig();
+    
+    return new RectangleElement(
+      `${this.id}_leading_rect`,
+      {
+        fill: appearanceConfig.fill || '#99CCFF',
+        width: EntityTextWidget.LEADING_RECT_WIDTH,
+        height: height
+      },
+      {
+        anchor: {
+          anchorTo: bounds.id,
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topLeft'
+        }
+      },
+      this.hass,
+      this.requestUpdateCallback,
+      this.getShadowElement
+    );
+  }
+
+  private createLabelRectangle(leadingRect: RectangleElement, height: number): RectangleElement {
+    const labelText = this.resolveLabelText();
+    const labelConfig = this.getLabelConfig();
+    const appearanceConfig = this.getAppearanceConfig();
+
+    return new RectangleElement(
+      `${this.id}_label_rect`,
+      {
+        fill: appearanceConfig.fill || '#99CCFF',
+        width: labelConfig.width || EntityTextWidget.DEFAULT_LABEL_WIDTH,
+        height: height,
+        text: labelText,
+        textColor: labelConfig.fill || '#FFFFFF',
+        fontFamily: labelConfig.fontFamily || 'Antonio',
+        fontWeight: labelConfig.fontWeight || 'normal',
+        fontSize: labelConfig.height || EntityTextWidget.DEFAULT_LABEL_HEIGHT,
+        textAnchor: 'middle',
+        dominantBaseline: 'middle'
+      },
+      {
+        anchor: {
+          anchorTo: leadingRect.id,
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topRight'
+        },
+        offsetX: labelConfig.offsetX || EntityTextWidget.DEFAULT_LABEL_OFFSET_X
+      },
+      this.hass,
+      this.requestUpdateCallback,
+      this.getShadowElement
+    );
+  }
+
+  private createValueText(labelRect: RectangleElement, height: number): TextElement {
+    const valueText = this.resolveValueText();
+    const valueConfig = this.getValueConfig();
+
+    return new TextElement(
+      `${this.id}_value_text`,
+      {
+        text: valueText,
+        fill: valueConfig.fill || '#FFFFFF',
+        fontFamily: valueConfig.fontFamily || 'Antonio',
+        fontWeight: valueConfig.fontWeight || 'normal',
+        height: height
+      },
+      {
+        anchor: {
+          anchorTo: labelRect.id,
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topRight'
+        },
+        offsetX: valueConfig.offsetX || EntityTextWidget.DEFAULT_VALUE_OFFSET_X
+      },
+      this.hass,
+      this.requestUpdateCallback,
+      this.getShadowElement
+    );
+  }
+
+  private getLabelConfig(): EntityTextLabelConfig {
+    return this.props.label || {};
+  }
+
+  private getValueConfig(): EntityTextValueConfig {
+    return this.props.value || {};
+  }
+
+  private getAppearanceConfig(): EntityTextAppearanceConfig {
+    return this.props.appearance || {};
+  }
+
+  private resolveLabelText(): string {
+    const labelConfig = this.getLabelConfig();
+    
+    if (labelConfig.content) {
+      return labelConfig.content;
+    }
+
+    const entityId = this.props.entity || '';
+    return EntityValueResolver.resolveEntityFriendlyName(
+      entityId,
+      this.hass,
+      entityId
+    );
+  }
+
+  private resolveValueText(): string {
+    const valueConfig = this.getValueConfig();
+    
+    if (valueConfig.content) {
+      return valueConfig.content;
+    }
+
+    const entityId = this.props.entity || '';
+    const attribute = this.props.attribute || 'state';
+    
+    return EntityValueResolver.resolveEntityValue(
+      {
+        entity: entityId,
+        attribute: attribute,
+        fallback: 'Unavailable'
+      },
+      this.hass
+    );
+  }
+
+  private addDefaultLabelInteraction(labelRect: RectangleElement): void {
+    const entityId = this.props.entity;
+    
+    if (!this.hasButtonConfig(labelRect) && entityId) {
+      labelRect.props.button = {
+        enabled: true,
+        actions: {
+          tap: {
+            action: 'more-info',
+            entity: entityId
+          }
+        }
+      };
+      
+      labelRect.button = new Button(
+        labelRect.id,
+        labelRect.props,
+        this.hass,
+        this.requestUpdateCallback,
+        this.getShadowElement
+      );
+    }
+  }
+
+  private hasButtonConfig(element: LayoutElement): boolean {
+    return Boolean(element.props.button?.enabled);
+  }
+}
+
+WidgetRegistry.registerWidget('entity-text-widget', (id, props, layoutConfig, hass, reqUpd, getEl) => {
+  const widget = new EntityTextWidget(id, props, layoutConfig, hass, reqUpd, getEl);
+  return widget.expand();
+});
+```
+
 ## File: src/layout/widgets/index.ts
 
 ```typescript
 import './top_header.js';
+import './entity-text.js';
 ```
 
 ## File: src/layout/widgets/registry.ts
@@ -8487,6 +8770,447 @@ export class WidgetRegistry {
     return factory(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
   }
 }
+```
+
+## File: src/layout/widgets/test/entity-text.spec.ts
+
+```typescript
+import { describe, it, expect, beforeEach } from 'vitest';
+import { EntityTextWidget } from '../entity-text.js';
+import { WidgetRegistry } from '../registry.js';
+import { RectangleElement } from '../../elements/rectangle.js';
+import { TextElement } from '../../elements/text.js';
+
+const mockHass = {
+  states: {
+    'light.kitchen_sink_light': {
+      state: 'on',
+      attributes: {
+        friendly_name: 'Kitchen Sink Light',
+        brightness: 255
+      }
+    },
+    'sensor.temperature': {
+      state: '23.5',
+      attributes: {
+        friendly_name: 'Temperature Sensor',
+        unit_of_measurement: '°C'
+      }
+    }
+  }
+} as any;
+
+describe('EntityTextWidget', () => {
+  let widget: EntityTextWidget;
+  let mockRequestUpdate: () => void;
+  let mockGetShadowElement: (id: string) => Element | null;
+
+  beforeEach(() => {
+    mockRequestUpdate = () => {};
+    mockGetShadowElement = () => null;
+  });
+
+  describe('Widget Creation and Expansion', () => {
+    it('should create widget with minimal configuration', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        { entity: 'light.kitchen_sink_light' },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      expect(elements).toHaveLength(4);
+      expect(elements[0]).toBeInstanceOf(RectangleElement); // bounds
+      expect(elements[1]).toBeInstanceOf(RectangleElement); // leading rect
+      expect(elements[2]).toBeInstanceOf(RectangleElement); // label rect
+      expect(elements[3]).toBeInstanceOf(TextElement); // value text
+    });
+
+    it('should create elements with correct IDs', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        { entity: 'light.kitchen_sink_light' },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      expect(elements[0].id).toBe('test_widget');
+      expect(elements[1].id).toBe('test_widget_leading_rect');
+      expect(elements[2].id).toBe('test_widget_label_rect');
+      expect(elements[3].id).toBe('test_widget_value_text');
+    });
+
+    it('should use default height when not specified', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        { entity: 'light.kitchen_sink_light' },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const leadingRect = elements[1] as RectangleElement;
+      const labelRect = elements[2] as RectangleElement;
+      
+      expect(leadingRect.props.height).toBe(25);
+      expect(labelRect.props.height).toBe(25);
+    });
+
+    it('should use configured height when specified', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        { entity: 'light.kitchen_sink_light' },
+        { height: 40 },
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const leadingRect = elements[1] as RectangleElement;
+      const labelRect = elements[2] as RectangleElement;
+      const valueText = elements[3] as TextElement;
+      
+      expect(leadingRect.props.height).toBe(40);
+      expect(labelRect.props.height).toBe(40);
+      expect(valueText.props.height).toBe(40);
+    });
+  });
+
+  describe('Configuration Handling', () => {
+    it('should apply label configuration correctly', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        {
+          entity: 'light.kitchen_sink_light',
+          label: {
+            content: 'Custom Label',
+            width: 120,
+            height: 18,
+            fontFamily: 'Arial',
+            fontWeight: 'bold',
+            fill: '#FF0000',
+            offsetX: 5
+          }
+        },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const labelRect = elements[2] as RectangleElement;
+      
+      expect(labelRect.props.text).toBe('Custom Label');
+      expect(labelRect.props.width).toBe(120);
+      expect(labelRect.props.fontSize).toBe(18);
+      expect(labelRect.props.fontFamily).toBe('Arial');
+      expect(labelRect.props.fontWeight).toBe('bold');
+      expect(labelRect.props.textColor).toBe('#FF0000');
+      expect(labelRect.layoutConfig.offsetX).toBe(5);
+    });
+
+    it('should apply value configuration correctly', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        {
+          entity: 'light.kitchen_sink_light',
+          value: {
+            content: 'Custom Value',
+            fontFamily: 'Courier',
+            fontWeight: 'normal',
+            fill: '#00FF00',
+            offsetX: 15
+          }
+        },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const valueText = elements[3] as TextElement;
+      
+      expect(valueText.props.text).toBe('Custom Value');
+      expect(valueText.props.fontFamily).toBe('Courier');
+      expect(valueText.props.fontWeight).toBe('normal');
+      expect(valueText.props.fill).toBe('#00FF00');
+      expect(valueText.layoutConfig.offsetX).toBe(15);
+    });
+
+    it('should apply appearance configuration correctly', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        {
+          entity: 'light.kitchen_sink_light',
+          appearance: {
+            fill: '#0000FF'
+          }
+        },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const leadingRect = elements[1] as RectangleElement;
+      const labelRect = elements[2] as RectangleElement;
+      
+      expect(leadingRect.props.fill).toBe('#0000FF');
+      expect(labelRect.props.fill).toBe('#0000FF');
+    });
+  });
+
+  describe('Label Text Resolution', () => {
+    it('should use configured label content when provided', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        {
+          entity: 'light.kitchen_sink_light',
+          label: { content: 'Custom Label' }
+        },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const labelRect = elements[2] as RectangleElement;
+      expect(labelRect.props.text).toBe('Custom Label');
+    });
+
+    it('should use entity friendly name when no label content configured', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        { entity: 'light.kitchen_sink_light' },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const labelRect = elements[2] as RectangleElement;
+      expect(labelRect.props.text).toBe('Kitchen Sink Light');
+    });
+
+    it('should fallback to entity ID when entity not found', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        { entity: 'light.nonexistent' },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const labelRect = elements[2] as RectangleElement;
+      expect(labelRect.props.text).toBe('light.nonexistent');
+    });
+  });
+
+  describe('Value Text Resolution', () => {
+    it('should use configured value content when provided', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        {
+          entity: 'light.kitchen_sink_light',
+          value: { content: 'Custom Value' }
+        },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const valueText = elements[3] as TextElement;
+      expect(valueText.props.text).toBe('Custom Value');
+    });
+
+    it('should use entity state when no value content configured', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        { entity: 'light.kitchen_sink_light' },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const valueText = elements[3] as TextElement;
+      expect(valueText.props.text).toBe('on');
+    });
+
+    it('should use entity attribute when attribute specified', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        {
+          entity: 'light.kitchen_sink_light',
+          attribute: 'brightness'
+        },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const valueText = elements[3] as TextElement;
+      expect(valueText.props.text).toBe('255');
+    });
+
+    it('should fallback when entity not found', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        { entity: 'light.nonexistent' },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const valueText = elements[3] as TextElement;
+      expect(valueText.props.text).toBe('Unavailable');
+    });
+  });
+
+  describe('Default Button Interaction', () => {
+    it('should add default more-info button to label when entity provided', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        { entity: 'light.kitchen_sink_light' },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const labelRect = elements[2] as RectangleElement;
+      
+      expect(labelRect.props.button?.enabled).toBe(true);
+      expect(labelRect.props.button?.actions?.tap?.action).toBe('more-info');
+      expect(labelRect.props.button?.actions?.tap?.entity).toBe('light.kitchen_sink_light');
+      expect(labelRect.button).toBeDefined();
+    });
+
+    it('should not add default button when no entity provided', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        {},
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const labelRect = elements[2] as RectangleElement;
+      
+      expect(labelRect.props.button).toBeUndefined();
+      expect(labelRect.button).toBeUndefined();
+    });
+  });
+
+  describe('Layout Anchoring', () => {
+    it('should correctly anchor elements in sequence', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        { entity: 'light.kitchen_sink_light' },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const bounds = elements[0];
+      const leadingRect = elements[1];
+      const labelRect = elements[2];
+      const valueText = elements[3];
+
+      // Leading rect anchors to bounds
+      expect(leadingRect.layoutConfig.anchor?.anchorTo).toBe(bounds.id);
+      expect(leadingRect.layoutConfig.anchor?.anchorPoint).toBe('topLeft');
+      expect(leadingRect.layoutConfig.anchor?.targetAnchorPoint).toBe('topLeft');
+
+      // Label rect anchors to leading rect
+      expect(labelRect.layoutConfig.anchor?.anchorTo).toBe(leadingRect.id);
+      expect(labelRect.layoutConfig.anchor?.anchorPoint).toBe('topLeft');
+      expect(labelRect.layoutConfig.anchor?.targetAnchorPoint).toBe('topRight');
+
+      // Value text anchors to label rect
+      expect(valueText.layoutConfig.anchor?.anchorTo).toBe(labelRect.id);
+      expect(valueText.layoutConfig.anchor?.anchorPoint).toBe('topLeft');
+      expect(valueText.layoutConfig.anchor?.targetAnchorPoint).toBe('topRight');
+    });
+
+    it('should use default offsets when not configured', () => {
+      widget = new EntityTextWidget(
+        'test_widget',
+        { entity: 'light.kitchen_sink_light' },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      const labelRect = elements[2];
+      const valueText = elements[3];
+
+      expect(labelRect.layoutConfig.offsetX).toBe(3); // DEFAULT_LABEL_OFFSET_X
+      expect(valueText.layoutConfig.offsetX).toBe(10); // DEFAULT_VALUE_OFFSET_X
+    });
+  });
+});
+
+describe('EntityTextWidget Registry Integration', () => {
+  it('should be registered in widget registry', () => {
+    const elements = WidgetRegistry.expandWidget(
+      'entity-text-widget',
+      'test_widget',
+      { entity: 'light.kitchen_sink_light' },
+      {},
+      mockHass,
+      () => {},
+      () => null
+    );
+
+    expect(elements).not.toBeNull();
+    expect(elements).toHaveLength(4);
+  });
+
+  it('should return null for unknown widget types', () => {
+    const elements = WidgetRegistry.expandWidget(
+      'unknown-widget',
+      'test_widget',
+      {},
+      {},
+      mockHass,
+      () => {},
+      () => null
+    );
+
+    expect(elements).toBeNull();
+  });
+});
 ```
 
 ## File: src/layout/widgets/test/index.spec.ts
@@ -10462,6 +11186,28 @@ const buttonSchema = z.object({
 }).optional();
 
 // -----------------------------------------------------------------------------
+// Entity Text Widget
+// -----------------------------------------------------------------------------
+
+const entityTextLabelSchema = z.object({
+  content: z.string().optional(),
+  width: z.number().optional(),
+  height: z.number().optional(),
+  fontFamily: z.string().optional(),
+  fontWeight: z.union([z.string(), z.number()]).optional(),
+  fill: colorValueSchema.optional(),
+  offsetX: z.number().optional(),
+});
+
+const entityTextValueSchema = z.object({
+  content: z.string().optional(),
+  fontFamily: z.string().optional(),
+  fontWeight: z.union([z.string(), z.number()]).optional(),
+  fill: colorValueSchema.optional(),
+  offsetX: z.number().optional(),
+});
+
+// -----------------------------------------------------------------------------
 // Element
 // -----------------------------------------------------------------------------
 
@@ -10472,6 +11218,7 @@ const elementTypeEnum = z.enum([
   'elbow',
   'chisel-endcap',
   'top_header',
+  'entity-text-widget',
 ]).or(z.string()); // Allow unknown types for backwards compatibility
 
 const elementSchema = z.object({
@@ -10485,6 +11232,12 @@ const elementSchema = z.object({
   visibility_rules: z.any().optional(),
   visibility_triggers: z.any().optional(),
   animations: z.any().optional(),
+  
+  // Entity text widget specific fields
+  entity: z.string().optional(),
+  attribute: z.string().optional(),
+  label: entityTextLabelSchema.optional(),
+  value: entityTextValueSchema.optional(),
 });
 
 // -----------------------------------------------------------------------------
@@ -12667,6 +13420,7 @@ export class ColorResolver {
     
     this.extractEntityIdsFromColorProperties(element.props, entityIds);
     this.extractEntityIdsFromButtonProperties(element.props, entityIds);
+    this.extractEntityIdsFromWidgetProperties(element.props, entityIds);
     
     return entityIds;
   }
@@ -12800,6 +13554,12 @@ export class ColorResolver {
       this.extractFromColorProperty(props.button.active_fill, entityIds);
       this.extractFromColorProperty(props.button.hover_text_color, entityIds);
       this.extractFromColorProperty(props.button.active_text_color, entityIds);
+    }
+  }
+
+  private extractEntityIdsFromWidgetProperties(props: LayoutElementProps, entityIds: Set<string>): void {
+    if (props.entity) {
+      entityIds.add(props.entity);
     }
   }
 
@@ -13432,6 +14192,111 @@ function formatZodPath(path: (string | number)[], cfg: any): string {
   }
 
   return parts.join('.');
+}
+```
+
+## File: src/utils/entity-value-resolver.ts
+
+```typescript
+import { HomeAssistant } from 'custom-card-helpers';
+
+export interface EntityValueConfig {
+  entity: string;
+  attribute?: string;
+  fallback?: string;
+}
+
+export class EntityValueResolver {
+  static resolveEntityValue(
+    config: EntityValueConfig,
+    hass?: HomeAssistant
+  ): string {
+    if (!hass || !config.entity) {
+      console.debug(`[EntityValueResolver] Missing HASS (${!!hass}) or entity ID (${config.entity})`);
+      return config.fallback || 'Unknown';
+    }
+
+    const entityStateObj = hass.states[config.entity];
+    if (!entityStateObj) {
+      console.debug(`[EntityValueResolver] Entity '${config.entity}' not found in HASS states. Available entities:`, Object.keys(hass.states).slice(0, 10));
+      return config.fallback || 'Unavailable';
+    }
+
+    const attribute = config.attribute || 'state';
+    const rawValue = attribute === 'state' 
+      ? entityStateObj.state 
+      : entityStateObj.attributes?.[attribute];
+
+    if (rawValue === null || rawValue === undefined) {
+      console.debug(`[EntityValueResolver] Attribute '${attribute}' not found for entity '${config.entity}'. Available attributes:`, Object.keys(entityStateObj.attributes || {}));
+    }
+
+    return this.formatEntityValue(rawValue, config.fallback);
+  }
+
+  static resolveEntityFriendlyName(
+    entityId: string,
+    hass?: HomeAssistant,
+    fallback?: string
+  ): string {
+    if (!hass || !entityId) {
+      console.debug(`[EntityValueResolver] Missing HASS (${!!hass}) or entity ID (${entityId}) for friendly name resolution`);
+      return fallback || entityId;
+    }
+
+    const entityStateObj = hass.states[entityId];
+    if (!entityStateObj) {
+      console.debug(`[EntityValueResolver] Entity '${entityId}' not found for friendly name resolution. Available entities:`, Object.keys(hass.states).slice(0, 10));
+      return fallback || entityId;
+    }
+
+    return entityStateObj?.attributes?.friendly_name || fallback || entityId;
+  }
+
+  static entityStateChanged(
+    entityId: string,
+    attribute: string = 'state',
+    lastHassStates?: { [entityId: string]: any },
+    currentHass?: HomeAssistant
+  ): boolean {
+    if (!lastHassStates || !currentHass || !entityId) {
+      return false;
+    }
+
+    const oldEntity = lastHassStates[entityId];
+    const newEntity = currentHass.states[entityId];
+
+    // If both are missing, no change
+    if (!oldEntity && !newEntity) return false;
+    
+    // If one exists and the other doesn't, there's a change
+    if (!oldEntity && newEntity) return true; // Entity added
+    if (oldEntity && !newEntity) return true; // Entity removed
+
+    // Both exist, check for actual changes
+    if (attribute === 'state') {
+      return oldEntity.state !== newEntity.state;
+    }
+
+    return oldEntity.attributes?.[attribute] !== newEntity.attributes?.[attribute];
+  }
+
+  static detectsEntityReferences(element: { props?: any }): Set<string> {
+    const entityIds = new Set<string>();
+    
+    if (element.props?.entity) {
+      entityIds.add(element.props.entity);
+    }
+
+    return entityIds;
+  }
+
+  private static formatEntityValue(value: any, fallback?: string): string {
+    if (value === null || value === undefined) {
+      return fallback || 'N/A';
+    }
+    return String(value);
+  }
 }
 ```
 
@@ -16006,6 +16871,346 @@ describe('Color', () => {
       expect(original.fallback).toBe('transparent');
       expect(withNewFallback.fallback).toBe('newFallback');
       expect(original).not.toBe(withNewFallback);
+    });
+  });
+});
+```
+
+## File: src/utils/test/entity-value-resolver.spec.ts
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { EntityValueResolver } from '../entity-value-resolver.js';
+
+const mockHass = {
+  states: {
+    'light.kitchen_sink_light': {
+      state: 'on',
+      attributes: {
+        friendly_name: 'Kitchen Sink Light',
+        brightness: 255,
+        color_mode: 'brightness'
+      }
+    },
+    'sensor.temperature': {
+      state: '23.5',
+      attributes: {
+        friendly_name: 'Temperature Sensor',
+        unit_of_measurement: '°C',
+        device_class: 'temperature'
+      }
+    },
+    'binary_sensor.door': {
+      state: 'off',
+      attributes: {
+        friendly_name: 'Front Door',
+        device_class: 'door'
+      }
+    }
+  }
+} as any;
+
+describe('EntityValueResolver', () => {
+  describe('resolveEntityValue', () => {
+    it('should resolve entity state value when no attribute specified', () => {
+      const result = EntityValueResolver.resolveEntityValue(
+        { entity: 'light.kitchen_sink_light' },
+        mockHass
+      );
+      expect(result).toBe('on');
+    });
+
+    it('should resolve entity state value when attribute is "state"', () => {
+      const result = EntityValueResolver.resolveEntityValue(
+        { entity: 'light.kitchen_sink_light', attribute: 'state' },
+        mockHass
+      );
+      expect(result).toBe('on');
+    });
+
+    it('should resolve entity attribute value when attribute specified', () => {
+      const result = EntityValueResolver.resolveEntityValue(
+        { entity: 'light.kitchen_sink_light', attribute: 'brightness' },
+        mockHass
+      );
+      expect(result).toBe('255');
+    });
+
+    it('should return fallback when entity not found', () => {
+      const result = EntityValueResolver.resolveEntityValue(
+        { entity: 'light.nonexistent', fallback: 'Custom Fallback' },
+        mockHass
+      );
+      expect(result).toBe('Custom Fallback');
+    });
+
+    it('should return default fallback when entity not found and no custom fallback', () => {
+      const result = EntityValueResolver.resolveEntityValue(
+        { entity: 'light.nonexistent' },
+        mockHass
+      );
+      expect(result).toBe('Unavailable');
+    });
+
+    it('should return fallback when hass not provided', () => {
+      const result = EntityValueResolver.resolveEntityValue(
+        { entity: 'light.kitchen_sink_light', fallback: 'No HASS' }
+      );
+      expect(result).toBe('No HASS');
+    });
+
+    it('should return default fallback when hass not provided and no custom fallback', () => {
+      const result = EntityValueResolver.resolveEntityValue(
+        { entity: 'light.kitchen_sink_light' }
+      );
+      expect(result).toBe('Unknown');
+    });
+
+    it('should return fallback when entity provided but empty', () => {
+      const result = EntityValueResolver.resolveEntityValue(
+        { entity: '', fallback: 'Empty Entity' },
+        mockHass
+      );
+      expect(result).toBe('Empty Entity');
+    });
+
+    it('should handle null attribute values', () => {
+      const mockHassWithNull = {
+        states: {
+          'sensor.null_value': {
+            state: 'unknown',
+            attributes: {
+              value: null
+            }
+          }
+        }
+      } as any;
+
+      const result = EntityValueResolver.resolveEntityValue(
+        { entity: 'sensor.null_value', attribute: 'value', fallback: 'Null Value' },
+        mockHassWithNull
+      );
+      expect(result).toBe('Null Value');
+    });
+
+    it('should handle undefined attribute values', () => {
+      const result = EntityValueResolver.resolveEntityValue(
+        { entity: 'light.kitchen_sink_light', attribute: 'nonexistent_attr', fallback: 'Missing Attr' },
+        mockHass
+      );
+      expect(result).toBe('Missing Attr');
+    });
+
+    it('should convert non-string values to strings', () => {
+      const result = EntityValueResolver.resolveEntityValue(
+        { entity: 'light.kitchen_sink_light', attribute: 'brightness' },
+        mockHass
+      );
+      expect(result).toBe('255');
+      expect(typeof result).toBe('string');
+    });
+  });
+
+  describe('resolveEntityFriendlyName', () => {
+    it('should return friendly name when entity exists', () => {
+      const result = EntityValueResolver.resolveEntityFriendlyName(
+        'light.kitchen_sink_light',
+        mockHass
+      );
+      expect(result).toBe('Kitchen Sink Light');
+    });
+
+    it('should return fallback when entity not found', () => {
+      const result = EntityValueResolver.resolveEntityFriendlyName(
+        'light.nonexistent',
+        mockHass,
+        'Custom Fallback'
+      );
+      expect(result).toBe('Custom Fallback');
+    });
+
+    it('should return entity ID when entity not found and no fallback', () => {
+      const result = EntityValueResolver.resolveEntityFriendlyName(
+        'light.nonexistent',
+        mockHass
+      );
+      expect(result).toBe('light.nonexistent');
+    });
+
+    it('should return fallback when hass not provided', () => {
+      const result = EntityValueResolver.resolveEntityFriendlyName(
+        'light.kitchen_sink_light',
+        undefined,
+        'No HASS'
+      );
+      expect(result).toBe('No HASS');
+    });
+
+    it('should return entity ID when hass not provided and no fallback', () => {
+      const result = EntityValueResolver.resolveEntityFriendlyName(
+        'light.kitchen_sink_light'
+      );
+      expect(result).toBe('light.kitchen_sink_light');
+    });
+
+    it('should return fallback when entity ID is empty', () => {
+      const result = EntityValueResolver.resolveEntityFriendlyName(
+        '',
+        mockHass,
+        'Empty ID'
+      );
+      expect(result).toBe('Empty ID');
+    });
+
+    it('should return entity ID when entity has no friendly name', () => {
+      const mockHassNoFriendlyName = {
+        states: {
+          'sensor.no_friendly': {
+            state: 'value',
+            attributes: {}
+          }
+        }
+      } as any;
+
+      const result = EntityValueResolver.resolveEntityFriendlyName(
+        'sensor.no_friendly',
+        mockHassNoFriendlyName
+      );
+      expect(result).toBe('sensor.no_friendly');
+    });
+  });
+
+  describe('entityStateChanged', () => {
+    const lastHassStates = {
+      'light.kitchen_sink_light': {
+        state: 'off',
+        attributes: {
+          brightness: 128
+        }
+      },
+      'sensor.temperature': {
+        state: '20.0',
+        attributes: {
+          unit_of_measurement: '°C'
+        }
+      }
+    };
+
+    it('should detect state changes', () => {
+      const result = EntityValueResolver.entityStateChanged(
+        'light.kitchen_sink_light',
+        'state',
+        lastHassStates,
+        mockHass
+      );
+      expect(result).toBe(true);
+    });
+
+    it('should detect attribute changes', () => {
+      const result = EntityValueResolver.entityStateChanged(
+        'light.kitchen_sink_light',
+        'brightness',
+        lastHassStates,
+        mockHass
+      );
+      expect(result).toBe(true);
+    });
+
+    it('should return false when no changes detected', () => {
+      const result = EntityValueResolver.entityStateChanged(
+        'sensor.temperature',
+        'unit_of_measurement',
+        lastHassStates,
+        mockHass
+      );
+      expect(result).toBe(false);
+    });
+
+    it('should return false when missing required parameters', () => {
+      expect(EntityValueResolver.entityStateChanged('', 'state', lastHassStates, mockHass)).toBe(false);
+      expect(EntityValueResolver.entityStateChanged('light.test', 'state', undefined, mockHass)).toBe(false);
+      expect(EntityValueResolver.entityStateChanged('light.test', 'state', lastHassStates, undefined)).toBe(false);
+    });
+
+    it('should return false when both old and new entities are missing', () => {
+      const result = EntityValueResolver.entityStateChanged(
+        'light.nonexistent',
+        'state',
+        {},
+        { states: {} } as any
+      );
+      expect(result).toBe(false);
+    });
+
+    it('should return true when entity was added', () => {
+      const result = EntityValueResolver.entityStateChanged(
+        'light.kitchen_sink_light',
+        'state',
+        {},
+        mockHass
+      );
+      expect(result).toBe(true);
+    });
+
+    it('should return true when entity was removed', () => {
+      const result = EntityValueResolver.entityStateChanged(
+        'light.removed_entity',
+        'state',
+        { 'light.removed_entity': { state: 'on', attributes: {} } },
+        { states: {} } as any
+      );
+      expect(result).toBe(true);
+    });
+
+    it('should default to checking state attribute when not specified', () => {
+      const result = EntityValueResolver.entityStateChanged(
+        'light.kitchen_sink_light',
+        undefined,
+        lastHassStates,
+        mockHass
+      );
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('detectsEntityReferences', () => {
+    it('should detect entity references from props', () => {
+      const element = {
+        props: {
+          entity: 'light.kitchen_sink_light'
+        }
+      };
+
+      const result = EntityValueResolver.detectsEntityReferences(element);
+      expect(result.has('light.kitchen_sink_light')).toBe(true);
+      expect(result.size).toBe(1);
+    });
+
+    it('should return empty set when no entity in props', () => {
+      const element = {
+        props: {
+          other_prop: 'value'
+        }
+      };
+
+      const result = EntityValueResolver.detectsEntityReferences(element);
+      expect(result.size).toBe(0);
+    });
+
+    it('should return empty set when no props', () => {
+      const element = {};
+
+      const result = EntityValueResolver.detectsEntityReferences(element);
+      expect(result.size).toBe(0);
+    });
+
+    it('should return empty set when props is undefined', () => {
+      const element = {
+        props: undefined
+      };
+
+      const result = EntityValueResolver.detectsEntityReferences(element);
+      expect(result.size).toBe(0);
     });
   });
 });

@@ -85,6 +85,7 @@ export class ColorResolver {
     
     this.extractEntityIdsFromColorProperties(element.props, entityIds);
     this.extractEntityIdsFromButtonProperties(element.props, entityIds);
+    this.extractEntityIdsFromWidgetProperties(element.props, entityIds);
     
     return entityIds;
   }
@@ -218,6 +219,12 @@ export class ColorResolver {
       this.extractFromColorProperty(props.button.active_fill, entityIds);
       this.extractFromColorProperty(props.button.hover_text_color, entityIds);
       this.extractFromColorProperty(props.button.active_text_color, entityIds);
+    }
+  }
+
+  private extractEntityIdsFromWidgetProperties(props: LayoutElementProps, entityIds: Set<string>): void {
+    if (props.entity) {
+      entityIds.add(props.entity);
     }
   }
 

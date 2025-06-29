@@ -153,6 +153,28 @@ const buttonSchema = z.object({
 }).optional();
 
 // -----------------------------------------------------------------------------
+// Entity Text Widget
+// -----------------------------------------------------------------------------
+
+const entityTextLabelSchema = z.object({
+  content: z.string().optional(),
+  width: z.number().optional(),
+  height: z.number().optional(),
+  fontFamily: z.string().optional(),
+  fontWeight: z.union([z.string(), z.number()]).optional(),
+  fill: colorValueSchema.optional(),
+  offsetX: z.number().optional(),
+});
+
+const entityTextValueSchema = z.object({
+  content: z.string().optional(),
+  fontFamily: z.string().optional(),
+  fontWeight: z.union([z.string(), z.number()]).optional(),
+  fill: colorValueSchema.optional(),
+  offsetX: z.number().optional(),
+});
+
+// -----------------------------------------------------------------------------
 // Element
 // -----------------------------------------------------------------------------
 
@@ -163,6 +185,7 @@ const elementTypeEnum = z.enum([
   'elbow',
   'chisel-endcap',
   'top_header',
+  'entity-text-widget',
 ]).or(z.string()); // Allow unknown types for backwards compatibility
 
 const elementSchema = z.object({
@@ -176,6 +199,12 @@ const elementSchema = z.object({
   visibility_rules: z.any().optional(),
   visibility_triggers: z.any().optional(),
   animations: z.any().optional(),
+  
+  // Entity text widget specific fields
+  entity: z.string().optional(),
+  attribute: z.string().optional(),
+  label: entityTextLabelSchema.optional(),
+  value: entityTextValueSchema.optional(),
 });
 
 // -----------------------------------------------------------------------------

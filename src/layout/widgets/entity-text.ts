@@ -1,0 +1,226 @@
+import { RectangleElement } from '../elements/rectangle.js';
+import { TextElement } from '../elements/text.js';
+import { Widget } from './widget.js';
+import { LayoutElement } from '../elements/element.js';
+import { WidgetRegistry } from './registry.js';
+import { Button } from '../../utils/button.js';
+import { EntityValueResolver } from '../../utils/entity-value-resolver.js';
+import { ColorValue } from '../../types.js';
+
+export interface EntityTextLabelConfig {
+  content?: string;
+  width?: number;
+  height?: number;
+  fontFamily?: string;
+  fontWeight?: string | number;
+  fill?: ColorValue;
+  offsetX?: number;
+}
+
+export interface EntityTextValueConfig {
+  content?: string;
+  fontFamily?: string;
+  fontWeight?: string | number;
+  fill?: ColorValue;
+  offsetX?: number;
+}
+
+export interface EntityTextAppearanceConfig {
+  fill?: ColorValue;
+}
+
+export class EntityTextWidget extends Widget {
+  private static readonly LEADING_RECT_WIDTH = 8;
+  private static readonly DEFAULT_LABEL_WIDTH = 80;
+  private static readonly DEFAULT_LABEL_HEIGHT = 20;
+  private static readonly DEFAULT_HEIGHT = 25;
+  private static readonly DEFAULT_LABEL_OFFSET_X = 3;
+  private static readonly DEFAULT_VALUE_OFFSET_X = 10;
+
+  public expand(): LayoutElement[] {
+    const height = this.layoutConfig.height || EntityTextWidget.DEFAULT_HEIGHT;
+
+    const bounds = this.createBoundsElement();
+    const leadingRect = this.createLeadingRectangle(bounds, height);
+    const labelRect = this.createLabelRectangle(leadingRect, height);
+    const valueText = this.createValueText(labelRect, height);
+
+    this.addDefaultLabelInteraction(labelRect);
+
+    return [bounds, leadingRect, labelRect, valueText];
+  }
+
+  private createBoundsElement(): RectangleElement {
+    return new RectangleElement(
+      this.id,
+      { fill: 'none', stroke: 'none' },
+      this.layoutConfig,
+      this.hass,
+      this.requestUpdateCallback,
+      this.getShadowElement
+    );
+  }
+
+  private createLeadingRectangle(bounds: RectangleElement, height: number): RectangleElement {
+    const appearanceConfig = this.getAppearanceConfig();
+    
+    return new RectangleElement(
+      `${this.id}_leading_rect`,
+      {
+        fill: appearanceConfig.fill || '#99CCFF',
+        width: EntityTextWidget.LEADING_RECT_WIDTH,
+        height: height
+      },
+      {
+        anchor: {
+          anchorTo: bounds.id,
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topLeft'
+        }
+      },
+      this.hass,
+      this.requestUpdateCallback,
+      this.getShadowElement
+    );
+  }
+
+  private createLabelRectangle(leadingRect: RectangleElement, height: number): RectangleElement {
+    const labelText = this.resolveLabelText();
+    const labelConfig = this.getLabelConfig();
+    const appearanceConfig = this.getAppearanceConfig();
+
+    return new RectangleElement(
+      `${this.id}_label_rect`,
+      {
+        fill: appearanceConfig.fill || '#99CCFF',
+        width: labelConfig.width || EntityTextWidget.DEFAULT_LABEL_WIDTH,
+        height: height,
+        text: labelText,
+        textColor: labelConfig.fill || '#FFFFFF',
+        fontFamily: labelConfig.fontFamily || 'Antonio',
+        fontWeight: labelConfig.fontWeight || 'normal',
+        fontSize: labelConfig.height || EntityTextWidget.DEFAULT_LABEL_HEIGHT,
+        textAnchor: 'middle',
+        dominantBaseline: 'middle'
+      },
+      {
+        anchor: {
+          anchorTo: leadingRect.id,
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topRight'
+        },
+        offsetX: labelConfig.offsetX || EntityTextWidget.DEFAULT_LABEL_OFFSET_X
+      },
+      this.hass,
+      this.requestUpdateCallback,
+      this.getShadowElement
+    );
+  }
+
+  private createValueText(labelRect: RectangleElement, height: number): TextElement {
+    const valueText = this.resolveValueText();
+    const valueConfig = this.getValueConfig();
+
+    return new TextElement(
+      `${this.id}_value_text`,
+      {
+        text: valueText,
+        fill: valueConfig.fill || '#FFFFFF',
+        fontFamily: valueConfig.fontFamily || 'Antonio',
+        fontWeight: valueConfig.fontWeight || 'normal',
+        height: height
+      },
+      {
+        anchor: {
+          anchorTo: labelRect.id,
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topRight'
+        },
+        offsetX: valueConfig.offsetX || EntityTextWidget.DEFAULT_VALUE_OFFSET_X
+      },
+      this.hass,
+      this.requestUpdateCallback,
+      this.getShadowElement
+    );
+  }
+
+  private getLabelConfig(): EntityTextLabelConfig {
+    return this.props.label || {};
+  }
+
+  private getValueConfig(): EntityTextValueConfig {
+    return this.props.value || {};
+  }
+
+  private getAppearanceConfig(): EntityTextAppearanceConfig {
+    return this.props.appearance || {};
+  }
+
+  private resolveLabelText(): string {
+    const labelConfig = this.getLabelConfig();
+    
+    if (labelConfig.content) {
+      return labelConfig.content;
+    }
+
+    const entityId = this.props.entity || '';
+    return EntityValueResolver.resolveEntityFriendlyName(
+      entityId,
+      this.hass,
+      entityId
+    );
+  }
+
+  private resolveValueText(): string {
+    const valueConfig = this.getValueConfig();
+    
+    if (valueConfig.content) {
+      return valueConfig.content;
+    }
+
+    const entityId = this.props.entity || '';
+    const attribute = this.props.attribute || 'state';
+    
+    return EntityValueResolver.resolveEntityValue(
+      {
+        entity: entityId,
+        attribute: attribute,
+        fallback: 'Unavailable'
+      },
+      this.hass
+    );
+  }
+
+  private addDefaultLabelInteraction(labelRect: RectangleElement): void {
+    const entityId = this.props.entity;
+    
+    if (!this.hasButtonConfig(labelRect) && entityId) {
+      labelRect.props.button = {
+        enabled: true,
+        actions: {
+          tap: {
+            action: 'more-info',
+            entity: entityId
+          }
+        }
+      };
+      
+      labelRect.button = new Button(
+        labelRect.id,
+        labelRect.props,
+        this.hass,
+        this.requestUpdateCallback,
+        this.getShadowElement
+      );
+    }
+  }
+
+  private hasButtonConfig(element: LayoutElement): boolean {
+    return Boolean(element.props.button?.enabled);
+  }
+}
+
+WidgetRegistry.registerWidget('entity-text-widget', (id, props, layoutConfig, hass, reqUpd, getEl) => {
+  const widget = new EntityTextWidget(id, props, layoutConfig, hass, reqUpd, getEl);
+  return widget.expand();
+}); 
