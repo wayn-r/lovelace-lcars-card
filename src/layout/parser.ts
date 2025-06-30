@@ -47,6 +47,8 @@ interface ElementProps {
   label?: any;
   value?: any;
   appearance?: any;
+  // Logger widget specific properties
+  maxLines?: number;
 }
 
 interface LayoutConfig {
@@ -175,6 +177,9 @@ export class ConfigParser {
     if (text.right_content !== undefined) props.rightContent = text.right_content;
     if (text.offsetX !== undefined) props.textOffsetX = text.offsetX;
     if (text.offsetY !== undefined) props.textOffsetY = text.offsetY;
+    
+    // Logger widget specific properties
+    if (text.max_lines !== undefined) props.maxLines = text.max_lines;
   }
 
   private static mapButtonProps(element: any, props: ElementProps): void {

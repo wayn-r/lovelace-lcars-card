@@ -48,10 +48,12 @@ lovelace-lcars-card/
 │   │   └── widgets/
 │   │       ├── entity-text.ts
 │   │       ├── index.ts
+│   │       ├── log-widget.ts
 │   │       ├── registry.ts
 │   │       ├── test/
 │   │       │   ├── entity-text.spec.ts
 │   │       │   ├── index.spec.ts
+│   │       │   ├── log-widget.spec.ts
 │   │       │   ├── registry.spec.ts
 │   │       │   ├── top_header.spec.ts
 │   │       │   └── widget.spec.ts
@@ -103,9 +105,2560 @@ lovelace-lcars-card/
 │       ├── utils/
 │       └── widgets/
 ├── tsconfig.json
+├── venv/
+│   ├── bin/
+│   │   ├── Activate.ps1
+│   │   ├── activate
+│   │   ├── activate.csh
+│   │   ├── activate.fish
+│   │   ├── mid3cp
+│   │   ├── mid3iconv
+│   │   ├── mid3v2
+│   │   ├── moggsplit
+│   │   ├── mutagen-inspect
+│   │   ├── mutagen-pony
+│   │   ├── pip
+│   │   ├── pip3
+│   │   ├── pip3.12
+│   │   ├── python
+│   │   ├── python3
+│   │   └── python3.12
+│   ├── include/
+│   │   └── python3.12/
+│   ├── lib/
+│   │   └── python3.12/
+│   │       └── site-packages/
+│   │           ├── mutagen/
+│   │           │   ├── __init__.py
+│   │           │   ├── __pycache__/
+│   │           │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   ├── _constants.cpython-312.pyc
+│   │           │   │   ├── _file.cpython-312.pyc
+│   │           │   │   ├── _iff.cpython-312.pyc
+│   │           │   │   ├── _riff.cpython-312.pyc
+│   │           │   │   ├── _tags.cpython-312.pyc
+│   │           │   │   ├── _util.cpython-312.pyc
+│   │           │   │   ├── _vorbis.cpython-312.pyc
+│   │           │   │   ├── aac.cpython-312.pyc
+│   │           │   │   ├── ac3.cpython-312.pyc
+│   │           │   │   ├── aiff.cpython-312.pyc
+│   │           │   │   ├── apev2.cpython-312.pyc
+│   │           │   │   ├── dsdiff.cpython-312.pyc
+│   │           │   │   ├── dsf.cpython-312.pyc
+│   │           │   │   ├── easyid3.cpython-312.pyc
+│   │           │   │   ├── easymp4.cpython-312.pyc
+│   │           │   │   ├── flac.cpython-312.pyc
+│   │           │   │   ├── m4a.cpython-312.pyc
+│   │           │   │   ├── monkeysaudio.cpython-312.pyc
+│   │           │   │   ├── musepack.cpython-312.pyc
+│   │           │   │   ├── ogg.cpython-312.pyc
+│   │           │   │   ├── oggflac.cpython-312.pyc
+│   │           │   │   ├── oggopus.cpython-312.pyc
+│   │           │   │   ├── oggspeex.cpython-312.pyc
+│   │           │   │   ├── oggtheora.cpython-312.pyc
+│   │           │   │   ├── oggvorbis.cpython-312.pyc
+│   │           │   │   ├── optimfrog.cpython-312.pyc
+│   │           │   │   ├── smf.cpython-312.pyc
+│   │           │   │   ├── tak.cpython-312.pyc
+│   │           │   │   ├── trueaudio.cpython-312.pyc
+│   │           │   │   ├── wave.cpython-312.pyc
+│   │           │   │   └── wavpack.cpython-312.pyc
+│   │           │   ├── _constants.py
+│   │           │   ├── _file.py
+│   │           │   ├── _iff.py
+│   │           │   ├── _riff.py
+│   │           │   ├── _tags.py
+│   │           │   ├── _tools/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   ├── _util.cpython-312.pyc
+│   │           │   │   │   ├── mid3cp.cpython-312.pyc
+│   │           │   │   │   ├── mid3iconv.cpython-312.pyc
+│   │           │   │   │   ├── mid3v2.cpython-312.pyc
+│   │           │   │   │   ├── moggsplit.cpython-312.pyc
+│   │           │   │   │   ├── mutagen_inspect.cpython-312.pyc
+│   │           │   │   │   └── mutagen_pony.cpython-312.pyc
+│   │           │   │   ├── _util.py
+│   │           │   │   ├── mid3cp.py
+│   │           │   │   ├── mid3iconv.py
+│   │           │   │   ├── mid3v2.py
+│   │           │   │   ├── moggsplit.py
+│   │           │   │   ├── mutagen_inspect.py
+│   │           │   │   └── mutagen_pony.py
+│   │           │   ├── _util.py
+│   │           │   ├── _vorbis.py
+│   │           │   ├── aac.py
+│   │           │   ├── ac3.py
+│   │           │   ├── aiff.py
+│   │           │   ├── apev2.py
+│   │           │   ├── asf/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   ├── _attrs.cpython-312.pyc
+│   │           │   │   │   ├── _objects.cpython-312.pyc
+│   │           │   │   │   └── _util.cpython-312.pyc
+│   │           │   │   ├── _attrs.py
+│   │           │   │   ├── _objects.py
+│   │           │   │   └── _util.py
+│   │           │   ├── dsdiff.py
+│   │           │   ├── dsf.py
+│   │           │   ├── easyid3.py
+│   │           │   ├── easymp4.py
+│   │           │   ├── flac.py
+│   │           │   ├── id3/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   ├── _file.cpython-312.pyc
+│   │           │   │   │   ├── _frames.cpython-312.pyc
+│   │           │   │   │   ├── _id3v1.cpython-312.pyc
+│   │           │   │   │   ├── _specs.cpython-312.pyc
+│   │           │   │   │   ├── _tags.cpython-312.pyc
+│   │           │   │   │   └── _util.cpython-312.pyc
+│   │           │   │   ├── _file.py
+│   │           │   │   ├── _frames.py
+│   │           │   │   ├── _id3v1.py
+│   │           │   │   ├── _specs.py
+│   │           │   │   ├── _tags.py
+│   │           │   │   └── _util.py
+│   │           │   ├── m4a.py
+│   │           │   ├── monkeysaudio.py
+│   │           │   ├── mp3/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   └── _util.cpython-312.pyc
+│   │           │   │   └── _util.py
+│   │           │   ├── mp4/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   ├── _as_entry.cpython-312.pyc
+│   │           │   │   │   ├── _atom.cpython-312.pyc
+│   │           │   │   │   └── _util.cpython-312.pyc
+│   │           │   │   ├── _as_entry.py
+│   │           │   │   ├── _atom.py
+│   │           │   │   └── _util.py
+│   │           │   ├── musepack.py
+│   │           │   ├── ogg.py
+│   │           │   ├── oggflac.py
+│   │           │   ├── oggopus.py
+│   │           │   ├── oggspeex.py
+│   │           │   ├── oggtheora.py
+│   │           │   ├── oggvorbis.py
+│   │           │   ├── optimfrog.py
+│   │           │   ├── py.typed
+│   │           │   ├── smf.py
+│   │           │   ├── tak.py
+│   │           │   ├── trueaudio.py
+│   │           │   ├── wave.py
+│   │           │   └── wavpack.py
+│   │           ├── mutagen-1.47.0.dist-info/
+│   │           │   ├── COPYING
+│   │           │   ├── INSTALLER
+│   │           │   ├── METADATA
+│   │           │   ├── RECORD
+│   │           │   ├── REQUESTED
+│   │           │   ├── WHEEL
+│   │           │   ├── entry_points.txt
+│   │           │   └── top_level.txt
+│   │           ├── pip/
+│   │           │   ├── __init__.py
+│   │           │   ├── __main__.py
+│   │           │   ├── __pip-runner__.py
+│   │           │   ├── __pycache__/
+│   │           │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   ├── __main__.cpython-312.pyc
+│   │           │   │   └── __pip-runner__.cpython-312.pyc
+│   │           │   ├── _internal/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   ├── build_env.cpython-312.pyc
+│   │           │   │   │   ├── cache.cpython-312.pyc
+│   │           │   │   │   ├── configuration.cpython-312.pyc
+│   │           │   │   │   ├── exceptions.cpython-312.pyc
+│   │           │   │   │   ├── main.cpython-312.pyc
+│   │           │   │   │   ├── pyproject.cpython-312.pyc
+│   │           │   │   │   ├── self_outdated_check.cpython-312.pyc
+│   │           │   │   │   └── wheel_builder.cpython-312.pyc
+│   │           │   │   ├── build_env.py
+│   │           │   │   ├── cache.py
+│   │           │   │   ├── cli/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── autocompletion.cpython-312.pyc
+│   │           │   │   │   │   ├── base_command.cpython-312.pyc
+│   │           │   │   │   │   ├── cmdoptions.cpython-312.pyc
+│   │           │   │   │   │   ├── command_context.cpython-312.pyc
+│   │           │   │   │   │   ├── main.cpython-312.pyc
+│   │           │   │   │   │   ├── main_parser.cpython-312.pyc
+│   │           │   │   │   │   ├── parser.cpython-312.pyc
+│   │           │   │   │   │   ├── progress_bars.cpython-312.pyc
+│   │           │   │   │   │   ├── req_command.cpython-312.pyc
+│   │           │   │   │   │   ├── spinners.cpython-312.pyc
+│   │           │   │   │   │   └── status_codes.cpython-312.pyc
+│   │           │   │   │   ├── autocompletion.py
+│   │           │   │   │   ├── base_command.py
+│   │           │   │   │   ├── cmdoptions.py
+│   │           │   │   │   ├── command_context.py
+│   │           │   │   │   ├── main.py
+│   │           │   │   │   ├── main_parser.py
+│   │           │   │   │   ├── parser.py
+│   │           │   │   │   ├── progress_bars.py
+│   │           │   │   │   ├── req_command.py
+│   │           │   │   │   ├── spinners.py
+│   │           │   │   │   └── status_codes.py
+│   │           │   │   ├── commands/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── cache.cpython-312.pyc
+│   │           │   │   │   │   ├── check.cpython-312.pyc
+│   │           │   │   │   │   ├── completion.cpython-312.pyc
+│   │           │   │   │   │   ├── configuration.cpython-312.pyc
+│   │           │   │   │   │   ├── debug.cpython-312.pyc
+│   │           │   │   │   │   ├── download.cpython-312.pyc
+│   │           │   │   │   │   ├── freeze.cpython-312.pyc
+│   │           │   │   │   │   ├── hash.cpython-312.pyc
+│   │           │   │   │   │   ├── help.cpython-312.pyc
+│   │           │   │   │   │   ├── index.cpython-312.pyc
+│   │           │   │   │   │   ├── inspect.cpython-312.pyc
+│   │           │   │   │   │   ├── install.cpython-312.pyc
+│   │           │   │   │   │   ├── list.cpython-312.pyc
+│   │           │   │   │   │   ├── search.cpython-312.pyc
+│   │           │   │   │   │   ├── show.cpython-312.pyc
+│   │           │   │   │   │   ├── uninstall.cpython-312.pyc
+│   │           │   │   │   │   └── wheel.cpython-312.pyc
+│   │           │   │   │   ├── cache.py
+│   │           │   │   │   ├── check.py
+│   │           │   │   │   ├── completion.py
+│   │           │   │   │   ├── configuration.py
+│   │           │   │   │   ├── debug.py
+│   │           │   │   │   ├── download.py
+│   │           │   │   │   ├── freeze.py
+│   │           │   │   │   ├── hash.py
+│   │           │   │   │   ├── help.py
+│   │           │   │   │   ├── index.py
+│   │           │   │   │   ├── inspect.py
+│   │           │   │   │   ├── install.py
+│   │           │   │   │   ├── list.py
+│   │           │   │   │   ├── search.py
+│   │           │   │   │   ├── show.py
+│   │           │   │   │   ├── uninstall.py
+│   │           │   │   │   └── wheel.py
+│   │           │   │   ├── configuration.py
+│   │           │   │   ├── distributions/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── base.cpython-312.pyc
+│   │           │   │   │   │   ├── installed.cpython-312.pyc
+│   │           │   │   │   │   ├── sdist.cpython-312.pyc
+│   │           │   │   │   │   └── wheel.cpython-312.pyc
+│   │           │   │   │   ├── base.py
+│   │           │   │   │   ├── installed.py
+│   │           │   │   │   ├── sdist.py
+│   │           │   │   │   └── wheel.py
+│   │           │   │   ├── exceptions.py
+│   │           │   │   ├── index/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── collector.cpython-312.pyc
+│   │           │   │   │   │   ├── package_finder.cpython-312.pyc
+│   │           │   │   │   │   └── sources.cpython-312.pyc
+│   │           │   │   │   ├── collector.py
+│   │           │   │   │   ├── package_finder.py
+│   │           │   │   │   └── sources.py
+│   │           │   │   ├── locations/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _distutils.cpython-312.pyc
+│   │           │   │   │   │   ├── _sysconfig.cpython-312.pyc
+│   │           │   │   │   │   └── base.cpython-312.pyc
+│   │           │   │   │   ├── _distutils.py
+│   │           │   │   │   ├── _sysconfig.py
+│   │           │   │   │   └── base.py
+│   │           │   │   ├── main.py
+│   │           │   │   ├── metadata/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _json.cpython-312.pyc
+│   │           │   │   │   │   ├── base.cpython-312.pyc
+│   │           │   │   │   │   └── pkg_resources.cpython-312.pyc
+│   │           │   │   │   ├── _json.py
+│   │           │   │   │   ├── base.py
+│   │           │   │   │   ├── importlib/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── _compat.cpython-312.pyc
+│   │           │   │   │   │   │   ├── _dists.cpython-312.pyc
+│   │           │   │   │   │   │   └── _envs.cpython-312.pyc
+│   │           │   │   │   │   ├── _compat.py
+│   │           │   │   │   │   ├── _dists.py
+│   │           │   │   │   │   └── _envs.py
+│   │           │   │   │   └── pkg_resources.py
+│   │           │   │   ├── models/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── candidate.cpython-312.pyc
+│   │           │   │   │   │   ├── direct_url.cpython-312.pyc
+│   │           │   │   │   │   ├── format_control.cpython-312.pyc
+│   │           │   │   │   │   ├── index.cpython-312.pyc
+│   │           │   │   │   │   ├── installation_report.cpython-312.pyc
+│   │           │   │   │   │   ├── link.cpython-312.pyc
+│   │           │   │   │   │   ├── scheme.cpython-312.pyc
+│   │           │   │   │   │   ├── search_scope.cpython-312.pyc
+│   │           │   │   │   │   ├── selection_prefs.cpython-312.pyc
+│   │           │   │   │   │   ├── target_python.cpython-312.pyc
+│   │           │   │   │   │   └── wheel.cpython-312.pyc
+│   │           │   │   │   ├── candidate.py
+│   │           │   │   │   ├── direct_url.py
+│   │           │   │   │   ├── format_control.py
+│   │           │   │   │   ├── index.py
+│   │           │   │   │   ├── installation_report.py
+│   │           │   │   │   ├── link.py
+│   │           │   │   │   ├── scheme.py
+│   │           │   │   │   ├── search_scope.py
+│   │           │   │   │   ├── selection_prefs.py
+│   │           │   │   │   ├── target_python.py
+│   │           │   │   │   └── wheel.py
+│   │           │   │   ├── network/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── auth.cpython-312.pyc
+│   │           │   │   │   │   ├── cache.cpython-312.pyc
+│   │           │   │   │   │   ├── download.cpython-312.pyc
+│   │           │   │   │   │   ├── lazy_wheel.cpython-312.pyc
+│   │           │   │   │   │   ├── session.cpython-312.pyc
+│   │           │   │   │   │   ├── utils.cpython-312.pyc
+│   │           │   │   │   │   └── xmlrpc.cpython-312.pyc
+│   │           │   │   │   ├── auth.py
+│   │           │   │   │   ├── cache.py
+│   │           │   │   │   ├── download.py
+│   │           │   │   │   ├── lazy_wheel.py
+│   │           │   │   │   ├── session.py
+│   │           │   │   │   ├── utils.py
+│   │           │   │   │   └── xmlrpc.py
+│   │           │   │   ├── operations/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── check.cpython-312.pyc
+│   │           │   │   │   │   ├── freeze.cpython-312.pyc
+│   │           │   │   │   │   └── prepare.cpython-312.pyc
+│   │           │   │   │   ├── build/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── build_tracker.cpython-312.pyc
+│   │           │   │   │   │   │   ├── metadata.cpython-312.pyc
+│   │           │   │   │   │   │   ├── metadata_editable.cpython-312.pyc
+│   │           │   │   │   │   │   ├── metadata_legacy.cpython-312.pyc
+│   │           │   │   │   │   │   ├── wheel.cpython-312.pyc
+│   │           │   │   │   │   │   ├── wheel_editable.cpython-312.pyc
+│   │           │   │   │   │   │   └── wheel_legacy.cpython-312.pyc
+│   │           │   │   │   │   ├── build_tracker.py
+│   │           │   │   │   │   ├── metadata.py
+│   │           │   │   │   │   ├── metadata_editable.py
+│   │           │   │   │   │   ├── metadata_legacy.py
+│   │           │   │   │   │   ├── wheel.py
+│   │           │   │   │   │   ├── wheel_editable.py
+│   │           │   │   │   │   └── wheel_legacy.py
+│   │           │   │   │   ├── check.py
+│   │           │   │   │   ├── freeze.py
+│   │           │   │   │   ├── install/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── editable_legacy.cpython-312.pyc
+│   │           │   │   │   │   │   └── wheel.cpython-312.pyc
+│   │           │   │   │   │   ├── editable_legacy.py
+│   │           │   │   │   │   └── wheel.py
+│   │           │   │   │   └── prepare.py
+│   │           │   │   ├── pyproject.py
+│   │           │   │   ├── req/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── constructors.cpython-312.pyc
+│   │           │   │   │   │   ├── req_file.cpython-312.pyc
+│   │           │   │   │   │   ├── req_install.cpython-312.pyc
+│   │           │   │   │   │   ├── req_set.cpython-312.pyc
+│   │           │   │   │   │   └── req_uninstall.cpython-312.pyc
+│   │           │   │   │   ├── constructors.py
+│   │           │   │   │   ├── req_file.py
+│   │           │   │   │   ├── req_install.py
+│   │           │   │   │   ├── req_set.py
+│   │           │   │   │   └── req_uninstall.py
+│   │           │   │   ├── resolution/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   └── base.cpython-312.pyc
+│   │           │   │   │   ├── base.py
+│   │           │   │   │   ├── legacy/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   └── resolver.cpython-312.pyc
+│   │           │   │   │   │   └── resolver.py
+│   │           │   │   │   └── resolvelib/
+│   │           │   │   │       ├── __init__.py
+│   │           │   │   │       ├── __pycache__/
+│   │           │   │   │       │   ├── __init__.cpython-312.pyc
+│   │           │   │   │       │   ├── base.cpython-312.pyc
+│   │           │   │   │       │   ├── candidates.cpython-312.pyc
+│   │           │   │   │       │   ├── factory.cpython-312.pyc
+│   │           │   │   │       │   ├── found_candidates.cpython-312.pyc
+│   │           │   │   │       │   ├── provider.cpython-312.pyc
+│   │           │   │   │       │   ├── reporter.cpython-312.pyc
+│   │           │   │   │       │   ├── requirements.cpython-312.pyc
+│   │           │   │   │       │   └── resolver.cpython-312.pyc
+│   │           │   │   │       ├── base.py
+│   │           │   │   │       ├── candidates.py
+│   │           │   │   │       ├── factory.py
+│   │           │   │   │       ├── found_candidates.py
+│   │           │   │   │       ├── provider.py
+│   │           │   │   │       ├── reporter.py
+│   │           │   │   │       ├── requirements.py
+│   │           │   │   │       └── resolver.py
+│   │           │   │   ├── self_outdated_check.py
+│   │           │   │   ├── utils/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _jaraco_text.cpython-312.pyc
+│   │           │   │   │   │   ├── _log.cpython-312.pyc
+│   │           │   │   │   │   ├── appdirs.cpython-312.pyc
+│   │           │   │   │   │   ├── compat.cpython-312.pyc
+│   │           │   │   │   │   ├── compatibility_tags.cpython-312.pyc
+│   │           │   │   │   │   ├── datetime.cpython-312.pyc
+│   │           │   │   │   │   ├── deprecation.cpython-312.pyc
+│   │           │   │   │   │   ├── direct_url_helpers.cpython-312.pyc
+│   │           │   │   │   │   ├── egg_link.cpython-312.pyc
+│   │           │   │   │   │   ├── encoding.cpython-312.pyc
+│   │           │   │   │   │   ├── entrypoints.cpython-312.pyc
+│   │           │   │   │   │   ├── filesystem.cpython-312.pyc
+│   │           │   │   │   │   ├── filetypes.cpython-312.pyc
+│   │           │   │   │   │   ├── glibc.cpython-312.pyc
+│   │           │   │   │   │   ├── hashes.cpython-312.pyc
+│   │           │   │   │   │   ├── logging.cpython-312.pyc
+│   │           │   │   │   │   ├── misc.cpython-312.pyc
+│   │           │   │   │   │   ├── models.cpython-312.pyc
+│   │           │   │   │   │   ├── packaging.cpython-312.pyc
+│   │           │   │   │   │   ├── setuptools_build.cpython-312.pyc
+│   │           │   │   │   │   ├── subprocess.cpython-312.pyc
+│   │           │   │   │   │   ├── temp_dir.cpython-312.pyc
+│   │           │   │   │   │   ├── unpacking.cpython-312.pyc
+│   │           │   │   │   │   ├── urls.cpython-312.pyc
+│   │           │   │   │   │   ├── virtualenv.cpython-312.pyc
+│   │           │   │   │   │   └── wheel.cpython-312.pyc
+│   │           │   │   │   ├── _jaraco_text.py
+│   │           │   │   │   ├── _log.py
+│   │           │   │   │   ├── appdirs.py
+│   │           │   │   │   ├── compat.py
+│   │           │   │   │   ├── compatibility_tags.py
+│   │           │   │   │   ├── datetime.py
+│   │           │   │   │   ├── deprecation.py
+│   │           │   │   │   ├── direct_url_helpers.py
+│   │           │   │   │   ├── egg_link.py
+│   │           │   │   │   ├── encoding.py
+│   │           │   │   │   ├── entrypoints.py
+│   │           │   │   │   ├── filesystem.py
+│   │           │   │   │   ├── filetypes.py
+│   │           │   │   │   ├── glibc.py
+│   │           │   │   │   ├── hashes.py
+│   │           │   │   │   ├── logging.py
+│   │           │   │   │   ├── misc.py
+│   │           │   │   │   ├── models.py
+│   │           │   │   │   ├── packaging.py
+│   │           │   │   │   ├── setuptools_build.py
+│   │           │   │   │   ├── subprocess.py
+│   │           │   │   │   ├── temp_dir.py
+│   │           │   │   │   ├── unpacking.py
+│   │           │   │   │   ├── urls.py
+│   │           │   │   │   ├── virtualenv.py
+│   │           │   │   │   └── wheel.py
+│   │           │   │   ├── vcs/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── bazaar.cpython-312.pyc
+│   │           │   │   │   │   ├── git.cpython-312.pyc
+│   │           │   │   │   │   ├── mercurial.cpython-312.pyc
+│   │           │   │   │   │   ├── subversion.cpython-312.pyc
+│   │           │   │   │   │   └── versioncontrol.cpython-312.pyc
+│   │           │   │   │   ├── bazaar.py
+│   │           │   │   │   ├── git.py
+│   │           │   │   │   ├── mercurial.py
+│   │           │   │   │   ├── subversion.py
+│   │           │   │   │   └── versioncontrol.py
+│   │           │   │   └── wheel_builder.py
+│   │           │   ├── _vendor/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   ├── six.cpython-312.pyc
+│   │           │   │   │   └── typing_extensions.cpython-312.pyc
+│   │           │   │   ├── cachecontrol/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _cmd.cpython-312.pyc
+│   │           │   │   │   │   ├── adapter.cpython-312.pyc
+│   │           │   │   │   │   ├── cache.cpython-312.pyc
+│   │           │   │   │   │   ├── controller.cpython-312.pyc
+│   │           │   │   │   │   ├── filewrapper.cpython-312.pyc
+│   │           │   │   │   │   ├── heuristics.cpython-312.pyc
+│   │           │   │   │   │   ├── serialize.cpython-312.pyc
+│   │           │   │   │   │   └── wrapper.cpython-312.pyc
+│   │           │   │   │   ├── _cmd.py
+│   │           │   │   │   ├── adapter.py
+│   │           │   │   │   ├── cache.py
+│   │           │   │   │   ├── caches/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── file_cache.cpython-312.pyc
+│   │           │   │   │   │   │   └── redis_cache.cpython-312.pyc
+│   │           │   │   │   │   ├── file_cache.py
+│   │           │   │   │   │   └── redis_cache.py
+│   │           │   │   │   ├── controller.py
+│   │           │   │   │   ├── filewrapper.py
+│   │           │   │   │   ├── heuristics.py
+│   │           │   │   │   ├── serialize.py
+│   │           │   │   │   └── wrapper.py
+│   │           │   │   ├── certifi/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __main__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── __main__.cpython-312.pyc
+│   │           │   │   │   │   └── core.cpython-312.pyc
+│   │           │   │   │   ├── cacert.pem
+│   │           │   │   │   └── core.py
+│   │           │   │   ├── chardet/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── big5freq.cpython-312.pyc
+│   │           │   │   │   │   ├── big5prober.cpython-312.pyc
+│   │           │   │   │   │   ├── chardistribution.cpython-312.pyc
+│   │           │   │   │   │   ├── charsetgroupprober.cpython-312.pyc
+│   │           │   │   │   │   ├── charsetprober.cpython-312.pyc
+│   │           │   │   │   │   ├── codingstatemachine.cpython-312.pyc
+│   │           │   │   │   │   ├── codingstatemachinedict.cpython-312.pyc
+│   │           │   │   │   │   ├── cp949prober.cpython-312.pyc
+│   │           │   │   │   │   ├── enums.cpython-312.pyc
+│   │           │   │   │   │   ├── escprober.cpython-312.pyc
+│   │           │   │   │   │   ├── escsm.cpython-312.pyc
+│   │           │   │   │   │   ├── eucjpprober.cpython-312.pyc
+│   │           │   │   │   │   ├── euckrfreq.cpython-312.pyc
+│   │           │   │   │   │   ├── euckrprober.cpython-312.pyc
+│   │           │   │   │   │   ├── euctwfreq.cpython-312.pyc
+│   │           │   │   │   │   ├── euctwprober.cpython-312.pyc
+│   │           │   │   │   │   ├── gb2312freq.cpython-312.pyc
+│   │           │   │   │   │   ├── gb2312prober.cpython-312.pyc
+│   │           │   │   │   │   ├── hebrewprober.cpython-312.pyc
+│   │           │   │   │   │   ├── jisfreq.cpython-312.pyc
+│   │           │   │   │   │   ├── johabfreq.cpython-312.pyc
+│   │           │   │   │   │   ├── johabprober.cpython-312.pyc
+│   │           │   │   │   │   ├── jpcntx.cpython-312.pyc
+│   │           │   │   │   │   ├── langbulgarianmodel.cpython-312.pyc
+│   │           │   │   │   │   ├── langgreekmodel.cpython-312.pyc
+│   │           │   │   │   │   ├── langhebrewmodel.cpython-312.pyc
+│   │           │   │   │   │   ├── langhungarianmodel.cpython-312.pyc
+│   │           │   │   │   │   ├── langrussianmodel.cpython-312.pyc
+│   │           │   │   │   │   ├── langthaimodel.cpython-312.pyc
+│   │           │   │   │   │   ├── langturkishmodel.cpython-312.pyc
+│   │           │   │   │   │   ├── latin1prober.cpython-312.pyc
+│   │           │   │   │   │   ├── macromanprober.cpython-312.pyc
+│   │           │   │   │   │   ├── mbcharsetprober.cpython-312.pyc
+│   │           │   │   │   │   ├── mbcsgroupprober.cpython-312.pyc
+│   │           │   │   │   │   ├── mbcssm.cpython-312.pyc
+│   │           │   │   │   │   ├── resultdict.cpython-312.pyc
+│   │           │   │   │   │   ├── sbcharsetprober.cpython-312.pyc
+│   │           │   │   │   │   ├── sbcsgroupprober.cpython-312.pyc
+│   │           │   │   │   │   ├── sjisprober.cpython-312.pyc
+│   │           │   │   │   │   ├── universaldetector.cpython-312.pyc
+│   │           │   │   │   │   ├── utf1632prober.cpython-312.pyc
+│   │           │   │   │   │   ├── utf8prober.cpython-312.pyc
+│   │           │   │   │   │   └── version.cpython-312.pyc
+│   │           │   │   │   ├── big5freq.py
+│   │           │   │   │   ├── big5prober.py
+│   │           │   │   │   ├── chardistribution.py
+│   │           │   │   │   ├── charsetgroupprober.py
+│   │           │   │   │   ├── charsetprober.py
+│   │           │   │   │   ├── cli/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   └── chardetect.cpython-312.pyc
+│   │           │   │   │   │   └── chardetect.py
+│   │           │   │   │   ├── codingstatemachine.py
+│   │           │   │   │   ├── codingstatemachinedict.py
+│   │           │   │   │   ├── cp949prober.py
+│   │           │   │   │   ├── enums.py
+│   │           │   │   │   ├── escprober.py
+│   │           │   │   │   ├── escsm.py
+│   │           │   │   │   ├── eucjpprober.py
+│   │           │   │   │   ├── euckrfreq.py
+│   │           │   │   │   ├── euckrprober.py
+│   │           │   │   │   ├── euctwfreq.py
+│   │           │   │   │   ├── euctwprober.py
+│   │           │   │   │   ├── gb2312freq.py
+│   │           │   │   │   ├── gb2312prober.py
+│   │           │   │   │   ├── hebrewprober.py
+│   │           │   │   │   ├── jisfreq.py
+│   │           │   │   │   ├── johabfreq.py
+│   │           │   │   │   ├── johabprober.py
+│   │           │   │   │   ├── jpcntx.py
+│   │           │   │   │   ├── langbulgarianmodel.py
+│   │           │   │   │   ├── langgreekmodel.py
+│   │           │   │   │   ├── langhebrewmodel.py
+│   │           │   │   │   ├── langhungarianmodel.py
+│   │           │   │   │   ├── langrussianmodel.py
+│   │           │   │   │   ├── langthaimodel.py
+│   │           │   │   │   ├── langturkishmodel.py
+│   │           │   │   │   ├── latin1prober.py
+│   │           │   │   │   ├── macromanprober.py
+│   │           │   │   │   ├── mbcharsetprober.py
+│   │           │   │   │   ├── mbcsgroupprober.py
+│   │           │   │   │   ├── mbcssm.py
+│   │           │   │   │   ├── metadata/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   └── languages.cpython-312.pyc
+│   │           │   │   │   │   └── languages.py
+│   │           │   │   │   ├── resultdict.py
+│   │           │   │   │   ├── sbcharsetprober.py
+│   │           │   │   │   ├── sbcsgroupprober.py
+│   │           │   │   │   ├── sjisprober.py
+│   │           │   │   │   ├── universaldetector.py
+│   │           │   │   │   ├── utf1632prober.py
+│   │           │   │   │   ├── utf8prober.py
+│   │           │   │   │   └── version.py
+│   │           │   │   ├── colorama/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── ansi.cpython-312.pyc
+│   │           │   │   │   │   ├── ansitowin32.cpython-312.pyc
+│   │           │   │   │   │   ├── initialise.cpython-312.pyc
+│   │           │   │   │   │   ├── win32.cpython-312.pyc
+│   │           │   │   │   │   └── winterm.cpython-312.pyc
+│   │           │   │   │   ├── ansi.py
+│   │           │   │   │   ├── ansitowin32.py
+│   │           │   │   │   ├── initialise.py
+│   │           │   │   │   ├── tests/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── ansi_test.cpython-312.pyc
+│   │           │   │   │   │   │   ├── ansitowin32_test.cpython-312.pyc
+│   │           │   │   │   │   │   ├── initialise_test.cpython-312.pyc
+│   │           │   │   │   │   │   ├── isatty_test.cpython-312.pyc
+│   │           │   │   │   │   │   ├── utils.cpython-312.pyc
+│   │           │   │   │   │   │   └── winterm_test.cpython-312.pyc
+│   │           │   │   │   │   ├── ansi_test.py
+│   │           │   │   │   │   ├── ansitowin32_test.py
+│   │           │   │   │   │   ├── initialise_test.py
+│   │           │   │   │   │   ├── isatty_test.py
+│   │           │   │   │   │   ├── utils.py
+│   │           │   │   │   │   └── winterm_test.py
+│   │           │   │   │   ├── win32.py
+│   │           │   │   │   └── winterm.py
+│   │           │   │   ├── distlib/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── compat.cpython-312.pyc
+│   │           │   │   │   │   ├── database.cpython-312.pyc
+│   │           │   │   │   │   ├── index.cpython-312.pyc
+│   │           │   │   │   │   ├── locators.cpython-312.pyc
+│   │           │   │   │   │   ├── manifest.cpython-312.pyc
+│   │           │   │   │   │   ├── markers.cpython-312.pyc
+│   │           │   │   │   │   ├── metadata.cpython-312.pyc
+│   │           │   │   │   │   ├── resources.cpython-312.pyc
+│   │           │   │   │   │   ├── scripts.cpython-312.pyc
+│   │           │   │   │   │   ├── util.cpython-312.pyc
+│   │           │   │   │   │   ├── version.cpython-312.pyc
+│   │           │   │   │   │   └── wheel.cpython-312.pyc
+│   │           │   │   │   ├── compat.py
+│   │           │   │   │   ├── database.py
+│   │           │   │   │   ├── index.py
+│   │           │   │   │   ├── locators.py
+│   │           │   │   │   ├── manifest.py
+│   │           │   │   │   ├── markers.py
+│   │           │   │   │   ├── metadata.py
+│   │           │   │   │   ├── resources.py
+│   │           │   │   │   ├── scripts.py
+│   │           │   │   │   ├── util.py
+│   │           │   │   │   ├── version.py
+│   │           │   │   │   └── wheel.py
+│   │           │   │   ├── distro/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __main__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── __main__.cpython-312.pyc
+│   │           │   │   │   │   └── distro.cpython-312.pyc
+│   │           │   │   │   └── distro.py
+│   │           │   │   ├── idna/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── codec.cpython-312.pyc
+│   │           │   │   │   │   ├── compat.cpython-312.pyc
+│   │           │   │   │   │   ├── core.cpython-312.pyc
+│   │           │   │   │   │   ├── idnadata.cpython-312.pyc
+│   │           │   │   │   │   ├── intranges.cpython-312.pyc
+│   │           │   │   │   │   ├── package_data.cpython-312.pyc
+│   │           │   │   │   │   └── uts46data.cpython-312.pyc
+│   │           │   │   │   ├── codec.py
+│   │           │   │   │   ├── compat.py
+│   │           │   │   │   ├── core.py
+│   │           │   │   │   ├── idnadata.py
+│   │           │   │   │   ├── intranges.py
+│   │           │   │   │   ├── package_data.py
+│   │           │   │   │   └── uts46data.py
+│   │           │   │   ├── msgpack/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── exceptions.cpython-312.pyc
+│   │           │   │   │   │   ├── ext.cpython-312.pyc
+│   │           │   │   │   │   └── fallback.cpython-312.pyc
+│   │           │   │   │   ├── exceptions.py
+│   │           │   │   │   ├── ext.py
+│   │           │   │   │   └── fallback.py
+│   │           │   │   ├── packaging/
+│   │           │   │   │   ├── __about__.py
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __about__.cpython-312.pyc
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _manylinux.cpython-312.pyc
+│   │           │   │   │   │   ├── _musllinux.cpython-312.pyc
+│   │           │   │   │   │   ├── _structures.cpython-312.pyc
+│   │           │   │   │   │   ├── markers.cpython-312.pyc
+│   │           │   │   │   │   ├── requirements.cpython-312.pyc
+│   │           │   │   │   │   ├── specifiers.cpython-312.pyc
+│   │           │   │   │   │   ├── tags.cpython-312.pyc
+│   │           │   │   │   │   ├── utils.cpython-312.pyc
+│   │           │   │   │   │   └── version.cpython-312.pyc
+│   │           │   │   │   ├── _manylinux.py
+│   │           │   │   │   ├── _musllinux.py
+│   │           │   │   │   ├── _structures.py
+│   │           │   │   │   ├── markers.py
+│   │           │   │   │   ├── requirements.py
+│   │           │   │   │   ├── specifiers.py
+│   │           │   │   │   ├── tags.py
+│   │           │   │   │   ├── utils.py
+│   │           │   │   │   └── version.py
+│   │           │   │   ├── pkg_resources/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   └── __pycache__/
+│   │           │   │   │       └── __init__.cpython-312.pyc
+│   │           │   │   ├── platformdirs/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __main__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── __main__.cpython-312.pyc
+│   │           │   │   │   │   ├── android.cpython-312.pyc
+│   │           │   │   │   │   ├── api.cpython-312.pyc
+│   │           │   │   │   │   ├── macos.cpython-312.pyc
+│   │           │   │   │   │   ├── unix.cpython-312.pyc
+│   │           │   │   │   │   ├── version.cpython-312.pyc
+│   │           │   │   │   │   └── windows.cpython-312.pyc
+│   │           │   │   │   ├── android.py
+│   │           │   │   │   ├── api.py
+│   │           │   │   │   ├── macos.py
+│   │           │   │   │   ├── unix.py
+│   │           │   │   │   ├── version.py
+│   │           │   │   │   └── windows.py
+│   │           │   │   ├── pygments/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __main__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── __main__.cpython-312.pyc
+│   │           │   │   │   │   ├── cmdline.cpython-312.pyc
+│   │           │   │   │   │   ├── console.cpython-312.pyc
+│   │           │   │   │   │   ├── filter.cpython-312.pyc
+│   │           │   │   │   │   ├── formatter.cpython-312.pyc
+│   │           │   │   │   │   ├── lexer.cpython-312.pyc
+│   │           │   │   │   │   ├── modeline.cpython-312.pyc
+│   │           │   │   │   │   ├── plugin.cpython-312.pyc
+│   │           │   │   │   │   ├── regexopt.cpython-312.pyc
+│   │           │   │   │   │   ├── scanner.cpython-312.pyc
+│   │           │   │   │   │   ├── sphinxext.cpython-312.pyc
+│   │           │   │   │   │   ├── style.cpython-312.pyc
+│   │           │   │   │   │   ├── token.cpython-312.pyc
+│   │           │   │   │   │   ├── unistring.cpython-312.pyc
+│   │           │   │   │   │   └── util.cpython-312.pyc
+│   │           │   │   │   ├── cmdline.py
+│   │           │   │   │   ├── console.py
+│   │           │   │   │   ├── filter.py
+│   │           │   │   │   ├── filters/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   └── __pycache__/
+│   │           │   │   │   │       └── __init__.cpython-312.pyc
+│   │           │   │   │   ├── formatter.py
+│   │           │   │   │   ├── formatters/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── _mapping.cpython-312.pyc
+│   │           │   │   │   │   │   ├── bbcode.cpython-312.pyc
+│   │           │   │   │   │   │   ├── groff.cpython-312.pyc
+│   │           │   │   │   │   │   ├── html.cpython-312.pyc
+│   │           │   │   │   │   │   ├── img.cpython-312.pyc
+│   │           │   │   │   │   │   ├── irc.cpython-312.pyc
+│   │           │   │   │   │   │   ├── latex.cpython-312.pyc
+│   │           │   │   │   │   │   ├── other.cpython-312.pyc
+│   │           │   │   │   │   │   ├── pangomarkup.cpython-312.pyc
+│   │           │   │   │   │   │   ├── rtf.cpython-312.pyc
+│   │           │   │   │   │   │   ├── svg.cpython-312.pyc
+│   │           │   │   │   │   │   ├── terminal.cpython-312.pyc
+│   │           │   │   │   │   │   └── terminal256.cpython-312.pyc
+│   │           │   │   │   │   ├── _mapping.py
+│   │           │   │   │   │   ├── bbcode.py
+│   │           │   │   │   │   ├── groff.py
+│   │           │   │   │   │   ├── html.py
+│   │           │   │   │   │   ├── img.py
+│   │           │   │   │   │   ├── irc.py
+│   │           │   │   │   │   ├── latex.py
+│   │           │   │   │   │   ├── other.py
+│   │           │   │   │   │   ├── pangomarkup.py
+│   │           │   │   │   │   ├── rtf.py
+│   │           │   │   │   │   ├── svg.py
+│   │           │   │   │   │   ├── terminal.py
+│   │           │   │   │   │   └── terminal256.py
+│   │           │   │   │   ├── lexer.py
+│   │           │   │   │   ├── lexers/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── _mapping.cpython-312.pyc
+│   │           │   │   │   │   │   └── python.cpython-312.pyc
+│   │           │   │   │   │   ├── _mapping.py
+│   │           │   │   │   │   └── python.py
+│   │           │   │   │   ├── modeline.py
+│   │           │   │   │   ├── plugin.py
+│   │           │   │   │   ├── regexopt.py
+│   │           │   │   │   ├── scanner.py
+│   │           │   │   │   ├── sphinxext.py
+│   │           │   │   │   ├── style.py
+│   │           │   │   │   ├── styles/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   └── __pycache__/
+│   │           │   │   │   │       └── __init__.cpython-312.pyc
+│   │           │   │   │   ├── token.py
+│   │           │   │   │   ├── unistring.py
+│   │           │   │   │   └── util.py
+│   │           │   │   ├── pyparsing/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── actions.cpython-312.pyc
+│   │           │   │   │   │   ├── common.cpython-312.pyc
+│   │           │   │   │   │   ├── core.cpython-312.pyc
+│   │           │   │   │   │   ├── exceptions.cpython-312.pyc
+│   │           │   │   │   │   ├── helpers.cpython-312.pyc
+│   │           │   │   │   │   ├── results.cpython-312.pyc
+│   │           │   │   │   │   ├── testing.cpython-312.pyc
+│   │           │   │   │   │   ├── unicode.cpython-312.pyc
+│   │           │   │   │   │   └── util.cpython-312.pyc
+│   │           │   │   │   ├── actions.py
+│   │           │   │   │   ├── common.py
+│   │           │   │   │   ├── core.py
+│   │           │   │   │   ├── diagram/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   └── __pycache__/
+│   │           │   │   │   │       └── __init__.cpython-312.pyc
+│   │           │   │   │   ├── exceptions.py
+│   │           │   │   │   ├── helpers.py
+│   │           │   │   │   ├── results.py
+│   │           │   │   │   ├── testing.py
+│   │           │   │   │   ├── unicode.py
+│   │           │   │   │   └── util.py
+│   │           │   │   ├── pyproject_hooks/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _compat.cpython-312.pyc
+│   │           │   │   │   │   └── _impl.cpython-312.pyc
+│   │           │   │   │   ├── _compat.py
+│   │           │   │   │   ├── _impl.py
+│   │           │   │   │   └── _in_process/
+│   │           │   │   │       ├── __init__.py
+│   │           │   │   │       ├── __pycache__/
+│   │           │   │   │       │   ├── __init__.cpython-312.pyc
+│   │           │   │   │       │   └── _in_process.cpython-312.pyc
+│   │           │   │   │       └── _in_process.py
+│   │           │   │   ├── requests/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── __version__.cpython-312.pyc
+│   │           │   │   │   │   ├── _internal_utils.cpython-312.pyc
+│   │           │   │   │   │   ├── adapters.cpython-312.pyc
+│   │           │   │   │   │   ├── api.cpython-312.pyc
+│   │           │   │   │   │   ├── auth.cpython-312.pyc
+│   │           │   │   │   │   ├── certs.cpython-312.pyc
+│   │           │   │   │   │   ├── compat.cpython-312.pyc
+│   │           │   │   │   │   ├── cookies.cpython-312.pyc
+│   │           │   │   │   │   ├── exceptions.cpython-312.pyc
+│   │           │   │   │   │   ├── help.cpython-312.pyc
+│   │           │   │   │   │   ├── hooks.cpython-312.pyc
+│   │           │   │   │   │   ├── models.cpython-312.pyc
+│   │           │   │   │   │   ├── packages.cpython-312.pyc
+│   │           │   │   │   │   ├── sessions.cpython-312.pyc
+│   │           │   │   │   │   ├── status_codes.cpython-312.pyc
+│   │           │   │   │   │   ├── structures.cpython-312.pyc
+│   │           │   │   │   │   └── utils.cpython-312.pyc
+│   │           │   │   │   ├── __version__.py
+│   │           │   │   │   ├── _internal_utils.py
+│   │           │   │   │   ├── adapters.py
+│   │           │   │   │   ├── api.py
+│   │           │   │   │   ├── auth.py
+│   │           │   │   │   ├── certs.py
+│   │           │   │   │   ├── compat.py
+│   │           │   │   │   ├── cookies.py
+│   │           │   │   │   ├── exceptions.py
+│   │           │   │   │   ├── help.py
+│   │           │   │   │   ├── hooks.py
+│   │           │   │   │   ├── models.py
+│   │           │   │   │   ├── packages.py
+│   │           │   │   │   ├── sessions.py
+│   │           │   │   │   ├── status_codes.py
+│   │           │   │   │   ├── structures.py
+│   │           │   │   │   └── utils.py
+│   │           │   │   ├── resolvelib/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── providers.cpython-312.pyc
+│   │           │   │   │   │   ├── reporters.cpython-312.pyc
+│   │           │   │   │   │   ├── resolvers.cpython-312.pyc
+│   │           │   │   │   │   └── structs.cpython-312.pyc
+│   │           │   │   │   ├── compat/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   └── collections_abc.cpython-312.pyc
+│   │           │   │   │   │   └── collections_abc.py
+│   │           │   │   │   ├── providers.py
+│   │           │   │   │   ├── reporters.py
+│   │           │   │   │   ├── resolvers.py
+│   │           │   │   │   └── structs.py
+│   │           │   │   ├── rich/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __main__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── __main__.cpython-312.pyc
+│   │           │   │   │   │   ├── _cell_widths.cpython-312.pyc
+│   │           │   │   │   │   ├── _emoji_codes.cpython-312.pyc
+│   │           │   │   │   │   ├── _emoji_replace.cpython-312.pyc
+│   │           │   │   │   │   ├── _export_format.cpython-312.pyc
+│   │           │   │   │   │   ├── _extension.cpython-312.pyc
+│   │           │   │   │   │   ├── _fileno.cpython-312.pyc
+│   │           │   │   │   │   ├── _inspect.cpython-312.pyc
+│   │           │   │   │   │   ├── _log_render.cpython-312.pyc
+│   │           │   │   │   │   ├── _loop.cpython-312.pyc
+│   │           │   │   │   │   ├── _null_file.cpython-312.pyc
+│   │           │   │   │   │   ├── _palettes.cpython-312.pyc
+│   │           │   │   │   │   ├── _pick.cpython-312.pyc
+│   │           │   │   │   │   ├── _ratio.cpython-312.pyc
+│   │           │   │   │   │   ├── _spinners.cpython-312.pyc
+│   │           │   │   │   │   ├── _stack.cpython-312.pyc
+│   │           │   │   │   │   ├── _timer.cpython-312.pyc
+│   │           │   │   │   │   ├── _win32_console.cpython-312.pyc
+│   │           │   │   │   │   ├── _windows.cpython-312.pyc
+│   │           │   │   │   │   ├── _windows_renderer.cpython-312.pyc
+│   │           │   │   │   │   ├── _wrap.cpython-312.pyc
+│   │           │   │   │   │   ├── abc.cpython-312.pyc
+│   │           │   │   │   │   ├── align.cpython-312.pyc
+│   │           │   │   │   │   ├── ansi.cpython-312.pyc
+│   │           │   │   │   │   ├── bar.cpython-312.pyc
+│   │           │   │   │   │   ├── box.cpython-312.pyc
+│   │           │   │   │   │   ├── cells.cpython-312.pyc
+│   │           │   │   │   │   ├── color.cpython-312.pyc
+│   │           │   │   │   │   ├── color_triplet.cpython-312.pyc
+│   │           │   │   │   │   ├── columns.cpython-312.pyc
+│   │           │   │   │   │   ├── console.cpython-312.pyc
+│   │           │   │   │   │   ├── constrain.cpython-312.pyc
+│   │           │   │   │   │   ├── containers.cpython-312.pyc
+│   │           │   │   │   │   ├── control.cpython-312.pyc
+│   │           │   │   │   │   ├── default_styles.cpython-312.pyc
+│   │           │   │   │   │   ├── diagnose.cpython-312.pyc
+│   │           │   │   │   │   ├── emoji.cpython-312.pyc
+│   │           │   │   │   │   ├── errors.cpython-312.pyc
+│   │           │   │   │   │   ├── file_proxy.cpython-312.pyc
+│   │           │   │   │   │   ├── filesize.cpython-312.pyc
+│   │           │   │   │   │   ├── highlighter.cpython-312.pyc
+│   │           │   │   │   │   ├── json.cpython-312.pyc
+│   │           │   │   │   │   ├── jupyter.cpython-312.pyc
+│   │           │   │   │   │   ├── layout.cpython-312.pyc
+│   │           │   │   │   │   ├── live.cpython-312.pyc
+│   │           │   │   │   │   ├── live_render.cpython-312.pyc
+│   │           │   │   │   │   ├── logging.cpython-312.pyc
+│   │           │   │   │   │   ├── markup.cpython-312.pyc
+│   │           │   │   │   │   ├── measure.cpython-312.pyc
+│   │           │   │   │   │   ├── padding.cpython-312.pyc
+│   │           │   │   │   │   ├── pager.cpython-312.pyc
+│   │           │   │   │   │   ├── palette.cpython-312.pyc
+│   │           │   │   │   │   ├── panel.cpython-312.pyc
+│   │           │   │   │   │   ├── pretty.cpython-312.pyc
+│   │           │   │   │   │   ├── progress.cpython-312.pyc
+│   │           │   │   │   │   ├── progress_bar.cpython-312.pyc
+│   │           │   │   │   │   ├── prompt.cpython-312.pyc
+│   │           │   │   │   │   ├── protocol.cpython-312.pyc
+│   │           │   │   │   │   ├── region.cpython-312.pyc
+│   │           │   │   │   │   ├── repr.cpython-312.pyc
+│   │           │   │   │   │   ├── rule.cpython-312.pyc
+│   │           │   │   │   │   ├── scope.cpython-312.pyc
+│   │           │   │   │   │   ├── screen.cpython-312.pyc
+│   │           │   │   │   │   ├── segment.cpython-312.pyc
+│   │           │   │   │   │   ├── spinner.cpython-312.pyc
+│   │           │   │   │   │   ├── status.cpython-312.pyc
+│   │           │   │   │   │   ├── style.cpython-312.pyc
+│   │           │   │   │   │   ├── styled.cpython-312.pyc
+│   │           │   │   │   │   ├── syntax.cpython-312.pyc
+│   │           │   │   │   │   ├── table.cpython-312.pyc
+│   │           │   │   │   │   ├── terminal_theme.cpython-312.pyc
+│   │           │   │   │   │   ├── text.cpython-312.pyc
+│   │           │   │   │   │   ├── theme.cpython-312.pyc
+│   │           │   │   │   │   ├── themes.cpython-312.pyc
+│   │           │   │   │   │   ├── traceback.cpython-312.pyc
+│   │           │   │   │   │   └── tree.cpython-312.pyc
+│   │           │   │   │   ├── _cell_widths.py
+│   │           │   │   │   ├── _emoji_codes.py
+│   │           │   │   │   ├── _emoji_replace.py
+│   │           │   │   │   ├── _export_format.py
+│   │           │   │   │   ├── _extension.py
+│   │           │   │   │   ├── _fileno.py
+│   │           │   │   │   ├── _inspect.py
+│   │           │   │   │   ├── _log_render.py
+│   │           │   │   │   ├── _loop.py
+│   │           │   │   │   ├── _null_file.py
+│   │           │   │   │   ├── _palettes.py
+│   │           │   │   │   ├── _pick.py
+│   │           │   │   │   ├── _ratio.py
+│   │           │   │   │   ├── _spinners.py
+│   │           │   │   │   ├── _stack.py
+│   │           │   │   │   ├── _timer.py
+│   │           │   │   │   ├── _win32_console.py
+│   │           │   │   │   ├── _windows.py
+│   │           │   │   │   ├── _windows_renderer.py
+│   │           │   │   │   ├── _wrap.py
+│   │           │   │   │   ├── abc.py
+│   │           │   │   │   ├── align.py
+│   │           │   │   │   ├── ansi.py
+│   │           │   │   │   ├── bar.py
+│   │           │   │   │   ├── box.py
+│   │           │   │   │   ├── cells.py
+│   │           │   │   │   ├── color.py
+│   │           │   │   │   ├── color_triplet.py
+│   │           │   │   │   ├── columns.py
+│   │           │   │   │   ├── console.py
+│   │           │   │   │   ├── constrain.py
+│   │           │   │   │   ├── containers.py
+│   │           │   │   │   ├── control.py
+│   │           │   │   │   ├── default_styles.py
+│   │           │   │   │   ├── diagnose.py
+│   │           │   │   │   ├── emoji.py
+│   │           │   │   │   ├── errors.py
+│   │           │   │   │   ├── file_proxy.py
+│   │           │   │   │   ├── filesize.py
+│   │           │   │   │   ├── highlighter.py
+│   │           │   │   │   ├── json.py
+│   │           │   │   │   ├── jupyter.py
+│   │           │   │   │   ├── layout.py
+│   │           │   │   │   ├── live.py
+│   │           │   │   │   ├── live_render.py
+│   │           │   │   │   ├── logging.py
+│   │           │   │   │   ├── markup.py
+│   │           │   │   │   ├── measure.py
+│   │           │   │   │   ├── padding.py
+│   │           │   │   │   ├── pager.py
+│   │           │   │   │   ├── palette.py
+│   │           │   │   │   ├── panel.py
+│   │           │   │   │   ├── pretty.py
+│   │           │   │   │   ├── progress.py
+│   │           │   │   │   ├── progress_bar.py
+│   │           │   │   │   ├── prompt.py
+│   │           │   │   │   ├── protocol.py
+│   │           │   │   │   ├── region.py
+│   │           │   │   │   ├── repr.py
+│   │           │   │   │   ├── rule.py
+│   │           │   │   │   ├── scope.py
+│   │           │   │   │   ├── screen.py
+│   │           │   │   │   ├── segment.py
+│   │           │   │   │   ├── spinner.py
+│   │           │   │   │   ├── status.py
+│   │           │   │   │   ├── style.py
+│   │           │   │   │   ├── styled.py
+│   │           │   │   │   ├── syntax.py
+│   │           │   │   │   ├── table.py
+│   │           │   │   │   ├── terminal_theme.py
+│   │           │   │   │   ├── text.py
+│   │           │   │   │   ├── theme.py
+│   │           │   │   │   ├── themes.py
+│   │           │   │   │   ├── traceback.py
+│   │           │   │   │   └── tree.py
+│   │           │   │   ├── six.py
+│   │           │   │   ├── tenacity/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _asyncio.cpython-312.pyc
+│   │           │   │   │   │   ├── _utils.cpython-312.pyc
+│   │           │   │   │   │   ├── after.cpython-312.pyc
+│   │           │   │   │   │   ├── before.cpython-312.pyc
+│   │           │   │   │   │   ├── before_sleep.cpython-312.pyc
+│   │           │   │   │   │   ├── nap.cpython-312.pyc
+│   │           │   │   │   │   ├── retry.cpython-312.pyc
+│   │           │   │   │   │   ├── stop.cpython-312.pyc
+│   │           │   │   │   │   ├── tornadoweb.cpython-312.pyc
+│   │           │   │   │   │   └── wait.cpython-312.pyc
+│   │           │   │   │   ├── _asyncio.py
+│   │           │   │   │   ├── _utils.py
+│   │           │   │   │   ├── after.py
+│   │           │   │   │   ├── before.py
+│   │           │   │   │   ├── before_sleep.py
+│   │           │   │   │   ├── nap.py
+│   │           │   │   │   ├── retry.py
+│   │           │   │   │   ├── stop.py
+│   │           │   │   │   ├── tornadoweb.py
+│   │           │   │   │   └── wait.py
+│   │           │   │   ├── tomli/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _parser.cpython-312.pyc
+│   │           │   │   │   │   ├── _re.cpython-312.pyc
+│   │           │   │   │   │   └── _types.cpython-312.pyc
+│   │           │   │   │   ├── _parser.py
+│   │           │   │   │   ├── _re.py
+│   │           │   │   │   └── _types.py
+│   │           │   │   ├── truststore/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _api.cpython-312.pyc
+│   │           │   │   │   │   ├── _macos.cpython-312.pyc
+│   │           │   │   │   │   ├── _openssl.cpython-312.pyc
+│   │           │   │   │   │   ├── _ssl_constants.cpython-312.pyc
+│   │           │   │   │   │   └── _windows.cpython-312.pyc
+│   │           │   │   │   ├── _api.py
+│   │           │   │   │   ├── _macos.py
+│   │           │   │   │   ├── _openssl.py
+│   │           │   │   │   ├── _ssl_constants.py
+│   │           │   │   │   └── _windows.py
+│   │           │   │   ├── typing_extensions.py
+│   │           │   │   ├── urllib3/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _collections.cpython-312.pyc
+│   │           │   │   │   │   ├── _version.cpython-312.pyc
+│   │           │   │   │   │   ├── connection.cpython-312.pyc
+│   │           │   │   │   │   ├── connectionpool.cpython-312.pyc
+│   │           │   │   │   │   ├── exceptions.cpython-312.pyc
+│   │           │   │   │   │   ├── fields.cpython-312.pyc
+│   │           │   │   │   │   ├── filepost.cpython-312.pyc
+│   │           │   │   │   │   ├── poolmanager.cpython-312.pyc
+│   │           │   │   │   │   ├── request.cpython-312.pyc
+│   │           │   │   │   │   └── response.cpython-312.pyc
+│   │           │   │   │   ├── _collections.py
+│   │           │   │   │   ├── _version.py
+│   │           │   │   │   ├── connection.py
+│   │           │   │   │   ├── connectionpool.py
+│   │           │   │   │   ├── contrib/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── _appengine_environ.cpython-312.pyc
+│   │           │   │   │   │   │   ├── appengine.cpython-312.pyc
+│   │           │   │   │   │   │   ├── ntlmpool.cpython-312.pyc
+│   │           │   │   │   │   │   ├── pyopenssl.cpython-312.pyc
+│   │           │   │   │   │   │   ├── securetransport.cpython-312.pyc
+│   │           │   │   │   │   │   └── socks.cpython-312.pyc
+│   │           │   │   │   │   ├── _appengine_environ.py
+│   │           │   │   │   │   ├── _securetransport/
+│   │           │   │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   │   ├── bindings.cpython-312.pyc
+│   │           │   │   │   │   │   │   └── low_level.cpython-312.pyc
+│   │           │   │   │   │   │   ├── bindings.py
+│   │           │   │   │   │   │   └── low_level.py
+│   │           │   │   │   │   ├── appengine.py
+│   │           │   │   │   │   ├── ntlmpool.py
+│   │           │   │   │   │   ├── pyopenssl.py
+│   │           │   │   │   │   ├── securetransport.py
+│   │           │   │   │   │   └── socks.py
+│   │           │   │   │   ├── exceptions.py
+│   │           │   │   │   ├── fields.py
+│   │           │   │   │   ├── filepost.py
+│   │           │   │   │   ├── packages/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   └── six.cpython-312.pyc
+│   │           │   │   │   │   ├── backports/
+│   │           │   │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   │   ├── makefile.cpython-312.pyc
+│   │           │   │   │   │   │   │   └── weakref_finalize.cpython-312.pyc
+│   │           │   │   │   │   │   ├── makefile.py
+│   │           │   │   │   │   │   └── weakref_finalize.py
+│   │           │   │   │   │   └── six.py
+│   │           │   │   │   ├── poolmanager.py
+│   │           │   │   │   ├── request.py
+│   │           │   │   │   ├── response.py
+│   │           │   │   │   └── util/
+│   │           │   │   │       ├── __init__.py
+│   │           │   │   │       ├── __pycache__/
+│   │           │   │   │       │   ├── __init__.cpython-312.pyc
+│   │           │   │   │       │   ├── connection.cpython-312.pyc
+│   │           │   │   │       │   ├── proxy.cpython-312.pyc
+│   │           │   │   │       │   ├── queue.cpython-312.pyc
+│   │           │   │   │       │   ├── request.cpython-312.pyc
+│   │           │   │   │       │   ├── response.cpython-312.pyc
+│   │           │   │   │       │   ├── retry.cpython-312.pyc
+│   │           │   │   │       │   ├── ssl_.cpython-312.pyc
+│   │           │   │   │       │   ├── ssl_match_hostname.cpython-312.pyc
+│   │           │   │   │       │   ├── ssltransport.cpython-312.pyc
+│   │           │   │   │       │   ├── timeout.cpython-312.pyc
+│   │           │   │   │       │   ├── url.cpython-312.pyc
+│   │           │   │   │       │   └── wait.cpython-312.pyc
+│   │           │   │   │       ├── connection.py
+│   │           │   │   │       ├── proxy.py
+│   │           │   │   │       ├── queue.py
+│   │           │   │   │       ├── request.py
+│   │           │   │   │       ├── response.py
+│   │           │   │   │       ├── retry.py
+│   │           │   │   │       ├── ssl_.py
+│   │           │   │   │       ├── ssl_match_hostname.py
+│   │           │   │   │       ├── ssltransport.py
+│   │           │   │   │       ├── timeout.py
+│   │           │   │   │       ├── url.py
+│   │           │   │   │       └── wait.py
+│   │           │   │   ├── vendor.txt
+│   │           │   │   └── webencodings/
+│   │           │   │       ├── __init__.py
+│   │           │   │       ├── __pycache__/
+│   │           │   │       │   ├── __init__.cpython-312.pyc
+│   │           │   │       │   ├── labels.cpython-312.pyc
+│   │           │   │       │   ├── mklabels.cpython-312.pyc
+│   │           │   │       │   ├── tests.cpython-312.pyc
+│   │           │   │       │   └── x_user_defined.cpython-312.pyc
+│   │           │   │       ├── labels.py
+│   │           │   │       ├── mklabels.py
+│   │           │   │       ├── tests.py
+│   │           │   │       └── x_user_defined.py
+│   │           │   └── py.typed
+│   │           └── pip-24.0.dist-info/
+│   │               ├── AUTHORS.txt
+│   │               ├── INSTALLER
+│   │               ├── LICENSE.txt
+│   │               ├── METADATA
+│   │               ├── RECORD
+│   │               ├── REQUESTED
+│   │               ├── WHEEL
+│   │               ├── entry_points.txt
+│   │               └── top_level.txt
+│   ├── lib64/
+│   │   └── python3.12/
+│   │       └── site-packages/
+│   │           ├── mutagen/
+│   │           │   ├── __init__.py
+│   │           │   ├── __pycache__/
+│   │           │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   ├── _constants.cpython-312.pyc
+│   │           │   │   ├── _file.cpython-312.pyc
+│   │           │   │   ├── _iff.cpython-312.pyc
+│   │           │   │   ├── _riff.cpython-312.pyc
+│   │           │   │   ├── _tags.cpython-312.pyc
+│   │           │   │   ├── _util.cpython-312.pyc
+│   │           │   │   ├── _vorbis.cpython-312.pyc
+│   │           │   │   ├── aac.cpython-312.pyc
+│   │           │   │   ├── ac3.cpython-312.pyc
+│   │           │   │   ├── aiff.cpython-312.pyc
+│   │           │   │   ├── apev2.cpython-312.pyc
+│   │           │   │   ├── dsdiff.cpython-312.pyc
+│   │           │   │   ├── dsf.cpython-312.pyc
+│   │           │   │   ├── easyid3.cpython-312.pyc
+│   │           │   │   ├── easymp4.cpython-312.pyc
+│   │           │   │   ├── flac.cpython-312.pyc
+│   │           │   │   ├── m4a.cpython-312.pyc
+│   │           │   │   ├── monkeysaudio.cpython-312.pyc
+│   │           │   │   ├── musepack.cpython-312.pyc
+│   │           │   │   ├── ogg.cpython-312.pyc
+│   │           │   │   ├── oggflac.cpython-312.pyc
+│   │           │   │   ├── oggopus.cpython-312.pyc
+│   │           │   │   ├── oggspeex.cpython-312.pyc
+│   │           │   │   ├── oggtheora.cpython-312.pyc
+│   │           │   │   ├── oggvorbis.cpython-312.pyc
+│   │           │   │   ├── optimfrog.cpython-312.pyc
+│   │           │   │   ├── smf.cpython-312.pyc
+│   │           │   │   ├── tak.cpython-312.pyc
+│   │           │   │   ├── trueaudio.cpython-312.pyc
+│   │           │   │   ├── wave.cpython-312.pyc
+│   │           │   │   └── wavpack.cpython-312.pyc
+│   │           │   ├── _constants.py
+│   │           │   ├── _file.py
+│   │           │   ├── _iff.py
+│   │           │   ├── _riff.py
+│   │           │   ├── _tags.py
+│   │           │   ├── _tools/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   ├── _util.cpython-312.pyc
+│   │           │   │   │   ├── mid3cp.cpython-312.pyc
+│   │           │   │   │   ├── mid3iconv.cpython-312.pyc
+│   │           │   │   │   ├── mid3v2.cpython-312.pyc
+│   │           │   │   │   ├── moggsplit.cpython-312.pyc
+│   │           │   │   │   ├── mutagen_inspect.cpython-312.pyc
+│   │           │   │   │   └── mutagen_pony.cpython-312.pyc
+│   │           │   │   ├── _util.py
+│   │           │   │   ├── mid3cp.py
+│   │           │   │   ├── mid3iconv.py
+│   │           │   │   ├── mid3v2.py
+│   │           │   │   ├── moggsplit.py
+│   │           │   │   ├── mutagen_inspect.py
+│   │           │   │   └── mutagen_pony.py
+│   │           │   ├── _util.py
+│   │           │   ├── _vorbis.py
+│   │           │   ├── aac.py
+│   │           │   ├── ac3.py
+│   │           │   ├── aiff.py
+│   │           │   ├── apev2.py
+│   │           │   ├── asf/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   ├── _attrs.cpython-312.pyc
+│   │           │   │   │   ├── _objects.cpython-312.pyc
+│   │           │   │   │   └── _util.cpython-312.pyc
+│   │           │   │   ├── _attrs.py
+│   │           │   │   ├── _objects.py
+│   │           │   │   └── _util.py
+│   │           │   ├── dsdiff.py
+│   │           │   ├── dsf.py
+│   │           │   ├── easyid3.py
+│   │           │   ├── easymp4.py
+│   │           │   ├── flac.py
+│   │           │   ├── id3/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   ├── _file.cpython-312.pyc
+│   │           │   │   │   ├── _frames.cpython-312.pyc
+│   │           │   │   │   ├── _id3v1.cpython-312.pyc
+│   │           │   │   │   ├── _specs.cpython-312.pyc
+│   │           │   │   │   ├── _tags.cpython-312.pyc
+│   │           │   │   │   └── _util.cpython-312.pyc
+│   │           │   │   ├── _file.py
+│   │           │   │   ├── _frames.py
+│   │           │   │   ├── _id3v1.py
+│   │           │   │   ├── _specs.py
+│   │           │   │   ├── _tags.py
+│   │           │   │   └── _util.py
+│   │           │   ├── m4a.py
+│   │           │   ├── monkeysaudio.py
+│   │           │   ├── mp3/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   └── _util.cpython-312.pyc
+│   │           │   │   └── _util.py
+│   │           │   ├── mp4/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   ├── _as_entry.cpython-312.pyc
+│   │           │   │   │   ├── _atom.cpython-312.pyc
+│   │           │   │   │   └── _util.cpython-312.pyc
+│   │           │   │   ├── _as_entry.py
+│   │           │   │   ├── _atom.py
+│   │           │   │   └── _util.py
+│   │           │   ├── musepack.py
+│   │           │   ├── ogg.py
+│   │           │   ├── oggflac.py
+│   │           │   ├── oggopus.py
+│   │           │   ├── oggspeex.py
+│   │           │   ├── oggtheora.py
+│   │           │   ├── oggvorbis.py
+│   │           │   ├── optimfrog.py
+│   │           │   ├── py.typed
+│   │           │   ├── smf.py
+│   │           │   ├── tak.py
+│   │           │   ├── trueaudio.py
+│   │           │   ├── wave.py
+│   │           │   └── wavpack.py
+│   │           ├── mutagen-1.47.0.dist-info/
+│   │           │   ├── COPYING
+│   │           │   ├── INSTALLER
+│   │           │   ├── METADATA
+│   │           │   ├── RECORD
+│   │           │   ├── REQUESTED
+│   │           │   ├── WHEEL
+│   │           │   ├── entry_points.txt
+│   │           │   └── top_level.txt
+│   │           ├── pip/
+│   │           │   ├── __init__.py
+│   │           │   ├── __main__.py
+│   │           │   ├── __pip-runner__.py
+│   │           │   ├── __pycache__/
+│   │           │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   ├── __main__.cpython-312.pyc
+│   │           │   │   └── __pip-runner__.cpython-312.pyc
+│   │           │   ├── _internal/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   ├── build_env.cpython-312.pyc
+│   │           │   │   │   ├── cache.cpython-312.pyc
+│   │           │   │   │   ├── configuration.cpython-312.pyc
+│   │           │   │   │   ├── exceptions.cpython-312.pyc
+│   │           │   │   │   ├── main.cpython-312.pyc
+│   │           │   │   │   ├── pyproject.cpython-312.pyc
+│   │           │   │   │   ├── self_outdated_check.cpython-312.pyc
+│   │           │   │   │   └── wheel_builder.cpython-312.pyc
+│   │           │   │   ├── build_env.py
+│   │           │   │   ├── cache.py
+│   │           │   │   ├── cli/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── autocompletion.cpython-312.pyc
+│   │           │   │   │   │   ├── base_command.cpython-312.pyc
+│   │           │   │   │   │   ├── cmdoptions.cpython-312.pyc
+│   │           │   │   │   │   ├── command_context.cpython-312.pyc
+│   │           │   │   │   │   ├── main.cpython-312.pyc
+│   │           │   │   │   │   ├── main_parser.cpython-312.pyc
+│   │           │   │   │   │   ├── parser.cpython-312.pyc
+│   │           │   │   │   │   ├── progress_bars.cpython-312.pyc
+│   │           │   │   │   │   ├── req_command.cpython-312.pyc
+│   │           │   │   │   │   ├── spinners.cpython-312.pyc
+│   │           │   │   │   │   └── status_codes.cpython-312.pyc
+│   │           │   │   │   ├── autocompletion.py
+│   │           │   │   │   ├── base_command.py
+│   │           │   │   │   ├── cmdoptions.py
+│   │           │   │   │   ├── command_context.py
+│   │           │   │   │   ├── main.py
+│   │           │   │   │   ├── main_parser.py
+│   │           │   │   │   ├── parser.py
+│   │           │   │   │   ├── progress_bars.py
+│   │           │   │   │   ├── req_command.py
+│   │           │   │   │   ├── spinners.py
+│   │           │   │   │   └── status_codes.py
+│   │           │   │   ├── commands/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── cache.cpython-312.pyc
+│   │           │   │   │   │   ├── check.cpython-312.pyc
+│   │           │   │   │   │   ├── completion.cpython-312.pyc
+│   │           │   │   │   │   ├── configuration.cpython-312.pyc
+│   │           │   │   │   │   ├── debug.cpython-312.pyc
+│   │           │   │   │   │   ├── download.cpython-312.pyc
+│   │           │   │   │   │   ├── freeze.cpython-312.pyc
+│   │           │   │   │   │   ├── hash.cpython-312.pyc
+│   │           │   │   │   │   ├── help.cpython-312.pyc
+│   │           │   │   │   │   ├── index.cpython-312.pyc
+│   │           │   │   │   │   ├── inspect.cpython-312.pyc
+│   │           │   │   │   │   ├── install.cpython-312.pyc
+│   │           │   │   │   │   ├── list.cpython-312.pyc
+│   │           │   │   │   │   ├── search.cpython-312.pyc
+│   │           │   │   │   │   ├── show.cpython-312.pyc
+│   │           │   │   │   │   ├── uninstall.cpython-312.pyc
+│   │           │   │   │   │   └── wheel.cpython-312.pyc
+│   │           │   │   │   ├── cache.py
+│   │           │   │   │   ├── check.py
+│   │           │   │   │   ├── completion.py
+│   │           │   │   │   ├── configuration.py
+│   │           │   │   │   ├── debug.py
+│   │           │   │   │   ├── download.py
+│   │           │   │   │   ├── freeze.py
+│   │           │   │   │   ├── hash.py
+│   │           │   │   │   ├── help.py
+│   │           │   │   │   ├── index.py
+│   │           │   │   │   ├── inspect.py
+│   │           │   │   │   ├── install.py
+│   │           │   │   │   ├── list.py
+│   │           │   │   │   ├── search.py
+│   │           │   │   │   ├── show.py
+│   │           │   │   │   ├── uninstall.py
+│   │           │   │   │   └── wheel.py
+│   │           │   │   ├── configuration.py
+│   │           │   │   ├── distributions/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── base.cpython-312.pyc
+│   │           │   │   │   │   ├── installed.cpython-312.pyc
+│   │           │   │   │   │   ├── sdist.cpython-312.pyc
+│   │           │   │   │   │   └── wheel.cpython-312.pyc
+│   │           │   │   │   ├── base.py
+│   │           │   │   │   ├── installed.py
+│   │           │   │   │   ├── sdist.py
+│   │           │   │   │   └── wheel.py
+│   │           │   │   ├── exceptions.py
+│   │           │   │   ├── index/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── collector.cpython-312.pyc
+│   │           │   │   │   │   ├── package_finder.cpython-312.pyc
+│   │           │   │   │   │   └── sources.cpython-312.pyc
+│   │           │   │   │   ├── collector.py
+│   │           │   │   │   ├── package_finder.py
+│   │           │   │   │   └── sources.py
+│   │           │   │   ├── locations/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _distutils.cpython-312.pyc
+│   │           │   │   │   │   ├── _sysconfig.cpython-312.pyc
+│   │           │   │   │   │   └── base.cpython-312.pyc
+│   │           │   │   │   ├── _distutils.py
+│   │           │   │   │   ├── _sysconfig.py
+│   │           │   │   │   └── base.py
+│   │           │   │   ├── main.py
+│   │           │   │   ├── metadata/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _json.cpython-312.pyc
+│   │           │   │   │   │   ├── base.cpython-312.pyc
+│   │           │   │   │   │   └── pkg_resources.cpython-312.pyc
+│   │           │   │   │   ├── _json.py
+│   │           │   │   │   ├── base.py
+│   │           │   │   │   ├── importlib/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── _compat.cpython-312.pyc
+│   │           │   │   │   │   │   ├── _dists.cpython-312.pyc
+│   │           │   │   │   │   │   └── _envs.cpython-312.pyc
+│   │           │   │   │   │   ├── _compat.py
+│   │           │   │   │   │   ├── _dists.py
+│   │           │   │   │   │   └── _envs.py
+│   │           │   │   │   └── pkg_resources.py
+│   │           │   │   ├── models/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── candidate.cpython-312.pyc
+│   │           │   │   │   │   ├── direct_url.cpython-312.pyc
+│   │           │   │   │   │   ├── format_control.cpython-312.pyc
+│   │           │   │   │   │   ├── index.cpython-312.pyc
+│   │           │   │   │   │   ├── installation_report.cpython-312.pyc
+│   │           │   │   │   │   ├── link.cpython-312.pyc
+│   │           │   │   │   │   ├── scheme.cpython-312.pyc
+│   │           │   │   │   │   ├── search_scope.cpython-312.pyc
+│   │           │   │   │   │   ├── selection_prefs.cpython-312.pyc
+│   │           │   │   │   │   ├── target_python.cpython-312.pyc
+│   │           │   │   │   │   └── wheel.cpython-312.pyc
+│   │           │   │   │   ├── candidate.py
+│   │           │   │   │   ├── direct_url.py
+│   │           │   │   │   ├── format_control.py
+│   │           │   │   │   ├── index.py
+│   │           │   │   │   ├── installation_report.py
+│   │           │   │   │   ├── link.py
+│   │           │   │   │   ├── scheme.py
+│   │           │   │   │   ├── search_scope.py
+│   │           │   │   │   ├── selection_prefs.py
+│   │           │   │   │   ├── target_python.py
+│   │           │   │   │   └── wheel.py
+│   │           │   │   ├── network/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── auth.cpython-312.pyc
+│   │           │   │   │   │   ├── cache.cpython-312.pyc
+│   │           │   │   │   │   ├── download.cpython-312.pyc
+│   │           │   │   │   │   ├── lazy_wheel.cpython-312.pyc
+│   │           │   │   │   │   ├── session.cpython-312.pyc
+│   │           │   │   │   │   ├── utils.cpython-312.pyc
+│   │           │   │   │   │   └── xmlrpc.cpython-312.pyc
+│   │           │   │   │   ├── auth.py
+│   │           │   │   │   ├── cache.py
+│   │           │   │   │   ├── download.py
+│   │           │   │   │   ├── lazy_wheel.py
+│   │           │   │   │   ├── session.py
+│   │           │   │   │   ├── utils.py
+│   │           │   │   │   └── xmlrpc.py
+│   │           │   │   ├── operations/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── check.cpython-312.pyc
+│   │           │   │   │   │   ├── freeze.cpython-312.pyc
+│   │           │   │   │   │   └── prepare.cpython-312.pyc
+│   │           │   │   │   ├── build/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── build_tracker.cpython-312.pyc
+│   │           │   │   │   │   │   ├── metadata.cpython-312.pyc
+│   │           │   │   │   │   │   ├── metadata_editable.cpython-312.pyc
+│   │           │   │   │   │   │   ├── metadata_legacy.cpython-312.pyc
+│   │           │   │   │   │   │   ├── wheel.cpython-312.pyc
+│   │           │   │   │   │   │   ├── wheel_editable.cpython-312.pyc
+│   │           │   │   │   │   │   └── wheel_legacy.cpython-312.pyc
+│   │           │   │   │   │   ├── build_tracker.py
+│   │           │   │   │   │   ├── metadata.py
+│   │           │   │   │   │   ├── metadata_editable.py
+│   │           │   │   │   │   ├── metadata_legacy.py
+│   │           │   │   │   │   ├── wheel.py
+│   │           │   │   │   │   ├── wheel_editable.py
+│   │           │   │   │   │   └── wheel_legacy.py
+│   │           │   │   │   ├── check.py
+│   │           │   │   │   ├── freeze.py
+│   │           │   │   │   ├── install/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── editable_legacy.cpython-312.pyc
+│   │           │   │   │   │   │   └── wheel.cpython-312.pyc
+│   │           │   │   │   │   ├── editable_legacy.py
+│   │           │   │   │   │   └── wheel.py
+│   │           │   │   │   └── prepare.py
+│   │           │   │   ├── pyproject.py
+│   │           │   │   ├── req/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── constructors.cpython-312.pyc
+│   │           │   │   │   │   ├── req_file.cpython-312.pyc
+│   │           │   │   │   │   ├── req_install.cpython-312.pyc
+│   │           │   │   │   │   ├── req_set.cpython-312.pyc
+│   │           │   │   │   │   └── req_uninstall.cpython-312.pyc
+│   │           │   │   │   ├── constructors.py
+│   │           │   │   │   ├── req_file.py
+│   │           │   │   │   ├── req_install.py
+│   │           │   │   │   ├── req_set.py
+│   │           │   │   │   └── req_uninstall.py
+│   │           │   │   ├── resolution/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   └── base.cpython-312.pyc
+│   │           │   │   │   ├── base.py
+│   │           │   │   │   ├── legacy/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   └── resolver.cpython-312.pyc
+│   │           │   │   │   │   └── resolver.py
+│   │           │   │   │   └── resolvelib/
+│   │           │   │   │       ├── __init__.py
+│   │           │   │   │       ├── __pycache__/
+│   │           │   │   │       │   ├── __init__.cpython-312.pyc
+│   │           │   │   │       │   ├── base.cpython-312.pyc
+│   │           │   │   │       │   ├── candidates.cpython-312.pyc
+│   │           │   │   │       │   ├── factory.cpython-312.pyc
+│   │           │   │   │       │   ├── found_candidates.cpython-312.pyc
+│   │           │   │   │       │   ├── provider.cpython-312.pyc
+│   │           │   │   │       │   ├── reporter.cpython-312.pyc
+│   │           │   │   │       │   ├── requirements.cpython-312.pyc
+│   │           │   │   │       │   └── resolver.cpython-312.pyc
+│   │           │   │   │       ├── base.py
+│   │           │   │   │       ├── candidates.py
+│   │           │   │   │       ├── factory.py
+│   │           │   │   │       ├── found_candidates.py
+│   │           │   │   │       ├── provider.py
+│   │           │   │   │       ├── reporter.py
+│   │           │   │   │       ├── requirements.py
+│   │           │   │   │       └── resolver.py
+│   │           │   │   ├── self_outdated_check.py
+│   │           │   │   ├── utils/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _jaraco_text.cpython-312.pyc
+│   │           │   │   │   │   ├── _log.cpython-312.pyc
+│   │           │   │   │   │   ├── appdirs.cpython-312.pyc
+│   │           │   │   │   │   ├── compat.cpython-312.pyc
+│   │           │   │   │   │   ├── compatibility_tags.cpython-312.pyc
+│   │           │   │   │   │   ├── datetime.cpython-312.pyc
+│   │           │   │   │   │   ├── deprecation.cpython-312.pyc
+│   │           │   │   │   │   ├── direct_url_helpers.cpython-312.pyc
+│   │           │   │   │   │   ├── egg_link.cpython-312.pyc
+│   │           │   │   │   │   ├── encoding.cpython-312.pyc
+│   │           │   │   │   │   ├── entrypoints.cpython-312.pyc
+│   │           │   │   │   │   ├── filesystem.cpython-312.pyc
+│   │           │   │   │   │   ├── filetypes.cpython-312.pyc
+│   │           │   │   │   │   ├── glibc.cpython-312.pyc
+│   │           │   │   │   │   ├── hashes.cpython-312.pyc
+│   │           │   │   │   │   ├── logging.cpython-312.pyc
+│   │           │   │   │   │   ├── misc.cpython-312.pyc
+│   │           │   │   │   │   ├── models.cpython-312.pyc
+│   │           │   │   │   │   ├── packaging.cpython-312.pyc
+│   │           │   │   │   │   ├── setuptools_build.cpython-312.pyc
+│   │           │   │   │   │   ├── subprocess.cpython-312.pyc
+│   │           │   │   │   │   ├── temp_dir.cpython-312.pyc
+│   │           │   │   │   │   ├── unpacking.cpython-312.pyc
+│   │           │   │   │   │   ├── urls.cpython-312.pyc
+│   │           │   │   │   │   ├── virtualenv.cpython-312.pyc
+│   │           │   │   │   │   └── wheel.cpython-312.pyc
+│   │           │   │   │   ├── _jaraco_text.py
+│   │           │   │   │   ├── _log.py
+│   │           │   │   │   ├── appdirs.py
+│   │           │   │   │   ├── compat.py
+│   │           │   │   │   ├── compatibility_tags.py
+│   │           │   │   │   ├── datetime.py
+│   │           │   │   │   ├── deprecation.py
+│   │           │   │   │   ├── direct_url_helpers.py
+│   │           │   │   │   ├── egg_link.py
+│   │           │   │   │   ├── encoding.py
+│   │           │   │   │   ├── entrypoints.py
+│   │           │   │   │   ├── filesystem.py
+│   │           │   │   │   ├── filetypes.py
+│   │           │   │   │   ├── glibc.py
+│   │           │   │   │   ├── hashes.py
+│   │           │   │   │   ├── logging.py
+│   │           │   │   │   ├── misc.py
+│   │           │   │   │   ├── models.py
+│   │           │   │   │   ├── packaging.py
+│   │           │   │   │   ├── setuptools_build.py
+│   │           │   │   │   ├── subprocess.py
+│   │           │   │   │   ├── temp_dir.py
+│   │           │   │   │   ├── unpacking.py
+│   │           │   │   │   ├── urls.py
+│   │           │   │   │   ├── virtualenv.py
+│   │           │   │   │   └── wheel.py
+│   │           │   │   ├── vcs/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── bazaar.cpython-312.pyc
+│   │           │   │   │   │   ├── git.cpython-312.pyc
+│   │           │   │   │   │   ├── mercurial.cpython-312.pyc
+│   │           │   │   │   │   ├── subversion.cpython-312.pyc
+│   │           │   │   │   │   └── versioncontrol.cpython-312.pyc
+│   │           │   │   │   ├── bazaar.py
+│   │           │   │   │   ├── git.py
+│   │           │   │   │   ├── mercurial.py
+│   │           │   │   │   ├── subversion.py
+│   │           │   │   │   └── versioncontrol.py
+│   │           │   │   └── wheel_builder.py
+│   │           │   ├── _vendor/
+│   │           │   │   ├── __init__.py
+│   │           │   │   ├── __pycache__/
+│   │           │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   ├── six.cpython-312.pyc
+│   │           │   │   │   └── typing_extensions.cpython-312.pyc
+│   │           │   │   ├── cachecontrol/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _cmd.cpython-312.pyc
+│   │           │   │   │   │   ├── adapter.cpython-312.pyc
+│   │           │   │   │   │   ├── cache.cpython-312.pyc
+│   │           │   │   │   │   ├── controller.cpython-312.pyc
+│   │           │   │   │   │   ├── filewrapper.cpython-312.pyc
+│   │           │   │   │   │   ├── heuristics.cpython-312.pyc
+│   │           │   │   │   │   ├── serialize.cpython-312.pyc
+│   │           │   │   │   │   └── wrapper.cpython-312.pyc
+│   │           │   │   │   ├── _cmd.py
+│   │           │   │   │   ├── adapter.py
+│   │           │   │   │   ├── cache.py
+│   │           │   │   │   ├── caches/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── file_cache.cpython-312.pyc
+│   │           │   │   │   │   │   └── redis_cache.cpython-312.pyc
+│   │           │   │   │   │   ├── file_cache.py
+│   │           │   │   │   │   └── redis_cache.py
+│   │           │   │   │   ├── controller.py
+│   │           │   │   │   ├── filewrapper.py
+│   │           │   │   │   ├── heuristics.py
+│   │           │   │   │   ├── serialize.py
+│   │           │   │   │   └── wrapper.py
+│   │           │   │   ├── certifi/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __main__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── __main__.cpython-312.pyc
+│   │           │   │   │   │   └── core.cpython-312.pyc
+│   │           │   │   │   ├── cacert.pem
+│   │           │   │   │   └── core.py
+│   │           │   │   ├── chardet/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── big5freq.cpython-312.pyc
+│   │           │   │   │   │   ├── big5prober.cpython-312.pyc
+│   │           │   │   │   │   ├── chardistribution.cpython-312.pyc
+│   │           │   │   │   │   ├── charsetgroupprober.cpython-312.pyc
+│   │           │   │   │   │   ├── charsetprober.cpython-312.pyc
+│   │           │   │   │   │   ├── codingstatemachine.cpython-312.pyc
+│   │           │   │   │   │   ├── codingstatemachinedict.cpython-312.pyc
+│   │           │   │   │   │   ├── cp949prober.cpython-312.pyc
+│   │           │   │   │   │   ├── enums.cpython-312.pyc
+│   │           │   │   │   │   ├── escprober.cpython-312.pyc
+│   │           │   │   │   │   ├── escsm.cpython-312.pyc
+│   │           │   │   │   │   ├── eucjpprober.cpython-312.pyc
+│   │           │   │   │   │   ├── euckrfreq.cpython-312.pyc
+│   │           │   │   │   │   ├── euckrprober.cpython-312.pyc
+│   │           │   │   │   │   ├── euctwfreq.cpython-312.pyc
+│   │           │   │   │   │   ├── euctwprober.cpython-312.pyc
+│   │           │   │   │   │   ├── gb2312freq.cpython-312.pyc
+│   │           │   │   │   │   ├── gb2312prober.cpython-312.pyc
+│   │           │   │   │   │   ├── hebrewprober.cpython-312.pyc
+│   │           │   │   │   │   ├── jisfreq.cpython-312.pyc
+│   │           │   │   │   │   ├── johabfreq.cpython-312.pyc
+│   │           │   │   │   │   ├── johabprober.cpython-312.pyc
+│   │           │   │   │   │   ├── jpcntx.cpython-312.pyc
+│   │           │   │   │   │   ├── langbulgarianmodel.cpython-312.pyc
+│   │           │   │   │   │   ├── langgreekmodel.cpython-312.pyc
+│   │           │   │   │   │   ├── langhebrewmodel.cpython-312.pyc
+│   │           │   │   │   │   ├── langhungarianmodel.cpython-312.pyc
+│   │           │   │   │   │   ├── langrussianmodel.cpython-312.pyc
+│   │           │   │   │   │   ├── langthaimodel.cpython-312.pyc
+│   │           │   │   │   │   ├── langturkishmodel.cpython-312.pyc
+│   │           │   │   │   │   ├── latin1prober.cpython-312.pyc
+│   │           │   │   │   │   ├── macromanprober.cpython-312.pyc
+│   │           │   │   │   │   ├── mbcharsetprober.cpython-312.pyc
+│   │           │   │   │   │   ├── mbcsgroupprober.cpython-312.pyc
+│   │           │   │   │   │   ├── mbcssm.cpython-312.pyc
+│   │           │   │   │   │   ├── resultdict.cpython-312.pyc
+│   │           │   │   │   │   ├── sbcharsetprober.cpython-312.pyc
+│   │           │   │   │   │   ├── sbcsgroupprober.cpython-312.pyc
+│   │           │   │   │   │   ├── sjisprober.cpython-312.pyc
+│   │           │   │   │   │   ├── universaldetector.cpython-312.pyc
+│   │           │   │   │   │   ├── utf1632prober.cpython-312.pyc
+│   │           │   │   │   │   ├── utf8prober.cpython-312.pyc
+│   │           │   │   │   │   └── version.cpython-312.pyc
+│   │           │   │   │   ├── big5freq.py
+│   │           │   │   │   ├── big5prober.py
+│   │           │   │   │   ├── chardistribution.py
+│   │           │   │   │   ├── charsetgroupprober.py
+│   │           │   │   │   ├── charsetprober.py
+│   │           │   │   │   ├── cli/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   └── chardetect.cpython-312.pyc
+│   │           │   │   │   │   └── chardetect.py
+│   │           │   │   │   ├── codingstatemachine.py
+│   │           │   │   │   ├── codingstatemachinedict.py
+│   │           │   │   │   ├── cp949prober.py
+│   │           │   │   │   ├── enums.py
+│   │           │   │   │   ├── escprober.py
+│   │           │   │   │   ├── escsm.py
+│   │           │   │   │   ├── eucjpprober.py
+│   │           │   │   │   ├── euckrfreq.py
+│   │           │   │   │   ├── euckrprober.py
+│   │           │   │   │   ├── euctwfreq.py
+│   │           │   │   │   ├── euctwprober.py
+│   │           │   │   │   ├── gb2312freq.py
+│   │           │   │   │   ├── gb2312prober.py
+│   │           │   │   │   ├── hebrewprober.py
+│   │           │   │   │   ├── jisfreq.py
+│   │           │   │   │   ├── johabfreq.py
+│   │           │   │   │   ├── johabprober.py
+│   │           │   │   │   ├── jpcntx.py
+│   │           │   │   │   ├── langbulgarianmodel.py
+│   │           │   │   │   ├── langgreekmodel.py
+│   │           │   │   │   ├── langhebrewmodel.py
+│   │           │   │   │   ├── langhungarianmodel.py
+│   │           │   │   │   ├── langrussianmodel.py
+│   │           │   │   │   ├── langthaimodel.py
+│   │           │   │   │   ├── langturkishmodel.py
+│   │           │   │   │   ├── latin1prober.py
+│   │           │   │   │   ├── macromanprober.py
+│   │           │   │   │   ├── mbcharsetprober.py
+│   │           │   │   │   ├── mbcsgroupprober.py
+│   │           │   │   │   ├── mbcssm.py
+│   │           │   │   │   ├── metadata/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   └── languages.cpython-312.pyc
+│   │           │   │   │   │   └── languages.py
+│   │           │   │   │   ├── resultdict.py
+│   │           │   │   │   ├── sbcharsetprober.py
+│   │           │   │   │   ├── sbcsgroupprober.py
+│   │           │   │   │   ├── sjisprober.py
+│   │           │   │   │   ├── universaldetector.py
+│   │           │   │   │   ├── utf1632prober.py
+│   │           │   │   │   ├── utf8prober.py
+│   │           │   │   │   └── version.py
+│   │           │   │   ├── colorama/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── ansi.cpython-312.pyc
+│   │           │   │   │   │   ├── ansitowin32.cpython-312.pyc
+│   │           │   │   │   │   ├── initialise.cpython-312.pyc
+│   │           │   │   │   │   ├── win32.cpython-312.pyc
+│   │           │   │   │   │   └── winterm.cpython-312.pyc
+│   │           │   │   │   ├── ansi.py
+│   │           │   │   │   ├── ansitowin32.py
+│   │           │   │   │   ├── initialise.py
+│   │           │   │   │   ├── tests/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── ansi_test.cpython-312.pyc
+│   │           │   │   │   │   │   ├── ansitowin32_test.cpython-312.pyc
+│   │           │   │   │   │   │   ├── initialise_test.cpython-312.pyc
+│   │           │   │   │   │   │   ├── isatty_test.cpython-312.pyc
+│   │           │   │   │   │   │   ├── utils.cpython-312.pyc
+│   │           │   │   │   │   │   └── winterm_test.cpython-312.pyc
+│   │           │   │   │   │   ├── ansi_test.py
+│   │           │   │   │   │   ├── ansitowin32_test.py
+│   │           │   │   │   │   ├── initialise_test.py
+│   │           │   │   │   │   ├── isatty_test.py
+│   │           │   │   │   │   ├── utils.py
+│   │           │   │   │   │   └── winterm_test.py
+│   │           │   │   │   ├── win32.py
+│   │           │   │   │   └── winterm.py
+│   │           │   │   ├── distlib/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── compat.cpython-312.pyc
+│   │           │   │   │   │   ├── database.cpython-312.pyc
+│   │           │   │   │   │   ├── index.cpython-312.pyc
+│   │           │   │   │   │   ├── locators.cpython-312.pyc
+│   │           │   │   │   │   ├── manifest.cpython-312.pyc
+│   │           │   │   │   │   ├── markers.cpython-312.pyc
+│   │           │   │   │   │   ├── metadata.cpython-312.pyc
+│   │           │   │   │   │   ├── resources.cpython-312.pyc
+│   │           │   │   │   │   ├── scripts.cpython-312.pyc
+│   │           │   │   │   │   ├── util.cpython-312.pyc
+│   │           │   │   │   │   ├── version.cpython-312.pyc
+│   │           │   │   │   │   └── wheel.cpython-312.pyc
+│   │           │   │   │   ├── compat.py
+│   │           │   │   │   ├── database.py
+│   │           │   │   │   ├── index.py
+│   │           │   │   │   ├── locators.py
+│   │           │   │   │   ├── manifest.py
+│   │           │   │   │   ├── markers.py
+│   │           │   │   │   ├── metadata.py
+│   │           │   │   │   ├── resources.py
+│   │           │   │   │   ├── scripts.py
+│   │           │   │   │   ├── util.py
+│   │           │   │   │   ├── version.py
+│   │           │   │   │   └── wheel.py
+│   │           │   │   ├── distro/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __main__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── __main__.cpython-312.pyc
+│   │           │   │   │   │   └── distro.cpython-312.pyc
+│   │           │   │   │   └── distro.py
+│   │           │   │   ├── idna/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── codec.cpython-312.pyc
+│   │           │   │   │   │   ├── compat.cpython-312.pyc
+│   │           │   │   │   │   ├── core.cpython-312.pyc
+│   │           │   │   │   │   ├── idnadata.cpython-312.pyc
+│   │           │   │   │   │   ├── intranges.cpython-312.pyc
+│   │           │   │   │   │   ├── package_data.cpython-312.pyc
+│   │           │   │   │   │   └── uts46data.cpython-312.pyc
+│   │           │   │   │   ├── codec.py
+│   │           │   │   │   ├── compat.py
+│   │           │   │   │   ├── core.py
+│   │           │   │   │   ├── idnadata.py
+│   │           │   │   │   ├── intranges.py
+│   │           │   │   │   ├── package_data.py
+│   │           │   │   │   └── uts46data.py
+│   │           │   │   ├── msgpack/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── exceptions.cpython-312.pyc
+│   │           │   │   │   │   ├── ext.cpython-312.pyc
+│   │           │   │   │   │   └── fallback.cpython-312.pyc
+│   │           │   │   │   ├── exceptions.py
+│   │           │   │   │   ├── ext.py
+│   │           │   │   │   └── fallback.py
+│   │           │   │   ├── packaging/
+│   │           │   │   │   ├── __about__.py
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __about__.cpython-312.pyc
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _manylinux.cpython-312.pyc
+│   │           │   │   │   │   ├── _musllinux.cpython-312.pyc
+│   │           │   │   │   │   ├── _structures.cpython-312.pyc
+│   │           │   │   │   │   ├── markers.cpython-312.pyc
+│   │           │   │   │   │   ├── requirements.cpython-312.pyc
+│   │           │   │   │   │   ├── specifiers.cpython-312.pyc
+│   │           │   │   │   │   ├── tags.cpython-312.pyc
+│   │           │   │   │   │   ├── utils.cpython-312.pyc
+│   │           │   │   │   │   └── version.cpython-312.pyc
+│   │           │   │   │   ├── _manylinux.py
+│   │           │   │   │   ├── _musllinux.py
+│   │           │   │   │   ├── _structures.py
+│   │           │   │   │   ├── markers.py
+│   │           │   │   │   ├── requirements.py
+│   │           │   │   │   ├── specifiers.py
+│   │           │   │   │   ├── tags.py
+│   │           │   │   │   ├── utils.py
+│   │           │   │   │   └── version.py
+│   │           │   │   ├── pkg_resources/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   └── __pycache__/
+│   │           │   │   │       └── __init__.cpython-312.pyc
+│   │           │   │   ├── platformdirs/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __main__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── __main__.cpython-312.pyc
+│   │           │   │   │   │   ├── android.cpython-312.pyc
+│   │           │   │   │   │   ├── api.cpython-312.pyc
+│   │           │   │   │   │   ├── macos.cpython-312.pyc
+│   │           │   │   │   │   ├── unix.cpython-312.pyc
+│   │           │   │   │   │   ├── version.cpython-312.pyc
+│   │           │   │   │   │   └── windows.cpython-312.pyc
+│   │           │   │   │   ├── android.py
+│   │           │   │   │   ├── api.py
+│   │           │   │   │   ├── macos.py
+│   │           │   │   │   ├── unix.py
+│   │           │   │   │   ├── version.py
+│   │           │   │   │   └── windows.py
+│   │           │   │   ├── pygments/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __main__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── __main__.cpython-312.pyc
+│   │           │   │   │   │   ├── cmdline.cpython-312.pyc
+│   │           │   │   │   │   ├── console.cpython-312.pyc
+│   │           │   │   │   │   ├── filter.cpython-312.pyc
+│   │           │   │   │   │   ├── formatter.cpython-312.pyc
+│   │           │   │   │   │   ├── lexer.cpython-312.pyc
+│   │           │   │   │   │   ├── modeline.cpython-312.pyc
+│   │           │   │   │   │   ├── plugin.cpython-312.pyc
+│   │           │   │   │   │   ├── regexopt.cpython-312.pyc
+│   │           │   │   │   │   ├── scanner.cpython-312.pyc
+│   │           │   │   │   │   ├── sphinxext.cpython-312.pyc
+│   │           │   │   │   │   ├── style.cpython-312.pyc
+│   │           │   │   │   │   ├── token.cpython-312.pyc
+│   │           │   │   │   │   ├── unistring.cpython-312.pyc
+│   │           │   │   │   │   └── util.cpython-312.pyc
+│   │           │   │   │   ├── cmdline.py
+│   │           │   │   │   ├── console.py
+│   │           │   │   │   ├── filter.py
+│   │           │   │   │   ├── filters/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   └── __pycache__/
+│   │           │   │   │   │       └── __init__.cpython-312.pyc
+│   │           │   │   │   ├── formatter.py
+│   │           │   │   │   ├── formatters/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── _mapping.cpython-312.pyc
+│   │           │   │   │   │   │   ├── bbcode.cpython-312.pyc
+│   │           │   │   │   │   │   ├── groff.cpython-312.pyc
+│   │           │   │   │   │   │   ├── html.cpython-312.pyc
+│   │           │   │   │   │   │   ├── img.cpython-312.pyc
+│   │           │   │   │   │   │   ├── irc.cpython-312.pyc
+│   │           │   │   │   │   │   ├── latex.cpython-312.pyc
+│   │           │   │   │   │   │   ├── other.cpython-312.pyc
+│   │           │   │   │   │   │   ├── pangomarkup.cpython-312.pyc
+│   │           │   │   │   │   │   ├── rtf.cpython-312.pyc
+│   │           │   │   │   │   │   ├── svg.cpython-312.pyc
+│   │           │   │   │   │   │   ├── terminal.cpython-312.pyc
+│   │           │   │   │   │   │   └── terminal256.cpython-312.pyc
+│   │           │   │   │   │   ├── _mapping.py
+│   │           │   │   │   │   ├── bbcode.py
+│   │           │   │   │   │   ├── groff.py
+│   │           │   │   │   │   ├── html.py
+│   │           │   │   │   │   ├── img.py
+│   │           │   │   │   │   ├── irc.py
+│   │           │   │   │   │   ├── latex.py
+│   │           │   │   │   │   ├── other.py
+│   │           │   │   │   │   ├── pangomarkup.py
+│   │           │   │   │   │   ├── rtf.py
+│   │           │   │   │   │   ├── svg.py
+│   │           │   │   │   │   ├── terminal.py
+│   │           │   │   │   │   └── terminal256.py
+│   │           │   │   │   ├── lexer.py
+│   │           │   │   │   ├── lexers/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── _mapping.cpython-312.pyc
+│   │           │   │   │   │   │   └── python.cpython-312.pyc
+│   │           │   │   │   │   ├── _mapping.py
+│   │           │   │   │   │   └── python.py
+│   │           │   │   │   ├── modeline.py
+│   │           │   │   │   ├── plugin.py
+│   │           │   │   │   ├── regexopt.py
+│   │           │   │   │   ├── scanner.py
+│   │           │   │   │   ├── sphinxext.py
+│   │           │   │   │   ├── style.py
+│   │           │   │   │   ├── styles/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   └── __pycache__/
+│   │           │   │   │   │       └── __init__.cpython-312.pyc
+│   │           │   │   │   ├── token.py
+│   │           │   │   │   ├── unistring.py
+│   │           │   │   │   └── util.py
+│   │           │   │   ├── pyparsing/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── actions.cpython-312.pyc
+│   │           │   │   │   │   ├── common.cpython-312.pyc
+│   │           │   │   │   │   ├── core.cpython-312.pyc
+│   │           │   │   │   │   ├── exceptions.cpython-312.pyc
+│   │           │   │   │   │   ├── helpers.cpython-312.pyc
+│   │           │   │   │   │   ├── results.cpython-312.pyc
+│   │           │   │   │   │   ├── testing.cpython-312.pyc
+│   │           │   │   │   │   ├── unicode.cpython-312.pyc
+│   │           │   │   │   │   └── util.cpython-312.pyc
+│   │           │   │   │   ├── actions.py
+│   │           │   │   │   ├── common.py
+│   │           │   │   │   ├── core.py
+│   │           │   │   │   ├── diagram/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   └── __pycache__/
+│   │           │   │   │   │       └── __init__.cpython-312.pyc
+│   │           │   │   │   ├── exceptions.py
+│   │           │   │   │   ├── helpers.py
+│   │           │   │   │   ├── results.py
+│   │           │   │   │   ├── testing.py
+│   │           │   │   │   ├── unicode.py
+│   │           │   │   │   └── util.py
+│   │           │   │   ├── pyproject_hooks/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _compat.cpython-312.pyc
+│   │           │   │   │   │   └── _impl.cpython-312.pyc
+│   │           │   │   │   ├── _compat.py
+│   │           │   │   │   ├── _impl.py
+│   │           │   │   │   └── _in_process/
+│   │           │   │   │       ├── __init__.py
+│   │           │   │   │       ├── __pycache__/
+│   │           │   │   │       │   ├── __init__.cpython-312.pyc
+│   │           │   │   │       │   └── _in_process.cpython-312.pyc
+│   │           │   │   │       └── _in_process.py
+│   │           │   │   ├── requests/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── __version__.cpython-312.pyc
+│   │           │   │   │   │   ├── _internal_utils.cpython-312.pyc
+│   │           │   │   │   │   ├── adapters.cpython-312.pyc
+│   │           │   │   │   │   ├── api.cpython-312.pyc
+│   │           │   │   │   │   ├── auth.cpython-312.pyc
+│   │           │   │   │   │   ├── certs.cpython-312.pyc
+│   │           │   │   │   │   ├── compat.cpython-312.pyc
+│   │           │   │   │   │   ├── cookies.cpython-312.pyc
+│   │           │   │   │   │   ├── exceptions.cpython-312.pyc
+│   │           │   │   │   │   ├── help.cpython-312.pyc
+│   │           │   │   │   │   ├── hooks.cpython-312.pyc
+│   │           │   │   │   │   ├── models.cpython-312.pyc
+│   │           │   │   │   │   ├── packages.cpython-312.pyc
+│   │           │   │   │   │   ├── sessions.cpython-312.pyc
+│   │           │   │   │   │   ├── status_codes.cpython-312.pyc
+│   │           │   │   │   │   ├── structures.cpython-312.pyc
+│   │           │   │   │   │   └── utils.cpython-312.pyc
+│   │           │   │   │   ├── __version__.py
+│   │           │   │   │   ├── _internal_utils.py
+│   │           │   │   │   ├── adapters.py
+│   │           │   │   │   ├── api.py
+│   │           │   │   │   ├── auth.py
+│   │           │   │   │   ├── certs.py
+│   │           │   │   │   ├── compat.py
+│   │           │   │   │   ├── cookies.py
+│   │           │   │   │   ├── exceptions.py
+│   │           │   │   │   ├── help.py
+│   │           │   │   │   ├── hooks.py
+│   │           │   │   │   ├── models.py
+│   │           │   │   │   ├── packages.py
+│   │           │   │   │   ├── sessions.py
+│   │           │   │   │   ├── status_codes.py
+│   │           │   │   │   ├── structures.py
+│   │           │   │   │   └── utils.py
+│   │           │   │   ├── resolvelib/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── providers.cpython-312.pyc
+│   │           │   │   │   │   ├── reporters.cpython-312.pyc
+│   │           │   │   │   │   ├── resolvers.cpython-312.pyc
+│   │           │   │   │   │   └── structs.cpython-312.pyc
+│   │           │   │   │   ├── compat/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   └── collections_abc.cpython-312.pyc
+│   │           │   │   │   │   └── collections_abc.py
+│   │           │   │   │   ├── providers.py
+│   │           │   │   │   ├── reporters.py
+│   │           │   │   │   ├── resolvers.py
+│   │           │   │   │   └── structs.py
+│   │           │   │   ├── rich/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __main__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── __main__.cpython-312.pyc
+│   │           │   │   │   │   ├── _cell_widths.cpython-312.pyc
+│   │           │   │   │   │   ├── _emoji_codes.cpython-312.pyc
+│   │           │   │   │   │   ├── _emoji_replace.cpython-312.pyc
+│   │           │   │   │   │   ├── _export_format.cpython-312.pyc
+│   │           │   │   │   │   ├── _extension.cpython-312.pyc
+│   │           │   │   │   │   ├── _fileno.cpython-312.pyc
+│   │           │   │   │   │   ├── _inspect.cpython-312.pyc
+│   │           │   │   │   │   ├── _log_render.cpython-312.pyc
+│   │           │   │   │   │   ├── _loop.cpython-312.pyc
+│   │           │   │   │   │   ├── _null_file.cpython-312.pyc
+│   │           │   │   │   │   ├── _palettes.cpython-312.pyc
+│   │           │   │   │   │   ├── _pick.cpython-312.pyc
+│   │           │   │   │   │   ├── _ratio.cpython-312.pyc
+│   │           │   │   │   │   ├── _spinners.cpython-312.pyc
+│   │           │   │   │   │   ├── _stack.cpython-312.pyc
+│   │           │   │   │   │   ├── _timer.cpython-312.pyc
+│   │           │   │   │   │   ├── _win32_console.cpython-312.pyc
+│   │           │   │   │   │   ├── _windows.cpython-312.pyc
+│   │           │   │   │   │   ├── _windows_renderer.cpython-312.pyc
+│   │           │   │   │   │   ├── _wrap.cpython-312.pyc
+│   │           │   │   │   │   ├── abc.cpython-312.pyc
+│   │           │   │   │   │   ├── align.cpython-312.pyc
+│   │           │   │   │   │   ├── ansi.cpython-312.pyc
+│   │           │   │   │   │   ├── bar.cpython-312.pyc
+│   │           │   │   │   │   ├── box.cpython-312.pyc
+│   │           │   │   │   │   ├── cells.cpython-312.pyc
+│   │           │   │   │   │   ├── color.cpython-312.pyc
+│   │           │   │   │   │   ├── color_triplet.cpython-312.pyc
+│   │           │   │   │   │   ├── columns.cpython-312.pyc
+│   │           │   │   │   │   ├── console.cpython-312.pyc
+│   │           │   │   │   │   ├── constrain.cpython-312.pyc
+│   │           │   │   │   │   ├── containers.cpython-312.pyc
+│   │           │   │   │   │   ├── control.cpython-312.pyc
+│   │           │   │   │   │   ├── default_styles.cpython-312.pyc
+│   │           │   │   │   │   ├── diagnose.cpython-312.pyc
+│   │           │   │   │   │   ├── emoji.cpython-312.pyc
+│   │           │   │   │   │   ├── errors.cpython-312.pyc
+│   │           │   │   │   │   ├── file_proxy.cpython-312.pyc
+│   │           │   │   │   │   ├── filesize.cpython-312.pyc
+│   │           │   │   │   │   ├── highlighter.cpython-312.pyc
+│   │           │   │   │   │   ├── json.cpython-312.pyc
+│   │           │   │   │   │   ├── jupyter.cpython-312.pyc
+│   │           │   │   │   │   ├── layout.cpython-312.pyc
+│   │           │   │   │   │   ├── live.cpython-312.pyc
+│   │           │   │   │   │   ├── live_render.cpython-312.pyc
+│   │           │   │   │   │   ├── logging.cpython-312.pyc
+│   │           │   │   │   │   ├── markup.cpython-312.pyc
+│   │           │   │   │   │   ├── measure.cpython-312.pyc
+│   │           │   │   │   │   ├── padding.cpython-312.pyc
+│   │           │   │   │   │   ├── pager.cpython-312.pyc
+│   │           │   │   │   │   ├── palette.cpython-312.pyc
+│   │           │   │   │   │   ├── panel.cpython-312.pyc
+│   │           │   │   │   │   ├── pretty.cpython-312.pyc
+│   │           │   │   │   │   ├── progress.cpython-312.pyc
+│   │           │   │   │   │   ├── progress_bar.cpython-312.pyc
+│   │           │   │   │   │   ├── prompt.cpython-312.pyc
+│   │           │   │   │   │   ├── protocol.cpython-312.pyc
+│   │           │   │   │   │   ├── region.cpython-312.pyc
+│   │           │   │   │   │   ├── repr.cpython-312.pyc
+│   │           │   │   │   │   ├── rule.cpython-312.pyc
+│   │           │   │   │   │   ├── scope.cpython-312.pyc
+│   │           │   │   │   │   ├── screen.cpython-312.pyc
+│   │           │   │   │   │   ├── segment.cpython-312.pyc
+│   │           │   │   │   │   ├── spinner.cpython-312.pyc
+│   │           │   │   │   │   ├── status.cpython-312.pyc
+│   │           │   │   │   │   ├── style.cpython-312.pyc
+│   │           │   │   │   │   ├── styled.cpython-312.pyc
+│   │           │   │   │   │   ├── syntax.cpython-312.pyc
+│   │           │   │   │   │   ├── table.cpython-312.pyc
+│   │           │   │   │   │   ├── terminal_theme.cpython-312.pyc
+│   │           │   │   │   │   ├── text.cpython-312.pyc
+│   │           │   │   │   │   ├── theme.cpython-312.pyc
+│   │           │   │   │   │   ├── themes.cpython-312.pyc
+│   │           │   │   │   │   ├── traceback.cpython-312.pyc
+│   │           │   │   │   │   └── tree.cpython-312.pyc
+│   │           │   │   │   ├── _cell_widths.py
+│   │           │   │   │   ├── _emoji_codes.py
+│   │           │   │   │   ├── _emoji_replace.py
+│   │           │   │   │   ├── _export_format.py
+│   │           │   │   │   ├── _extension.py
+│   │           │   │   │   ├── _fileno.py
+│   │           │   │   │   ├── _inspect.py
+│   │           │   │   │   ├── _log_render.py
+│   │           │   │   │   ├── _loop.py
+│   │           │   │   │   ├── _null_file.py
+│   │           │   │   │   ├── _palettes.py
+│   │           │   │   │   ├── _pick.py
+│   │           │   │   │   ├── _ratio.py
+│   │           │   │   │   ├── _spinners.py
+│   │           │   │   │   ├── _stack.py
+│   │           │   │   │   ├── _timer.py
+│   │           │   │   │   ├── _win32_console.py
+│   │           │   │   │   ├── _windows.py
+│   │           │   │   │   ├── _windows_renderer.py
+│   │           │   │   │   ├── _wrap.py
+│   │           │   │   │   ├── abc.py
+│   │           │   │   │   ├── align.py
+│   │           │   │   │   ├── ansi.py
+│   │           │   │   │   ├── bar.py
+│   │           │   │   │   ├── box.py
+│   │           │   │   │   ├── cells.py
+│   │           │   │   │   ├── color.py
+│   │           │   │   │   ├── color_triplet.py
+│   │           │   │   │   ├── columns.py
+│   │           │   │   │   ├── console.py
+│   │           │   │   │   ├── constrain.py
+│   │           │   │   │   ├── containers.py
+│   │           │   │   │   ├── control.py
+│   │           │   │   │   ├── default_styles.py
+│   │           │   │   │   ├── diagnose.py
+│   │           │   │   │   ├── emoji.py
+│   │           │   │   │   ├── errors.py
+│   │           │   │   │   ├── file_proxy.py
+│   │           │   │   │   ├── filesize.py
+│   │           │   │   │   ├── highlighter.py
+│   │           │   │   │   ├── json.py
+│   │           │   │   │   ├── jupyter.py
+│   │           │   │   │   ├── layout.py
+│   │           │   │   │   ├── live.py
+│   │           │   │   │   ├── live_render.py
+│   │           │   │   │   ├── logging.py
+│   │           │   │   │   ├── markup.py
+│   │           │   │   │   ├── measure.py
+│   │           │   │   │   ├── padding.py
+│   │           │   │   │   ├── pager.py
+│   │           │   │   │   ├── palette.py
+│   │           │   │   │   ├── panel.py
+│   │           │   │   │   ├── pretty.py
+│   │           │   │   │   ├── progress.py
+│   │           │   │   │   ├── progress_bar.py
+│   │           │   │   │   ├── prompt.py
+│   │           │   │   │   ├── protocol.py
+│   │           │   │   │   ├── region.py
+│   │           │   │   │   ├── repr.py
+│   │           │   │   │   ├── rule.py
+│   │           │   │   │   ├── scope.py
+│   │           │   │   │   ├── screen.py
+│   │           │   │   │   ├── segment.py
+│   │           │   │   │   ├── spinner.py
+│   │           │   │   │   ├── status.py
+│   │           │   │   │   ├── style.py
+│   │           │   │   │   ├── styled.py
+│   │           │   │   │   ├── syntax.py
+│   │           │   │   │   ├── table.py
+│   │           │   │   │   ├── terminal_theme.py
+│   │           │   │   │   ├── text.py
+│   │           │   │   │   ├── theme.py
+│   │           │   │   │   ├── themes.py
+│   │           │   │   │   ├── traceback.py
+│   │           │   │   │   └── tree.py
+│   │           │   │   ├── six.py
+│   │           │   │   ├── tenacity/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _asyncio.cpython-312.pyc
+│   │           │   │   │   │   ├── _utils.cpython-312.pyc
+│   │           │   │   │   │   ├── after.cpython-312.pyc
+│   │           │   │   │   │   ├── before.cpython-312.pyc
+│   │           │   │   │   │   ├── before_sleep.cpython-312.pyc
+│   │           │   │   │   │   ├── nap.cpython-312.pyc
+│   │           │   │   │   │   ├── retry.cpython-312.pyc
+│   │           │   │   │   │   ├── stop.cpython-312.pyc
+│   │           │   │   │   │   ├── tornadoweb.cpython-312.pyc
+│   │           │   │   │   │   └── wait.cpython-312.pyc
+│   │           │   │   │   ├── _asyncio.py
+│   │           │   │   │   ├── _utils.py
+│   │           │   │   │   ├── after.py
+│   │           │   │   │   ├── before.py
+│   │           │   │   │   ├── before_sleep.py
+│   │           │   │   │   ├── nap.py
+│   │           │   │   │   ├── retry.py
+│   │           │   │   │   ├── stop.py
+│   │           │   │   │   ├── tornadoweb.py
+│   │           │   │   │   └── wait.py
+│   │           │   │   ├── tomli/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _parser.cpython-312.pyc
+│   │           │   │   │   │   ├── _re.cpython-312.pyc
+│   │           │   │   │   │   └── _types.cpython-312.pyc
+│   │           │   │   │   ├── _parser.py
+│   │           │   │   │   ├── _re.py
+│   │           │   │   │   └── _types.py
+│   │           │   │   ├── truststore/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _api.cpython-312.pyc
+│   │           │   │   │   │   ├── _macos.cpython-312.pyc
+│   │           │   │   │   │   ├── _openssl.cpython-312.pyc
+│   │           │   │   │   │   ├── _ssl_constants.cpython-312.pyc
+│   │           │   │   │   │   └── _windows.cpython-312.pyc
+│   │           │   │   │   ├── _api.py
+│   │           │   │   │   ├── _macos.py
+│   │           │   │   │   ├── _openssl.py
+│   │           │   │   │   ├── _ssl_constants.py
+│   │           │   │   │   └── _windows.py
+│   │           │   │   ├── typing_extensions.py
+│   │           │   │   ├── urllib3/
+│   │           │   │   │   ├── __init__.py
+│   │           │   │   │   ├── __pycache__/
+│   │           │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   ├── _collections.cpython-312.pyc
+│   │           │   │   │   │   ├── _version.cpython-312.pyc
+│   │           │   │   │   │   ├── connection.cpython-312.pyc
+│   │           │   │   │   │   ├── connectionpool.cpython-312.pyc
+│   │           │   │   │   │   ├── exceptions.cpython-312.pyc
+│   │           │   │   │   │   ├── fields.cpython-312.pyc
+│   │           │   │   │   │   ├── filepost.cpython-312.pyc
+│   │           │   │   │   │   ├── poolmanager.cpython-312.pyc
+│   │           │   │   │   │   ├── request.cpython-312.pyc
+│   │           │   │   │   │   └── response.cpython-312.pyc
+│   │           │   │   │   ├── _collections.py
+│   │           │   │   │   ├── _version.py
+│   │           │   │   │   ├── connection.py
+│   │           │   │   │   ├── connectionpool.py
+│   │           │   │   │   ├── contrib/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   ├── _appengine_environ.cpython-312.pyc
+│   │           │   │   │   │   │   ├── appengine.cpython-312.pyc
+│   │           │   │   │   │   │   ├── ntlmpool.cpython-312.pyc
+│   │           │   │   │   │   │   ├── pyopenssl.cpython-312.pyc
+│   │           │   │   │   │   │   ├── securetransport.cpython-312.pyc
+│   │           │   │   │   │   │   └── socks.cpython-312.pyc
+│   │           │   │   │   │   ├── _appengine_environ.py
+│   │           │   │   │   │   ├── _securetransport/
+│   │           │   │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   │   ├── bindings.cpython-312.pyc
+│   │           │   │   │   │   │   │   └── low_level.cpython-312.pyc
+│   │           │   │   │   │   │   ├── bindings.py
+│   │           │   │   │   │   │   └── low_level.py
+│   │           │   │   │   │   ├── appengine.py
+│   │           │   │   │   │   ├── ntlmpool.py
+│   │           │   │   │   │   ├── pyopenssl.py
+│   │           │   │   │   │   ├── securetransport.py
+│   │           │   │   │   │   └── socks.py
+│   │           │   │   │   ├── exceptions.py
+│   │           │   │   │   ├── fields.py
+│   │           │   │   │   ├── filepost.py
+│   │           │   │   │   ├── packages/
+│   │           │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   └── six.cpython-312.pyc
+│   │           │   │   │   │   ├── backports/
+│   │           │   │   │   │   │   ├── __init__.py
+│   │           │   │   │   │   │   ├── __pycache__/
+│   │           │   │   │   │   │   │   ├── __init__.cpython-312.pyc
+│   │           │   │   │   │   │   │   ├── makefile.cpython-312.pyc
+│   │           │   │   │   │   │   │   └── weakref_finalize.cpython-312.pyc
+│   │           │   │   │   │   │   ├── makefile.py
+│   │           │   │   │   │   │   └── weakref_finalize.py
+│   │           │   │   │   │   └── six.py
+│   │           │   │   │   ├── poolmanager.py
+│   │           │   │   │   ├── request.py
+│   │           │   │   │   ├── response.py
+│   │           │   │   │   └── util/
+│   │           │   │   │       ├── __init__.py
+│   │           │   │   │       ├── __pycache__/
+│   │           │   │   │       │   ├── __init__.cpython-312.pyc
+│   │           │   │   │       │   ├── connection.cpython-312.pyc
+│   │           │   │   │       │   ├── proxy.cpython-312.pyc
+│   │           │   │   │       │   ├── queue.cpython-312.pyc
+│   │           │   │   │       │   ├── request.cpython-312.pyc
+│   │           │   │   │       │   ├── response.cpython-312.pyc
+│   │           │   │   │       │   ├── retry.cpython-312.pyc
+│   │           │   │   │       │   ├── ssl_.cpython-312.pyc
+│   │           │   │   │       │   ├── ssl_match_hostname.cpython-312.pyc
+│   │           │   │   │       │   ├── ssltransport.cpython-312.pyc
+│   │           │   │   │       │   ├── timeout.cpython-312.pyc
+│   │           │   │   │       │   ├── url.cpython-312.pyc
+│   │           │   │   │       │   └── wait.cpython-312.pyc
+│   │           │   │   │       ├── connection.py
+│   │           │   │   │       ├── proxy.py
+│   │           │   │   │       ├── queue.py
+│   │           │   │   │       ├── request.py
+│   │           │   │   │       ├── response.py
+│   │           │   │   │       ├── retry.py
+│   │           │   │   │       ├── ssl_.py
+│   │           │   │   │       ├── ssl_match_hostname.py
+│   │           │   │   │       ├── ssltransport.py
+│   │           │   │   │       ├── timeout.py
+│   │           │   │   │       ├── url.py
+│   │           │   │   │       └── wait.py
+│   │           │   │   ├── vendor.txt
+│   │           │   │   └── webencodings/
+│   │           │   │       ├── __init__.py
+│   │           │   │       ├── __pycache__/
+│   │           │   │       │   ├── __init__.cpython-312.pyc
+│   │           │   │       │   ├── labels.cpython-312.pyc
+│   │           │   │       │   ├── mklabels.cpython-312.pyc
+│   │           │   │       │   ├── tests.cpython-312.pyc
+│   │           │   │       │   └── x_user_defined.cpython-312.pyc
+│   │           │   │       ├── labels.py
+│   │           │   │       ├── mklabels.py
+│   │           │   │       ├── tests.py
+│   │           │   │       └── x_user_defined.py
+│   │           │   └── py.typed
+│   │           └── pip-24.0.dist-info/
+│   │               ├── AUTHORS.txt
+│   │               ├── INSTALLER
+│   │               ├── LICENSE.txt
+│   │               ├── METADATA
+│   │               ├── RECORD
+│   │               ├── REQUESTED
+│   │               ├── WHEEL
+│   │               ├── entry_points.txt
+│   │               └── top_level.txt
+│   ├── pyvenv.cfg
+│   └── share/
+│       └── man/
+│           └── man1/
+│               ├── mid3cp.1
+│               ├── mid3iconv.1
+│               ├── mid3v2.1
+│               ├── moggsplit.1
+│               ├── mutagen-inspect.1
+│               └── mutagen-pony.1
 ├── vite.config.ts
 ├── vitest.config.ts
 ├── yaml-bak/
+│   └── 29-logger-widget.yaml
 ├── yaml-config-definition.yaml
 ├── yaml-config-examples/
 └── yaml-dont-run/
@@ -963,6 +3516,11 @@ export const CARD_TYPE = "lovelace-lcars-card";
 export const DEFAULT_FONT_SIZE = 16;
 export const DEFAULT_TITLE = "LCARS Card";
 export const DEFAULT_TEXT = "Hello from LCARS";
+
+// Log widget constants
+export const LOG_LINE_HEIGHT_PX = 20;
+export const LOG_FADE_MEDIUM_MS = 5000;
+export const LOG_FADE_OUT_MS = 10000;
 ```
 
 ## File: src/core/store.ts
@@ -6903,6 +9461,8 @@ interface ElementProps {
   label?: any;
   value?: any;
   appearance?: any;
+  // Logger widget specific properties
+  maxLines?: number;
 }
 
 interface LayoutConfig {
@@ -7031,6 +9591,9 @@ export class ConfigParser {
     if (text.right_content !== undefined) props.rightContent = text.right_content;
     if (text.offsetX !== undefined) props.textOffsetX = text.offsetX;
     if (text.offsetY !== undefined) props.textOffsetY = text.offsetY;
+    
+    // Logger widget specific properties
+    if (text.max_lines !== undefined) props.maxLines = text.max_lines;
   }
 
   private static mapButtonProps(element: any, props: ElementProps): void {
@@ -8712,6 +11275,371 @@ WidgetRegistry.registerWidget('entity-text-widget', (id, props, layoutConfig, ha
 ```typescript
 import './top_header.js';
 import './entity-text.js';
+import './log-widget.js';
+```
+
+## File: src/layout/widgets/log-widget.ts
+
+```typescript
+import { TextElement } from '../elements/text.js';
+import { RectangleElement } from '../elements/rectangle.js';
+import { Widget } from './widget.js';
+import { LayoutElement } from '../elements/element.js';
+import { WidgetRegistry } from './registry.js';
+import { LogMessage } from '../../types.js';
+import { LOG_LINE_HEIGHT_PX } from '../../constants.js';
+import { HomeAssistant } from 'custom-card-helpers';
+import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
+
+interface LogWidgetConfig {
+  maxLines?: number;
+  textColor?: string;
+  textAnchor?: 'start' | 'middle' | 'end';
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string | number;
+  height?: number;
+}
+
+export class LogWidget extends Widget {
+  private static readonly DEFAULT_HEIGHT = 100;
+  private static readonly DEFAULT_MAX_LINES = 5;
+  private static readonly DEFAULT_FONT_SIZE = 14;
+  private static readonly DEFAULT_TEXT_COLOR = '#ffc996';
+  private static readonly FADE_COLOR = '#864f0b';
+  private static readonly MEDIUM_COLOR = '#df8313';
+  private static readonly FADE_THRESHOLD_MS = 500;
+
+  private logMessages: LogMessage[] = [];
+  private newlyAddedIds: Set<string> = new Set();
+  private previousHass?: HomeAssistant;
+  private logLineElements: TextElement[] = [];
+  private unsubscribeFromEvents?: () => void;
+
+  constructor(
+    id: string,
+    props: LayoutElementProps = {},
+    layoutConfig: LayoutConfigOptions = {},
+    hass?: HomeAssistant,
+    requestUpdateCallback?: () => void,
+    getShadowElement?: (id: string) => Element | null
+  ) {
+    super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+    // Initialize previousHass if hass is provided
+    this.previousHass = hass;
+    
+    // Set up event subscription if hass is available
+    if (hass) {
+      this.initializeLogging(hass);
+    }
+  }
+
+  public expand(): LayoutElement[] {
+    const config = this.getWidgetConfig();
+    const bounds = this.createBoundsElement();
+    
+    // Create a fixed number of log line elements (max_lines) upfront
+    this.logLineElements = this.createFixedLogLineElements(bounds, config);
+    this.updateLogLineElementsContent();
+    
+    // Always return all elements but make empty ones transparent
+    return [bounds, ...this.logLineElements];
+  }
+  
+  public updateHass(hass?: HomeAssistant): void {
+    if (!hass) return;
+    
+    // Prevent recursive calls by checking if this is the same hass object
+    if (this.hass === hass) return;
+    
+    // Initialize logging if this is the first time we get hass
+    if (!this.unsubscribeFromEvents && this.hass !== hass) {
+      this.initializeLogging(hass);
+    }
+    
+    // Only process manual updateHass calls if we don't have event subscription
+    // (When we have subscription, live updates come through handleStateChangeEvent)
+    if (!this.unsubscribeFromEvents && this.previousHass && this.previousHass !== hass) {
+      const newMessages = this.detectStateChanges(this.previousHass, hass);
+      if (newMessages.length > 0) {
+        this.addLogMessages(newMessages);
+        this.recreateElements();
+        this.requestUpdateCallback?.();
+      }
+    }
+    
+    // Update state for next comparison
+    this.previousHass = this.hass; // Keep the old hass as previous
+    this.hass = hass;
+  }
+  
+  public updateLogMessages(messages: LogMessage[], newIds: Set<string> = new Set()): void {
+    this.logMessages = messages.slice(0, this.getMaxLines());
+    this.newlyAddedIds = newIds;
+    this.recreateElements();
+    this.requestUpdateCallback?.();
+  }
+
+  private getWidgetConfig(): LogWidgetConfig {
+    return {
+      maxLines: this.props.maxLines || LogWidget.DEFAULT_MAX_LINES,
+      textColor: this.props.textColor || LogWidget.DEFAULT_TEXT_COLOR,
+      textAnchor: this.props.textAnchor || 'start',
+      fontSize: this.props.fontSize || LogWidget.DEFAULT_FONT_SIZE,
+      fontFamily: this.props.fontFamily || 'Antonio',
+      fontWeight: this.props.fontWeight || 'normal',
+      height: this.layoutConfig.height || LogWidget.DEFAULT_HEIGHT
+    };
+  }
+
+  private createBoundsElement(): RectangleElement {
+    const bounds = new RectangleElement(
+      this.id,
+      { fill: 'none', stroke: 'none' },
+      this.layoutConfig,
+      this.hass,
+      this.requestUpdateCallback,
+      this.getShadowElement
+    );
+    
+    // Inject updateHass method to keep the widget alive and receive updates
+    const widget = this;
+    bounds.updateHass = function(this: RectangleElement, hass?: HomeAssistant): void {
+      // Call the original updateHass method
+      RectangleElement.prototype.updateHass.call(this, hass);
+      
+      // Forward to the widget
+      widget.updateHass(hass);
+    };
+    
+    return bounds;
+  }
+
+  private createFixedLogLineElements(bounds: RectangleElement, config: LogWidgetConfig): TextElement[] {
+    const elements: TextElement[] = [];
+    const maxLines = this.getMaxLines();
+
+    // Create a fixed number of elements equal to max_lines
+    for (let index = 0; index < maxLines; index++) {
+      const element = this.createEmptyLogLineElement(bounds, index, config);
+      elements.push(element);
+    }
+
+    return elements;
+  }
+  
+  private createEmptyLogLineElement(
+    bounds: RectangleElement, 
+    index: number, 
+    config: LogWidgetConfig
+  ): TextElement {
+    const yOffset = index * LOG_LINE_HEIGHT_PX;
+
+    return new TextElement(
+      `${this.id}_line_${index}`,
+      {
+        text: '', // Start empty
+        fill: config.textColor,
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
+        fontWeight: config.fontWeight,
+        textAnchor: config.textAnchor,
+        dominantBaseline: 'hanging'
+      },
+      {
+        anchor: {
+          anchorTo: bounds.id,
+          anchorPoint: 'topLeft',
+          targetAnchorPoint: 'topLeft'
+        },
+        offsetY: yOffset
+      },
+      this.hass,
+      this.requestUpdateCallback,
+      this.getShadowElement
+    );
+  }
+
+  private updateLogLineElementsContent(): void {
+    const config = this.getWidgetConfig();
+    
+    for (let index = 0; index < this.logLineElements.length; index++) {
+      const element = this.logLineElements[index];
+      const message = this.logMessages[index];
+
+      if (message) {
+        // Update element with log message
+        element.props.text = message.text;
+        element.props.fill = this.calculateLogColor(message, index, config);
+        element.props.fillOpacity = 1; // Make visible
+      } else {
+        // Hide element if no message by making it transparent
+        element.props.text = '';
+        element.props.fillOpacity = 0;
+      }
+    }
+  }
+
+
+
+  private calculateLogColor(message: LogMessage, index: number, config: LogWidgetConfig): string {
+    // User-specified color takes precedence
+    if (this.props.textColor) {
+      return config.textColor!;
+    }
+    
+    // Newly added messages get full brightness
+    if (this.newlyAddedIds.has(message.id)) {
+      return config.textColor!;
+    }
+    
+    // First line gets full brightness
+    if (index === 0) {
+      return config.textColor!;
+    }
+    
+    // Apply fade based on age
+    const age = Date.now() - message.timestamp;
+    if (age > LogWidget.FADE_THRESHOLD_MS) {
+      return LogWidget.FADE_COLOR;
+    }
+    
+    return LogWidget.MEDIUM_COLOR;
+  }
+
+  private detectStateChanges(oldHass: HomeAssistant, newHass: HomeAssistant): LogMessage[] {
+    const changes: LogMessage[] = [];
+    
+    for (const entityId in newHass.states) {
+      const newState = newHass.states[entityId];
+      const oldState = oldHass.states[entityId];
+      
+      if (this.stateChanged(oldState, newState)) {
+        // Use entity_id from the state object if available, otherwise use the key
+        const actualEntityId = newState.entity_id || entityId;
+        const friendlyName = newState.attributes?.friendly_name || actualEntityId;
+        const message: LogMessage = {
+          id: `${actualEntityId}-${newState.last_changed}`,
+          text: `${friendlyName}: ${newState.state}`,
+          timestamp: new Date(newState.last_changed).getTime()
+        };
+        changes.push(message);
+      }
+    }
+    
+    return changes.sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  private stateChanged(oldState: any, newState: any): boolean {
+    if (!newState) return false;
+    if (!oldState) return true;
+    return oldState.state !== newState.state;
+  }
+
+  private addLogMessages(newMessages: LogMessage[]): void {
+    this.newlyAddedIds.clear();
+    newMessages.forEach(msg => this.newlyAddedIds.add(msg.id));
+    
+    this.logMessages = [...newMessages, ...this.logMessages]
+      .slice(0, this.getMaxLines());
+  }
+
+  private recreateElements(): void {
+    // Update existing elements with new log content instead of recreating
+    this.updateLogLineElementsContent();
+  }
+
+  private getMaxLines(): number {
+    return this.props.maxLines || LogWidget.DEFAULT_MAX_LINES;
+  }
+
+  private async initializeLogging(hass: HomeAssistant): Promise<void> {
+    // Only populate initial logs if we have a real connection (not in tests)
+    if (hass.connection) {
+      this.populateInitialLogs(hass);
+    }
+    
+    // Subscribe to state change events
+    await this.subscribeToStateChanges(hass);
+  }
+
+  private populateInitialLogs(hass: HomeAssistant): void {
+    const initialMessages: LogMessage[] = Object.entries(hass.states)
+      .filter(([_, entity]) => entity.state)
+      .map(([entityId, entity]) => {
+        const actualEntityId = entity.entity_id || entityId;
+        const friendlyName = entity.attributes?.friendly_name || actualEntityId;
+        return {
+          id: `${actualEntityId}-${entity.last_changed}`,
+          text: `${friendlyName}: ${entity.state}`,
+          timestamp: new Date(entity.last_changed).getTime(),
+        };
+      });
+
+    initialMessages.sort((a, b) => b.timestamp - a.timestamp);
+    this.logMessages = initialMessages.slice(0, this.getMaxLines());
+  }
+
+  private async subscribeToStateChanges(hass: HomeAssistant): Promise<void> {
+    if (!hass.connection || this.unsubscribeFromEvents) return;
+
+    try {
+      this.unsubscribeFromEvents = await hass.connection.subscribeEvents(
+        (event: any) => this.handleStateChangeEvent(event),
+        'state_changed'
+      );
+    } catch (error) {
+      console.warn('LCARS Card Logger Widget: Failed to subscribe to state changes', error);
+    }
+  }
+
+  private handleStateChangeEvent(event: any): void {
+    const newState = event.data.new_state;
+    const oldState = event.data.old_state;
+    
+    if (!newState || (oldState && oldState.state === newState.state)) {
+      return;
+    }
+
+    const actualEntityId = newState.entity_id;
+    const friendlyName = newState.attributes?.friendly_name || actualEntityId;
+    const message: LogMessage = {
+      id: `${actualEntityId}-${newState.last_changed}`,
+      text: `${friendlyName}: ${newState.state}`,
+      timestamp: new Date(newState.last_changed).getTime(),
+    };
+    
+    // Check if this message already exists to prevent duplicates
+    const messageExists = this.logMessages.some(existingMessage => existingMessage.id === message.id);
+    if (messageExists) return;
+    
+    this.newlyAddedIds.clear();
+    this.newlyAddedIds.add(message.id);
+    
+    this.logMessages = [message, ...this.logMessages].slice(0, this.getMaxLines());
+    this.recreateElements();
+    this.requestUpdateCallback?.();
+  }
+
+  public destroy(): void {
+    if (this.unsubscribeFromEvents) {
+      this.unsubscribeFromEvents();
+      this.unsubscribeFromEvents = undefined;
+    }
+  }
+}
+
+WidgetRegistry.registerWidget('logger-widget', (id, props, layoutConfig, hass, reqUpd, getEl) => {
+  const widget = new LogWidget(id, props, layoutConfig, hass, reqUpd, getEl);
+  const elements = widget.expand();
+  
+  // Keep the widget alive by storing it on the bounds element
+  if (elements.length > 0) {
+    (elements[0] as any)._logWidget = widget;
+  }
+  
+  return elements;
+});
 ```
 
 ## File: src/layout/widgets/registry.ts
@@ -9270,6 +12198,193 @@ describe('Widget Index', () => {
 });
 ```
 
+## File: src/layout/widgets/test/log-widget.spec.ts
+
+```typescript
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { LogWidget } from '../log-widget.js';
+import { LayoutElement } from '../../elements/element.js';
+import { TextElement } from '../../elements/text.js';
+import { RectangleElement } from '../../elements/rectangle.js';
+import { LayoutElementProps, LayoutConfigOptions } from '../../engine.js';
+import { HomeAssistant } from 'custom-card-helpers';
+import { LogMessage } from '../../../types.js';
+import { WidgetRegistry } from '../registry.js';
+
+describe('LogWidget', () => {
+  let mockHass: HomeAssistant;
+  let mockRequestUpdate: () => void;
+  let mockGetShadowElement: (id: string) => Element | null;
+  let widget: LogWidget;
+
+  beforeEach(() => {
+    mockHass = { states: {} } as HomeAssistant;
+    mockRequestUpdate = vi.fn();
+    mockGetShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+  });
+
+  describe('Constructor', () => {
+    it('should initialize with minimal parameters', () => {
+      widget = new LogWidget('test-log');
+      const elements = widget.expand();
+
+      expect(elements).toHaveLength(6); // bounds + 5 default max_lines elements
+      expect(elements[0]).toBeInstanceOf(RectangleElement);
+      expect(elements[0].id).toBe('test-log');
+      // Log elements should be empty initially
+      for (let i = 1; i < elements.length; i++) {
+        expect((elements[i] as TextElement).props.text).toBe('');
+      }
+    });
+
+    it('should initialize with all parameters', () => {
+      const props: LayoutElementProps = { maxLines: 10, fontSize: 16 };
+      const layoutConfig: LayoutConfigOptions = { offsetX: 10, offsetY: 20 };
+
+      widget = new LogWidget(
+        'full-log',
+        props,
+        layoutConfig,
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      const elements = widget.expand();
+      expect(elements[0].id).toBe('full-log');
+      expect(elements[0].layoutConfig).toBe(layoutConfig);
+    });
+  });
+
+  describe('updateLogMessages method', () => {
+    it('should allow manual log message updates', () => {
+      widget = new LogWidget('manual-log', {}, {}, mockHass, mockRequestUpdate);
+      const messages: LogMessage[] = [{ id: '1', text: 'Manual message', timestamp: Date.now() }];
+      widget.updateLogMessages(messages);
+
+      const elements = widget.expand();
+      expect(elements).toHaveLength(6); // bounds + 5 max_lines elements
+      const logElement = elements[1] as TextElement;
+      expect(logElement.props.text).toBe('Manual message');
+      expect(logElement.props.fillOpacity).toBe(1); // Should be visible
+      expect(mockRequestUpdate).toHaveBeenCalled();
+    });
+  });
+
+  describe('Global Logging with updateHass', () => {
+    it('should not log anything on the first updateHass call', () => {
+      widget = new LogWidget('first-update-log', {}, {}, undefined, mockRequestUpdate);
+      const hass = { states: { 'sensor.a': { state: '10' } } } as any;
+      
+      widget.updateHass(hass);
+      const elements = widget.expand();
+
+      expect(elements).toHaveLength(6); // bounds + 5 max_lines elements
+      // All log elements should be empty/invisible
+      for (let i = 1; i < elements.length; i++) {
+        expect((elements[i] as TextElement).props.text).toBe('');
+        expect((elements[i] as TextElement).props.fillOpacity).toBe(0);
+      }
+      expect(mockRequestUpdate).not.toHaveBeenCalled();
+    });
+
+    it('should log state changes on subsequent updateHass calls', () => {
+      const oldHass = {
+        states: {
+          'sensor.a': { state: '10', last_changed: '2023-01-01T00:00:00Z', attributes: { friendly_name: 'Sensor A' } },
+          'sensor.b': { state: 'off', last_changed: '2023-01-01T00:00:00Z', attributes: { friendly_name: 'Sensor B' } }
+        }
+      } as any;
+      const newHass = {
+        states: {
+          'sensor.a': { state: '20', last_changed: '2023-01-01T00:01:00Z', attributes: { friendly_name: 'Sensor A' } },
+          'sensor.b': { state: 'off', last_changed: '2023-01-01T00:00:00Z', attributes: { friendly_name: 'Sensor B' } }
+        }
+      } as any;
+
+      widget = new LogWidget('state-change-log', {}, {}, oldHass, mockRequestUpdate);
+      widget.updateHass(newHass);
+
+      const elements = widget.expand();
+      expect(elements).toHaveLength(6); // bounds + 5 max_lines elements
+      expect((elements[1] as TextElement).props.text).toBe('Sensor A: 20');
+      expect((elements[1] as TextElement).props.fillOpacity).toBe(1); // Should be visible
+      // Other elements should be empty/invisible
+      for (let i = 2; i < elements.length; i++) {
+        expect((elements[i] as TextElement).props.text).toBe('');
+        expect((elements[i] as TextElement).props.fillOpacity).toBe(0);
+      }
+      expect(mockRequestUpdate).toHaveBeenCalled();
+    });
+
+    it('should not log if states have not changed', () => {
+      const oldHass = { states: { 'sensor.a': { state: '10' } } } as any;
+      const newHass = { states: { 'sensor.a': { state: '10' } } } as any;
+
+      widget = new LogWidget('no-change-log', {}, {}, oldHass, mockRequestUpdate);
+      widget.updateHass(newHass);
+      
+      const elements = widget.expand();
+      expect(elements).toHaveLength(6); // bounds + 5 max_lines elements
+      // All log elements should be empty/invisible
+      for (let i = 1; i < elements.length; i++) {
+        expect((elements[i] as TextElement).props.text).toBe('');
+        expect((elements[i] as TextElement).props.fillOpacity).toBe(0);
+      }
+      expect(mockRequestUpdate).not.toHaveBeenCalled();
+    });
+
+    it('should prepend new logs and respect max_lines', () => {
+      let oldHass = {
+        states: {
+          'sensor.a': { state: '10', last_changed: '2023-01-01T00:00:00Z', attributes: {} },
+          'sensor.b': { state: '100', last_changed: '2023-01-01T00:00:00Z', attributes: {} }
+        }
+      } as any;
+
+      widget = new LogWidget('max-lines-log', { maxLines: 2 }, {}, oldHass, mockRequestUpdate);
+      
+      // First change
+      let newHass = { states: { ...oldHass.states, 'sensor.a': { state: '20', last_changed: '2023-01-01T00:01:00Z', attributes: {} } } } as any;
+      widget.updateHass(newHass);
+
+      // Second change
+      oldHass = newHass;
+      newHass = { states: { ...newHass.states, 'sensor.b': { state: '200', last_changed: '2023-01-01T00:02:00Z', attributes: {} } } } as any;
+      widget.updateHass(newHass);
+      
+      // Third change (this should push the first log out)
+      oldHass = newHass;
+      newHass = { states: { ...newHass.states, 'sensor.a': { state: '30', last_changed: '2023-01-01T00:03:00Z', attributes: {} } } } as any;
+      widget.updateHass(newHass);
+
+      const elements = widget.expand();
+      expect(elements).toHaveLength(3); // bounds + 2 max_lines elements (custom max_lines: 2)
+      expect((elements[1] as TextElement).props.text).toBe('sensor.a: 30'); // Most recent
+      expect((elements[2] as TextElement).props.text).toBe('sensor.b: 200'); // Second most recent
+    });
+  });
+
+  describe('Registry Integration', () => {
+    it('should be registered in widget registry', () => {
+      const elements = WidgetRegistry.expandWidget(
+        'logger-widget',
+        'test_log',
+        {},
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement
+      );
+
+      expect(elements).not.toBeNull();
+      expect(elements).toHaveLength(6); // bounds + 5 default max_lines elements
+      expect(elements![0].id).toBe('test_log');
+    });
+  });
+});
+```
+
 ## File: src/layout/widgets/test/registry.spec.ts
 
 ```typescript
@@ -9496,6 +12611,8 @@ describe('Widget Registry', () => {
       expect(result![0].hass).toBe(mockHass);
       expect(result![0].requestUpdateCallback).toBe(mockRequestUpdate);
     });
+
+
   });
 });
 ```
@@ -11062,6 +14179,9 @@ const textSchema = z.object({
   right_content: z.string().optional(),
   offsetX: z.union([z.number(), z.string()]).optional(),
   offsetY: z.union([z.number(), z.string()]).optional(),
+  // Logger widget specific properties
+  max_lines: z.number().optional(),
+  text_color: colorValueSchema.optional(),
 });
 
 // -----------------------------------------------------------------------------
@@ -11198,6 +14318,7 @@ const elementTypeEnum = z.enum([
   'chisel-endcap',
   'top_header',
   'entity-text-widget',
+  'logger-widget',
 ]).or(z.string()); // Allow unknown types for backwards compatibility
 
 const elementSchema = z.object({
@@ -11781,7 +14902,7 @@ export interface GroupConfig {
 
 export interface ElementConfig {
   id: string;
-  type: 'rectangle' | 'text' | 'endcap' | 'elbow' | 'chisel-endcap' | 'top_header';
+  type: 'rectangle' | 'text' | 'endcap' | 'elbow' | 'chisel-endcap' | 'top_header' | 'logger-widget';
   appearance?: AppearanceConfig;
   text?: TextConfig;
   layout?: LayoutConfig;
@@ -12210,6 +15331,22 @@ export interface ElementStateManagementConfig {
   default_state?: string;
   entity_id?: string;
   attribute?: string; // defaults to 'state'
+}
+
+// ============================================================================
+// Log Widget Types
+// ============================================================================
+
+export interface LogMessage {
+  id: string;
+  text: string;
+  timestamp: number;
+}
+
+export interface LogAreaLayout {
+  x: number;
+  y: number;
+  textAnchor: 'start' | 'middle' | 'end';
 }
 ```
 

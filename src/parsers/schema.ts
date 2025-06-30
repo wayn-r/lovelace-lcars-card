@@ -52,6 +52,9 @@ const textSchema = z.object({
   right_content: z.string().optional(),
   offsetX: z.union([z.number(), z.string()]).optional(),
   offsetY: z.union([z.number(), z.string()]).optional(),
+  // Logger widget specific properties
+  max_lines: z.number().optional(),
+  text_color: colorValueSchema.optional(),
 });
 
 // -----------------------------------------------------------------------------
@@ -188,6 +191,7 @@ const elementTypeEnum = z.enum([
   'chisel-endcap',
   'top_header',
   'entity-text-widget',
+  'logger-widget',
 ]).or(z.string()); // Allow unknown types for backwards compatibility
 
 const elementSchema = z.object({

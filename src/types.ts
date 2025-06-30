@@ -62,7 +62,7 @@ export interface GroupConfig {
 
 export interface ElementConfig {
   id: string;
-  type: 'rectangle' | 'text' | 'endcap' | 'elbow' | 'chisel-endcap' | 'top_header';
+  type: 'rectangle' | 'text' | 'endcap' | 'elbow' | 'chisel-endcap' | 'top_header' | 'logger-widget';
   appearance?: AppearanceConfig;
   text?: TextConfig;
   layout?: LayoutConfig;
@@ -491,4 +491,20 @@ export interface ElementStateManagementConfig {
   default_state?: string;
   entity_id?: string;
   attribute?: string; // defaults to 'state'
+}
+
+// ============================================================================
+// Log Widget Types
+// ============================================================================
+
+export interface LogMessage {
+  id: string;
+  text: string;
+  timestamp: number;
+}
+
+export interface LogAreaLayout {
+  x: number;
+  y: number;
+  textAnchor: 'start' | 'middle' | 'end';
 } 

@@ -221,5 +221,7 @@ describe('Widget Registry', () => {
       expect(result![0].hass).toBe(mockHass);
       expect(result![0].requestUpdateCallback).toBe(mockRequestUpdate);
     });
+
+
   });
 }); 

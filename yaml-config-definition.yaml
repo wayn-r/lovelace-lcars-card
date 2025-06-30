@@ -20,7 +20,7 @@ groups: <array>                  # Required: Defines groups of elements. Element
                                    #   Full ID becomes "group_id.id" (e.g., "navigation.status_light").
         type: <string>             # Required: The type of LCARS element.
                                    #   Options: "rectangle", "text", "endcap", "elbow",
-                                   #            "chisel-endcap", "top_header".
+                                   #            "chisel-endcap", "top_header", "logger-widget".
 
         appearance:                # Optional: Defines the static visual style of the element's shape.
           fill: <color_property>     # Primary fill color for the element's shape.
@@ -34,6 +34,7 @@ groups: <array>                  # Required: Defines groups of elements. Element
           bodyWidth: <number>        # For 'elbow': Thickness of the main part.
           armHeight: <number>        # For 'elbow': Thickness of the arm.
           # For 'top_header', `fill` applies to its internal endcaps and bar.
+          # For 'logger-widget', appearance properties are not applicable as it renders text elements.
 
         text:                      # Optional: Defines text content and styling.
                                    #   Applicable to 'text' type directly, or for text *on* other
@@ -62,6 +63,11 @@ groups: <array>                  # Required: Defines groups of elements. Element
           right_content: <string>    # Text for the right side of the top_header.
           # `fontFamily`, `fontSize`, etc., in this `text` block will apply to both
           # left_content and right_content for a `top_header`.
+
+          # --- Specific to 'logger-widget' type ---
+          max_lines: <number>        # Maximum number of log lines to display. Default: 5.
+          # Note: The logger-widget automatically displays all entity state changes from Home Assistant.
+          # Use standard text properties (fill, fontFamily, fontSize, etc.) to configure appearance.
 
         layout:                    # Optional: Defines positioning and sizing.
           width: <number | string_percentage>    # e.g., 100 or "50%"
@@ -257,3 +263,23 @@ animation_sequence:                  # Alternative: Animation sequence with mult
     # --- Animation Step Group Configuration (Each item in the 'steps' array) ---
     - index: <number>                # Required: Execution order. Groups with same index execute concurrently.
       animations: <animation_definition>            # Required: Array of animations to execute simultaneously in this group.
+
+
+# === Example Logger Widget Configuration ===
+# 
+# groups:
+#   - group_id: "system_status"
+#     elements:
+#       - id: "system_log"
+#         type: "logger-widget"
+#         text:
+#           max_lines: 10
+#           text_color: "#ffc96f"
+#         layout:
+#           width: 400
+#           height: 200
+#           offsetX: 20
+#           offsetY: 100
+# 
+# Note: The logger-widget automatically displays all entity state changes.
+# Use 'max_lines' to control how many recent changes are shown.

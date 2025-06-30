@@ -1,0 +1,53 @@
+type: custom:lovelace-lcars-card
+card_title: Logger Widget
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Logger Widget
+          right_content: example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+
+  - group_id: "log_demo"
+    elements:
+      - id: "system_log"
+        type: "logger-widget"
+        text:
+          max_lines: 8                    # Maximum log entries to display
+          fill: "#ffc96f"                # Standard text color property
+          fontFamily: "Antonio"          # Standard font family
+          fontSize: 14                   # Standard font size  
+          textAnchor: "start"            # Standard text alignment
+        layout:
+          width: 400
+          height: 180
+          offsetX: 20
+          offsetY: 50
+
+      # Comparison with different styling
+      - id: "compact_log"  
+        type: "logger-widget"
+        text:
+          max_lines: 5
+          fill: "#ff6633"               # Orange text
+          fontSize: 12                  # Smaller font
+          textAnchor: "middle"          # Center aligned
+        layout:
+          width: 300
+          height: 120
+          offsetX: 450
+          offsetY: 50

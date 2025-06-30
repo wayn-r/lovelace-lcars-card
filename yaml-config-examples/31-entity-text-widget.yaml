@@ -1,3 +1,6 @@
+# Example Logger Widget Configuration
+# This demonstrates the cleaned-up logger-widget that automatically displays all Home Assistant entity state changes
+
 type: custom:lovelace-lcars-card
 card_title: Entity Text Widget
 groups:
