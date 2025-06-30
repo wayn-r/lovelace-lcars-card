@@ -5,6 +5,7 @@ import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { ShapeGenerator } from "../../utils/shapes.js";
 import { Button } from "../../utils/button.js";
+import { OffsetCalculator } from "../../utils/offset-calculator.js";
 
 export class ElbowElement extends LayoutElement {
     button?: Button;
@@ -34,8 +35,8 @@ export class ElbowElement extends LayoutElement {
     protected getTextPosition(): { x: number, y: number } {
         const { x, y, width, height } = this.layout;
         const orientation = this.props.orientation || 'top-left';
-        const bodyWidth = this.props.bodyWidth || 30;
-        const armHeight = this.props.armHeight || 30;
+        const bodyWidth = this.resolveBodyWidth();
+        const armHeight = this.resolveArmHeight();
         const elbowTextPosition = this.props.elbowTextPosition;
         const textAnchor = this.props.textAnchor || 'middle';
         
@@ -53,10 +54,27 @@ export class ElbowElement extends LayoutElement {
         return this.applyTextOffsets(calculatedPosition);
     }
 
+    private resolveBodyWidth(): number {
+        const bodyWidth = this.props.bodyWidth ?? 30;
+        const baseWidth = this.containerRect?.width ?? this.layout.width;
+        return OffsetCalculator.calculateTextOffset(bodyWidth, baseWidth);
+    }
+
+    private resolveArmHeight(): number {
+        const armHeight = this.props.armHeight ?? 30;
+        const baseHeight = this.containerRect?.height ?? this.layout.height;
+        return OffsetCalculator.calculateTextOffset(armHeight, baseHeight);
+    }
+
     private calculateEffectiveElbowWidth(layoutWidth: number): number {
         const hasStretchConfig = Boolean(this.layoutConfig.stretch?.stretchTo1 || this.layoutConfig.stretch?.stretchTo2);
         const configuredWidth = this.props.width || this.layoutConfig.width || 100;
-        return hasStretchConfig ? layoutWidth : configuredWidth;
+        const baseWidth = this.containerRect?.width ?? this.layout.width;
+        const resolvedWidth = (typeof configuredWidth === 'string')
+            ? OffsetCalculator.calculateTextOffset(configuredWidth, baseWidth)
+            : configuredWidth;
+        
+        return hasStretchConfig ? layoutWidth : resolvedWidth;
     }
 
     private calculateArmTextPosition(x: number, y: number, height: number, orientation: string, bodyWidth: number, armHeight: number, elbowWidth: number, textAnchor: string): { x: number, y: number } {
@@ -129,8 +147,8 @@ export class ElbowElement extends LayoutElement {
 
         const { x, y, width, height } = this.layout;
         const orientation = this.props.orientation || 'top-left';
-        const bodyWidth = this.props.bodyWidth || 30;
-        const armHeight = this.props.armHeight || 30;
+        const bodyWidth = this.resolveBodyWidth();
+        const armHeight = this.resolveArmHeight();
         
         const elbowWidth = this.calculateEffectiveElbowWidth(width);
         const pathData = ShapeGenerator.generateElbow(x, elbowWidth, bodyWidth, armHeight, height, orientation, y, armHeight);
@@ -143,7 +161,7 @@ export class ElbowElement extends LayoutElement {
     }
 
     private dimensionsAreValid(): boolean {
-        return this.layout.width > 0 && this.layout.height > 0;
+        return this.layout.width > 0 && this.layout.height > 0 && this.resolveArmHeight() > 0 && this.resolveBodyWidth() > 0;
     }
 
     private renderPathWithButtonSupport(pathData: string, x: number, y: number, width: number, height: number): SVGTemplateResult {

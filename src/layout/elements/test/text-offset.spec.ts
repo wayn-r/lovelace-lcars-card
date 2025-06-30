@@ -6,7 +6,17 @@ import { OffsetCalculator } from '../../../utils/offset-calculator.js';
 
 vi.mock('../../../utils/offset-calculator.js', () => ({
   OffsetCalculator: {
-    applyTextOffsets: vi.fn()
+    applyTextOffsets: vi.fn(),
+    calculateTextOffset: vi.fn((val, dim) => {
+      if (typeof val === 'number') return val;
+      if (typeof val === 'string') {
+          if (val.endsWith('%')) {
+              return (parseFloat(val) / 100) * dim;
+          }
+          return parseFloat(val) || 0;
+      }
+      return 0;
+    }),
   }
 }));
 

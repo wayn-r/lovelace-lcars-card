@@ -17,8 +17,8 @@ interface ElementProps {
   rx?: number;
   direction?: 'left' | 'right';
   orientation?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-  bodyWidth?: number;
-  armHeight?: number;
+  bodyWidth?: number | string;
+  armHeight?: number | string;
   text?: string;
   textColor?: string;
   fontFamily?: string;

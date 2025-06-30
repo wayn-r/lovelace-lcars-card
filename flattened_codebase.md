@@ -1283,6 +1283,7 @@ import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { ShapeGenerator } from "../../utils/shapes.js";
 import { Button } from "../../utils/button.js";
+import { OffsetCalculator } from "../../utils/offset-calculator.js";
 
 export class ElbowElement extends LayoutElement {
     button?: Button;
@@ -1312,8 +1313,8 @@ export class ElbowElement extends LayoutElement {
     protected getTextPosition(): { x: number, y: number } {
         const { x, y, width, height } = this.layout;
         const orientation = this.props.orientation || 'top-left';
-        const bodyWidth = this.props.bodyWidth || 30;
-        const armHeight = this.props.armHeight || 30;
+        const bodyWidth = this.resolveBodyWidth();
+        const armHeight = this.resolveArmHeight();
         const elbowTextPosition = this.props.elbowTextPosition;
         const textAnchor = this.props.textAnchor || 'middle';
         
@@ -1331,10 +1332,27 @@ export class ElbowElement extends LayoutElement {
         return this.applyTextOffsets(calculatedPosition);
     }
 
+    private resolveBodyWidth(): number {
+        const bodyWidth = this.props.bodyWidth ?? 30;
+        const baseWidth = this.containerRect?.width ?? this.layout.width;
+        return OffsetCalculator.calculateTextOffset(bodyWidth, baseWidth);
+    }
+
+    private resolveArmHeight(): number {
+        const armHeight = this.props.armHeight ?? 30;
+        const baseHeight = this.containerRect?.height ?? this.layout.height;
+        return OffsetCalculator.calculateTextOffset(armHeight, baseHeight);
+    }
+
     private calculateEffectiveElbowWidth(layoutWidth: number): number {
         const hasStretchConfig = Boolean(this.layoutConfig.stretch?.stretchTo1 || this.layoutConfig.stretch?.stretchTo2);
         const configuredWidth = this.props.width || this.layoutConfig.width || 100;
-        return hasStretchConfig ? layoutWidth : configuredWidth;
+        const baseWidth = this.containerRect?.width ?? this.layout.width;
+        const resolvedWidth = (typeof configuredWidth === 'string')
+            ? OffsetCalculator.calculateTextOffset(configuredWidth, baseWidth)
+            : configuredWidth;
+        
+        return hasStretchConfig ? layoutWidth : resolvedWidth;
     }
 
     private calculateArmTextPosition(x: number, y: number, height: number, orientation: string, bodyWidth: number, armHeight: number, elbowWidth: number, textAnchor: string): { x: number, y: number } {
@@ -1407,8 +1425,8 @@ export class ElbowElement extends LayoutElement {
 
         const { x, y, width, height } = this.layout;
         const orientation = this.props.orientation || 'top-left';
-        const bodyWidth = this.props.bodyWidth || 30;
-        const armHeight = this.props.armHeight || 30;
+        const bodyWidth = this.resolveBodyWidth();
+        const armHeight = this.resolveArmHeight();
         
         const elbowWidth = this.calculateEffectiveElbowWidth(width);
         const pathData = ShapeGenerator.generateElbow(x, elbowWidth, bodyWidth, armHeight, height, orientation, y, armHeight);
@@ -1421,7 +1439,7 @@ export class ElbowElement extends LayoutElement {
     }
 
     private dimensionsAreValid(): boolean {
-        return this.layout.width > 0 && this.layout.height > 0;
+        return this.layout.width > 0 && this.layout.height > 0 && this.resolveArmHeight() > 0 && this.resolveBodyWidth() > 0;
     }
 
     private renderPathWithButtonSupport(pathData: string, x: number, y: number, width: number, height: number): SVGTemplateResult {
@@ -1468,6 +1486,7 @@ export abstract class LayoutElement {
     public requestUpdateCallback?: () => void;
     public button?: Button;
     public getShadowElement?: (id: string) => Element | null;
+    protected containerRect?: DOMRect;
     
     private isHovering = false;
     private isActive = false;
@@ -1690,27 +1709,30 @@ export abstract class LayoutElement {
         return true;
     }
 
-    calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
+    public calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
         if (this.layout.calculated) return;
 
-        const containerWidth = containerRect.width;
-        const containerHeight = containerRect.height;
+        this.containerRect = containerRect;
 
-        const elementWidth = this.calculateElementWidth(containerWidth);
-        const elementHeight = this.calculateElementHeight(containerHeight);
+        const { width, height } = this.intrinsicSize;
+        let x = this.parseLayoutOffset(this.layoutConfig.offsetX, containerRect.width) || 0;
+        let y = this.parseLayoutOffset(this.layoutConfig.offsetY, containerRect.height) || 0;
+
+        const elementWidth = this.calculateElementWidth(containerRect.width);
+        const elementHeight = this.calculateElementHeight(containerRect.height);
 
         const initialPosition = this.calculateInitialPosition(
             elementsMap,
-            containerWidth,
-            containerHeight,
+            containerRect.width,
+            containerRect.height,
             elementWidth,
             elementHeight
         );
 
         const context: StretchContext = {
             elementsMap,
-            containerWidth,
-            containerHeight,
+            containerWidth: containerRect.width,
+            containerHeight: containerRect.height,
             x: initialPosition.x,
             y: initialPosition.y,
             width: elementWidth,
@@ -5252,7 +5274,17 @@ import { OffsetCalculator } from '../../../utils/offset-calculator.js';
 
 vi.mock('../../../utils/offset-calculator.js', () => ({
   OffsetCalculator: {
-    applyTextOffsets: vi.fn()
+    applyTextOffsets: vi.fn(),
+    calculateTextOffset: vi.fn((val, dim) => {
+      if (typeof val === 'number') return val;
+      if (typeof val === 'string') {
+          if (val.endsWith('%')) {
+              return (parseFloat(val) / 100) * dim;
+          }
+          return parseFloat(val) || 0;
+      }
+      return 0;
+    }),
   }
 }));
 
@@ -6841,8 +6873,8 @@ interface ElementProps {
   rx?: number;
   direction?: 'left' | 'right';
   orientation?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-  bodyWidth?: number;
-  armHeight?: number;
+  bodyWidth?: number | string;
+  armHeight?: number | string;
   text?: string;
   textColor?: string;
   fontFamily?: string;
@@ -11010,8 +11042,8 @@ const appearanceSchema = z.object({
   cornerRadius: z.number().optional(),
   direction: z.enum(['left', 'right']).optional(),
   orientation: z.enum(['top-left', 'top-right', 'bottom-left', 'bottom-right']).optional(),
-  bodyWidth: z.number().optional(),
-  armHeight: z.number().optional(),
+  bodyWidth: sizeSchema.optional(),
+  armHeight: sizeSchema.optional(),
 });
 
 const textSchema = z.object({

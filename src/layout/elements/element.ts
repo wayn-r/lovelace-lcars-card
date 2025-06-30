@@ -19,6 +19,7 @@ export abstract class LayoutElement {
     public requestUpdateCallback?: () => void;
     public button?: Button;
     public getShadowElement?: (id: string) => Element | null;
+    protected containerRect?: DOMRect;
     
     private isHovering = false;
     private isActive = false;
@@ -241,27 +242,30 @@ export abstract class LayoutElement {
         return true;
     }
 
-    calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
+    public calculateLayout(elementsMap: Map<string, LayoutElement>, containerRect: DOMRect): void {
         if (this.layout.calculated) return;
 
-        const containerWidth = containerRect.width;
-        const containerHeight = containerRect.height;
+        this.containerRect = containerRect;
 
-        const elementWidth = this.calculateElementWidth(containerWidth);
-        const elementHeight = this.calculateElementHeight(containerHeight);
+        const { width, height } = this.intrinsicSize;
+        let x = this.parseLayoutOffset(this.layoutConfig.offsetX, containerRect.width) || 0;
+        let y = this.parseLayoutOffset(this.layoutConfig.offsetY, containerRect.height) || 0;
+
+        const elementWidth = this.calculateElementWidth(containerRect.width);
+        const elementHeight = this.calculateElementHeight(containerRect.height);
 
         const initialPosition = this.calculateInitialPosition(
             elementsMap,
-            containerWidth,
-            containerHeight,
+            containerRect.width,
+            containerRect.height,
             elementWidth,
             elementHeight
         );
 
         const context: StretchContext = {
             elementsMap,
-            containerWidth,
-            containerHeight,
+            containerWidth: containerRect.width,
+            containerHeight: containerRect.height,
             x: initialPosition.x,
             y: initialPosition.y,
             width: elementWidth,

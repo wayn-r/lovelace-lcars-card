@@ -32,8 +32,8 @@ const appearanceSchema = z.object({
   cornerRadius: z.number().optional(),
   direction: z.enum(['left', 'right']).optional(),
   orientation: z.enum(['top-left', 'top-right', 'bottom-left', 'bottom-right']).optional(),
-  bodyWidth: z.number().optional(),
-  armHeight: z.number().optional(),
+  bodyWidth: sizeSchema.optional(),
+  armHeight: sizeSchema.optional(),
 });
 
 const textSchema = z.object({
