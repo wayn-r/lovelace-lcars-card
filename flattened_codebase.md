@@ -108,7 +108,33 @@ lovelace-lcars-card/
 ├── vite.config.ts
 ├── vitest.config.ts
 ├── yaml-bak/
-│   └── 29-logger-widget.yaml
+│   ├── 11-simple-state-group-for-navigation.yaml
+│   ├── 12-toggle-with-dependencies.yaml
+│   ├── 13-conditional-actions-based-on-state.yaml
+│   ├── 14-state-machine-approach.yaml
+│   ├── 15-hass-integration-with-state-management.yaml
+│   ├── 16-anchoring.yaml
+│   ├── 17-stretching.yaml
+│   ├── 18-sequential-animation-and-propogation.yaml
+│   ├── 19-onLoad-animation.yaml
+│   ├── 20-onShowHide-animation.yaml
+│   ├── 21-onStateChange-animation.yaml
+│   ├── 22-visibility-rules.yaml
+│   ├── 24-custom-state-animations.yaml
+│   ├── 24-text-offset.yaml
+│   ├── 25-endcap-text-anchors.yaml
+│   ├── 26-chisel-endcap-text-anchors.yaml
+│   ├── 27-rectangle-text-anchors.yaml
+│   ├── 28-elbow-text-anchors.yaml
+│   ├── 29-logger-widget.yaml
+│   ├── 3-dynamic-color.yaml
+│   ├── 30-text-size-overrides.yaml
+│   ├── 31-entity-text-widget.yaml
+│   ├── 5-lcars-shape-elements.yaml
+│   ├── 6-complex-actions-and-visibility.yaml
+│   ├── 7-button-actions-and-confirmations.yaml
+│   ├── 8-animations.yaml
+│   └── 9-text-styling.yaml
 ├── yaml-config-definition.yaml
 ├── yaml-config-examples/
 └── yaml-dont-run/
@@ -8752,19 +8778,215 @@ interface LogWidgetConfig {
   lineSpacing?: number | string;
 }
 
+type ColorPhase = 'bright' | 'medium' | 'fade' | 'hidden';
+
+interface ColorConfiguration {
+  readonly bright: string;
+  readonly medium: string;
+  readonly fade: string;
+  readonly userOverride?: string;
+}
+
+class LogEntryColorResolver {
+  static readonly DEFAULT_COLORS: ColorConfiguration = {
+    bright: '#ffc996',
+    medium: '#df8313',
+    fade: '#864f0b'
+  };
+
+  static resolveColor(phase: ColorPhase, config: ColorConfiguration): string {
+    if (config.userOverride) return config.userOverride;
+    
+    switch (phase) {
+      case 'bright': return config.bright;
+      case 'medium': return config.medium;
+      case 'fade': return config.fade;
+      case 'hidden': return config.fade;
+      default: return config.bright;
+    }
+  }
+
+  static createConfiguration(userColor?: string): ColorConfiguration {
+    return {
+      ...this.DEFAULT_COLORS,
+      userOverride: userColor
+    };
+  }
+
+  static resolveOpacity(phase: ColorPhase): number {
+    return phase === 'hidden' ? 0 : 1;
+  }
+}
+
+class LogEntryTimer {
+  private static readonly TRANSITION_DELAYS = {
+    brightToMedium: 2000,
+    mediumToFade: 2000,
+    fadeToHidden: 2000
+  };
+
+  private timers: {
+    toMedium?: ReturnType<typeof setTimeout>;
+    toFade?: ReturnType<typeof setTimeout>;
+    toHidden?: ReturnType<typeof setTimeout>;
+  } = {};
+
+  constructor(private readonly onPhaseChange: (newPhase: ColorPhase) => void) {}
+
+  startTransitionSequence(): void {
+    this.clearAllTimers();
+    this.scheduleTransitions();
+  }
+
+  destroy(): void {
+    this.clearAllTimers();
+  }
+
+  private scheduleTransitions(): void {
+    this.timers.toMedium = setTimeout(() => {
+      this.onPhaseChange('medium');
+      this.scheduleToFade();
+    }, LogEntryTimer.TRANSITION_DELAYS.brightToMedium);
+  }
+
+  private scheduleToFade(): void {
+    this.timers.toFade = setTimeout(() => {
+      this.onPhaseChange('fade');
+      this.scheduleToHidden();
+    }, LogEntryTimer.TRANSITION_DELAYS.mediumToFade);
+  }
+
+  private scheduleToHidden(): void {
+    this.timers.toHidden = setTimeout(() => {
+      this.onPhaseChange('hidden');
+    }, LogEntryTimer.TRANSITION_DELAYS.fadeToHidden);
+  }
+
+  private clearAllTimers(): void {
+    Object.values(this.timers).forEach(timer => {
+      if (timer) clearTimeout(timer);
+    });
+    this.timers = {};
+  }
+}
+
+class LogEntry {
+  private colorPhase: ColorPhase = 'bright';
+  private readonly timer: LogEntryTimer;
+  private readonly colorConfiguration: ColorConfiguration;
+
+  constructor(
+    public readonly message: LogMessage,
+    colorConfiguration: ColorConfiguration,
+    private readonly onDisplayUpdate: () => void
+  ) {
+    this.colorConfiguration = colorConfiguration;
+    this.timer = new LogEntryTimer((newPhase) => this.handlePhaseChange(newPhase));
+    this.timer.startTransitionSequence();
+  }
+
+  getCurrentColor(): string {
+    return LogEntryColorResolver.resolveColor(this.colorPhase, this.colorConfiguration);
+  }
+
+  getCurrentOpacity(): number {
+    return LogEntryColorResolver.resolveOpacity(this.colorPhase);
+  }
+
+  entryIsVisible(): boolean {
+    return this.colorPhase !== 'hidden';
+  }
+
+  destroy(): void {
+    this.timer.destroy();
+  }
+
+  private handlePhaseChange(newPhase: ColorPhase): void {
+    this.colorPhase = newPhase;
+    this.onDisplayUpdate();
+  }
+}
+
+class LogEntryCollection {
+  private entries: LogEntry[] = [];
+  
+  constructor(
+    private readonly maxSize: number,
+    private readonly colorConfiguration: ColorConfiguration,
+    private readonly onDisplayUpdate: () => void
+  ) {}
+
+  addEntries(messages: LogMessage[]): void {
+    const newEntries = messages.map(message => 
+      new LogEntry(message, this.colorConfiguration, this.onDisplayUpdate)
+    );
+    
+    this.entries = [...newEntries, ...this.entries];
+    this.trimToMaxSize();
+  }
+
+  getVisibleEntries(): LogEntry[] {
+    return this.entries.slice(0, this.maxSize);
+  }
+
+  clear(): void {
+    this.entries.forEach(entry => entry.destroy());
+    this.entries = [];
+  }
+
+  destroy(): void {
+    this.clear();
+  }
+
+  private trimToMaxSize(): void {
+    while (this.entries.length > this.maxSize) {
+      const removedEntry = this.entries.pop();
+      removedEntry?.destroy();
+    }
+  }
+}
+
+class LogElementRenderer {
+  constructor(
+    private readonly elements: TextElement[],
+    private readonly colorConfiguration: ColorConfiguration
+  ) {}
+
+  updateElementsFromEntries(entries: LogEntry[]): void {
+    this.elements.forEach((element, index) => {
+      const entry = entries[index];
+      
+      if (entry && entry.entryIsVisible()) {
+        this.renderVisibleEntry(element, entry);
+      } else {
+        this.renderEmptyElement(element);
+      }
+    });
+  }
+
+  private renderVisibleEntry(element: TextElement, entry: LogEntry): void {
+    element.props.text = entry.message.text;
+    element.props.fill = entry.getCurrentColor();
+    element.props.fillOpacity = entry.getCurrentOpacity();
+  }
+
+  private renderEmptyElement(element: TextElement): void {
+    element.props.text = '';
+    element.props.fillOpacity = 0;
+  }
+}
+
 export class LogWidget extends Widget {
   private static readonly DEFAULT_HEIGHT = 100;
   private static readonly DEFAULT_MAX_LINES = 5;
   private static readonly DEFAULT_FONT_SIZE = 14;
-  private static readonly DEFAULT_TEXT_COLOR = '#ffc996';
-  private static readonly FADE_COLOR = '#864f0b';
-  private static readonly MEDIUM_COLOR = '#df8313';
-  private static readonly FADE_THRESHOLD_MS = 5000;
 
-  private logMessages: LogMessage[] = [];
-  private newlyAddedIds: Set<string> = new Set();
+  private entryCollection?: LogEntryCollection;
+  private elementRenderer?: LogElementRenderer;
   private previousHass?: HomeAssistant;
   private logLineElements: TextElement[] = [];
+  private boundsElement?: RectangleElement;
+  private widgetConfig?: LogWidgetConfig;
   private unsubscribeFromEvents?: () => void;
 
   constructor(
@@ -8776,66 +8998,72 @@ export class LogWidget extends Widget {
     getShadowElement?: (id: string) => Element | null
   ) {
     super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
-    // Initialize previousHass if hass is provided
     this.previousHass = hass;
     
-    // Set up event subscription if hass is available
     if (hass) {
       this.initializeLogging(hass);
     }
   }
 
   public expand(): LayoutElement[] {
-    const config = this.getWidgetConfig();
-    const bounds = this.createBoundsElement();
+    this.ensureInitialized();
     
-    // Create a fixed number of log line elements (max_lines) upfront
-    this.logLineElements = this.createFixedLogLineElements(bounds, config);
-    this.updateLogLineElementsContent();
+    // Only refresh display if we have entries to show
+    if (this.entryCollection && this.entryCollection.getVisibleEntries().length > 0) {
+      this.refreshDisplay();
+    }
     
-    // Always return all elements but make empty ones transparent
-    return [bounds, ...this.logLineElements];
+    return [this.boundsElement!, ...this.logLineElements];
   }
   
   public updateHass(hass?: HomeAssistant): void {
-    if (!hass) return;
+    if (!hass || this.hass === hass) return;
     
-    // Prevent recursive calls by checking if this is the same hass object
-    if (this.hass === hass) return;
-    
-    // Initialize logging if this is the first time we get hass
     if (!this.unsubscribeFromEvents && this.hass !== hass) {
       this.initializeLogging(hass);
     }
     
-    // Only process manual updateHass calls if we don't have event subscription
-    // (When we have subscription, live updates come through handleStateChangeEvent)
     if (!this.unsubscribeFromEvents && this.previousHass && this.previousHass !== hass) {
       const newMessages = this.detectStateChanges(this.previousHass, hass);
       if (newMessages.length > 0) {
+        this.ensureInitialized();
         this.addLogMessages(newMessages);
-        this.recreateElements();
-        this.requestUpdateCallback?.();
       }
     }
     
-    // Update state for next comparison
-    this.previousHass = this.hass; // Keep the old hass as previous
+    this.previousHass = this.hass;
     this.hass = hass;
   }
-  
-  public updateLogMessages(messages: LogMessage[], newIds: Set<string> = new Set()): void {
-    this.logMessages = messages.slice(0, this.getMaxLines());
-    this.newlyAddedIds = newIds;
-    this.recreateElements();
-    this.requestUpdateCallback?.();
+
+  public updateLogMessages(messages: LogMessage[]): void {
+    this.ensureInitialized();
+    this.entryCollection!.clear();
+    this.addLogMessages(messages);
+  }
+
+  private ensureInitialized(): void {
+    if (!this.widgetConfig) {
+      this.widgetConfig = this.getWidgetConfig();
+    }
+    
+    if (!this.boundsElement) {
+      this.boundsElement = this.createBoundsElement();
+    }
+    
+    if (this.logLineElements.length === 0) {
+      this.logLineElements = this.createLogLineElements(this.boundsElement, this.widgetConfig);
+    }
+    
+    if (!this.entryCollection || !this.elementRenderer) {
+      this.initializeCollectionAndRenderer(this.widgetConfig);
+    }
   }
 
   private getWidgetConfig(): LogWidgetConfig {
     const fontSize = this.props.fontSize || LogWidget.DEFAULT_FONT_SIZE;
     return {
       maxLines: this.props.maxLines || LogWidget.DEFAULT_MAX_LINES,
-      textColor: this.props.textColor || LogWidget.DEFAULT_TEXT_COLOR,
+      textColor: this.props.textColor,
       textAnchor: this.props.textAnchor || 'start',
       fontSize: fontSize,
       fontFamily: this.props.fontFamily || 'Antonio',
@@ -8855,57 +9083,45 @@ export class LogWidget extends Widget {
       this.getShadowElement
     );
     
-    // Inject updateHass method to keep the widget alive and receive updates
     const widget = this;
     bounds.updateHass = function(this: RectangleElement, hass?: HomeAssistant): void {
-      // Call the original updateHass method
       RectangleElement.prototype.updateHass.call(this, hass);
-      
-      // Forward to the widget
       widget.updateHass(hass);
     };
     
     return bounds;
   }
 
-  private createFixedLogLineElements(bounds: RectangleElement, config: LogWidgetConfig): TextElement[] {
+  private createLogLineElements(bounds: RectangleElement, config: LogWidgetConfig): TextElement[] {
     const elements: TextElement[] = [];
-    const maxLines = this.getMaxLines();
+    const maxLines = config.maxLines!;
 
-    // Create a fixed number of elements equal to max_lines
     for (let index = 0; index < maxLines; index++) {
-      const element = this.createEmptyLogLineElement(bounds, index, config);
+      const element = this.createLogLineElement(bounds, index, config);
       elements.push(element);
     }
 
     return elements;
   }
   
-  private createEmptyLogLineElement(
+  private createLogLineElement(
     bounds: RectangleElement, 
     index: number, 
     config: LogWidgetConfig
   ): TextElement {
-    const lineSpacingValue = config.lineSpacing!;
-    const fontSize = config.fontSize!;
-
-    const parsedLineSpacing = DistanceParser.parse(
-        lineSpacingValue.toString(),
-        { layout: { width: fontSize, height: fontSize } }
-    );
-
-    const yOffset = index * parsedLineSpacing;
+    const yOffset = this.calculateLineOffset(index, config);
 
     return new TextElement(
       `${this.id}_line_${index}`,
       {
-        text: '', // Start empty
-        fill: config.textColor,
+        text: '',
+        fill: LogEntryColorResolver.DEFAULT_COLORS.bright,
         fontSize: config.fontSize,
         fontFamily: config.fontFamily,
         fontWeight: config.fontWeight,
         textAnchor: config.textAnchor,
-        dominantBaseline: 'hanging'
+        dominantBaseline: 'hanging',
+        fillOpacity: 0
       },
       {
         anchor: {
@@ -8921,49 +9137,31 @@ export class LogWidget extends Widget {
     );
   }
 
-  private updateLogLineElementsContent(): void {
-    const config = this.getWidgetConfig();
-    
-    for (let index = 0; index < this.logLineElements.length; index++) {
-      const element = this.logLineElements[index];
-      const message = this.logMessages[index];
+  private calculateLineOffset(index: number, config: LogWidgetConfig): number {
+    const lineSpacingValue = config.lineSpacing!;
+    const fontSize = config.fontSize!;
 
-      if (message) {
-        // Update element with log message
-        element.props.text = message.text;
-        element.props.fill = this.calculateLogColor(message, index, config);
-        element.props.fillOpacity = 1; // Make visible
-      } else {
-        // Hide element if no message by making it transparent
-        element.props.text = '';
-        element.props.fillOpacity = 0;
-      }
-    }
+    const parsedLineSpacing = DistanceParser.parse(
+      lineSpacingValue.toString(),
+      { layout: { width: fontSize, height: fontSize } }
+    );
+
+    return index * parsedLineSpacing;
   }
 
-  private calculateLogColor(message: LogMessage, index: number, config: LogWidgetConfig): string {
-    // User-specified color takes precedence
-    if (this.props.textColor) {
-      return config.textColor!;
-    }
+  private initializeCollectionAndRenderer(config: LogWidgetConfig): void {
+    const colorConfiguration = LogEntryColorResolver.createConfiguration(config.textColor);
     
-    // Newly added messages get full brightness
-    if (this.newlyAddedIds.has(message.id)) {
-      return config.textColor!;
-    }
+    this.entryCollection = new LogEntryCollection(
+      config.maxLines!,
+      colorConfiguration,
+      () => this.refreshDisplay()
+    );
     
-    // First line gets full brightness
-    if (index === 0) {
-      return config.textColor!;
-    }
-    
-    // Apply fade based on age
-    const age = Date.now() - message.timestamp;
-    if (age > LogWidget.FADE_THRESHOLD_MS) {
-      return LogWidget.FADE_COLOR;
-    }
-    
-    return LogWidget.MEDIUM_COLOR;
+    this.elementRenderer = new LogElementRenderer(
+      this.logLineElements,
+      colorConfiguration
+    );
   }
 
   private detectStateChanges(oldHass: HomeAssistant, newHass: HomeAssistant): LogMessage[] {
@@ -8974,7 +9172,6 @@ export class LogWidget extends Widget {
       const oldState = oldHass.states[entityId];
       
       if (this.stateChanged(oldState, newState)) {
-        // Use entity_id from the state object if available, otherwise use the key
         const actualEntityId = newState.entity_id || entityId;
         const friendlyName = newState.attributes?.friendly_name || actualEntityId;
         const message: LogMessage = {
@@ -8996,29 +9193,42 @@ export class LogWidget extends Widget {
   }
 
   private addLogMessages(newMessages: LogMessage[]): void {
-    this.newlyAddedIds.clear();
-    newMessages.forEach(msg => this.newlyAddedIds.add(msg.id));
-    
-    this.logMessages = [...newMessages, ...this.logMessages]
-      .slice(0, this.getMaxLines());
+    if (!this.entryCollection) return;
+
+    const existingVisibleTexts = new Set<string>();
+    this.entryCollection.getVisibleEntries().forEach(entry => {
+      if (entry.entryIsVisible()) {
+        existingVisibleTexts.add(entry.message.text);
+      }
+    });
+
+    const uniqueNewMessages: LogMessage[] = [];
+    for (const message of newMessages) {
+      if (!existingVisibleTexts.has(message.text)) {
+        uniqueNewMessages.push(message);
+        existingVisibleTexts.add(message.text);
+      }
+    }
+
+    if (uniqueNewMessages.length > 0) {
+      this.entryCollection.addEntries(uniqueNewMessages);
+      this.refreshDisplay();
+    }
   }
 
-  private recreateElements(): void {
-    // Update existing elements with new log content instead of recreating
-    this.updateLogLineElementsContent();
-  }
-
-  private getMaxLines(): number {
-    return this.props.maxLines || LogWidget.DEFAULT_MAX_LINES;
+  private refreshDisplay(): void {
+    if (this.entryCollection && this.elementRenderer) {
+      const visibleEntries = this.entryCollection.getVisibleEntries();
+      this.elementRenderer.updateElementsFromEntries(visibleEntries);
+    }
+    this.requestUpdateCallback?.();
   }
 
   private async initializeLogging(hass: HomeAssistant): Promise<void> {
-    // Only populate initial logs if we have a real connection (not in tests)
     if (hass.connection) {
       this.populateInitialLogs(hass);
     }
     
-    // Subscribe to state change events
     await this.subscribeToStateChanges(hass);
   }
 
@@ -9036,7 +9246,8 @@ export class LogWidget extends Widget {
       });
 
     initialMessages.sort((a, b) => b.timestamp - a.timestamp);
-    this.logMessages = initialMessages.slice(0, this.getMaxLines());
+    const config = this.getWidgetConfig();
+    this.addLogMessages(initialMessages.slice(0, config.maxLines));
   }
 
   private async subscribeToStateChanges(hass: HomeAssistant): Promise<void> {
@@ -9068,19 +9279,12 @@ export class LogWidget extends Widget {
       timestamp: new Date(newState.last_changed).getTime(),
     };
     
-    // Check if this message already exists to prevent duplicates
-    const messageExists = this.logMessages.some(existingMessage => existingMessage.id === message.id);
-    if (messageExists) return;
-    
-    this.newlyAddedIds.clear();
-    this.newlyAddedIds.add(message.id);
-    
-    this.logMessages = [message, ...this.logMessages].slice(0, this.getMaxLines());
-    this.recreateElements();
-    this.requestUpdateCallback?.();
+    this.addLogMessages([message]);
   }
 
   public destroy(): void {
+    this.entryCollection?.destroy();
+    
     if (this.unsubscribeFromEvents) {
       this.unsubscribeFromEvents();
       this.unsubscribeFromEvents = undefined;
@@ -9092,7 +9296,6 @@ WidgetRegistry.registerWidget('logger-widget', (id, props, layoutConfig, hass, r
   const widget = new LogWidget(id, props, layoutConfig, hass, reqUpd, getEl);
   const elements = widget.expand();
   
-  // Keep the widget alive by storing it on the bounds element
   if (elements.length > 0) {
     (elements[0] as any)._logWidget = widget;
   }
