@@ -9,6 +9,27 @@ import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
 import { DistanceParser } from '../../utils/animation.js';
 import gsap from 'gsap';
 
+// ============================================================================
+// Animation Durations (in seconds)
+// ----------------------------------------------------------------------------
+// These constants allow independent tuning of each animation phase. Placing
+// them immediately after imports satisfies the "top of file" requirement and
+// makes them easy to locate.
+// ----------------------------------------------------------------------------
+// Duration for slide-down and fade-out operations
+export const SLIDE_ANIMATION_DURATION = 0.3;
+
+// ----------------------------------------------------------------------------
+// Fade-in configuration for new log entries
+// ----------------------------------------------------------------------------
+// Total duration for the fade-in (seconds)
+export const FADE_IN_DURATION = 0.3;
+
+// Customize bounce characteristics – see GSAP docs for options such as
+// "bounce.out(0.7)" or "bounce.inOut(1.2)"
+export const FADE_IN_EASE = 'bounce.in';
+// ============================================================================
+
 interface LogWidgetConfig {
   maxLines?: number;
   textColor?: string;
@@ -221,7 +242,11 @@ class LogElementRenderer {
 class LogAnimation {
     constructor(
         private readonly getShadowElement: (id: string) => Element | null,
-        private readonly animationDuration: number
+        /**
+         * Duration (seconds) for slide-related animations. Fade-in durations are
+         * controlled by the top-level constants to keep them independent.
+         */
+        private readonly slideDuration: number
     ) {}
 
     public fadeIn(
@@ -230,7 +255,6 @@ class LogAnimation {
         newDomElement: Element,
         message: LogMessage,
         widgetConfig: LogWidgetConfig,
-        lineSpacing: number,
         requestUpdateCallback?: () => void
     ): void {
         const newEntryTemp = new LogEntry(
@@ -243,14 +267,18 @@ class LogAnimation {
         newElement.props.fill = newEntryTemp.getCurrentColor();
         requestUpdateCallback?.();
 
-        gsap.set(newDomElement, { y: -lineSpacing, opacity: 0 });
+        gsap.set(newDomElement, { opacity: 0 });
 
-        timeline.to(newDomElement, {
-            y: 0,
-            opacity: 1,
-            duration: this.animationDuration,
-            ease: 'power2.out',
-        }, 0);
+        // Single fade-in with customized bounce ease
+        timeline.to(
+            newDomElement,
+            {
+                opacity: 1,
+                duration: FADE_IN_DURATION,
+                ease: FADE_IN_EASE
+            },
+            '>' // start after previous tweens in the timeline
+        );
 
         newEntryTemp.destroy();
     }
@@ -262,23 +290,32 @@ class LogAnimation {
         maxLines: number,
         lineSpacing: number
     ): void {
-        for (let i = 0; i < Math.min(visibleEntries.length, maxLines); i++) {
-            const element = logLineElements[i];
-            const slideTargetElement = logLineElements[i + 1];
+        for (let i = visibleEntries.length - 1; i >= 0; i--) {
+            const currentElement = logLineElements[i];
+            const targetElement = logLineElements[i + 1];
 
-            if (slideTargetElement) {
-                const slideTargetDomElement = this.getShadowElement(slideTargetElement.id);
-                if (slideTargetDomElement) {
-                    const guardedElement = slideTargetDomElement;
-                    const textSvgElement = guardedElement.querySelector('text');
-                    if (textSvgElement) {
-                        textSvgElement.textContent = element.props.text ?? '';
+            if (targetElement && i < maxLines - 1) {
+                const currentDomElement = this.getShadowElement(currentElement.id);
+                const targetDomElement = this.getShadowElement(targetElement.id);
+                
+                if (currentDomElement && targetDomElement) {
+                    const currentTextElement = currentDomElement.querySelector('text');
+                    const targetTextElement = targetDomElement.querySelector('text');
+                    
+                    if (currentTextElement && targetTextElement) {
+                        targetTextElement.textContent = currentTextElement.textContent || '';
                     }
-                    timeline.fromTo(guardedElement,
-                        { y: 0 },
+                    
+                    // Ensure SVG properties mirror as well (color / opacity)
+                    targetDomElement.setAttribute('opacity', '1');
+                    targetElement.props.fillOpacity = 1;
+
+                    timeline.fromTo(targetDomElement,
+                        { y: -lineSpacing, opacity: 1 },
                         {
-                            y: lineSpacing,
-                            duration: this.animationDuration,
+                            y: 0,
+                            opacity: 1,
+                            duration: this.slideDuration,
                             ease: 'power2.out',
                         }, 0
                     );
@@ -298,7 +335,7 @@ class LogAnimation {
         if (lastDomElement) {
             timeline.to(lastDomElement, {
                 opacity: 0,
-                duration: this.animationDuration,
+                duration: this.slideDuration,
                 ease: 'power2.out',
             }, 0);
         }
@@ -307,7 +344,6 @@ class LogAnimation {
 
 class LogAnimationCoordinator {
     private readonly timeline: gsap.core.Timeline;
-    private readonly animationDuration = 0.5;
     private readonly animation: LogAnimation;
 
     constructor(
@@ -327,7 +363,7 @@ class LogAnimationCoordinator {
                 this.onAnimationComplete();
             }
         });
-        this.animation = new LogAnimation(this.getShadowElement, this.animationDuration);
+        this.animation = new LogAnimation(this.getShadowElement, SLIDE_ANIMATION_DURATION);
     }
 
     public async run(): Promise<void> {
@@ -336,21 +372,6 @@ class LogAnimationCoordinator {
     }
 
     private buildAnimation(): void {
-        const newElement = this.logLineElements[0];
-        const newDomElement = this.getShadowElement(newElement.id);
-
-        if (newDomElement) {
-            this.animation.fadeIn(
-                this.timeline,
-                newElement,
-                newDomElement,
-                this.message,
-                this.widgetConfig,
-                this.lineSpacing,
-                this.requestUpdateCallback
-            );
-        }
-
         const visibleEntries = this.entryCollection.getVisibleEntries();
         const maxLines = this.widgetConfig.maxLines!;
 
@@ -367,6 +388,20 @@ class LogAnimationCoordinator {
                 this.timeline,
                 this.logLineElements,
                 maxLines
+            );
+        }
+
+        const newElement = this.logLineElements[0];
+        const newDomElement = this.getShadowElement(newElement.id);
+
+        if (newDomElement) {
+            this.animation.fadeIn(
+                this.timeline,
+                newElement,
+                newDomElement,
+                this.message,
+                this.widgetConfig,
+                this.requestUpdateCallback
             );
         }
     }
@@ -604,29 +639,33 @@ export class LogWidget extends Widget {
   private addLogMessages(newMessages: LogMessage[], animated = true): void {
     if (!this.entryCollection) return;
 
-    const existingVisibleTexts = new Set<string>();
-    this.entryCollection.getVisibleEntries().forEach(entry => {
-      if (entry.entryIsVisible()) {
-        existingVisibleTexts.add(entry.message.text);
-      }
-    });
+    const isDuplicate = (candidate: LogMessage): boolean => {
+      const regexSafe = candidate.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = new RegExp(`^${regexSafe}$`, 'i');
 
-    const uniqueNewMessages: LogMessage[] = [];
-    for (const message of newMessages) {
-      if (!existingVisibleTexts.has(message.text)) {
-        uniqueNewMessages.push(message);
-        existingVisibleTexts.add(message.text);
+      // Check currently visible & stored entries
+      for (const entry of this.entryCollection!.getVisibleEntries()) {
+        if (pattern.test(entry.message.text)) return true;
       }
-    }
 
-    if (uniqueNewMessages.length > 0) {
-      if (animated) {
-        this.messageQueue.push(...uniqueNewMessages);
-        this.processMessageQueue();
-      } else {
-        this.entryCollection.addEntries(uniqueNewMessages);
-        this.refreshDisplay();
+      // Check the entire message queue (already scheduled for animation)
+      for (const queued of this.messageQueue) {
+        if (pattern.test(queued.text)) return true;
       }
+
+      return false;
+    };
+
+    const uniqueNewMessages: LogMessage[] = newMessages.filter(msg => !isDuplicate(msg));
+
+    if (uniqueNewMessages.length === 0) return;
+
+    if (animated) {
+      this.messageQueue.push(...uniqueNewMessages);
+      this.processMessageQueue();
+    } else {
+      this.entryCollection.addEntries(uniqueNewMessages);
+      this.refreshDisplay();
     }
   }
 
@@ -669,29 +708,8 @@ export class LogWidget extends Widget {
   }
 
   private async initializeLogging(hass: HomeAssistant): Promise<void> {
-    if (hass.connection) {
-      this.populateInitialLogs(hass);
-    }
-    
+    // Start listening for future state changes only; we intentionally skip initial log population
     await this.subscribeToStateChanges(hass);
-  }
-
-  private populateInitialLogs(hass: HomeAssistant): void {
-    const initialMessages: LogMessage[] = Object.entries(hass.states)
-      .filter(([_, entity]) => entity.state)
-      .map(([entityId, entity]) => {
-        const actualEntityId = entity.entity_id || entityId;
-        const friendlyName = entity.attributes?.friendly_name || actualEntityId;
-        return {
-          id: `${actualEntityId}-${entity.last_changed}`,
-          text: `${friendlyName}: ${entity.state}`,
-          timestamp: new Date(entity.last_changed).getTime(),
-        };
-      });
-
-    initialMessages.sort((a, b) => b.timestamp - a.timestamp);
-    const config = this.getWidgetConfig();
-    this.addLogMessages(initialMessages.slice(0, config.maxLines));
   }
 
   private async subscribeToStateChanges(hass: HomeAssistant): Promise<void> {
