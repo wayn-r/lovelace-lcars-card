@@ -66,6 +66,9 @@ groups: <array>                  # Required: Defines groups of elements. Element
 
           # --- Specific to 'logger-widget' type ---
           max_lines: <number>        # Maximum number of log lines to display. Default: 5.
+          line_spacing: <number|string_percentage> # Optional: Vertical spacing between log lines.
+                                                   #   Can be a number (pixels) or percentage of font size.
+                                                   #   Default: 1.4 * fontSize.
           # Note: The logger-widget automatically displays all entity state changes from Home Assistant.
           # Use standard text properties (fill, fontFamily, fontSize, etc.) to configure appearance.
 

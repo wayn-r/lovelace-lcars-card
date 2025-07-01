@@ -54,6 +54,7 @@ const textSchema = z.object({
   offsetY: z.union([z.number(), z.string()]).optional(),
   // Logger widget specific properties
   max_lines: z.number().optional(),
+  line_spacing: sizeSchema.optional(),
   text_color: colorValueSchema.optional(),
 });
 

@@ -4,9 +4,9 @@ import { Widget } from './widget.js';
 import { LayoutElement } from '../elements/element.js';
 import { WidgetRegistry } from './registry.js';
 import { LogMessage } from '../../types.js';
-import { LOG_LINE_HEIGHT_PX } from '../../constants.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
+import { DistanceParser } from '../../utils/animation.js';
 
 interface LogWidgetConfig {
   maxLines?: number;
@@ -16,6 +16,7 @@ interface LogWidgetConfig {
   fontFamily?: string;
   fontWeight?: string | number;
   height?: number;
+  lineSpacing?: number | string;
 }
 
 export class LogWidget extends Widget {
@@ -25,7 +26,7 @@ export class LogWidget extends Widget {
   private static readonly DEFAULT_TEXT_COLOR = '#ffc996';
   private static readonly FADE_COLOR = '#864f0b';
   private static readonly MEDIUM_COLOR = '#df8313';
-  private static readonly FADE_THRESHOLD_MS = 500;
+  private static readonly FADE_THRESHOLD_MS = 5000;
 
   private logMessages: LogMessage[] = [];
   private newlyAddedIds: Set<string> = new Set();
@@ -98,14 +99,16 @@ export class LogWidget extends Widget {
   }
 
   private getWidgetConfig(): LogWidgetConfig {
+    const fontSize = this.props.fontSize || LogWidget.DEFAULT_FONT_SIZE;
     return {
       maxLines: this.props.maxLines || LogWidget.DEFAULT_MAX_LINES,
       textColor: this.props.textColor || LogWidget.DEFAULT_TEXT_COLOR,
       textAnchor: this.props.textAnchor || 'start',
-      fontSize: this.props.fontSize || LogWidget.DEFAULT_FONT_SIZE,
+      fontSize: fontSize,
       fontFamily: this.props.fontFamily || 'Antonio',
       fontWeight: this.props.fontWeight || 'normal',
-      height: this.layoutConfig.height || LogWidget.DEFAULT_HEIGHT
+      height: this.layoutConfig.height || LogWidget.DEFAULT_HEIGHT,
+      lineSpacing: this.props.lineSpacing === undefined ? (fontSize * 1.4) : this.props.lineSpacing,
     };
   }
 
@@ -150,7 +153,15 @@ export class LogWidget extends Widget {
     index: number, 
     config: LogWidgetConfig
   ): TextElement {
-    const yOffset = index * LOG_LINE_HEIGHT_PX;
+    const lineSpacingValue = config.lineSpacing!;
+    const fontSize = config.fontSize!;
+
+    const parsedLineSpacing = DistanceParser.parse(
+        lineSpacingValue.toString(),
+        { layout: { width: fontSize, height: fontSize } }
+    );
+
+    const yOffset = index * parsedLineSpacing;
 
     return new TextElement(
       `${this.id}_line_${index}`,
@@ -196,8 +207,6 @@ export class LogWidget extends Widget {
       }
     }
   }
-
-
 
   private calculateLogColor(message: LogMessage, index: number, config: LogWidgetConfig): string {
     // User-specified color takes precedence

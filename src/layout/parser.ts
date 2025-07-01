@@ -49,6 +49,7 @@ interface ElementProps {
   appearance?: any;
   // Logger widget specific properties
   maxLines?: number;
+  lineSpacing?: number | string;
 }
 
 interface LayoutConfig {
@@ -180,6 +181,7 @@ export class ConfigParser {
     
     // Logger widget specific properties
     if (text.max_lines !== undefined) props.maxLines = text.max_lines;
+    if (text.line_spacing !== undefined) props.lineSpacing = text.line_spacing;
   }
 
   private static mapButtonProps(element: any, props: ElementProps): void {
