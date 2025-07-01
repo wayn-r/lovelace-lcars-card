@@ -8768,27 +8768,6 @@ import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
 import { DistanceParser } from '../../utils/animation.js';
 import gsap from 'gsap';
 
-// ============================================================================
-// Animation Durations (in seconds)
-// ----------------------------------------------------------------------------
-// These constants allow independent tuning of each animation phase. Placing
-// them immediately after imports satisfies the "top of file" requirement and
-// makes them easy to locate.
-// ----------------------------------------------------------------------------
-// Duration for slide-down and fade-out operations
-export const SLIDE_ANIMATION_DURATION = 0.3;
-
-// ----------------------------------------------------------------------------
-// Fade-in configuration for new log entries
-// ----------------------------------------------------------------------------
-// Total duration for the fade-in (seconds)
-export const FADE_IN_DURATION = 0.3;
-
-// Customize bounce characteristics – see GSAP docs for options such as
-// "bounce.out(0.7)" or "bounce.inOut(1.2)"
-export const FADE_IN_EASE = 'bounce.in';
-// ============================================================================
-
 interface LogWidgetConfig {
   maxLines?: number;
   textColor?: string;
@@ -8802,37 +8781,39 @@ interface LogWidgetConfig {
 
 type ColorPhase = 'bright' | 'medium' | 'fade' | 'hidden';
 
-interface ColorConfiguration {
-  readonly bright: string;
-  readonly medium: string;
-  readonly fade: string;
-  readonly userOverride?: string;
+class LogAnimationConfig {
+  static readonly SLIDE_DURATION = 0.3;
+  static readonly FADE_IN_DURATION = 0.3;
+  static readonly FADE_IN_EASE = 'bounce.in';
+  
+  static readonly TRANSITION_DELAYS = {
+    brightToMedium: 5000,
+    mediumToFade: 5000,
+    fadeToHidden: 5000
+  };
 }
 
-class LogEntryColorResolver {
-  static readonly DEFAULT_COLORS: ColorConfiguration = {
+class LogColorUtils {
+  private static readonly DEFAULT_COLORS = {
     bright: '#ffc996',
     medium: '#df8313',
     fade: '#864f0b'
   };
 
-  static resolveColor(phase: ColorPhase, config: ColorConfiguration): string {
-    if (config.userOverride) return config.userOverride;
+  static resolveColor(phase: ColorPhase, userColor?: string): string {
+    if (userColor) return userColor;
     
     switch (phase) {
-      case 'bright': return config.bright;
-      case 'medium': return config.medium;
-      case 'fade': return config.fade;
-      case 'hidden': return config.fade;
-      default: return config.bright;
+      case 'bright': return this.DEFAULT_COLORS.bright;
+      case 'medium': return this.DEFAULT_COLORS.medium;
+      case 'fade': return this.DEFAULT_COLORS.fade;
+      case 'hidden': return this.DEFAULT_COLORS.fade;
+      default: return this.DEFAULT_COLORS.bright;
     }
   }
 
-  static createConfiguration(userColor?: string): ColorConfiguration {
-    return {
-      ...this.DEFAULT_COLORS,
-      userOverride: userColor
-    };
+  static colorPhaseIsVisible(phase: ColorPhase): boolean {
+    return phase !== 'hidden';
   }
 
   static resolveOpacity(phase: ColorPhase): number {
@@ -8841,17 +8822,7 @@ class LogEntryColorResolver {
 }
 
 class LogEntryTimer {
-  private static readonly TRANSITION_DELAYS = {
-    brightToMedium: 2000,
-    mediumToFade: 2000,
-    fadeToHidden: 2000
-  };
-
-  private timers: {
-    toMedium?: ReturnType<typeof setTimeout>;
-    toFade?: ReturnType<typeof setTimeout>;
-    toHidden?: ReturnType<typeof setTimeout>;
-  } = {};
+  private timers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(private readonly onPhaseChange: (newPhase: ColorPhase) => void) {}
 
@@ -8865,58 +8836,65 @@ class LogEntryTimer {
   }
 
   private scheduleTransitions(): void {
-    this.timers.toMedium = setTimeout(() => {
+    this.timers.set('toMedium', setTimeout(() => {
       this.onPhaseChange('medium');
       this.scheduleToFade();
-    }, LogEntryTimer.TRANSITION_DELAYS.brightToMedium);
+    }, LogAnimationConfig.TRANSITION_DELAYS.brightToMedium));
   }
 
   private scheduleToFade(): void {
-    this.timers.toFade = setTimeout(() => {
+    this.timers.set('toFade', setTimeout(() => {
       this.onPhaseChange('fade');
       this.scheduleToHidden();
-    }, LogEntryTimer.TRANSITION_DELAYS.mediumToFade);
+    }, LogAnimationConfig.TRANSITION_DELAYS.mediumToFade));
   }
 
   private scheduleToHidden(): void {
-    this.timers.toHidden = setTimeout(() => {
+    this.timers.set('toHidden', setTimeout(() => {
       this.onPhaseChange('hidden');
-    }, LogEntryTimer.TRANSITION_DELAYS.fadeToHidden);
+    }, LogAnimationConfig.TRANSITION_DELAYS.fadeToHidden));
   }
 
   private clearAllTimers(): void {
-    Object.values(this.timers).forEach(timer => {
-      if (timer) clearTimeout(timer);
-    });
-    this.timers = {};
+    this.timers.forEach(timer => clearTimeout(timer));
+    this.timers.clear();
   }
 }
 
 class LogEntry {
   private colorPhase: ColorPhase = 'bright';
   private readonly timer: LogEntryTimer;
-  private readonly colorConfiguration: ColorConfiguration;
+  private timerStarted = false;
 
   constructor(
     public readonly message: LogMessage,
-    colorConfiguration: ColorConfiguration,
-    private readonly onDisplayUpdate: () => void
+    private readonly userColor: string | undefined,
+    private readonly onDisplayUpdate: () => void,
+    startTimer = true
   ) {
-    this.colorConfiguration = colorConfiguration;
     this.timer = new LogEntryTimer((newPhase) => this.handlePhaseChange(newPhase));
-    this.timer.startTransitionSequence();
+    if (startTimer) {
+      this.startTimer();
+    }
+  }
+
+  startTimer(): void {
+    if (!this.timerStarted) {
+      this.timerStarted = true;
+      this.timer.startTransitionSequence();
+    }
   }
 
   getCurrentColor(): string {
-    return LogEntryColorResolver.resolveColor(this.colorPhase, this.colorConfiguration);
+    return LogColorUtils.resolveColor(this.colorPhase, this.userColor);
   }
 
   getCurrentOpacity(): number {
-    return LogEntryColorResolver.resolveOpacity(this.colorPhase);
+    return LogColorUtils.resolveOpacity(this.colorPhase);
   }
 
   entryIsVisible(): boolean {
-    return this.colorPhase !== 'hidden';
+    return LogColorUtils.colorPhaseIsVisible(this.colorPhase);
   }
 
   destroy(): void {
@@ -8934,13 +8912,13 @@ class LogEntryCollection {
   
   constructor(
     private readonly maxSize: number,
-    private readonly colorConfiguration: ColorConfiguration,
+    private readonly userColor: string | undefined,
     private readonly onDisplayUpdate: () => void
   ) {}
 
-  addEntries(messages: LogMessage[]): void {
+  addEntries(messages: LogMessage[], startTimers = false): void {
     const newEntries = messages.map(message => 
-      new LogEntry(message, this.colorConfiguration, this.onDisplayUpdate)
+      new LogEntry(message, this.userColor, this.onDisplayUpdate, startTimers)
     );
     
     this.entries = [...newEntries, ...this.entries];
@@ -8949,6 +8927,11 @@ class LogEntryCollection {
 
   getVisibleEntries(): LogEntry[] {
     return this.entries.slice(0, this.maxSize);
+  }
+
+  startTimersForVisibleEntries(): void {
+    const visibleEntries = this.getVisibleEntries();
+    visibleEntries.forEach(entry => entry.startTimer());
   }
 
   clear(): void {
@@ -8963,7 +8946,9 @@ class LogEntryCollection {
   private trimToMaxSize(): void {
     while (this.entries.length > this.maxSize) {
       const removedEntry = this.entries.pop();
-      removedEntry?.destroy();
+      if (removedEntry) {
+        removedEntry.destroy();
+      }
     }
   }
 }
@@ -8971,7 +8956,7 @@ class LogEntryCollection {
 class LogElementRenderer {
   constructor(
     private readonly elements: TextElement[],
-    private readonly colorConfiguration: ColorConfiguration
+    private readonly userColor: string | undefined
   ) {}
 
   updateElementsFromEntries(entries: LogEntry[]): void {
@@ -8998,181 +8983,179 @@ class LogElementRenderer {
   }
 }
 
-class LogAnimation {
-    constructor(
-        private readonly getShadowElement: (id: string) => Element | null,
-        /**
-         * Duration (seconds) for slide-related animations. Fade-in durations are
-         * controlled by the top-level constants to keep them independent.
-         */
-        private readonly slideDuration: number
-    ) {}
+class LogAnimationManager {
+  constructor(
+    private readonly getShadowElement: (id: string) => Element | null
+  ) {}
 
-    public fadeIn(
-        timeline: gsap.core.Timeline,
-        newElement: TextElement,
-        newDomElement: Element,
-        message: LogMessage,
-        widgetConfig: LogWidgetConfig,
-        requestUpdateCallback?: () => void
-    ): void {
-        const newEntryTemp = new LogEntry(
-            message,
-            LogEntryColorResolver.createConfiguration(widgetConfig.textColor),
-            () => {}
-        );
+  async animateNewMessage(
+    logLineElements: TextElement[],
+    message: LogMessage,
+    widgetConfig: LogWidgetConfig,
+    entryCollection: LogEntryCollection,
+    lineSpacing: number,
+    onAnimationComplete: () => void,
+    requestUpdateCallback?: () => void
+  ): Promise<void> {
+    const timeline = gsap.timeline({
+      onComplete: () => {
+        entryCollection.addEntries([message], false);
+        this.resetElementPositions(logLineElements);
+        onAnimationComplete();
+        entryCollection.startTimersForVisibleEntries();
+      }
+    });
 
-        newElement.props.text = newEntryTemp.message.text;
-        newElement.props.fill = newEntryTemp.getCurrentColor();
-        requestUpdateCallback?.();
+    const visibleEntries = entryCollection.getVisibleEntries();
+    const maxLines = widgetConfig.maxLines!;
+    const shouldFadeOut = visibleEntries.length >= maxLines;
 
-        gsap.set(newDomElement, { opacity: 0 });
+    if (shouldFadeOut) {
+      this.fadeOutLastElement(timeline, logLineElements, maxLines, 0);
+    }
 
-        // Single fade-in with customized bounce ease
-        timeline.to(
-            newDomElement,
+    this.slideDownElements(timeline, logLineElements, visibleEntries, maxLines, lineSpacing, 0);
+    
+    const newElement = logLineElements[0];
+    const newDomElement = this.getShadowElement(newElement.id);
+
+    if (newDomElement) {
+      this.fadeInNewElement(timeline, newElement, newDomElement, message, widgetConfig, requestUpdateCallback, LogAnimationConfig.SLIDE_DURATION);
+    }
+
+    await timeline;
+  }
+
+  private fadeInNewElement(
+    timeline: gsap.core.Timeline,
+    newElement: TextElement,
+    newDomElement: Element,
+    message: LogMessage,
+    widgetConfig: LogWidgetConfig,
+    requestUpdateCallback?: () => void,
+    delay: number = 0
+  ): void {
+    const tempEntry = new LogEntry(message, widgetConfig.textColor, () => {}, false);
+
+    newElement.props.text = tempEntry.message.text;
+    newElement.props.fill = tempEntry.getCurrentColor();
+    requestUpdateCallback?.();
+
+    gsap.set(newDomElement, { opacity: 0 });
+
+    timeline.to(newDomElement, {
+      opacity: 1,
+      duration: LogAnimationConfig.FADE_IN_DURATION,
+      ease: LogAnimationConfig.FADE_IN_EASE
+    }, delay);
+
+    tempEntry.destroy();
+  }
+
+  private slideDownElements(
+    timeline: gsap.core.Timeline,
+    logLineElements: TextElement[],
+    visibleEntries: LogEntry[],
+    maxLines: number,
+    lineSpacing: number,
+    delay: number = 0
+  ): void {
+    for (let i = visibleEntries.length - 1; i >= 0; i--) {
+      const currentElement = logLineElements[i];
+      const targetElement = logLineElements[i + 1];
+
+      if (targetElement && i < maxLines - 1) {
+        const currentDomElement = this.getShadowElement(currentElement.id);
+        const targetDomElement = this.getShadowElement(targetElement.id);
+        
+        if (currentDomElement && targetDomElement) {
+          this.copyElementContent(currentDomElement, targetDomElement);
+          
+          targetDomElement.setAttribute('opacity', '1');
+          targetElement.props.fillOpacity = 1;
+
+          timeline.fromTo(targetDomElement,
+            { y: -lineSpacing, opacity: 1 },
             {
-                opacity: 1,
-                duration: FADE_IN_DURATION,
-                ease: FADE_IN_EASE
-            },
-            '>' // start after previous tweens in the timeline
-        );
-
-        newEntryTemp.destroy();
-    }
-
-    public slideDown(
-        timeline: gsap.core.Timeline,
-        logLineElements: TextElement[],
-        visibleEntries: LogEntry[],
-        maxLines: number,
-        lineSpacing: number
-    ): void {
-        for (let i = visibleEntries.length - 1; i >= 0; i--) {
-            const currentElement = logLineElements[i];
-            const targetElement = logLineElements[i + 1];
-
-            if (targetElement && i < maxLines - 1) {
-                const currentDomElement = this.getShadowElement(currentElement.id);
-                const targetDomElement = this.getShadowElement(targetElement.id);
-                
-                if (currentDomElement && targetDomElement) {
-                    const currentTextElement = currentDomElement.querySelector('text');
-                    const targetTextElement = targetDomElement.querySelector('text');
-                    
-                    if (currentTextElement && targetTextElement) {
-                        targetTextElement.textContent = currentTextElement.textContent || '';
-                    }
-                    
-                    // Ensure SVG properties mirror as well (color / opacity)
-                    targetDomElement.setAttribute('opacity', '1');
-                    targetElement.props.fillOpacity = 1;
-
-                    timeline.fromTo(targetDomElement,
-                        { y: -lineSpacing, opacity: 1 },
-                        {
-                            y: 0,
-                            opacity: 1,
-                            duration: this.slideDuration,
-                            ease: 'power2.out',
-                        }, 0
-                    );
-                }
-            }
+              y: 0,
+              opacity: 1,
+              duration: LogAnimationConfig.SLIDE_DURATION,
+              ease: 'power2.out',
+            }, delay
+          );
         }
+      }
     }
+  }
 
-    public fadeOut(
-        timeline: gsap.core.Timeline,
-        logLineElements: TextElement[],
-        maxLines: number
-    ): void {
-        const lastElement = logLineElements[maxLines - 1];
-        const lastDomElement = this.getShadowElement(lastElement.id);
+  private fadeOutLastElement(
+    timeline: gsap.core.Timeline,
+    logLineElements: TextElement[],
+    maxLines: number,
+    delay: number = 0
+  ): void {
+    const lastElement = logLineElements[maxLines - 1];
+    const lastDomElement = this.getShadowElement(lastElement.id);
 
-        if (lastDomElement) {
-            timeline.to(lastDomElement, {
-                opacity: 0,
-                duration: this.slideDuration,
-                ease: 'power2.out',
-            }, 0);
-        }
+    if (lastDomElement) {
+      timeline.to(lastDomElement, {
+        opacity: 0,
+        duration: LogAnimationConfig.SLIDE_DURATION,
+        ease: 'power2.out',
+      }, delay);
     }
+  }
+
+  private copyElementContent(sourceElement: Element, targetElement: Element): void {
+    const sourceText = sourceElement.querySelector('text');
+    const targetText = targetElement.querySelector('text');
+    
+    if (sourceText && targetText) {
+      targetText.textContent = sourceText.textContent || '';
+    }
+  }
+  
+  private resetElementPositions(logLineElements: TextElement[]): void {
+    logLineElements.forEach(element => {
+      const domElement = this.getShadowElement(element.id);
+      if (domElement) {
+        gsap.set(domElement, { y: 0, clearProps: 'transform' });
+      }
+    });
+  }
 }
 
-class LogAnimationCoordinator {
-    private readonly timeline: gsap.core.Timeline;
-    private readonly animation: LogAnimation;
+class LogMessageUtils {
+  static messageIsDuplicate(candidate: LogMessage, existingEntries: LogEntry[], messageQueue: LogMessage[]): boolean {
+    const regexSafe = candidate.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`^${regexSafe}$`, 'i');
 
-    constructor(
-        private readonly logLineElements: TextElement[],
-        private readonly message: LogMessage,
-        private readonly widgetConfig: LogWidgetConfig,
-        private readonly entryCollection: LogEntryCollection,
-        private readonly getShadowElement: (id: string) => Element | null,
-        private readonly onAnimationComplete: () => void,
-        private readonly lineSpacing: number,
-        private readonly requestUpdateCallback?: () => void,
-    ) {
-        this.timeline = gsap.timeline({
-            onComplete: () => {
-                this.entryCollection.addEntries([this.message]);
-                this.resetElementPositions();
-                this.onAnimationComplete();
-            }
-        });
-        this.animation = new LogAnimation(this.getShadowElement, SLIDE_ANIMATION_DURATION);
+    for (const entry of existingEntries) {
+      if (pattern.test(entry.message.text)) return true;
     }
 
-    public async run(): Promise<void> {
-        this.buildAnimation();
-        await this.timeline;
+    for (const queued of messageQueue) {
+      if (pattern.test(queued.text)) return true;
     }
 
-    private buildAnimation(): void {
-        const visibleEntries = this.entryCollection.getVisibleEntries();
-        const maxLines = this.widgetConfig.maxLines!;
+    return false;
+  }
 
-        this.animation.slideDown(
-            this.timeline,
-            this.logLineElements,
-            visibleEntries,
-            maxLines,
-            this.lineSpacing
-        );
+  static createMessageFromStateChange(entityId: string, newState: any): LogMessage {
+    const actualEntityId = newState.entity_id || entityId;
+    const friendlyName = newState.attributes?.friendly_name || actualEntityId;
+    return {
+      id: `${actualEntityId}-${newState.last_changed}`,
+      text: `${friendlyName}: ${newState.state}`,
+      timestamp: new Date(newState.last_changed).getTime()
+    };
+  }
 
-        if (visibleEntries.length >= maxLines) {
-            this.animation.fadeOut(
-                this.timeline,
-                this.logLineElements,
-                maxLines
-            );
-        }
-
-        const newElement = this.logLineElements[0];
-        const newDomElement = this.getShadowElement(newElement.id);
-
-        if (newDomElement) {
-            this.animation.fadeIn(
-                this.timeline,
-                newElement,
-                newDomElement,
-                this.message,
-                this.widgetConfig,
-                this.requestUpdateCallback
-            );
-        }
-    }
-    
-    private resetElementPositions(): void {
-        this.logLineElements.forEach(element => {
-            const domElement = this.getShadowElement(element.id);
-            if (domElement) {
-                gsap.set(domElement, { y: 0, clearProps: 'transform' });
-            }
-        });
-    }
+  static stateHasChanged(oldState: any, newState: any): boolean {
+    if (!newState) return false;
+    if (!oldState) return true;
+    return oldState.state !== newState.state;
+  }
 }
 
 export class LogWidget extends Widget {
@@ -9180,15 +9163,16 @@ export class LogWidget extends Widget {
   private static readonly DEFAULT_MAX_LINES = 5;
   private static readonly DEFAULT_FONT_SIZE = 14;
 
-  private entryCollection?: LogEntryCollection;
-  private elementRenderer?: LogElementRenderer;
-  private previousHass?: HomeAssistant;
+  private entryCollection: LogEntryCollection | undefined;
+  private elementRenderer: LogElementRenderer | undefined;
+  private previousHass: HomeAssistant | undefined;
   private logLineElements: TextElement[] = [];
-  private boundsElement?: RectangleElement;
-  private widgetConfig?: LogWidgetConfig;
-  private unsubscribeFromEvents?: () => void;
+  private boundsElement: RectangleElement | undefined;
+  private widgetConfig: LogWidgetConfig | undefined;
+  private unsubscribeFromEvents: (() => void) | undefined;
   private messageQueue: LogMessage[] = [];
   private isProcessingQueue = false;
+  private animationManager: LogAnimationManager;
 
   constructor(
     id: string,
@@ -9200,6 +9184,7 @@ export class LogWidget extends Widget {
   ) {
     super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     this.previousHass = hass;
+    this.animationManager = new LogAnimationManager((id) => this.getShadowElement?.(id) ?? null);
     
     this.ensureInitialized();
     
@@ -9211,7 +9196,6 @@ export class LogWidget extends Widget {
   public expand(): LayoutElement[] {
     this.ensureInitialized();
     
-    // Only refresh display if we have entries to show
     if (this.entryCollection && this.entryCollection.getVisibleEntries().length > 0) {
       this.refreshDisplay();
     }
@@ -9246,7 +9230,7 @@ export class LogWidget extends Widget {
 
   private ensureInitialized(): void {
     if (!this.widgetConfig) {
-      this.widgetConfig = this.getWidgetConfig();
+      this.widgetConfig = this.createWidgetConfig();
     }
     
     if (!this.boundsElement) {
@@ -9262,7 +9246,7 @@ export class LogWidget extends Widget {
     }
   }
 
-  private getWidgetConfig(): LogWidgetConfig {
+  private createWidgetConfig(): LogWidgetConfig {
     const fontSize = this.props.fontSize || LogWidget.DEFAULT_FONT_SIZE;
     return {
       maxLines: this.props.maxLines || LogWidget.DEFAULT_MAX_LINES,
@@ -9318,7 +9302,7 @@ export class LogWidget extends Widget {
       `${this.id}_line_${index}`,
       {
         text: '',
-        fill: LogEntryColorResolver.DEFAULT_COLORS.bright,
+        fill: LogColorUtils.resolveColor('bright'),
         fontSize: config.fontSize,
         fontFamily: config.fontFamily,
         fontWeight: config.fontWeight,
@@ -9353,17 +9337,15 @@ export class LogWidget extends Widget {
   }
 
   private initializeCollectionAndRenderer(config: LogWidgetConfig): void {
-    const colorConfiguration = LogEntryColorResolver.createConfiguration(config.textColor);
-    
     this.entryCollection = new LogEntryCollection(
       config.maxLines!,
-      colorConfiguration,
+      config.textColor,
       () => this.refreshDisplay()
     );
     
     this.elementRenderer = new LogElementRenderer(
       this.logLineElements,
-      colorConfiguration
+      config.textColor
     );
   }
 
@@ -9374,14 +9356,8 @@ export class LogWidget extends Widget {
       const newState = newHass.states[entityId];
       const oldState = oldHass.states[entityId];
       
-      if (this.stateChanged(oldState, newState)) {
-        const actualEntityId = newState.entity_id || entityId;
-        const friendlyName = newState.attributes?.friendly_name || actualEntityId;
-        const message: LogMessage = {
-          id: `${actualEntityId}-${newState.last_changed}`,
-          text: `${friendlyName}: ${newState.state}`,
-          timestamp: new Date(newState.last_changed).getTime()
-        };
+      if (LogMessageUtils.stateHasChanged(oldState, newState)) {
+        const message = LogMessageUtils.createMessageFromStateChange(entityId, newState);
         changes.push(message);
       }
     }
@@ -9389,33 +9365,12 @@ export class LogWidget extends Widget {
     return changes.sort((a, b) => b.timestamp - a.timestamp);
   }
 
-  private stateChanged(oldState: any, newState: any): boolean {
-    if (!newState) return false;
-    if (!oldState) return true;
-    return oldState.state !== newState.state;
-  }
-
   private addLogMessages(newMessages: LogMessage[], animated = true): void {
     if (!this.entryCollection) return;
 
-    const isDuplicate = (candidate: LogMessage): boolean => {
-      const regexSafe = candidate.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const pattern = new RegExp(`^${regexSafe}$`, 'i');
-
-      // Check currently visible & stored entries
-      for (const entry of this.entryCollection!.getVisibleEntries()) {
-        if (pattern.test(entry.message.text)) return true;
-      }
-
-      // Check the entire message queue (already scheduled for animation)
-      for (const queued of this.messageQueue) {
-        if (pattern.test(queued.text)) return true;
-      }
-
-      return false;
-    };
-
-    const uniqueNewMessages: LogMessage[] = newMessages.filter(msg => !isDuplicate(msg));
+    const uniqueNewMessages = newMessages.filter(msg => 
+      !LogMessageUtils.messageIsDuplicate(msg, this.entryCollection!.getVisibleEntries(), this.messageQueue)
+    );
 
     if (uniqueNewMessages.length === 0) return;
 
@@ -9423,7 +9378,8 @@ export class LogWidget extends Widget {
       this.messageQueue.push(...uniqueNewMessages);
       this.processMessageQueue();
     } else {
-      this.entryCollection.addEntries(uniqueNewMessages);
+      this.entryCollection.addEntries(uniqueNewMessages, false);
+      this.entryCollection.startTimersForVisibleEntries();
       this.refreshDisplay();
     }
   }
@@ -9444,18 +9400,15 @@ export class LogWidget extends Widget {
     this.ensureInitialized();
     const lineSpacing = this.calculateLineOffset(1, this.widgetConfig!);
 
-    const coordinator = new LogAnimationCoordinator(
-        this.logLineElements,
-        message,
-        this.widgetConfig!,
-        this.entryCollection!,
-        (id) => this.getShadowElement?.(id) ?? null,
-        () => this.refreshDisplay(),
-        lineSpacing,
-        this.requestUpdateCallback
+    await this.animationManager.animateNewMessage(
+      this.logLineElements,
+      message,
+      this.widgetConfig!,
+      this.entryCollection!,
+      lineSpacing,
+      () => this.refreshDisplay(),
+      this.requestUpdateCallback
     );
-
-    await coordinator.run();
   }
 
   private refreshDisplay(): void {
@@ -9467,7 +9420,6 @@ export class LogWidget extends Widget {
   }
 
   private async initializeLogging(hass: HomeAssistant): Promise<void> {
-    // Start listening for future state changes only; we intentionally skip initial log population
     await this.subscribeToStateChanges(hass);
   }
 
@@ -9492,14 +9444,7 @@ export class LogWidget extends Widget {
       return;
     }
 
-    const actualEntityId = newState.entity_id;
-    const friendlyName = newState.attributes?.friendly_name || actualEntityId;
-    const message: LogMessage = {
-      id: `${actualEntityId}-${newState.last_changed}`,
-      text: `${friendlyName}: ${newState.state}`,
-      timestamp: new Date(newState.last_changed).getTime(),
-    };
-    
+    const message = LogMessageUtils.createMessageFromStateChange(newState.entity_id, newState);
     this.addLogMessages([message]);
   }
 
