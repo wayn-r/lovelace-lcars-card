@@ -7,6 +7,7 @@ import { LogMessage } from '../../types.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
 import { DistanceParser } from '../../utils/animation.js';
+import gsap from 'gsap';
 
 interface LogWidgetConfig {
   maxLines?: number;
@@ -217,6 +218,169 @@ class LogElementRenderer {
   }
 }
 
+class LogAnimation {
+    constructor(
+        private readonly getShadowElement: (id: string) => Element | null,
+        private readonly animationDuration: number
+    ) {}
+
+    public fadeIn(
+        timeline: gsap.core.Timeline,
+        newElement: TextElement,
+        newDomElement: Element,
+        message: LogMessage,
+        widgetConfig: LogWidgetConfig,
+        lineSpacing: number,
+        requestUpdateCallback?: () => void
+    ): void {
+        const newEntryTemp = new LogEntry(
+            message,
+            LogEntryColorResolver.createConfiguration(widgetConfig.textColor),
+            () => {}
+        );
+
+        newElement.props.text = newEntryTemp.message.text;
+        newElement.props.fill = newEntryTemp.getCurrentColor();
+        requestUpdateCallback?.();
+
+        gsap.set(newDomElement, { y: -lineSpacing, opacity: 0 });
+
+        timeline.to(newDomElement, {
+            y: 0,
+            opacity: 1,
+            duration: this.animationDuration,
+            ease: 'power2.out',
+        }, 0);
+
+        newEntryTemp.destroy();
+    }
+
+    public slideDown(
+        timeline: gsap.core.Timeline,
+        logLineElements: TextElement[],
+        visibleEntries: LogEntry[],
+        maxLines: number,
+        lineSpacing: number
+    ): void {
+        for (let i = 0; i < Math.min(visibleEntries.length, maxLines); i++) {
+            const element = logLineElements[i];
+            const slideTargetElement = logLineElements[i + 1];
+
+            if (slideTargetElement) {
+                const slideTargetDomElement = this.getShadowElement(slideTargetElement.id);
+                if (slideTargetDomElement) {
+                    const guardedElement = slideTargetDomElement;
+                    const textSvgElement = guardedElement.querySelector('text');
+                    if (textSvgElement) {
+                        textSvgElement.textContent = element.props.text ?? '';
+                    }
+                    timeline.fromTo(guardedElement,
+                        { y: 0 },
+                        {
+                            y: lineSpacing,
+                            duration: this.animationDuration,
+                            ease: 'power2.out',
+                        }, 0
+                    );
+                }
+            }
+        }
+    }
+
+    public fadeOut(
+        timeline: gsap.core.Timeline,
+        logLineElements: TextElement[],
+        maxLines: number
+    ): void {
+        const lastElement = logLineElements[maxLines - 1];
+        const lastDomElement = this.getShadowElement(lastElement.id);
+
+        if (lastDomElement) {
+            timeline.to(lastDomElement, {
+                opacity: 0,
+                duration: this.animationDuration,
+                ease: 'power2.out',
+            }, 0);
+        }
+    }
+}
+
+class LogAnimationCoordinator {
+    private readonly timeline: gsap.core.Timeline;
+    private readonly animationDuration = 0.5;
+    private readonly animation: LogAnimation;
+
+    constructor(
+        private readonly logLineElements: TextElement[],
+        private readonly message: LogMessage,
+        private readonly widgetConfig: LogWidgetConfig,
+        private readonly entryCollection: LogEntryCollection,
+        private readonly getShadowElement: (id: string) => Element | null,
+        private readonly onAnimationComplete: () => void,
+        private readonly lineSpacing: number,
+        private readonly requestUpdateCallback?: () => void,
+    ) {
+        this.timeline = gsap.timeline({
+            onComplete: () => {
+                this.entryCollection.addEntries([this.message]);
+                this.resetElementPositions();
+                this.onAnimationComplete();
+            }
+        });
+        this.animation = new LogAnimation(this.getShadowElement, this.animationDuration);
+    }
+
+    public async run(): Promise<void> {
+        this.buildAnimation();
+        await this.timeline;
+    }
+
+    private buildAnimation(): void {
+        const newElement = this.logLineElements[0];
+        const newDomElement = this.getShadowElement(newElement.id);
+
+        if (newDomElement) {
+            this.animation.fadeIn(
+                this.timeline,
+                newElement,
+                newDomElement,
+                this.message,
+                this.widgetConfig,
+                this.lineSpacing,
+                this.requestUpdateCallback
+            );
+        }
+
+        const visibleEntries = this.entryCollection.getVisibleEntries();
+        const maxLines = this.widgetConfig.maxLines!;
+
+        this.animation.slideDown(
+            this.timeline,
+            this.logLineElements,
+            visibleEntries,
+            maxLines,
+            this.lineSpacing
+        );
+
+        if (visibleEntries.length >= maxLines) {
+            this.animation.fadeOut(
+                this.timeline,
+                this.logLineElements,
+                maxLines
+            );
+        }
+    }
+    
+    private resetElementPositions(): void {
+        this.logLineElements.forEach(element => {
+            const domElement = this.getShadowElement(element.id);
+            if (domElement) {
+                gsap.set(domElement, { y: 0, clearProps: 'transform' });
+            }
+        });
+    }
+}
+
 export class LogWidget extends Widget {
   private static readonly DEFAULT_HEIGHT = 100;
   private static readonly DEFAULT_MAX_LINES = 5;
@@ -229,6 +393,8 @@ export class LogWidget extends Widget {
   private boundsElement?: RectangleElement;
   private widgetConfig?: LogWidgetConfig;
   private unsubscribeFromEvents?: () => void;
+  private messageQueue: LogMessage[] = [];
+  private isProcessingQueue = false;
 
   constructor(
     id: string,
@@ -240,6 +406,8 @@ export class LogWidget extends Widget {
   ) {
     super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     this.previousHass = hass;
+    
+    this.ensureInitialized();
     
     if (hass) {
       this.initializeLogging(hass);
@@ -264,11 +432,11 @@ export class LogWidget extends Widget {
       this.initializeLogging(hass);
     }
     
-    if (!this.unsubscribeFromEvents && this.previousHass && this.previousHass !== hass) {
-      const newMessages = this.detectStateChanges(this.previousHass, hass);
+    if (!this.unsubscribeFromEvents && this.hass && this.hass !== hass) {
+      const newMessages = this.detectStateChanges(this.hass, hass);
       if (newMessages.length > 0) {
         this.ensureInitialized();
-        this.addLogMessages(newMessages);
+        this.addLogMessages(newMessages, false);
       }
     }
     
@@ -279,7 +447,7 @@ export class LogWidget extends Widget {
   public updateLogMessages(messages: LogMessage[]): void {
     this.ensureInitialized();
     this.entryCollection!.clear();
-    this.addLogMessages(messages);
+    this.addLogMessages(messages, false);
   }
 
   private ensureInitialized(): void {
@@ -433,7 +601,7 @@ export class LogWidget extends Widget {
     return oldState.state !== newState.state;
   }
 
-  private addLogMessages(newMessages: LogMessage[]): void {
+  private addLogMessages(newMessages: LogMessage[], animated = true): void {
     if (!this.entryCollection) return;
 
     const existingVisibleTexts = new Set<string>();
@@ -452,9 +620,44 @@ export class LogWidget extends Widget {
     }
 
     if (uniqueNewMessages.length > 0) {
-      this.entryCollection.addEntries(uniqueNewMessages);
-      this.refreshDisplay();
+      if (animated) {
+        this.messageQueue.push(...uniqueNewMessages);
+        this.processMessageQueue();
+      } else {
+        this.entryCollection.addEntries(uniqueNewMessages);
+        this.refreshDisplay();
+      }
     }
+  }
+
+  private async processMessageQueue(): Promise<void> {
+    if (this.isProcessingQueue) return;
+    this.isProcessingQueue = true;
+
+    while (this.messageQueue.length > 0) {
+      const message = this.messageQueue.shift()!;
+      await this.animateNewMessage(message);
+    }
+
+    this.isProcessingQueue = false;
+  }
+  
+  private async animateNewMessage(message: LogMessage): Promise<void> {
+    this.ensureInitialized();
+    const lineSpacing = this.calculateLineOffset(1, this.widgetConfig!);
+
+    const coordinator = new LogAnimationCoordinator(
+        this.logLineElements,
+        message,
+        this.widgetConfig!,
+        this.entryCollection!,
+        (id) => this.getShadowElement?.(id) ?? null,
+        () => this.refreshDisplay(),
+        lineSpacing,
+        this.requestUpdateCallback
+    );
+
+    await coordinator.run();
   }
 
   private refreshDisplay(): void {
