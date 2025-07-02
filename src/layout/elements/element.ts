@@ -133,8 +133,8 @@ export abstract class LayoutElement {
             element.addEventListener('mouseleave', this.boundHandleMouseLeave);
             element.addEventListener('mousedown', this.boundHandleMouseDown);
             element.addEventListener('mouseup', this.boundHandleMouseUp);
-            element.addEventListener('touchstart', this.boundHandleTouchStart);
-            element.addEventListener('touchend', this.boundHandleTouchEnd);
+            // element.addEventListener('touchstart', this.boundHandleTouchStart);  // causing errors - see if these are needed
+            // element.addEventListener('touchend', this.boundHandleTouchEnd);
         }
     }
 
