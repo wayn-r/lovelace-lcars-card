@@ -375,6 +375,9 @@ export class TransformPropagator {
       case 'fade':
         effects.push(this.analyzeFadeEffect(element, animationConfig));
         break;
+      case 'color':
+        // Color animations don't affect positioning or transforms
+        break;
     }
 
     return effects.filter(effect => this.isEffectSignificant(effect, elementId));

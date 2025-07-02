@@ -15,7 +15,7 @@ export interface AnimationContext {
 }
 
 export interface AnimationConfig {
-  type: 'scale' | 'slide' | 'fade' | 'custom_gsap';
+  type: 'scale' | 'slide' | 'fade' | 'color' | 'custom_gsap';
   duration?: number;
   ease?: string;
   delay?: number;
@@ -36,6 +36,11 @@ export interface AnimationConfig {
   fade_params?: {
     opacity_start?: number;
     opacity_end?: number;
+  };
+  color_params?: {
+    property?: 'fill' | 'stroke' | 'color';
+    color_start?: string;
+    color_end?: string;
   };
   custom_gsap_params?: {
     [key: string]: any;
@@ -170,6 +175,9 @@ export class AnimationManager {
         break;
       case 'fade':
         this.buildFadeAnimation(animationConfig, targetElement, timeline, animationProps, initialValues);
+        break;
+      case 'color':
+        this.buildColorAnimation(animationConfig, targetElement, timeline, animationProps);
         break;
       case 'custom_gsap':
         this.buildCustomGsapAnimation(animationConfig, targetElement, timeline, animationProps);
@@ -357,6 +365,7 @@ export class AnimationManager {
         affectsPositioning = true;
         break;
       case 'fade':
+      case 'color':
         affectsPositioning = false;
         break;
       case 'custom_gsap':
@@ -574,6 +583,31 @@ export class AnimationManager {
     }
   }
 
+  private buildColorAnimation(
+    config: AnimationConfig,
+    targetElement: Element,
+    timeline: gsap.core.Timeline,
+    animationProps: gsap.TweenVars
+  ): void {
+    const { color_params } = config;
+    if (!color_params || !color_params.color_end) {
+      timeline.add(gsap.to(targetElement, animationProps));
+      return;
+    }
+
+    const property = color_params.property || 'fill';
+    const startColor = color_params.color_start;
+    const endColor = color_params.color_end;
+
+    if (startColor) {
+      const initialColorProps: gsap.TweenVars = { [property]: startColor };
+      timeline.set(targetElement, initialColorProps);
+    }
+
+    animationProps[property] = endColor;
+    timeline.to(targetElement, animationProps);
+  }
+
   private buildCustomGsapAnimation(
     config: AnimationConfig,
     targetElement: Element,
@@ -609,6 +643,53 @@ export class DistanceParser {
     } else {
       return numericValue || 0;
     }
+  }
+}
+
+export class ColorAnimationUtils {
+  static interpolateColors(fromColor: string, toColor: string, progress: number): string {
+    const fromRgb = this.parseColorToRgb(fromColor);
+    const toRgb = this.parseColorToRgb(toColor);
+    
+    if (!fromRgb || !toRgb) {
+      return progress < 0.5 ? fromColor : toColor;
+    }
+    
+    const r = Math.round(fromRgb.r + (toRgb.r - fromRgb.r) * progress);
+    const g = Math.round(fromRgb.g + (toRgb.g - fromRgb.g) * progress);
+    const b = Math.round(fromRgb.b + (toRgb.b - fromRgb.b) * progress);
+    
+    return this.rgbToHex(r, g, b);
+  }
+
+  static parseColorToRgb(color: string): { r: number; g: number; b: number } | null {
+    const hexMatch = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
+    if (hexMatch) {
+      return {
+        r: parseInt(hexMatch[1], 16),
+        g: parseInt(hexMatch[2], 16),
+        b: parseInt(hexMatch[3], 16)
+      };
+    }
+
+    const rgbMatch = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i.exec(color);
+    if (rgbMatch) {
+      return {
+        r: parseInt(rgbMatch[1], 10),
+        g: parseInt(rgbMatch[2], 10),
+        b: parseInt(rgbMatch[3], 10)
+      };
+    }
+
+    return null;
+  }
+
+  private static rgbToHex(r: number, g: number, b: number): string {
+    const toHex = (value: number) => {
+      const hex = Math.round(Math.max(0, Math.min(255, value))).toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    };
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
   }
 }
 

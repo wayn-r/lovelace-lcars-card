@@ -265,12 +265,13 @@ export interface StateChangeAnimationConfig extends AnimationDefinition {
 }
 
 export interface AnimationDefinition {
-  type: 'fade' | 'slide' | 'scale' | 'custom_gsap';
+  type: 'fade' | 'slide' | 'scale' | 'color' | 'custom_gsap';
   
   // Type-specific parameters
   fade_params?: FadeParams;
   slide_params?: SlideParams;
   scale_params?: ScaleParams;
+  color_params?: ColorParams;
   custom_gsap_vars?: Record<string, any>;
   
   // Common parameters
@@ -303,10 +304,11 @@ export interface AnimationStepConfig {
   target_elements_ref?: string[];
   target_groups_ref?: string[];
   
-  type: 'fade' | 'slide' | 'scale' | 'custom_gsap';
+  type: 'fade' | 'slide' | 'scale' | 'color' | 'custom_gsap';
   fade_params?: FadeParams;
   slide_params?: SlideParams;
   scale_params?: ScaleParams;
+  color_params?: ColorParams;
   custom_gsap_vars?: Record<string, any>;
   duration: number;
   delay?: number;
@@ -332,6 +334,12 @@ export interface ScaleParams {
   scale_start?: number;
   scale_end?: number;
   transform_origin?: string;
+}
+
+export interface ColorParams {
+  property?: 'fill' | 'stroke' | 'color';
+  color_start?: string;
+  color_end?: string;
 }
 
 // ============================================================================

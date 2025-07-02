@@ -263,6 +263,9 @@ export class StateManager {
     if (animationDef.fade_params) {
       config.fade_params = animationDef.fade_params;
     }
+    if (animationDef.color_params) {
+      config.color_params = animationDef.color_params;
+    }
     if (animationDef.custom_gsap_vars) {
       config.custom_gsap_params = animationDef.custom_gsap_vars;
     }
