@@ -476,21 +476,21 @@ export class LcarsCard extends LitElement {
     if (!entry) return;
     
     const newRect = entry.contentRect;
+    const newWidth = newRect.width;
+    const newHeight = newRect.height;
     
-    if (newRect.width > 0 && newRect.height > 0) {
-        this._containerRect = newRect;
-        
-        if (this._layoutEngine && this._layoutEngine.layoutGroups) {
-            this._layoutEngine.layoutGroups.forEach(group => {
-                group.elements.forEach(el => {
-                    el.resetLayout();
-                });
-            });
+    if (newWidth > 0 && (newWidth !== this._containerRect?.width || newHeight !== this._containerRect?.height)) {
+      this._containerRect = new DOMRect(rect.x, rect.y, newWidth, newHeight);
+
+      for (const group of this._layoutEngine.layoutGroups) {
+        for (const element of group.elements) {
+          if ((element as any)._loggerWidget) {
+            (element as any)._loggerWidget.handleResize();
+          }
         }
-        
-        if (this._config) {
-          this._performLayoutCalculation(this._containerRect);
-        }
+      }
+      
+      this._performLayoutCalculation(this._containerRect);
     }
   }
 

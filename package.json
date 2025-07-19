@@ -47,7 +47,7 @@
     "dependencies": {
         "fontfaceobserver": "^2.3.0",
         "fontmetrics": "^1.0.0",
-        "gsap": "^3.12.7",
+        "gsap": "^3.13.0",
         "ignore": "^7.0.4",
         "js-yaml": "^4.1.0",
         "junit": "^1.4.9",

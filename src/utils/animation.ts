@@ -616,9 +616,19 @@ export class AnimationManager {
   ): void {
     const { custom_gsap_params } = config;
     if (custom_gsap_params) {
-      Object.assign(animationProps, custom_gsap_params);
+      const fromVars = custom_gsap_params.from;
+      const toVars = { ...animationProps };
+      Object.assign(toVars, custom_gsap_params);
+      delete toVars.from; // Remove 'from' from toVars to prevent conflicts
+
+      if (fromVars) {
+        timeline.fromTo(targetElement, fromVars, toVars);
+      } else {
+        timeline.to(targetElement, toVars);
+      }
+    } else {
+      timeline.to(targetElement, animationProps);
     }
-    timeline.to(targetElement, animationProps);
   }
 }
 
