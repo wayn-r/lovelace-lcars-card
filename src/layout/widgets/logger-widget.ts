@@ -213,6 +213,8 @@ class LogEntry {
   }
 
   private createTextElement(): TextElement {
+    const isEndAnchor = this.textAnchor === 'end';
+    
     return new TextElement(
       this.elementId,
       {
@@ -228,8 +230,8 @@ class LogEntry {
       {
         anchor: {
           anchorTo: this.boundsElementId,
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topLeft'
+          anchorPoint: isEndAnchor ? 'topRight' : 'topLeft',
+          targetAnchorPoint: isEndAnchor ? 'topRight' : 'topLeft'
         },
         offsetY: 0
       },
