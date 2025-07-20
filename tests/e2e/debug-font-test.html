@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LCARS Font Loading Debug Test</title>
+    
+    <!-- Force fonts to load from cache-busted Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap&v=1" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #000;
+            color: #fff;
+        }
+        
+        .test-container {
+            width: 600px;
+            height: 300px;
+            border: 1px solid #555;
+            margin: 20px 0;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+        }
+        
+        .debug-output {
+            background: #111;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>LCARS Font Loading Debug Test</h1>
+    
+    <div class="test-container">
+        <lovelace-lcars-card id="test-card"></lovelace-lcars-card>
+    </div>
+    
+    <button onclick="clearFontsAndReload()">Clear Fonts & Reload Card</button>
+    <button onclick="triggerLayoutRecalc()">Force Layout Recalc</button>
+    <button onclick="clearDebugOutput()">Clear Debug</button>
+    
+    <h3>Debug Output:</h3>
+    <div id="debug-output" class="debug-output"></div>
+
+    <script type="module" src="http://localhost:5001/src/lovelace-lcars-card.ts"></script>
+    <script>
+        const debugOutput = document.getElementById('debug-output');
+        
+        // Capture console output for debugging
+        const originalConsoleLog = console.log;
+        const originalConsoleWarn = console.warn;
+        const originalConsoleError = console.error;
+        
+        function logToDebug(level, ...args) {
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            debugOutput.textContent += `[${timestamp}] ${level.toUpperCase()}: ${message}\n`;
+            debugOutput.scrollTop = debugOutput.scrollHeight;
+        }
+        
+        console.log = (...args) => {
+            originalConsoleLog.apply(console, args);
+            logToDebug('log', ...args);
+        };
+        
+        console.warn = (...args) => {
+            originalConsoleWarn.apply(console, args);
+            logToDebug('warn', ...args);
+        };
+        
+        console.error = (...args) => {
+            originalConsoleError.apply(console, args);
+            logToDebug('error', ...args);
+        };
+        
+        // Mock Home Assistant object
+        const hassMock = {
+            states: {
+                'input_boolean.kitchen_sink_light': {
+                    state: 'on',
+                    entity_id: 'input_boolean.kitchen_sink_light',
+                    attributes: {
+                        friendly_name: 'Kitchen Sink Light'
+                    }
+                }
+            },
+            themes: {},
+            language: 'en',
+            resources: {},
+        };
+
+        // Test config with top-header widget
+        const testConfig = {
+            type: 'lovelace-lcars-card',
+            groups: [
+                {
+                    group_id: 'test_header',
+                    elements: [
+                        {
+                            id: 'main_header',
+                            type: 'top_header',
+                            appearance: {
+                                fill: '#99CCFF'
+                            },
+                            text: {
+                                leftContent: 'SYSTEM STATUS',
+                                rightContent: 'ONLINE',
+                                fontFamily: 'Antonio',
+                                textColor: '#FFFFFF'
+                            },
+                            layout: {
+                                width: 400,
+                                height: 30,
+                                offsetX: 20,
+                                offsetY: 20
+                            }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        function initializeCard() {
+            console.log('Initializing LCARS card...');
+            const card = document.getElementById('test-card');
+            if (card && card.setConfig) {
+                card.setConfig(testConfig);
+                card.hass = hassMock;
+                console.log('Card configured successfully');
+            } else {
+                console.warn('Card element or setConfig method not available yet');
+                setTimeout(initializeCard, 100);
+            }
+        }
+
+        function clearFontsAndReload() {
+            console.log('=== CLEARING FONTS AND RELOADING ===');
+            
+            // Remove font link to simulate cache miss
+            const fontLinks = document.querySelectorAll('link[href*="fonts.googleapis.com"]');
+            fontLinks.forEach(link => link.remove());
+            
+            // Clear font cache
+            if (document.fonts && document.fonts.clear) {
+                document.fonts.clear();
+            }
+            
+            // Force re-add font with cache busting
+            const newFontLink = document.createElement('link');
+            newFontLink.rel = 'stylesheet';
+            newFontLink.href = `https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&display=swap&v=${Date.now()}`;
+            document.head.appendChild(newFontLink);
+            
+            // Reinitialize card
+            setTimeout(() => {
+                const card = document.getElementById('test-card');
+                if (card && card.setConfig) {
+                    card.setConfig(testConfig);
+                    console.log('Card reloaded after font clearing');
+                }
+            }, 100);
+        }
+
+        function triggerLayoutRecalc() {
+            console.log('=== TRIGGERING LAYOUT RECALCULATION ===');
+            const card = document.getElementById('test-card');
+            if (card && card._performLayoutCalculation) {
+                // This might not work as _performLayoutCalculation is private
+                console.log('Attempting to trigger layout recalculation...');
+                card.requestUpdate();
+            }
+        }
+
+        function clearDebugOutput() {
+            debugOutput.textContent = '';
+        }
+
+        // Wait for card to be defined and initialize
+        if (customElements.get('lovelace-lcars-card')) {
+            initializeCard();
+        } else {
+            customElements.whenDefined('lovelace-lcars-card').then(() => {
+                console.log('lovelace-lcars-card element defined');
+                initializeCard();
+            });
+        }
+
+        // Log font loading state
+        if (document.fonts) {
+            document.fonts.ready.then(() => {
+                console.log('document.fonts.ready resolved');
+            });
+            
+            document.fonts.addEventListener('loadingdone', (event) => {
+                console.log('Font loading done:', event.fontfaces.map(f => f.family));
+            });
+            
+            document.fonts.addEventListener('loadingerror', (event) => {
+                console.error('Font loading error:', event.fontfaces.map(f => f.family));
+            });
+        }
+
+        console.log('Debug test page initialized');
+    </script>
+</body>
+</html> 
