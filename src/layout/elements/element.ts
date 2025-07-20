@@ -32,6 +32,7 @@ export abstract class LayoutElement {
     private readonly boundHandleMouseUp: () => void;
     private readonly boundHandleTouchStart: () => void;
     private readonly boundHandleTouchEnd: () => void;
+    private readonly boundHandleTouchCancel: () => void;
 
     constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
         this.id = id;
@@ -47,6 +48,7 @@ export abstract class LayoutElement {
         this.boundHandleMouseUp = this.handleMouseUp.bind(this);
         this.boundHandleTouchStart = this.handleTouchStart.bind(this);
         this.boundHandleTouchEnd = this.handleTouchEnd.bind(this);
+        this.boundHandleTouchCancel = this.handleTouchCancel.bind(this);
 
         animationManager.initializeElementAnimationTracking(id);
 
@@ -129,12 +131,13 @@ export abstract class LayoutElement {
                                      this.hasAnimations();
 
         if (hasInteractiveFeatures) {
-            element.addEventListener('mouseenter', this.boundHandleMouseEnter);
-            element.addEventListener('mouseleave', this.boundHandleMouseLeave);
-            element.addEventListener('mousedown', this.boundHandleMouseDown);
-            element.addEventListener('mouseup', this.boundHandleMouseUp);
-            // element.addEventListener('touchstart', this.boundHandleTouchStart);  // causing errors - see if these are needed
-            // element.addEventListener('touchend', this.boundHandleTouchEnd);
+            element.addEventListener('mouseenter', this.boundHandleMouseEnter, { passive: false });
+            element.addEventListener('mouseleave', this.boundHandleMouseLeave, { passive: false });
+            element.addEventListener('mousedown', this.boundHandleMouseDown, { passive: false });
+            element.addEventListener('mouseup', this.boundHandleMouseUp, { passive: false });
+            element.addEventListener('touchstart', this.boundHandleTouchStart, { passive: true });
+            element.addEventListener('touchend', this.boundHandleTouchEnd, { passive: true });
+            element.addEventListener('touchcancel', this.boundHandleTouchCancel, { passive: true });
         }
     }
 
@@ -161,6 +164,11 @@ export abstract class LayoutElement {
     }
 
     private handleTouchEnd(): void {
+        this.elementIsHovering = false;
+        this.elementIsActive = false;
+    }
+
+    private handleTouchCancel(): void {
         this.elementIsHovering = false;
         this.elementIsActive = false;
     }

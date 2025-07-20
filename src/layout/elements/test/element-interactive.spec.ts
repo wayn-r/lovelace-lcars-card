@@ -54,10 +54,15 @@ describe('Element Interactive States', () => {
       
       element.setupInteractiveListeners();
       
-      expect(addEventListenerSpy).toHaveBeenCalledWith('mouseenter', expect.any(Function));
-      expect(addEventListenerSpy).toHaveBeenCalledWith('mouseleave', expect.any(Function));
-      expect(addEventListenerSpy).toHaveBeenCalledWith('mousedown', expect.any(Function));
-      expect(addEventListenerSpy).toHaveBeenCalledWith('mouseup', expect.any(Function));
+      expect(addEventListenerSpy).toHaveBeenCalledWith('mouseenter', expect.any(Function), expect.any(Object));
+      expect(addEventListenerSpy).toHaveBeenCalledWith('mouseleave', expect.any(Function), expect.any(Object));
+      expect(addEventListenerSpy).toHaveBeenCalledWith('mousedown', expect.any(Function), expect.any(Object));
+      expect(addEventListenerSpy).toHaveBeenCalledWith('mouseup', expect.any(Function), expect.any(Object));
+      expect(addEventListenerSpy).toHaveBeenCalledWith('touchstart', expect.any(Function), expect.any(Object));
+      expect(addEventListenerSpy).toHaveBeenCalledWith('touchend', expect.any(Function), expect.any(Object));
+      expect(addEventListenerSpy).toHaveBeenCalledWith('touchcancel', expect.any(Function), expect.any(Object));
+
+      expect(addEventListenerSpy).toHaveBeenCalledTimes(7);
     });
 
     it('should not setup listeners for elements without stateful colors or buttons', () => {
