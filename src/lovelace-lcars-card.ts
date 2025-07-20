@@ -49,7 +49,6 @@ export class LcarsCard extends LitElement {
   @state() private _viewBox: string = '0 0 100 100';
   @state() private _calculatedHeight: number = 100;
   @state() private _fontsLoaded = false;
-  @state() private _needsFontRecalc = false;
   
   private _layoutEngine: LayoutEngine = new LayoutEngine();
   private _resizeObserver?: ResizeObserver;
@@ -57,8 +56,18 @@ export class LcarsCard extends LitElement {
   private _lastConfig?: LcarsCardConfig;
   private _lastHassStates?: { [entityId: string]: any };
   private _needsReinitialization = false;
+  private _layoutInitialized = false;
+  private _fontsReady: Promise<void>;
+  private _resolveFontsReady!: () => void;
 
   static styles = [editorStyles];
+
+  constructor() {
+    super();
+    this._fontsReady = new Promise<void>((resolve) => {
+      this._resolveFontsReady = resolve;
+    });
+  }
 
   public setConfig(config: LcarsCardConfig | any): void {
     if (!config) {
@@ -116,24 +125,26 @@ export class LcarsCard extends LitElement {
     }
   }
   
-  public firstUpdated() {
+  public async firstUpdated() {
     const container = this.shadowRoot?.querySelector('.card-container');
     if (container && this._resizeObserver) {
       this._resizeObserver.observe(container);
     }
     
-    this._scheduleInitialLayout();
+    this._layoutInitialized = false;
 
-    FontManager.ensureFontsLoaded(['Antonio']).then(() => {
+    try {
+      await FontManager.ensureFontsLoaded(['Antonio']);
       this._fontsLoaded = true;
       FontManager.clearMetricsCache();
+      this._resolveFontsReady();
+    } catch (error) {
+      console.error("Font loading failed", error);
+      this._fontsLoaded = true;
+      this._resolveFontsReady();
+    }
 
-      if (this._config && this._containerRect) {
-        this._performLayoutCalculation(this._containerRect);
-      } else {
-        this._needsFontRecalc = true;
-      }
-    });
+    this._scheduleInitialLayout();
   }
 
   updated(changedProperties: Map<string | number | symbol, unknown>): void {
@@ -205,29 +216,26 @@ export class LcarsCard extends LitElement {
     });
   }
 
-  private _tryCalculateInitialLayout(): void {
-    if (this._containerRect && this._layoutElementTemplates.length > 0) {
+  private async _tryCalculateInitialLayout(): Promise<void> {
+    if (this._layoutInitialized) {
       return;
     }
+
+    await this._fontsReady;
     
     const container = this.shadowRoot?.querySelector('.card-container');
     if (!container || !this._config) {
+      requestAnimationFrame(() => this._tryCalculateInitialLayout());
       return;
     }
     
     const rect = container.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) {
-      if (!this._fontsLoaded) {
-        this._containerRect = rect;
-        this._needsFontRecalc = true;
-      } else {
-        this._containerRect = rect;
-        this._performLayoutCalculation(rect);
-      }
+      this._containerRect = rect;
+      this._performLayoutCalculation(rect);
+      this._layoutInitialized = true;
     } else {
-      requestAnimationFrame(() => {
-        this._tryCalculateInitialLayout();
-      });
+      requestAnimationFrame(() => this._tryCalculateInitialLayout());
     }
   }
 
@@ -480,7 +488,7 @@ export class LcarsCard extends LitElement {
     const newHeight = newRect.height;
     
     if (newWidth > 0 && (newWidth !== this._containerRect?.width || newHeight !== this._containerRect?.height)) {
-      this._containerRect = new DOMRect(rect.x, rect.y, newWidth, newHeight);
+      this._containerRect = new DOMRect(newRect.x, newRect.y, newWidth, newHeight);
 
       for (const group of this._layoutEngine.layoutGroups) {
         for (const element of group.elements) {
