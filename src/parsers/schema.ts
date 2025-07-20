@@ -56,6 +56,10 @@ const textSchema = z.object({
   max_lines: z.number().optional(),
   line_spacing: sizeSchema.optional(),
   text_color: colorValueSchema.optional(),
+  color_cycle: z.array(z.object({
+    color: colorValueSchema,
+    duration: z.number(),
+  })).optional(),
 });
 
 // -----------------------------------------------------------------------------

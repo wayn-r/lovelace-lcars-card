@@ -69,6 +69,9 @@ groups: <array>                  # Required: Defines groups of elements. Element
           line_spacing: <number|string_percentage> # Optional: Vertical spacing between log lines.
                                                    #   Can be a number (pixels) or percentage of font size.
                                                    #   Default: 1.4 * fontSize.
+          color_cycle: <array>       # Optional: Defines the color and duration for each log entry phase.
+            - color: <color_property>  # The color for this phase.
+              duration: <number>       # Duration in milliseconds before transitioning to the next color.
           # Note: The logger-widget automatically displays all entity state changes from Home Assistant.
           # Use standard text properties (fill, fontFamily, fontSize, etc.) to configure appearance.
 
@@ -282,7 +285,13 @@ animation_sequence:                  # Alternative: Animation sequence with mult
 #         type: "logger-widget"
 #         text:
 #           max_lines: 10
-#           text_color: "#ffc96f"
+#           color_cycle:
+#             - color: "#ffc996"
+#               duration: 5000
+#             - color: "#df8313"
+#               duration: 5000
+#             - color: "#864f0b"
+#               duration: 3000
 #         layout:
 #           width: 400
 #           height: 200

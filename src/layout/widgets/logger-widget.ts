@@ -17,6 +17,11 @@ gsap.registerPlugin(CustomEase);
 // ease customizer at https://gsap.com/docs/v3/Eases/CustomEase/
 const customBounce = CustomEase.create("custom", "M0,0 C0.71,-0.314 0.719,0.494 0.719,0.494 0.719,0.494 0.8,-0.002 0.848,-0.002 0.903,-0.002 1,0.98 1,0.98 ");
 
+interface ColorPhaseConfig {
+  color: string;
+  duration: number;
+}
+
 class LogEntryAnimator {
   constructor(
     private readonly elementId: string,
@@ -112,75 +117,76 @@ class LogEntryAnimator {
   }
 }
 
-enum ColorPhase {
-  Bright,
-  Medium,
-  Fade,
-  Hidden
-}
-
 class ColorStateManager {
-  private static readonly COLOR_MAP = {
-    // [ColorPhase.Bright]: '#ffc996',
-    [ColorPhase.Bright]: '#86c8ff',
-    // [ColorPhase.Medium]: '#df8313',
-    [ColorPhase.Medium]: '#12a4e3',
-    // [ColorPhase.Fade]: '#864f0b',
-    [ColorPhase.Fade]: '#0b6288',
-  };
+  private static readonly DEFAULT_COLOR_CYCLE: ColorPhaseConfig[] = [
+    { color: '#86c8ff', duration: 5000 },
+    { color: '#12a4e3', duration: 5000 },
+    { color: '#0b6288', duration: 3000 },
+  ];
 
   private timer: NodeJS.Timeout | undefined;
-  private currentPhase: ColorPhase = ColorPhase.Bright;
+  private currentPhaseIndex: number = 0;
+  private colorCycle: ColorPhaseConfig[];
 
   constructor(
     private readonly entry: LogEntry,
     private readonly animator: LogEntryAnimator,
-    private readonly onFadeOut: () => void
-  ) {}
+    private readonly onFadeOut: () => void,
+    colorCycle?: ColorPhaseConfig[]
+  ) {
+    this.colorCycle = (colorCycle && colorCycle.length > 0)
+      ? colorCycle
+      : ColorStateManager.DEFAULT_COLOR_CYCLE;
+  }
 
   public start(): void {
-    this.scheduleNextPhase(5000);
+    if (this.colorCycle.length > 0) {
+      this.scheduleNextPhase(this.colorCycle[0].duration);
+    }
   }
 
   public advance(): void {
-    if (this.currentPhase === ColorPhase.Bright) {
+    if (this.currentPhaseIndex === 0) {
       clearTimeout(this.timer);
-      this.transitionToPhase(ColorPhase.Medium);
+      this.transitionToPhase(1);
     }
   }
 
   public reset(): void {
     clearTimeout(this.timer);
-    this.currentPhase = ColorPhase.Bright;
+    this.currentPhaseIndex = 0;
 
-    const brightColor = ColorStateManager.COLOR_MAP[ColorPhase.Bright];
-    this.entry.setColor(brightColor);
-    this.animator.resetColor(brightColor);
+    if (this.colorCycle.length > 0) {
+      const brightColor = this.colorCycle[0].color;
+      this.entry.setColor(brightColor);
+      this.animator.resetColor(brightColor);
+    }
     this.animator.reset();
   }
 
   private scheduleNextPhase(delay: number): void {
     clearTimeout(this.timer);
     this.timer = setTimeout(() => {
-      this.transitionToPhase(this.currentPhase + 1);
+      this.transitionToPhase(this.currentPhaseIndex + 1);
     }, delay);
   }
 
-  private async transitionToPhase(newPhase: ColorPhase): Promise<void> {
-    if (newPhase >= ColorPhase.Hidden) {
+  private async transitionToPhase(newPhaseIndex: number): Promise<void> {
+    if (newPhaseIndex >= this.colorCycle.length) {
       this.onFadeOut();
       return;
     }
 
-    const startColor = ColorStateManager.COLOR_MAP[this.currentPhase as keyof typeof ColorStateManager.COLOR_MAP];
-    const endColor = ColorStateManager.COLOR_MAP[newPhase as keyof typeof ColorStateManager.COLOR_MAP];
+    const startColor = this.colorCycle[this.currentPhaseIndex].color;
+    const endColor = this.colorCycle[newPhaseIndex].color;
 
-    this.currentPhase = newPhase;
+    this.currentPhaseIndex = newPhaseIndex;
 
     await this.animator.changeColor(startColor, endColor);
 
-    this.scheduleNextPhase(5000);
-    // this.scheduleNextPhase(3000);
+    if (this.currentPhaseIndex < this.colorCycle.length) {
+      this.scheduleNextPhase(this.colorCycle[this.currentPhaseIndex].duration);
+    }
   }
 }
 
@@ -200,7 +206,8 @@ class LogEntry {
     private readonly textAnchor: string,
     private readonly hass?: HomeAssistant,
     private readonly requestUpdateCallback?: () => void,
-    private readonly getShadowElement?: (id: string) => Element | null
+    private readonly getShadowElement?: (id: string) => Element | null,
+    private readonly colorCycle?: ColorPhaseConfig[]
   ) {
     this.textElement = this.createTextElement();
   }
@@ -215,7 +222,7 @@ class LogEntry {
         fontFamily: this.fontFamily,
         fontWeight: this.fontWeight,
         textAnchor: this.textAnchor,
-        dominantBaseline: 'hanging',
+        dominantBaseline: 'auto',
         fillOpacity: 0
       },
       {
@@ -276,7 +283,7 @@ class LogEntry {
 
   public initializeAnimation(animationContext: AnimationContext, onFadeOut: () => void): void {
     this.animator = new LogEntryAnimator(this.textElement.id, animationContext);
-    this.colorManager = new ColorStateManager(this, this.animator, onFadeOut);
+    this.colorManager = new ColorStateManager(this, this.animator, onFadeOut, this.colorCycle);
   }
 
   public startColorCycling(): void {
@@ -399,10 +406,15 @@ export class LoggerWidget extends Widget {
     this.unsubscribe = undefined;
   }
 
+  private updateHeight(): void {
+    this.layoutConfig.height = this.maxLines * this.lineSpacing;
+  }
+
   private initialize(): void {
     this.boundsElement ??= this.createBounds();
     this.maxLines = this.props.maxLines || LoggerWidget.DEFAULTS.MAX_LINES;
     this.lineSpacing = this.calculateSpacing();
+    this.updateHeight();
     
     if (this.entries.length === 0) {
       this.entries = Array.from({ length: this.maxLines + 1 }, () => this.createEntry());
@@ -440,7 +452,7 @@ export class LoggerWidget extends Widget {
   private createBounds(): RectangleElement {
     const bounds = new RectangleElement(
       this.id,
-      { fill: 'none', stroke: 'none' },
+      { fill: '#440000', stroke: 'none' },
       this.layoutConfig,
       this.hass,
       this.requestUpdateCallback,
@@ -471,17 +483,21 @@ export class LoggerWidget extends Widget {
 
   private createEntry(): LogEntry {
     const elementId = `${this.id}_entry_${this.entryCounter++}`;
+    const colorCycle = this.props.color_cycle;
+    const initialColor = colorCycle?.[0]?.color || this.props.textColor || LoggerWidget.DEFAULTS.TEXT_COLOR;
+
     return new LogEntry(
       elementId,
       this.id,
-      this.props.textColor || LoggerWidget.DEFAULTS.TEXT_COLOR,
+      initialColor,
       this.props.fontSize || LoggerWidget.DEFAULTS.FONT_SIZE,
       this.props.fontFamily || LoggerWidget.DEFAULTS.FONT_FAMILY,
       this.props.fontWeight || LoggerWidget.DEFAULTS.FONT_WEIGHT,
       this.props.textAnchor || LoggerWidget.DEFAULTS.TEXT_ANCHOR,
       this.hass,
       this.requestUpdateCallback,
-      this.getShadowElement
+      this.getShadowElement,
+      colorCycle
     );
   }
 
@@ -507,7 +523,7 @@ export class LoggerWidget extends Widget {
         fontFamily: this.props.fontFamily || LoggerWidget.DEFAULTS.FONT_FAMILY,
         fontWeight: this.props.fontWeight || LoggerWidget.DEFAULTS.FONT_WEIGHT,
         textAnchor: 'end',
-        dominantBaseline: 'hanging',
+        dominantBaseline: 'auto',
       },
       {
         anchor: {
@@ -616,6 +632,7 @@ export class LoggerWidget extends Widget {
   public handleResize(): void {
     this.entries.forEach(entry => entry.reset());
     this.lineSpacing = this.calculateSpacing();
+    this.updateHeight();
     this.populateFromExisting();
     this.requestUpdateCallback?.();
   }

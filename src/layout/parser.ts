@@ -50,6 +50,7 @@ interface ElementProps {
   // Logger widget specific properties
   maxLines?: number;
   lineSpacing?: number | string;
+  color_cycle?: { color: any; duration: number }[];
 }
 
 interface LayoutConfig {
@@ -123,89 +124,65 @@ export class ConfigParser {
     }
   }
 
-  private static convertElementProps(element: any): ElementProps {
-    const props: ElementProps = {};
-    
-    this.mapAppearanceProps(element, props);
-    this.mapTextProps(element, props);
-    this.mapButtonProps(element, props);
-    this.mapConfigurationProps(element, props);
-    this.mapWidgetProps(element, props);
-    
-    return props;
-  }
+  private static convertElementProps(elementConfig: any): ElementProps {
+    const appearance = elementConfig.appearance || {};
+    const text = elementConfig.text || {};
 
-  private static mapAppearanceProps(element: any, props: ElementProps): void {
-    if (!element.appearance) return;
+    const props: ElementProps = {
+      fill: appearance.fill,
+      stroke: appearance.stroke,
+      strokeWidth: appearance.strokeWidth,
+      rx: appearance.cornerRadius,
+      direction: appearance.direction,
+      orientation: appearance.orientation,
+      bodyWidth: appearance.bodyWidth,
+      armHeight: appearance.armHeight,
+      
+      text: text.content,
+      fontFamily: text.fontFamily,
+      fontSize: text.fontSize,
+      fontWeight: text.fontWeight,
+      letterSpacing: text.letterSpacing,
+      textAnchor: text.textAnchor,
+      dominantBaseline: text.dominantBaseline,
+      textTransform: text.textTransform,
+      cutout: text.cutout,
+      elbowTextPosition: text.elbow_text_position,
+      leftContent: text.left_content,
+      rightContent: text.right_content,
+      textOffsetX: text.offsetX,
+      textOffsetY: text.offsetY,
+      
+      button: elementConfig.button,
+      visibility_rules: elementConfig.visibility_rules,
+      visibility_triggers: elementConfig.visibility_triggers,
+      state_management: elementConfig.state_management,
+      animations: elementConfig.animations,
+      
+      entity: elementConfig.entity,
+      attribute: elementConfig.attribute,
+      label: elementConfig.label,
+      value: elementConfig.value,
+      appearance: elementConfig.appearance,
+      
+      // Logger widget specific properties
+      maxLines: text.max_lines,
+      lineSpacing: text.line_spacing,
+      color_cycle: text.color_cycle,
+    };
 
-    const appearance = element.appearance;
-    
-    if (appearance.fill !== undefined) props.fill = appearance.fill;
-    if (appearance.stroke !== undefined) props.stroke = appearance.stroke;
-    if (appearance.strokeWidth !== undefined) props.strokeWidth = appearance.strokeWidth;
-    if (appearance.cornerRadius !== undefined) props.rx = appearance.cornerRadius;
-    if (appearance.direction !== undefined) props.direction = appearance.direction;
-    if (appearance.orientation !== undefined) props.orientation = appearance.orientation;
-    if (appearance.bodyWidth !== undefined) props.bodyWidth = appearance.bodyWidth;
-    if (appearance.armHeight !== undefined) props.armHeight = appearance.armHeight;
-  }
-
-  private static mapTextProps(element: any, props: ElementProps): void {
-    if (!element.text) return;
-
-    const text = element.text;
-    
-    if (text.content !== undefined) props.text = text.content;
-    
+    // Handle text color differently for text elements vs other elements
     if (text.fill !== undefined) {
-      if (element.type === 'text') {
+      if (elementConfig.type === 'text') {
+        // For text elements, text.fill becomes the fill property
         props.fill = text.fill;
       } else {
+        // For other elements, text.fill becomes textColor
         props.textColor = text.fill;
       }
     }
-    
-    if (text.fontFamily !== undefined) props.fontFamily = text.fontFamily;
-    if (text.fontSize !== undefined) props.fontSize = text.fontSize;
-    if (text.fontWeight !== undefined) props.fontWeight = text.fontWeight;
-    if (text.letterSpacing !== undefined) props.letterSpacing = text.letterSpacing;
-    if (text.textAnchor !== undefined) props.textAnchor = text.textAnchor;
-    if (text.dominantBaseline !== undefined) props.dominantBaseline = text.dominantBaseline;
-    if (text.textTransform !== undefined) props.textTransform = text.textTransform;
-    if (text.cutout !== undefined) props.cutout = text.cutout;
-    if (text.elbow_text_position !== undefined) props.elbowTextPosition = text.elbow_text_position;
-    if (text.left_content !== undefined) props.leftContent = text.left_content;
-    if (text.right_content !== undefined) props.rightContent = text.right_content;
-    if (text.offsetX !== undefined) props.textOffsetX = text.offsetX;
-    if (text.offsetY !== undefined) props.textOffsetY = text.offsetY;
-    
-    // Logger widget specific properties
-    if (text.max_lines !== undefined) props.maxLines = text.max_lines;
-    if (text.line_spacing !== undefined) props.lineSpacing = text.line_spacing;
-  }
 
-  private static mapButtonProps(element: any, props: ElementProps): void {
-    if (!element.button) return;
-
-    props.button = {
-      enabled: element.button.enabled,
-      actions: element.button.actions
-    };
-  }
-
-  private static mapConfigurationProps(element: any, props: ElementProps): void {
-    if (element.visibility_rules !== undefined) props.visibility_rules = element.visibility_rules;
-    if (element.visibility_triggers !== undefined) props.visibility_triggers = element.visibility_triggers;
-    if (element.state_management !== undefined) props.state_management = element.state_management;
-    if (element.animations !== undefined) props.animations = element.animations;
-  }
-
-  private static mapWidgetProps(element: any, props: ElementProps): void {
-    if (element.entity !== undefined) props.entity = element.entity;
-    if (element.attribute !== undefined) props.attribute = element.attribute;
-    if (element.label !== undefined) props.label = element.label;
-    if (element.value !== undefined) props.value = element.value;
-    if (element.appearance !== undefined) props.appearance = element.appearance;
+    return props;
   }
 
   private static convertLayoutConfig(layout?: any): LayoutConfig {
