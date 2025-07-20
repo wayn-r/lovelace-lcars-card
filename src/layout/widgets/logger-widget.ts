@@ -3,7 +3,7 @@ import { RectangleElement } from '../elements/rectangle.js';
 import { Widget } from './widget.js';
 import { LayoutElement } from '../elements/element.js';
 import { WidgetRegistry } from './registry.js';
-import { LogMessage } from '../../types.js';
+import { LogMessage, TextConfig } from '../../types.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
 import { loggerService } from '../../utils/logger-service.js';
@@ -11,6 +11,7 @@ import { DistanceParser } from '../../utils/animation.js';
 import { animationManager, AnimationContext, AnimationConfig } from '../../utils/animation.js';
 import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
+import { FontManager } from '../../utils/font-manager.js';
 
 gsap.registerPlugin(CustomEase);
 
@@ -368,6 +369,29 @@ export class LoggerWidget extends Widget {
   private boundsElement?: RectangleElement;
   private processor?: MessageProcessor;
 
+  private trimTextToWidth(
+    text: string,
+    maxWidth: number,
+    config: Omit<TextConfig, 'content'>
+  ): string {
+    const ellipsis = '…';
+    const ellipsisWidth = FontManager.measureTextWidth(ellipsis, config);
+
+    let currentWidth = FontManager.measureTextWidth(text, config);
+
+    if (currentWidth <= maxWidth) {
+      return text;
+    }
+
+    let trimmedText = text;
+    while (currentWidth + ellipsisWidth > maxWidth && trimmedText.length > 0) {
+      trimmedText = trimmedText.slice(0, -1);
+      currentWidth = FontManager.measureTextWidth(trimmedText, config);
+    }
+
+    return trimmedText + ellipsis;
+  }
+
   constructor(
     id: string,
     props: LayoutElementProps = {},
@@ -506,11 +530,19 @@ export class LoggerWidget extends Widget {
   private populateFromExisting(): void {
     this.entries.forEach(entry => entry.hide());
     
+    const widgetWidth = this.boundsElement?.layout.width || 0;
+    const textConfig = {
+      fontFamily: this.props.fontFamily || LoggerWidget.DEFAULTS.FONT_FAMILY,
+      fontSize: this.props.fontSize || LoggerWidget.DEFAULTS.FONT_SIZE,
+      fontWeight: this.props.fontWeight || LoggerWidget.DEFAULTS.FONT_WEIGHT,
+    };
+
     loggerService.getMessages()
       .slice(0, this.maxLines)
       .forEach((message, index) => {
         const entry = this.entries[index];
-        entry.show(message.text);
+        const trimmedText = this.trimTextToWidth(message.text, widgetWidth, textConfig);
+        entry.show(trimmedText);
         entry.setPosition(index, this.lineSpacing);
       });
   }
@@ -584,9 +616,8 @@ export class LoggerWidget extends Widget {
     };
   }
 
-  private prepareForReuse(entry: LogEntry, message: LogMessage): void {
+  private prepareForReuse(entry: LogEntry): void {
     entry.reset();
-    entry.setText(message.text);
     entry.setOffsetY(0);
     this.requestUpdateCallback?.();
   }
@@ -602,8 +633,17 @@ export class LoggerWidget extends Widget {
     const entryToReuse = this.entries.pop()!;
     this.entries.unshift(entryToReuse);
 
-    this.prepareForReuse(entryToReuse, message);
-    entryToReuse.show(message.text);
+    this.prepareForReuse(entryToReuse);
+
+    const widgetWidth = this.boundsElement?.layout.width || 0;
+    const textConfig = {
+      fontFamily: this.props.fontFamily || LoggerWidget.DEFAULTS.FONT_FAMILY,
+      fontSize: this.props.fontSize || LoggerWidget.DEFAULTS.FONT_SIZE,
+      fontWeight: this.props.fontWeight || LoggerWidget.DEFAULTS.FONT_WEIGHT,
+    };
+    const trimmedText = this.trimTextToWidth(message.text, widgetWidth, textConfig);
+
+    entryToReuse.show(trimmedText);
     entryToReuse.startColorCycling();
 
     const fadeInPromise = entryToReuse.animator?.fadeIn();
