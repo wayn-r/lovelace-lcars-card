@@ -308,28 +308,17 @@ class LogEntry {
 
 class MessageProcessor {
   private isProcessing: boolean = false;
-  private queueLength: number = 0;
 
   constructor(
     private readonly queue: LogMessage[],
-    private readonly updateCounter: (length: number) => void,
     private readonly processMessage: (message: LogMessage) => Promise<void>
   ) {}
 
   enqueue(message: LogMessage): void {
     this.queue.push(message);
-    this.updateCounterDisplay();
     
     if (!this.isProcessing) {
       this.processQueue();
-    }
-  }
-
-  private updateCounterDisplay(): void {
-    const newLength = this.queue.length;
-    if (this.queueLength !== newLength) {
-      this.queueLength = newLength;
-      this.updateCounter(newLength);
     }
   }
 
@@ -340,7 +329,6 @@ class MessageProcessor {
 
     while (this.queue.length > 0) {
       const message = this.queue.shift()!;
-      this.updateCounterDisplay();
       await this.processMessage(message);
     }
 
@@ -364,7 +352,6 @@ export class LoggerWidget extends Widget {
   private entryCounter: number = 0;
   private maxLines: number = LoggerWidget.DEFAULTS.MAX_LINES;
   private lineSpacing: number = 0;
-  private counterText?: TextElement;
   private unsubscribe?: () => void;
   private boundsElement?: RectangleElement;
   private processor?: MessageProcessor;
@@ -467,10 +454,8 @@ export class LoggerWidget extends Widget {
       this.maxLines,
       (message) => this.enqueueMessage(message)
     );
-    this.counterText ??= this.createCounter();
     this.processor ??= new MessageProcessor(
       this.queue,
-      (length) => this.updateCounter(length),
       (message) => this.displayMessage(message)
     );
   }
@@ -478,7 +463,7 @@ export class LoggerWidget extends Widget {
   private createBounds(): RectangleElement {
     const bounds = new RectangleElement(
       this.id,
-      { fill: '#440000', stroke: 'none' },
+      { fill: 'none', stroke: 'none' },
       this.layoutConfig,
       this.hass,
       this.requestUpdateCallback,
@@ -545,40 +530,6 @@ export class LoggerWidget extends Widget {
         entry.show(trimmedText);
         entry.setPosition(index, this.lineSpacing);
       });
-  }
-
-  private createCounter(): TextElement {
-    return new TextElement(
-      `${this.id}_counter`,
-      {
-        text: '0',
-        fill: this.props.textColor || LoggerWidget.DEFAULTS.TEXT_COLOR,
-        fontSize: this.props.fontSize || LoggerWidget.DEFAULTS.FONT_SIZE,
-        fontFamily: this.props.fontFamily || LoggerWidget.DEFAULTS.FONT_FAMILY,
-        fontWeight: this.props.fontWeight || LoggerWidget.DEFAULTS.FONT_WEIGHT,
-        textAnchor: 'end',
-        dominantBaseline: 'auto',
-      },
-      {
-        anchor: {
-          anchorTo: this.id,
-          anchorPoint: 'topRight',
-          targetAnchorPoint: 'topLeft'
-        },
-        offsetX: -10,
-        offsetY: 0
-      },
-      this.hass,
-      this.requestUpdateCallback,
-      this.getShadowElement
-    );
-  }
-
-  private updateCounter(queueLength: number): void {
-    if (this.counterText) {
-      this.counterText.props.text = `${queueLength}`;
-      this.requestUpdateCallback?.();
-    }
   }
 
   private isDuplicate(messageText: string): boolean {
@@ -681,8 +632,7 @@ export class LoggerWidget extends Widget {
 
   public expand(): LayoutElement[] {
     return [
-      this.boundsElement!, 
-      this.counterText!, 
+      this.boundsElement!,
       ...this.entries.map(entry => entry.textElement)
     ];
   }
