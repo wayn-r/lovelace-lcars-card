@@ -100,19 +100,28 @@ class LogEntryAnimator {
   }
 
   public fadeIn(): Promise<void> {
-    return this.fade(0, 1, customBounce);
+    return this.fade(0, 1, customBounce).then(() => {
+      const element = this.context.getShadowElement?.(this.elementId);
+      if (element) {
+
+      }
+    });
   }
 
   public slideDown(lineSpacing: number): Promise<void> {
     const elementDom = this.context.getShadowElement?.(this.elementId);
     if (!elementDom) return Promise.resolve();
 
+    const startY = gsap.getProperty(elementDom, 'y');
+
     return new Promise<void>((resolve) => {
       gsap.to(elementDom, {
         y: `+=${lineSpacing}`,
         duration: 0.5,
         ease: 'power4.out',
-        onComplete: resolve
+        onComplete: () => {
+          resolve();
+        }
       });
     });
   }
@@ -524,11 +533,13 @@ export class LoggerWidget extends Widget {
 
     loggerService.getMessages()
       .slice(0, this.maxLines)
-      .forEach((message, index) => {
-        const entry = this.entries[index];
-        const trimmedText = this.trimTextToWidth(message.text, widgetWidth, textConfig);
-        entry.show(trimmedText);
-        entry.setPosition(index, this.lineSpacing);
+      .forEach((message, messageIndex) => {
+        const entry = this.entries.find(e => e.getText() === message.text);
+        if (entry) {
+          const trimmedText = this.trimTextToWidth(message.text, widgetWidth, textConfig);
+          entry.show(trimmedText);
+          entry.setPosition(messageIndex, this.lineSpacing);
+        }
       });
   }
 
@@ -643,7 +654,7 @@ WidgetRegistry.registerWidget('logger-widget', (id, props, layoutConfig, hass, r
   const elements = widget.expand();
   
   if (elements.length > 0) {
-    (elements[0] as any)._loggerWidget = widget;
+    (elements[0] as RectangleElement)._loggerWidget = widget;
   }
   
   return elements;
