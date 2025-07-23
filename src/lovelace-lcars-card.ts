@@ -333,17 +333,6 @@ export class LcarsCard extends LitElement {
         this._layoutEngine.addGroup(group); 
       });
 
-      const elementIds: string[] = [];
-      const groupIds: string[] = [];
-
-      groups.forEach(group => {
-        groupIds.push(group.id);
-        console.log(`[LcarsCard] Processing group: ${group.id}`);
-        group.elements.forEach(element => {
-          elementIds.push(element.id);
-          console.log(`[LcarsCard] Processing element: ${element.id}`);
-        });
-      });
       const animationContext: AnimationContext = {
         elementId: 'card',
         getShadowElement: getShadowElement,
