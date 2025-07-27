@@ -20,10 +20,16 @@ groups: <array>                  # Required: Defines groups of elements. Element
                                    #   Full ID becomes "group_id.id" (e.g., "navigation.status_light").
         type: <string>             # Required: The type of LCARS element.
                                    #   Options: "rectangle", "text", "endcap", "elbow",
-                                   #            "chisel-endcap", "top_header", "logger-widget".
-
+                                   #            "chisel-endcap", "top_header", "logger-widget", "graph-widget".
+        entity: <string|array>     # Optional: Home Assistant entity ID or array of entity IDs.
+                                   #   Required for 'graph-widget' and 'entity-text-widget'.
+                                   #   For 'graph-widget', this can be a string, an array of strings,
+                                   #   or an array of objects with 'id' and 'color' to override line colors.
+                                   #   e.g., entity: [{id: "sensor.one", color: "#ff0000"}, "sensor.two"]
+        grid:                      # Optional for 'graph-widget': Defines the grid line configuration.
+          num_lines: <number>        # Optional: The number of horizontal grid lines to display. Default: 6.
         appearance:                # Optional: Defines the static visual style of the element's shape.
-          fill: <color_property>     # Primary fill color for the element's shape.
+          fill: <color_property>     # Primary fill color. For 'graph-widget', this colors the grid lines.
           stroke: <color_property>   # Outline/border color for the element's shape.
           strokeWidth: <number>      # Outline/border width in pixels for the element's shape.
 
@@ -39,6 +45,7 @@ groups: <array>                  # Required: Defines groups of elements. Element
         text:                      # Optional: Defines text content and styling.
                                    #   Applicable to 'text' type directly, or for text *on* other
                                    #   buttonized elements (e.g., a rectangle button).
+                                   #   For 'graph-widget', `fill` colors the grid line labels.
           content: <string>          # The text to display.
                                      #   For buttonized elements, this is the button's label.
           fill: <color_property>     # Color of the text.
@@ -300,3 +307,46 @@ animation_sequence:                  # Alternative: Animation sequence with mult
 # 
 # Note: The logger-widget automatically displays all entity state changes.
 # Use 'max_lines' to control how many recent changes are shown.
+
+# === Example Graph Widget Configuration ===
+#
+# groups:
+#   - group_id: "main_content"
+#     elements:
+#       - id: "temp_graph"
+#         type: "graph-widget"
+#         entity: "sensor.living_room_temperature"
+#         layout:
+#           width: 500
+#           height: 150
+#           # Additional layout properties (anchor, offset) can be added here.
+#
+#       - id: "multi_sensor_graph"
+#         type: "graph-widget"
+#         entity:
+#           - sensor.living_room_temperature
+#           - sensor.outside_temperature
+#         layout:
+#           width: 500
+#           height: 150
+#
+# Note: The `entity` property is required. `width` and `height` in the `layout`
+# section are strongly recommended for proper sizing.
+#
+# === Example With Line Colors ===
+#
+#       - id: "multi_sensor_graph_colored"
+#         type: "graph-widget"
+#         entity:
+#           - id: sensor.living_room_temperature
+#             color: "#FF6666"
+#           - sensor.outside_temperature
+#         grid:
+#           num_lines: 5
+#         appearance:
+#           fill: "#CCCCCC" # Grid line color
+#         text:
+#           fill: "#FFFFFF" # Grid label color
+#         layout:
+#           width: 500
+#           height: 150

@@ -42,7 +42,7 @@ interface ElementProps {
   visibility_triggers?: unknown;
   state_management?: unknown;
   animations?: unknown;
-  entity?: string;
+  entity?: string | string[];
   attribute?: string;
   label?: any;
   value?: any;
@@ -51,6 +51,10 @@ interface ElementProps {
   maxLines?: number;
   lineSpacing?: number | string;
   color_cycle?: { color: any; duration: number }[];
+  entity_id?: string;
+  grid?: {
+    num_lines?: number;
+  };
 }
 
 interface LayoutConfig {
@@ -160,6 +164,7 @@ export class ConfigParser {
       animations: elementConfig.animations,
       
       entity: elementConfig.entity,
+      entity_id: elementConfig.entity,
       attribute: elementConfig.attribute,
       label: elementConfig.label,
       value: elementConfig.value,
@@ -169,6 +174,7 @@ export class ConfigParser {
       maxLines: text.max_lines,
       lineSpacing: text.line_spacing,
       color_cycle: text.color_cycle,
+      grid: elementConfig.grid,
     };
 
     // Handle text color differently for text elements vs other elements

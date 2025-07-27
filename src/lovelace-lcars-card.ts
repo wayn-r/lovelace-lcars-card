@@ -519,8 +519,13 @@ export class LcarsCard extends LitElement {
     } else if (this._layoutElementTemplates.length > 0) {
       svgContent = this._layoutElementTemplates;
       
-      defsContent = this._layoutEngine.layoutGroups.flatMap((group: any) =>
-        group.elements.flatMap((e: any) => e.renderDefs?.() || []).filter((d: any) => d !== null)
+      defsContent = this._layoutEngine.layoutGroups.flatMap((group: Group) =>
+        group.elements.flatMap((e: LayoutElement) => {
+            if ('renderDefs' in e && typeof e.renderDefs === 'function') {
+                return e.renderDefs() || [];
+            }
+            return [];
+        }).filter((d) => d !== null)
       );
     } else {
       svgContent = [svg`<text x="10" y="30" fill="red" font-size="14">No layout elements to render</text>`];
@@ -620,7 +625,6 @@ export class LcarsCard extends LitElement {
       });
     });
   }
-
 
 
   private _setupAllElementListeners(): void {

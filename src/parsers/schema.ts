@@ -197,11 +197,15 @@ const elementTypeEnum = z.enum([
   'top_header',
   'entity-text-widget',
   'logger-widget',
+  'graph-widget',
 ]).or(z.string()); // Allow unknown types for backwards compatibility
 
 const elementSchema = z.object({
   id: z.string().min(1),
   type: elementTypeEnum,
+  grid: z.object({
+    num_lines: z.number().optional(),
+  }).optional(),
   appearance: appearanceSchema.optional(),
   text: textSchema.optional(),
   layout: layoutSchema.optional(),
@@ -212,10 +216,44 @@ const elementSchema = z.object({
   animations: z.any().optional(),
   
   // Entity text widget specific fields
-  entity: z.string().optional(),
+  entity: z.union([
+    z.string(),
+    z.array(
+        z.union([
+            z.string(),
+            z.object({
+                id: z.string(),
+                color: z.string().optional(),
+            }),
+        ])
+    ),
+  ]).optional(),
   attribute: z.string().optional(),
   label: entityTextLabelSchema.optional(),
   value: entityTextValueSchema.optional(),
+});
+
+const refinedElementSchema = elementSchema.refine(data => {
+    if (data.type === 'graph-widget') {
+        if (!data.entity) return false;
+        if (Array.isArray(data.entity)) {
+            return data.entity.length > 0 && data.entity.every(e => {
+                if (typeof e === 'string') return e.length > 0;
+                if (typeof e === 'object' && e !== null && 'id' in e) {
+                    return typeof (e as {id:any}).id === 'string' && (e as {id:string}).id.length > 0;
+                }
+                return false;
+            });
+        }
+        return typeof data.entity === 'string' && data.entity.length > 0;
+    }
+    if (data.type === 'entity-text-widget') {
+        return typeof data.entity === 'string' && data.entity.length > 0;
+    }
+    return true;
+}, {
+    message: "For 'graph-widget', 'entity' must be a non-empty string or a non-empty array of valid entities (string or object with id). For 'entity-text-widget', 'entity' must be a non-empty string.",
+    path: ['entity'],
 });
 
 // -----------------------------------------------------------------------------
@@ -224,7 +262,7 @@ const elementSchema = z.object({
 
 const groupSchema = z.object({
   group_id: z.string().min(1),
-  elements: z.array(elementSchema), // Allow empty arrays for backward compatibility
+  elements: z.array(refinedElementSchema), // Allow empty arrays for backward compatibility
 });
 
 const cardConfigSchema = z.object({
