@@ -5,6 +5,8 @@ import yaml from 'js-yaml';
 import { HomeAssistant, PlaywrightBrowser } from 'hass-taste-test';
 import { AnimationTimingCalculator, TestWaitHelper, AnimationTimingInfo } from './test-helpers';
 import './test-helpers';
+import { mockSensorData } from './test-data';
+import os from 'os';
 
 const EXAMPLES_DIR = path.resolve(process.cwd(), 'yaml-config-examples');
 
@@ -16,7 +18,8 @@ const exampleFiles = fs
 let hass: HomeAssistant<any>;
 
 test.beforeAll(async () => {
-  hass = await HomeAssistant.create('', {
+  const dbPath = path.join(os.tmpdir(), `hass-test-${Date.now()}.db`);
+  hass = await HomeAssistant.create(`recorder:\n  db_url: "sqlite:///${dbPath}"\nhistory:\n`, {
     browser: new PlaywrightBrowser('chromium'),
   });
 
@@ -112,6 +115,21 @@ for (const filePath of exampleFiles) {
       const configObj = yaml.load(raw) as Record<string, unknown>;
 
       const timingInfo: AnimationTimingInfo = AnimationTimingCalculator.analyzeConfigurationTiming(configObj);
+
+      if (baseName === '32-graph-widget') {
+        for (const [entityId, entityData] of Object.entries(mockSensorData)) {
+            for (const dataPoint of entityData.data) {
+                await hass.post(`/api/states/${entityId}`, {
+                    state: dataPoint.state,
+                    attributes: {
+                        unit_of_measurement: entityData.unit_of_measurement,
+                    },
+                    last_changed: dataPoint.last_changed,
+                }, true);
+                await page.waitForTimeout(100);
+            }
+        }
+      }
 
       await hass.callService('input_number', 'set_value', {
         entity_id: 'input_number.kitchen_sink_brightness',
