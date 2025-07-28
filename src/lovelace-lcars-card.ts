@@ -16,7 +16,7 @@ import { colorResolver } from './utils/color-resolver.js';
 import { stateManager } from './utils/state-manager.js';
 import { StoreProvider, StateChangeEvent } from './core/store.js';
 import { FontManager } from './utils/font-manager.js';
-import { validateConfig, logValidationResult } from './utils/config-validator.js';
+import { ConfigValidator, logValidationResult } from './utils/config-validator.js';
 
 import { editorStyles } from './styles/styles.js';
 
@@ -79,7 +79,7 @@ export class LcarsCard extends LitElement {
     
     const normalizedConfig = this.normalizeConfig(config);
 
-    const validation = validateConfig(normalizedConfig);
+    const validation = ConfigValidator.validateConfig(normalizedConfig);
     logValidationResult(validation);
 
     this._config = normalizedConfig;
