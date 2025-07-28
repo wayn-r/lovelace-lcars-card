@@ -8,18 +8,8 @@ export interface ValidationResult {
   errors: string[];
 }
 
-/**
- * Validate a LCARS card configuration object.
- *
- * The validator performs several layers of checks:
- * 1. Schema validation via Zod (structural + type safety).
- * 2. Duplicate ID detection for groups and elements.
- * 3. Reference validation for anchors, stretch targets, button actions, and visibility rules.
- * 4. Action-specific validation (e.g. missing required properties).
- *
- * The function never throws – callers decide how to handle the result.
- */
-export function validateConfig(config: unknown): ValidationResult {
+export class ConfigValidator {
+  static validateConfig(config: unknown): ValidationResult {
   const errors: string[] = [];
 
   // ---------------------------------------------------------------------------
@@ -31,7 +21,7 @@ export function validateConfig(config: unknown): ValidationResult {
     const zodErrors = err?.errors as any[] | undefined;
     if (Array.isArray(zodErrors)) {
       zodErrors.forEach((e) => {
-        const friendlyPath = formatZodPath(e.path, config);
+        const friendlyPath = ConfigValidator.formatZodPath(e.path, config);
         errors.push(`schema » ${friendlyPath} – ${e.message}`);
       });
     } else if (err instanceof Error) {
@@ -148,11 +138,48 @@ export function validateConfig(config: unknown): ValidationResult {
   });
 
   return { valid: errors.length === 0, errors };
+  }
+
+  private static formatZodPath(path: (string | number)[], cfg: any): string {
+    if (!path || path.length === 0) return '';
+
+    const parts: string[] = [];
+    let cursor: any = cfg;
+
+    for (let i = 0; i < path.length; i++) {
+      const seg = path[i];
+
+      if (seg === 'groups' && typeof path[i + 1] === 'number') {
+        const idx = path[i + 1] as number;
+        const group = Array.isArray(cursor?.groups) ? cursor.groups[idx] : undefined;
+        const name = group?.group_id ?? idx;
+        parts.push(`groups.${name}`);
+        cursor = group;
+        i++;
+        continue;
+      }
+
+      if (seg === 'elements' && typeof path[i + 1] === 'number') {
+        const idx = path[i + 1] as number;
+        const element = Array.isArray(cursor?.elements) ? cursor.elements[idx] : undefined;
+        const name = element?.id ?? idx;
+        parts.push(`elements.${name}`);
+        cursor = element;
+        i++;
+        continue;
+      }
+
+      parts.push(String(seg));
+
+      if (typeof seg === 'string') {
+        cursor = cursor ? cursor[seg] : undefined;
+      }
+    }
+
+    return parts.join('.');
+  }
 }
 
-/**
- * Log validation result to browser console in a developer-friendly format.
- */
 export function logValidationResult(result: ValidationResult): void {
   if (result.valid) {
     // Using info so the output is less alarming but still visible in console.
@@ -167,49 +194,3 @@ export function logValidationResult(result: ValidationResult): void {
   result.errors.forEach((msg) => console.error(`• ${msg}`));
   console.groupEnd();
 }
-
-/**
- * Convert a Zod error path array into a developer-friendly string by replacing
- * numeric indices with the actual group_id / element id from the config.
- */
-function formatZodPath(path: (string | number)[], cfg: any): string {
-  if (!path || path.length === 0) return '';
-
-  const parts: string[] = [];
-  let cursor: any = cfg;
-
-  for (let i = 0; i < path.length; i++) {
-    const seg = path[i];
-
-    // Handle groups[N]
-    if (seg === 'groups' && typeof path[i + 1] === 'number') {
-      const idx = path[i + 1] as number;
-      const group = Array.isArray(cursor?.groups) ? cursor.groups[idx] : undefined;
-      const name = group?.group_id ?? idx;
-      parts.push(`groups.${name}`);
-      cursor = group;
-      i++; // Skip index
-      continue;
-    }
-
-    // Handle elements[N]
-    if (seg === 'elements' && typeof path[i + 1] === 'number') {
-      const idx = path[i + 1] as number;
-      const element = Array.isArray(cursor?.elements) ? cursor.elements[idx] : undefined;
-      const name = element?.id ?? idx;
-      parts.push(`elements.${name}`);
-      cursor = element;
-      i++;
-      continue;
-    }
-
-    parts.push(String(seg));
-
-    // Advance cursor when seg is string property
-    if (typeof seg === 'string') {
-      cursor = cursor ? cursor[seg] : undefined;
-    }
-  }
-
-  return parts.join('.');
-} 
