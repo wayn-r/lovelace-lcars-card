@@ -23,13 +23,24 @@ groups: <array>                  # Required: Defines groups of elements. Element
                                    #            "chisel-endcap", "top_header", "logger-widget", "graph-widget".
         entity: <string|array>     # Optional: Home Assistant entity ID or array of entity IDs.
                                    #   Required for 'graph-widget' and 'entity-text-widget'.
-                                   #   For 'graph-widget', this can be a string, an array of strings,
-                                   #   or an array of objects with 'id' and 'color' to override line colors.
-                                   #   e.g., entity: [{id: "sensor.one", color: "#ff0000"}, "sensor.two"]
+                                   #   For 'graph-widget', this can be:
+                                   #     - A single entity ID string
+                                   #     - An array of entity ID strings
+                                   #     - An array mixing strings and objects for customization
+        # === Graph Widget Specific ===
+                                   #   Object format: {id: <string>, color: <color_property>, toggleable: <boolean>, animated: <boolean>, duration: <number>}
+                                   #   Where:
+          - id: <string>            # Required entity ID
+            color: <color_property> # Optional line color override
+            toggleable: <boolean>   # Optional, enables click to toggle visibility (default: true)
+            animated: <boolean>     # Optional, enables line drawing animation (default: true)
+            duration: <number>      # Optional, animation duration in milliseconds (default: 3000)
         grid:                      # Optional for 'graph-widget': Defines the grid line configuration.
           num_lines: <number>        # Optional: The number of horizontal grid lines to display. Default: 6.
+          fill: <color_property>     # Optional: The color for the grid lines. Default: '#0b6288'.
+          label_fill: <color_property> # Optional: The color for the grid line labels. Default: 'white'.
         appearance:                # Optional: Defines the static visual style of the element's shape.
-          fill: <color_property>     # Primary fill color. For 'graph-widget', this colors the grid lines.
+          fill: <color_property>     # Primary fill color.
           stroke: <color_property>   # Outline/border color for the element's shape.
           strokeWidth: <number>      # Outline/border width in pixels for the element's shape.
 
@@ -282,71 +293,3 @@ animation_sequence:                  # Alternative: Animation sequence with mult
     - index: <number>                # Required: Execution order. Groups with same index execute concurrently.
       animations: <animation_definition>            # Required: Array of animations to execute simultaneously in this group.
 
-
-# === Example Logger Widget Configuration ===
-# 
-# groups:
-#   - group_id: "system_status"
-#     elements:
-#       - id: "system_log"
-#         type: "logger-widget"
-#         text:
-#           max_lines: 10
-#           color_cycle:
-#             - color: "#ffc996"
-#               duration: 5000
-#             - color: "#df8313"
-#               duration: 5000
-#             - color: "#864f0b"
-#               duration: 3000
-#         layout:
-#           width: 400
-#           height: 200
-#           offsetX: 20
-#           offsetY: 100
-# 
-# Note: The logger-widget automatically displays all entity state changes.
-# Use 'max_lines' to control how many recent changes are shown.
-
-# === Example Graph Widget Configuration ===
-#
-# groups:
-#   - group_id: "main_content"
-#     elements:
-#       - id: "temp_graph"
-#         type: "graph-widget"
-#         entity: "sensor.living_room_temperature"
-#         layout:
-#           width: 500
-#           height: 150
-#           # Additional layout properties (anchor, offset) can be added here.
-#
-#       - id: "multi_sensor_graph"
-#         type: "graph-widget"
-#         entity:
-#           - sensor.living_room_temperature
-#           - sensor.outside_temperature
-#         layout:
-#           width: 500
-#           height: 150
-#
-# Note: The `entity` property is required. `width` and `height` in the `layout`
-# section are strongly recommended for proper sizing.
-#
-# === Example With Line Colors ===
-#
-#       - id: "multi_sensor_graph_colored"
-#         type: "graph-widget"
-#         entity:
-#           - id: sensor.living_room_temperature
-#             color: "#FF6666"
-#           - sensor.outside_temperature
-#         grid:
-#           num_lines: 5
-#         appearance:
-#           fill: "#CCCCCC" # Grid line color
-#         text:
-#           fill: "#FFFFFF" # Grid label color
-#         layout:
-#           width: 500
-#           height: 150

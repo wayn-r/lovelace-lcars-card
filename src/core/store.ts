@@ -88,6 +88,18 @@ export class ReactiveStore {
     this.stateChangeCallbacks.forEach(callback => callback(event));
   }
 
+  registerState(name: string, value: any): void {
+    this.state.update(state => {
+        if (!state.elementStates.has(name)) {
+            state.elementStates.set(name, {
+                currentState: value,
+                lastChange: Date.now()
+            });
+        }
+        return { ...state };
+    });
+  }
+
   initializeElementState(
     elementId: string,
     stateConfig?: ElementStateManagementConfig,

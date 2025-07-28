@@ -3,8 +3,12 @@ import { LayoutElement } from './element.js';
 import { HistoryMap } from '../../utils/data-fetcher.js';
 import { gsap } from 'gsap';
 import { nice } from 'd3-array';
+import { stateManager } from '../../utils/state-manager.js';
+import { StateChangeEvent } from '../../core/store.js';
+import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
+import { HomeAssistant } from 'custom-card-helpers';
 
-const lineGradients = [
+export const lineGradients = [
     { color: '#0b6288' }, // Blue
     { color: '#FF9900' }, // Orange
     { color: '#FF6666' }, // Red
@@ -13,15 +17,45 @@ const lineGradients = [
     { color: '#FFFF66' }, // Yellow
 ];
 
+export interface RichEntityConfig {
+    id: string;
+    color?: string;
+    toggleable?: boolean;
+    animated?: boolean;
+    duration?: number;
+}
+
 export class GraphElement extends LayoutElement {
   private historyMap: HistoryMap = {};
   private gradientIds: string[] = [];
-  private entityConfigs: { id: string, color?: string }[] = [];
-  private animations: gsap.core.Tween[] = [];
+  private entityConfigs: RichEntityConfig[] = [];
+  private animations: Map<string, gsap.core.Tween> = new Map();
+  private unsubscribeFromStateChanges?: () => void;
 
-  constructor(id: string, props: any, layoutConfig: any, hass?: any, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
+  constructor(id: string, props: LayoutElementProps, layoutConfig: LayoutConfigOptions, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
     super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
     this.updateGradientIds();
+    this.subscribeToStateChanges();
+  }
+
+  private subscribeToStateChanges(): void {
+    this.unsubscribeFromStateChanges = stateManager.onStateChange((event: StateChangeEvent) => {
+        const stateNamePrefix = `${this.id}_`;
+        const stateNameSuffix = `_visible`;
+
+        if (event.elementId.startsWith(stateNamePrefix) && event.elementId.endsWith(stateNameSuffix)) {
+            const entityId = event.elementId.substring(stateNamePrefix.length, event.elementId.length - stateNameSuffix.length);
+            
+            if (event.toState === 'visible') {
+                this.startEntityAnimation(entityId);
+            } else if (event.toState === 'hidden') {
+                if (this.animations.has(entityId)) {
+                    this.animations.get(entityId)?.kill();
+                    this.animations.delete(entityId);
+                }
+            }
+        }
+    });
   }
 
   setHistory(historyMap: HistoryMap): void {
@@ -30,7 +64,7 @@ export class GraphElement extends LayoutElement {
     this.setupAnimation();
   }
 
-  setEntityConfigs(configs?: { id: string, color?: string }[]): void {
+  setEntityConfigs(configs?: RichEntityConfig[]): void {
     this.entityConfigs = configs || [];
     this.updateGradientIds();
     this.requestUpdateCallback?.();
@@ -39,7 +73,10 @@ export class GraphElement extends LayoutElement {
   cleanup(): void {
     super.cleanup();
     this.animations.forEach(a => a.kill());
-    this.animations = [];
+    this.animations.clear();
+    if (this.unsubscribeFromStateChanges) {
+        this.unsubscribeFromStateChanges();
+    }
   }
 
   private updateGradientIds(): void {
@@ -48,56 +85,71 @@ export class GraphElement extends LayoutElement {
   }
 
   private setupAnimation(): void {
+    this.animations.forEach(a => a.kill());
+    this.animations.clear();
+
+    const visibleEntityConfigs = this.entityConfigs.filter(config => {
+        const stateName = `${this.id}_${config.id}_visible`;
+        return stateManager.getState(stateName) !== 'hidden';
+    });
+
+    visibleEntityConfigs.forEach(config => {
+        this.startEntityAnimation(config.id);
+    });
+  }
+
+  private startEntityAnimation(entityId: string): void {
     if (!this.getShadowElement) {
         return;
     }
 
-    this.animations.forEach(a => a.kill());
-    this.animations = [];
+    if (this.animations.has(entityId)) {
+        this.animations.get(entityId)?.kill();
+        this.animations.delete(entityId);
+    }
+
+    const config = this.entityConfigs.find(c => c.id === entityId);
+    if (!config) return;
 
     const getElement = this.getShadowElement;
-    const gradients = this.gradientIds.map(id => getElement(id)).filter(el => el) as Element[];
-    
-    if (gradients.length !== this.gradientIds.length) {
-        requestAnimationFrame(() => this.setupAnimation());
+    const originalIndex = this.entityConfigs.findIndex(ec => ec.id === entityId);
+    const gradientId = `grad-${this.id}-${originalIndex}`;
+    const gradient = getElement(gradientId);
+
+    if (!gradient) {
+        requestAnimationFrame(() => this.startEntityAnimation(entityId));
         return;
     }
 
-    const newAnimations: gsap.core.Tween[] = [];
-    gradients.forEach((gradient) => {
-        gsap.set(gradient, { attr: { spreadMethod: 'none' } });
-        const animation = gsap.fromTo(gradient, 
-            { attr: { x1: '-100%', x2: '0%' } },
-            { 
-                attr: { x1: '0%', x2: '100%' },
-                duration: 3,
-                ease: 'none',
-                onComplete: () => {
-                    this.startLoopingAnimation(gradient);
-                }
+    gsap.set(gradient, { attr: { spreadMethod: 'none' } });
+    const animation = gsap.fromTo(gradient, 
+        { attr: { x1: '-100%', x2: '0%' } },
+        { 
+            attr: { x1: '0%', x2: '100%' },
+            duration: (config.duration || 3000) / 1000,
+            ease: 'none',
+            onComplete: () => {
+                this.startContinuousAnimation(gradient, entityId);
             }
-        );
-        newAnimations.push(animation);
-    });
-    this.animations = newAnimations;
+        }
+    );
+    this.animations.set(entityId, animation);
   }
 
-  private startLoopingAnimation(gradient: Element): void {
+  private startContinuousAnimation(gradient: Element, entityId: string): void {
     gsap.set(gradient, { attr: { spreadMethod: 'repeat', x1: '0%', x2: '100%' } });
+
+    const config = this.entityConfigs.find(c => c.id === entityId);
+    if (!config) return;
 
     const animation = gsap.to(gradient, {
         attr: { x1: '100%', x2: '200%' },
-        duration: 3,
+        duration: (config.duration || 3000) / 1000,
         ease: 'none',
         repeat: -1,
     });
     
-    const index = this.animations.findIndex(a => a.targets().includes(gradient));
-    if (index !== -1) {
-      this.animations[index] = animation;
-    } else {
-      this.animations.push(animation);
-    }
+    this.animations.set(entityId, animation);
   }
 
   renderDefs(): SVGTemplateResult {
@@ -125,22 +177,31 @@ export class GraphElement extends LayoutElement {
       return null;
     }
     
-    const entityIds = this.entityConfigs.map(config => config.id);
-    const hasData = entityIds.some(id => this.historyMap[id] && this.historyMap[id].length >= 2);
-
-    if (!hasData) {
+    const allEntityIds = this.entityConfigs.map(config => config.id);
+    
+    if (!this.hasSufficientData(allEntityIds)) {
       const textX = this.layout.x + 10;
       const textY = this.layout.y + 20;
       return svg`<text x="${textX}" y="${textY}" fill="orange">Insufficient data</text>`;
     }
 
+    const visibleEntityConfigs = this.entityConfigs.filter(config => {
+        const stateName = `${this.id}_${config.id}_visible`;
+        return stateManager.getState(stateName) !== 'hidden';
+    });
     const allPoints = this.calculateAllPoints();
-    const paths = this.entityConfigs.map((config, index) => {
+
+    const paths = visibleEntityConfigs.map((config) => {
       const points = allPoints[config.id];
       if (!points || points.length < 2) return null;
 
       const path = points.map((p, i) => (i === 0 ? 'M' : 'L') + `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
-      const gradientId = this.gradientIds[index % this.gradientIds.length];
+      const originalIndex = this.entityConfigs.findIndex(ec => ec.id === config.id);
+      const gradientId = this.gradientIds[originalIndex % this.gradientIds.length];
+
+      if (config.animated === false) {
+        return svg`<path d="${path}" fill="none" stroke="${config.color || lineGradients[originalIndex % lineGradients.length].color}" stroke-width="4" />`;
+      }
       
       return svg`<path d="${path}" fill="none" stroke="url(#${gradientId})" stroke-width="4" />`;
     }).filter(p => p !== null);
@@ -158,6 +219,10 @@ export class GraphElement extends LayoutElement {
         ${paths}
       </g>
     `;
+  }
+
+  private hasSufficientData(entityIds: string[]): boolean {
+    return entityIds.some(id => this.historyMap[id] && this.historyMap[id].length >= 2);
   }
 
   private renderGridLines(): SVGTemplateResult | null {
@@ -181,7 +246,7 @@ export class GraphElement extends LayoutElement {
         <line 
           x1="${this.layout.x}" y1="${y}" 
           x2="${this.layout.x + this.layout.width}" y2="${y}" 
-          stroke="${this.props.appearance?.fill ?? '#0b6288'}" stroke-width="2" stroke-opacity="0.5" />
+          stroke="${this.props.grid?.fill ?? '#0b6288'}" stroke-width="2" stroke-opacity="0.5" />
       `);
 
       const textX = this.layout.x + 5;
@@ -192,7 +257,7 @@ export class GraphElement extends LayoutElement {
           y="${y}"
           dominant-baseline="middle"
           font-family="Antonio, sans-serif"
-          fill="${this.props.textColor ?? 'white'}"
+          fill="${this.props.grid?.label_fill ?? 'white'}"
           font-size="14px"
           text-anchor="start"
         >

@@ -30,6 +30,10 @@ export interface StatefulColorConfig {
   default?: any; // default color (static string, array, or dynamic config)
   hover?: any; // hover color (static string, array, or dynamic config)
   active?: any; // active/pressed color (static string, array, or dynamic config)
+  toggled_off?: any;
+  toggled_off_hover?: any;
+  state_map?: Record<string, string>;
+  state_name?: string;
 }
 
 export type ColorValue = string | number[] | DynamicColorConfig | StatefulColorConfig;
@@ -152,7 +156,7 @@ export interface StretchTargetConfig {
 
 export interface Action {
   // Core action type
-  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'none' | 'set_state' | 'toggle_state';
+  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'none' | 'set_state' | 'toggle_state' | 'toggle_line_visibility';
   
   // Home Assistant service actions
   service?: string;
@@ -170,6 +174,8 @@ export interface Action {
   
   // Custom state management actions
   target_element_ref?: string;
+  target_id?: string;
+  entity_id?: string;
   state?: string;
   states?: string[];
   actions?: Action[]; // For multi-action sequences

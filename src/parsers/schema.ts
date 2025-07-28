@@ -205,6 +205,8 @@ const elementSchema = z.object({
   type: elementTypeEnum,
   grid: z.object({
     num_lines: z.number().optional(),
+    fill: colorValueSchema.optional(),
+    label_fill: colorValueSchema.optional(),
   }).optional(),
   appearance: appearanceSchema.optional(),
   text: textSchema.optional(),
@@ -224,6 +226,9 @@ const elementSchema = z.object({
             z.object({
                 id: z.string(),
                 color: z.string().optional(),
+                toggleable: z.boolean().optional(),
+                animated: z.boolean().optional(),
+                duration: z.number().optional(),
             }),
         ])
     ),

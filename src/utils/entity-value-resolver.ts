@@ -41,6 +41,10 @@ export class EntityValueResolver {
     return entityStateObj?.attributes?.friendly_name || fallback || entityId;
   }
 
+  static formatEntityIdAsDisplayText(entityId: string): string {
+    return entityId.split('.').pop()?.replace(/_/g, ' ') || "";
+  }
+
   static entityStateChanged(
     entityId: string,
     attribute: string = 'state',

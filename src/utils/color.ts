@@ -1,6 +1,7 @@
 import { ColorValue, StatefulColorConfig, isDynamicColorConfig, isStatefulColorConfig } from '../types';
 import { AnimationContext } from './animation';
 import { colorResolver } from './color-resolver';
+import { stateManager } from './state-manager';
 
 export type ColorState = 'default' | 'hover' | 'active';
 
@@ -133,6 +134,24 @@ export class Color {
   ): ColorValue | undefined {
     if (stateContext?.isCurrentlyActive && statefulConfig.active !== undefined) {
       return statefulConfig.active;
+    }
+
+    if (statefulConfig.state_name && statefulConfig.state_map) {
+        const currentState = stateManager.getState(statefulConfig.state_name);
+        const colorStateKey = currentState ? statefulConfig.state_map[currentState] : undefined;
+
+        if (colorStateKey) {
+            // Type-safe access to dynamic properties by casting to Record<string, any>
+            const configAsRecord = statefulConfig as Record<string, any>;
+            const hoverKey = `${colorStateKey}_hover`;
+            
+            if (stateContext?.isCurrentlyHovering && configAsRecord[hoverKey] !== undefined) {
+                return configAsRecord[hoverKey];
+            }
+            if (configAsRecord[colorStateKey] !== undefined) {
+                return configAsRecord[colorStateKey];
+            }
+        }
     }
     
     if (stateContext?.isCurrentlyHovering && statefulConfig.hover !== undefined) {

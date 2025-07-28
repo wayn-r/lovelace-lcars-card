@@ -6,6 +6,7 @@ import { GSDevTools } from 'gsap/GSDevTools';
 import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
 import { CustomEase } from 'gsap/CustomEase';
 import { AnimationSequence as AnimationSequenceDefinition } from '../types.js';
+import { ColorResolver } from './color-resolver.js';
 
 export interface AnimationContext {
   elementId: string;
@@ -669,7 +670,7 @@ export class ColorAnimationUtils {
     const g = Math.round(fromRgb.g + (toRgb.g - fromRgb.g) * progress);
     const b = Math.round(fromRgb.b + (toRgb.b - fromRgb.b) * progress);
     
-    return this.rgbToHex(r, g, b);
+    return ColorResolver.convertRgbToHex([r, g, b]);
   }
 
   static parseColorToRgb(color: string): { r: number; g: number; b: number } | null {
@@ -694,13 +695,7 @@ export class ColorAnimationUtils {
     return null;
   }
 
-  private static rgbToHex(r: number, g: number, b: number): string {
-    const toHex = (value: number) => {
-      const hex = Math.round(Math.max(0, Math.min(255, value))).toString(16);
-      return hex.length === 1 ? '0' + hex : hex;
-    };
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-  }
+
 }
 
 export const animationManager = new AnimationManager();

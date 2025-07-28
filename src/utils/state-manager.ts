@@ -23,6 +23,10 @@ export class StateManager {
     }
   }
 
+  registerState(name: string, value: any): void {
+    this.store.registerState(name, value);
+  }
+
   initializeElementState(
     elementId: string, 
     stateConfig?: ElementStateManagementConfig,

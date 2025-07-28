@@ -6,6 +6,62 @@ import { Group } from '../layout/engine.js';
 import { Color, ColorStateContext, ComputedElementColors, ColorResolutionDefaults } from './color.js';
 
 export class ColorResolver {
+  static lightenColor(color: string, percent: number): string {
+    return ColorResolver.adjustBrightness(color, percent);
+  }
+
+  static darkenColor(color: string, percent: number): string {
+    return ColorResolver.adjustBrightness(color, -percent);
+  }
+
+  static parseColorToRgb(colorStr: string): [number, number, number] | null {
+    if (!colorStr) return null;
+
+    const hexMatch = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(colorStr);
+    if (hexMatch) {
+      let hex = hexMatch[1];
+      if (hex.length === 3) {
+        hex = hex.split('').map(ch => ch + ch).join('');
+      }
+      const intVal = parseInt(hex, 16);
+      return [
+        (intVal >> 16) & 255,
+        (intVal >> 8) & 255,
+        intVal & 255,
+      ];
+    }
+
+    const rgbMatch = /^rgba?\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})(?:,\s*[\d.]+)?\)$/i.exec(colorStr);
+    if (rgbMatch) {
+      return [parseInt(rgbMatch[1], 10), parseInt(rgbMatch[2], 10), parseInt(rgbMatch[3], 10)];
+    }
+
+    return null;
+  }
+
+  static convertRgbToHex(rgb: [number, number, number]): string {
+    return `#${rgb.map(c => {
+      const hex = c.toString(16);
+      return hex.length === 1 ? `0${hex}` : hex;
+    }).join('')}`;
+  }
+
+  static adjustBrightness(color: string, percent: number): string {
+    const rgb = ColorResolver.parseColorToRgb(color);
+    if (!rgb) return color;
+
+    const amount = Math.floor(255 * (percent / 100));
+
+    const newRgb = rgb.map(c => {
+      const newColor = c + amount;
+      if (newColor > 255) return 255;
+      if (newColor < 0) return 0;
+      return newColor;
+    }) as [number, number, number];
+
+    return ColorResolver.convertRgbToHex(newRgb);
+  }
+
   resolveAllElementColors(
     elementId: string,
     elementProps: LayoutElementProps,
@@ -422,8 +478,8 @@ export class ColorResolver {
       return normaliseColor(config.mapping[String(lower)]) || normaliseColor(config.default) || fallback;
     }
 
-    const lowerColor = this.parseToRgb(normaliseColor(config.mapping[String(lower)]));
-    const upperColor = this.parseToRgb(normaliseColor(config.mapping[String(upper)]));
+    const lowerColor = ColorResolver.parseColorToRgb(normaliseColor(config.mapping[String(lower)]) || '');
+    const upperColor = ColorResolver.parseColorToRgb(normaliseColor(config.mapping[String(upper)]) || '');
 
     if (!lowerColor || !upperColor) {
       return normaliseColor(config.default) || fallback;
@@ -433,31 +489,7 @@ export class ColorResolver {
     const interp = lowerColor.map((c, idx) => Math.round(c + (upperColor[idx] - c) * ratio));
     return `rgb(${interp[0]},${interp[1]},${interp[2]})`;
   }
-
-  private parseToRgb(colorStr: string | undefined): [number, number, number] | undefined {
-    if (!colorStr) return undefined;
-
-    const hexMatch = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(colorStr);
-    if (hexMatch) {
-      let hex = hexMatch[1];
-      if (hex.length === 3) {
-        hex = hex.split('').map(ch => ch + ch).join('');
-      }
-      const intVal = parseInt(hex, 16);
-      return [
-        (intVal >> 16) & 255,
-        (intVal >> 8) & 255,
-        intVal & 255,
-      ];
-    }
-
-    const rgbMatch = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i.exec(colorStr);
-    if (rgbMatch) {
-      return [parseInt(rgbMatch[1], 10), parseInt(rgbMatch[2], 10), parseInt(rgbMatch[3], 10)];
-    }
-
-    return undefined;
-  }
 }
 
 export const colorResolver = new ColorResolver();
+
