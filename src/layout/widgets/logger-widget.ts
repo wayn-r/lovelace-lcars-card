@@ -647,6 +647,10 @@ export class LoggerWidget extends Widget {
       ...this.entries.map(entry => entry.textElement)
     ];
   }
+
+  public getLayoutConfig() {
+    return this.layoutConfig;
+  }
 }
 
 WidgetRegistry.registerWidget('logger-widget', (id, props, layoutConfig, hass, reqUpd, getEl) => {
