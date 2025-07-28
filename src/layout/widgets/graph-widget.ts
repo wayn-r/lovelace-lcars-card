@@ -33,7 +33,7 @@ class GraphButtonFactory {
   ): RectangleElement {
     const { entityConfig, index, dimensions, parentGraphId } = config;
     
-    const stateName = `${parentGraphId}_graph_${entityConfig.id}_visible`;
+    const stateName = `${parentGraphId}_${entityConfig.id}_visible`;
     const buttonColor = this.determineButtonColor(entityConfig, index);
     
     const buttonProps = this.createButtonProps(buttonColor, entityConfig.id, stateName, dimensions.height);
@@ -137,7 +137,7 @@ class GraphButtonFactory {
       width: dimensions.width,
       height: dimensions.height,
       anchor: {
-        anchorTo: `${parentGraphId}_graph`,
+        anchorTo: parentGraphId,
         anchorPoint: 'topLeft',
         targetAnchorPoint: 'topRight',
       },
@@ -215,7 +215,7 @@ export class GraphWidget extends Widget {
 
   private initializeEntityStates(): void {
     this.entityConfigs.forEach(config => {
-      const stateName = `${this.id}_graph_${config.id}_visible`;
+      const stateName = `${this.id}_${config.id}_visible`;
       if (stateManager.getState(stateName) === undefined) {
         stateManager.registerState(stateName, "visible");
       }
@@ -224,7 +224,7 @@ export class GraphWidget extends Widget {
 
   private createGraphElement(): void {
     this.graphElement = new GraphElement(
-      `${this.id}_graph`,
+      this.id,
       this.props,
       this.layoutConfig,
       this.hass,

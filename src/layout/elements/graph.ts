@@ -46,6 +46,11 @@ export class GraphElement extends LayoutElement {
         if (event.elementId.startsWith(stateNamePrefix) && event.elementId.endsWith(stateNameSuffix)) {
             const entityId = event.elementId.substring(stateNamePrefix.length, event.elementId.length - stateNameSuffix.length);
             
+            // Ensure we are not accidentally picking up a state change from a widget with a similar name
+            if (!this.entityConfigs.some(config => config.id === entityId)) {
+                return;
+            }
+
             if (event.toState === 'visible') {
                 this.startEntityAnimation(entityId);
             } else if (event.toState === 'hidden') {
@@ -121,7 +126,7 @@ export class GraphElement extends LayoutElement {
         return;
     }
 
-    gsap.set(gradient, { attr: { spreadMethod: 'none' } });
+    gsap.set(gradient, { attr: { spreadMethod: 'pad' } });
     const animation = gsap.fromTo(gradient, 
         { attr: { x1: '-100%', x2: '0%' } },
         { 

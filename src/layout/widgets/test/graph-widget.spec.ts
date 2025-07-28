@@ -73,7 +73,7 @@ describe('GraphWidget', () => {
       const elements = widget.expand();
       expect(elements).toHaveLength(2); // Graph + 1 toggle button (single entities are toggleable by default)
       expect(elements[0]).toBeInstanceOf(GraphElement);
-      expect(elements[0].id).toBe('test_graph_graph');
+      expect(elements[0].id).toBe('test_graph');
     });
 
     it('should create widget with array of string entities', () => {
@@ -125,7 +125,7 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      expect(elements[0].id).toBe('id_test_graph_graph');
+      expect(elements[0].id).toBe('id_test_graph');
       expect(elements[1].id).toBe('id_test_graph_button_0');
       expect(elements[2].id).toBe('id_test_graph_button_1');
     });
@@ -215,12 +215,12 @@ describe('GraphWidget', () => {
         mockGetShadowElement
       );
 
-      expect(stateManager.getState('state_test_graph_sensor.temperature_visible')).toBe('visible');
-      expect(stateManager.getState('state_test_graph_sensor.humidity_visible')).toBe('visible');
+      expect(stateManager.getState('state_test_sensor.temperature_visible')).toBe('visible');
+      expect(stateManager.getState('state_test_sensor.humidity_visible')).toBe('visible');
     });
 
     it('should not reinitialize existing states', () => {
-      const stateName = 'existing_state_test_graph_sensor.temperature_visible';
+      const stateName = 'existing_state_test_sensor.temperature_visible';
       stateManager.registerState(stateName, 'hidden');
 
       widget = new GraphWidget(
@@ -315,7 +315,7 @@ describe('GraphWidget', () => {
       
       expect(button.props.button?.enabled).toBe(true);
       expect(button.props.button?.actions?.tap?.action).toBe('toggle_state');
-      expect(button.props.button?.actions?.tap?.target_element_ref).toBe('toggle_func_test_graph_sensor.temperature_visible');
+      expect(button.props.button?.actions?.tap?.target_element_ref).toBe('toggle_func_test_sensor.temperature_visible');
       expect(button.props.button?.actions?.tap?.states).toEqual(['visible', 'hidden']);
     });
   });
@@ -411,7 +411,7 @@ describe('GraphWidget', () => {
       const button = elements[1] as RectangleElement;
       
       expect(button.layoutConfig.anchor).toEqual({
-        anchorTo: 'anchor_test_graph',
+        anchorTo: 'anchor_test',
         anchorPoint: 'topLeft',
         targetAnchorPoint: 'topRight'
       });
@@ -646,7 +646,7 @@ describe('GraphWidget', () => {
 
       const graphElement = (widget as any).graphElement;
       
-      expect(graphElement.id).toBe('param_test_graph');
+      expect(graphElement.id).toBe('param_test');
       expect(graphElement.props).toBe(props);
       expect(graphElement.layoutConfig).toBe(layoutConfig);
       expect(graphElement.hass).toBe(mockHass);
