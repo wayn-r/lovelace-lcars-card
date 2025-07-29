@@ -1,0 +1,144 @@
+# Lovelace LCARS Card Configuration Example
+#
+# This example demonstrates various configurations for the graph widget.
+# Each graph includes up to 5 entities with different options.
+# All animateds are disabled for consistent automated testing.
+
+type: custom:lovelace-lcars-card
+card_title: Graph Widget Examples
+
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: graph-widget-lines
+          right_content: example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+
+  - group_id: graphs
+    elements:
+      - id: graph_1
+        type: graph-widget
+        layout:
+          height: 150
+          width: 450
+          offsetY: 20
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+        entity:
+          - id: sensor.living_room_temperature
+            animated: false
+            color: "#CC66FF"
+          - id: sensor.living_room_humidity
+            animated: false
+            color: "#FF66CC"
+          - id: sensor.kevv_temperature
+            animated: false
+            color: "#66FFCC"
+          - id: sensor.kevv_relative_humidity
+            animated: false
+            color: "#66CCFF"
+          - id: sensor.ep1_kitchen_temperature
+            animated: false
+            color: "#FFCC66"
+
+  - group_id: graph_2
+    elements:
+      - id: graph_2
+        type: graph-widget
+        layout:
+          height: 150
+          width: 450
+          offsetY: 20
+          anchor:
+            to: graphs.graph_1
+            element_point: topLeft
+            target_point: bottomLeft
+        entity:
+          - id: sensor.living_room_temperature
+            animated: false
+            color: "#CC66FF" # Reverting to match graph_1 entity color
+
+  - group_id: graph_3
+    elements:
+      - id: graph_3
+        type: graph-widget
+        layout:
+          height: 150
+          width: 450
+          offsetY: 20
+          anchor:
+            to: graph_2.graph_2
+            element_point: topLeft
+            target_point: bottomLeft
+        entity:
+          - id: sensor.living_room_humidity
+            animated: false
+            color: "#FF66CC" # Reverting to match graph_1 entity color
+
+  - group_id: graph_4
+    elements:
+      - id: graph_4
+        type: graph-widget
+        layout:
+          height: 150
+          width: 450
+          offsetY: 20
+          anchor:
+            to: graph_3.graph_3
+            element_point: topLeft
+            target_point: bottomLeft
+        entity:
+          - id: sensor.kevv_temperature
+            animated: false
+            color: "#66FFCC" # Reverting to match graph_1 entity color
+
+  - group_id: graph_5
+    elements:
+      - id: graph_5
+        type: graph-widget
+        layout:
+          height: 150
+          width: 450
+          offsetY: 20
+          anchor:
+            to: graph_4.graph_4
+            element_point: topLeft
+            target_point: bottomLeft
+        entity:
+          - id: sensor.kevv_relative_humidity
+            animated: false
+            color: "#66CCFF" # Reverting to match graph_1 entity color
+
+  - group_id: graph_6
+    elements:
+      - id: graph_6
+        type: graph-widget
+        layout:
+          height: 150
+          width: 450
+          offsetY: 20
+          anchor:
+            to: graph_5.graph_5
+            element_point: topLeft
+            target_point: bottomLeft
+        entity:
+          - id: sensor.ep1_kitchen_temperature
+            animated: false
+            color: "#FFCC66" # Reverting to match graph_1 entity color
