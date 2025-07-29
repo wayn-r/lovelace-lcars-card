@@ -8,7 +8,6 @@ groups:
         text:
           left_content: U.S.S. HERCULES / WILLEMETTE CLASS
           right_content: NCC-1901
-          fontWeight: bold
           fill: "#7addee"
         appearance:
           fill: "#04bfd8"
@@ -78,8 +77,8 @@ groups:
           armHeight: 40
           fill: "#12a4e3"
         layout:
-          width: 145
-          height: 55
+          width: 25%
+          height: 60
           offsetY: 10
           anchor:
             to: top-header.top-header
@@ -112,24 +111,44 @@ groups:
             to: sub-header.elbow
             element_point: topLeft
             target_point: bottomLeft
+      - id: logger
+        type: logger-widget
+        text:
+          max_lines: 6
+          text_color: "#12a4e3"
+          text_anchor: start
+          fontSize: 22
+          textTransform: uppercase
+        layout:
+          width: 400
+          height: 200
+          offsetY: 10
+          anchor:
+            to: sub-header.header-bar
+            element_point: topLeft
+            target_point: bottomLeft
       - id: bar-1
         type: rectangle
         appearance:
           fill: "#044ea9"
         layout:
-          width: 10%
+          width: 5
           height: 15
           offsetX: 5
           anchor:
             to: environmental-header.elbow
             element_point: bottomLeft
             target_point: bottomRight
+          stretch:
+            target1:
+              id: sub-header.elbow
+              edge: right
       - id: bar-2
         type: rectangle
         appearance:
           fill: "#5ca8ea"
         layout:
-          width: 55%
+          width: 10%
           height: 15
           offsetX: 5
           anchor:
@@ -153,7 +172,7 @@ groups:
         appearance:
           fill: "#12a4e3"
         layout:
-          width: 300
+          width: 40
           height: 15
           offsetX: 5
           anchor:
@@ -171,6 +190,7 @@ groups:
           fill: "#5ca8ea"
         label:
           fontFamily: Antonio
+          content: current conditions
         value:
           fontFamily: Antonio
           fill: "#3ad9e7"
@@ -178,9 +198,8 @@ groups:
         layout:
           height: 25
           offsetY: -160
-          offsetX: -400
           anchor:
-            to: environmental-header.bar-2
+            to: environmental-header.bar-3
             element_point: bottomLeft
             target_point: topRight
       - id: current-temp-widget
@@ -377,6 +396,12 @@ groups:
             to: environmental-buttons.ship_map
             element_point: topLeft
             target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: toggle
+              entity: input_boolean.message_logger_debug_toggle
   - group_id: environmental-lower-section
     elements:
       - id: bar-1
@@ -406,3 +431,36 @@ groups:
             to: environmental-lower-section.bar-1
             element_point: topLeft
             target_point: topRight
+      - id: graph
+        type: graph-widget
+        text:
+          fill: "#FFF"
+        appearance:
+          fill: "#0B6288"
+        entity:
+          - id: sensor.living_room_temperature
+            color: "#FF66CC"
+            animated: false
+          - id: sensor.living_room_humidity
+            color: "#FF3366"
+            duration: 1000
+          - id: sensor.kevv_temperature
+            color: "#CCFF66"
+            duration: 2000
+          - id: sensor.kevv_relative_humidity
+            color: "#CC66FF"
+            duration: 3000
+          - id: sensor.ep1_kitchen_temperature
+            color: "#EE00FF"
+            toggleable: false
+            animated: false
+        grid:
+          num_lines: 5
+        layout:
+          width: 500
+          height: 150
+          offsetY: 20
+          anchor:
+            to: environmental-lower-section.bar-1
+            element_point: topLeft
+            target_point: bottomLeft
