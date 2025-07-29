@@ -1,0 +1,65 @@
+lcars_theme:
+  # General Colors
+  lcars-color-light-cyan: "#7addee"
+  lcars-color-cyan: "#04bfd8"
+  lcars-color-aqua: "#3ad9e7"
+  lcars-color-blue: "#5ca8ea"
+  lcars-color-dark-blue: "#044ea9"
+  lcars-color-dark-teal: "#225782"
+  lcars-color-black: "#000000"
+  lcars-color-hover-blue: "#00CCFF"
+  lcars-color-default-cyan: "#00ffff"
+  lcars-color-active-blue: "#0066AA"
+  lcars-color-light-grey-blue: "#9ec9ce"
+  lcars-color-dodger-blue: "#12a4e3"
+  lcars-color-light-sky-blue: "#86c8ff"
+  lcars-color-turquoise: "#3ad8e6"
+  lcars-color-teal: "#0B6288"
+  lcars-color-white: "#FFFFFF"
+  lcars-color-dark-turquoise: "#04bfd8"
+
+  # Logger Widget Colors
+  lcars-color-logger-bright: var(--lcars-color-light-sky-blue)
+  lcars-color-logger-medium: var(--lcars-color-dodger-blue)
+  lcars-color-logger-dark: var(--lcars-color-teal)
+
+  # Entity Text Widget Colors
+  lcars-color-entity-text: var(--lcars-color-blue)
+
+  # Graph Widget Colors
+  lcars-color-graph-background: var(--lcars-color-teal)
+  lcars-color-graph-line-1: var(--lcars-color-dodger-blue)
+  lcars-color-graph-line-2: var(--lcars-color-light-sky-blue)
+  lcars-color-graph-line-3: var(--lcars-color-dark-turquoise)
+
+  # Environmental Config Colors
+  lcars-color-environmental-main-header-text: var(--lcars-color-blue)
+  lcars-color-environmental-main-header-bar: var(--lcars-color-aqua)
+  lcars-color-environmental-main-header-elbow-1: var(--lcars-color-dodger-blue)
+  lcars-color-environmental-main-header-elbow-2: var(--lcars-color-blue)
+  lcars-color-environmental-main-header-lower-bar-1: var(--lcars-color-dark-blue)
+  lcars-color-environmental-main-header-lower-bar-2: var(--lcars-color-blue)
+  lcars-color-environmental-main-header-lower-bar-3: var(--lcars-color-light-sky-blue)
+  lcars-color-environmental-main-header-lower-bar-4: var(--lcars-color-dodger-blue)
+
+  lcars-color-environmental-button-1: var(--lcars-color-turqoise)
+  lcars-color-environmental-button-2: var(--lcars-color-light-cyan)
+  lcars-color-environmental-button-3: var(--lcars-color-grey-blue)
+  lcars-color-environmental-button-4: var(--lcars-color-aqua)
+  lcars-color-environmental-button-5: var(--lcars-color-light-cyan)
+
+  lcars-color-environmental-entity-text-1: var(--lcars-color-blue)
+  lcars-color-environmental-entity-text-2: var(--lcars-color-dodger-blue)
+  lcars-color-environmental-entity-text-3: var(--lcars-color-dark-teal)
+  lcars-color-environmental-entity-text-4: var(--lcars-color-cyan)
+
+  lcars-color-environmental-top-header-text: var(--lcars-color-light-cyan)
+  lcars-color-environmental-top-header-bar: var(--lcars-color-aqua)
+
+  lcars-color-environmental-graph-1: var(--lcars-color-graph-line-1)
+  lcars-color-environmental-graph-2: var(--lcars-color-graph-line-2)
+  lcars-color-environmental-graph-3: var(--lcars-color-graph-line-3)
+
+  lcars-color-environmental-logger-bright: var(--lcars-color-logger-bright)
+  lcars-color-environmental-logger-medium: var(--lcars-color-logger-medium)
+  lcars-color-environmental-logger-dark: var(--lcars-color-logger-dark)
