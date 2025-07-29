@@ -1,6 +1,6 @@
 import { ColorValue, StatefulColorConfig, isDynamicColorConfig, isStatefulColorConfig } from '../types';
 import { AnimationContext } from './animation';
-import { colorResolver } from './color-resolver';
+import { colorResolver, ColorResolver } from './color-resolver';
 import { stateManager } from './state-manager';
 
 export type ColorState = 'default' | 'hover' | 'active';
@@ -75,7 +75,7 @@ export class Color {
           undefined,
           'transparent'
         );
-        return resolved || this._getStaticFallbackColor();
+        return (resolved ?? '') || this._getStaticFallbackColor(elementId ? animationContext?.getShadowElement?.(elementId) || undefined : undefined);
       } else {
         const resolved = colorResolver.resolveColor(
           this._value,
@@ -85,11 +85,11 @@ export class Color {
           undefined,
           'transparent'
         );
-        return resolved || this._getStaticFallbackColor();
+        return (resolved ?? '') || this._getStaticFallbackColor(elementId ? animationContext?.getShadowElement?.(elementId) || undefined : undefined);
       }
     }
 
-    return this._formatStaticColorValue(this._value) || this._fallback;
+    return this._formatStaticColorValue(this._value, elementId ? animationContext?.getShadowElement?.(elementId) || undefined : undefined) || this._fallback;
   }
 
   get value(): ColorValue {
@@ -112,12 +112,12 @@ export class Color {
     return !this.isDynamic && !this.hasInteractiveStates;
   }
 
-  toStaticString(): string {
+  toStaticString(element: Element): string {
     if (this.isStatic) {
-      return this._formatStaticColorValue(this._value) || this._fallback;
+      return this._formatStaticColorValue(this._value, element) || this._fallback;
     }
     
-    return this._getStaticFallbackColor();
+    return this._getStaticFallbackColor(element);
   }
 
   withFallback(newFallback: string): Color {
@@ -125,7 +125,12 @@ export class Color {
   }
 
   toString(): string {
-    return this.toStaticString();
+    if (typeof this._value === 'string') {
+      return this._value;
+    } else if (Array.isArray(this._value) && this._value.length === 3 && this._value.every(component => typeof component === 'number')) {
+      return `rgb(${this._value[0]},${this._value[1]},${this._value[2]})`;
+    }
+    return this._fallback;
   }
 
   private _resolveStateBasedColorValue(
@@ -161,9 +166,31 @@ export class Color {
     return statefulConfig.default;
   }
 
-  private _formatStaticColorValue(color: ColorValue): string | undefined {
+  private _formatStaticColorValue(color: ColorValue, element?: Element): string {
     if (typeof color === 'string' && color.trim().length > 0) {
-      return color.trim();
+        const trimmedColor = color.trim();
+
+        const lightenMatch = trimmedColor.match(/^lighten\((.+),\s*(\d+%?)\)$/);
+        if (lightenMatch && element) {
+            const baseColor = this._formatStaticColorValue(lightenMatch[1], element);
+            const percent = parseFloat(lightenMatch[2]);
+            if (ColorResolver.isColor(baseColor)) {
+                const resolvedBaseColor = ColorResolver.resolveCssVariable(baseColor, element);
+                return ColorResolver.calculateLightenColor(resolvedBaseColor, percent);
+            }
+        }
+
+        const darkenMatch = trimmedColor.match(/^darken\((.+),\s*(\d+%?)\)$/);
+        if (darkenMatch && element) {
+            const baseColor = this._formatStaticColorValue(darkenMatch[1], element);
+            const percent = parseFloat(darkenMatch[2]);
+            if (ColorResolver.isColor(baseColor)) {
+                const resolvedBaseColor = ColorResolver.resolveCssVariable(baseColor, element);
+                return ColorResolver.calculateDarkenColor(resolvedBaseColor, percent);
+            }
+        }
+        
+        return trimmedColor; // Ensure a string is always returned if it's a string color
     }
     
     if (Array.isArray(color) && 
@@ -172,18 +199,18 @@ export class Color {
       return `rgb(${color[0]},${color[1]},${color[2]})`;
     }
     
-    return undefined;
+    return this._fallback; // Final fallback to ensure string return
   }
 
-  private _getStaticFallbackColor(): string {
+  private _getStaticFallbackColor(element?: Element): string {
     if (isDynamicColorConfig(this._value) && this._value.default !== undefined) {
-      const defaultColor = this._formatStaticColorValue(this._value.default);
-      if (defaultColor) return defaultColor;
+      const defaultColor = this._formatStaticColorValue(this._value.default, element);
+      return defaultColor; 
     }
     
     if (isStatefulColorConfig(this._value) && this._value.default !== undefined) {
-      const defaultColor = this._formatStaticColorValue(this._value.default);
-      if (defaultColor) return defaultColor;
+      const defaultColor = this._formatStaticColorValue(this._value.default, element);
+      return defaultColor; 
     }
     
     return this._fallback;

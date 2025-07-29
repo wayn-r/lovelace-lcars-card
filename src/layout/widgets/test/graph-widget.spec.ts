@@ -297,7 +297,7 @@ describe('GraphWidget', () => {
       const buttons = elements.slice(1) as RectangleElement[];
       
       expect(buttons[0].props.fill.default).toBe('#FF0000');
-      expect(buttons[1].props.fill.default).toBe('#FF9900'); // Second lineGradient color (Orange)
+      expect(buttons[1].props.fill.default).toBe('var(--lcars-color-graph-line-2)');
     });
 
     it('should create buttons with toggle functionality', () => {

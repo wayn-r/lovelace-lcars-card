@@ -7,14 +7,12 @@ import { stateManager } from '../../utils/state-manager.js';
 import { StateChangeEvent } from '../../core/store.js';
 import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
 import { HomeAssistant } from 'custom-card-helpers';
+import { ColorResolver } from '../../utils/color-resolver.js';
 
 export const lineGradients = [
-    { color: '#0b6288' }, // Blue
-    { color: '#FF9900' }, // Orange
-    { color: '#FF6666' }, // Red
-    { color: '#66FF66' }, // Green
-    { color: '#9966FF' }, // Purple
-    { color: '#FFFF66' }, // Yellow
+    { color: 'var(--lcars-color-graph-line-1)' },
+    { color: 'var(--lcars-color-graph-line-2)' },
+    { color: 'var(--lcars-color-graph-line-3)' },
 ];
 
 export interface RichEntityConfig {
@@ -205,7 +203,7 @@ export class GraphElement extends LayoutElement {
       const gradientId = this.gradientIds[originalIndex % this.gradientIds.length];
 
       if (config.animated === false) {
-        return svg`<path d="${path}" fill="none" stroke="${config.color || lineGradients[originalIndex % lineGradients.length].color}" stroke-width="4" />`;
+        return svg`<path d="${path}" fill="none" stroke="${ColorResolver.resolveCssVariable(config.color || lineGradients[originalIndex % lineGradients.length].color, this.getShadowElement?.(this.id) as Element)}" stroke-width="4" />`;
       }
       
       return svg`<path d="${path}" fill="none" stroke="url(#${gradientId})" stroke-width="4" />`;
@@ -251,7 +249,7 @@ export class GraphElement extends LayoutElement {
         <line 
           x1="${this.layout.x}" y1="${y}" 
           x2="${this.layout.x + this.layout.width}" y2="${y}" 
-          stroke="${this.props.grid?.fill ?? '#0b6288'}" stroke-width="2" stroke-opacity="0.5" />
+          stroke="${this.props.grid?.fill ?? 'var(--lcars-color-background)'}" stroke-width="2" stroke-opacity="0.5" />
       `);
 
       const textX = this.layout.x + 5;

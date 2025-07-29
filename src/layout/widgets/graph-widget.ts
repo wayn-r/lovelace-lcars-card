@@ -98,9 +98,9 @@ class GraphButtonFactory {
     return {
       fill: {
         default: buttonColor,
-        hover: ColorResolver.lightenColor(buttonColor, 20),
-        toggled_off: ColorResolver.darkenColor(buttonColor, 40),
-        toggled_off_hover: ColorResolver.lightenColor(ColorResolver.darkenColor(buttonColor, 40), 20),
+        hover: `lighten(${buttonColor}, 20)`,
+        toggled_off: `darken(${buttonColor}, 40)`,
+        toggled_off_hover: `lighten(darken(${buttonColor}, 40), 20)`,
         state_map: {
           "hidden": "toggled_off"
         },

@@ -9,6 +9,7 @@ import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
 import { loggerService } from '../../utils/logger-service.js';
 import { DistanceParser } from '../../utils/animation.js';
 import { animationManager, AnimationContext, AnimationConfig } from '../../utils/animation.js';
+import { ColorResolver } from '../../utils/color-resolver.js';
 import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { FontManager } from '../../utils/font-manager.js';
@@ -71,9 +72,11 @@ class LogEntryAnimator {
     const element = this.context.getShadowElement?.(this.elementId);
     if (!element) return Promise.resolve();
 
+    const resolvedEndColor = ColorResolver.resolveCssVariable(endColor, element);
+
     return new Promise<void>(resolve => {
       gsap.to(element, {
-        fill: endColor,
+        fill: resolvedEndColor,
         duration: 0.5,
         ease: 'power1.inOut',
         onComplete: resolve
@@ -84,7 +87,8 @@ class LogEntryAnimator {
   public resetColor(color: string): void {
     const element = this.context.getShadowElement?.(this.elementId);
     if (element) {
-      gsap.set(element, { fill: color });
+      const resolvedColor = ColorResolver.resolveCssVariable(color, element);
+      gsap.set(element, { fill: resolvedColor });
     }
   }
 
@@ -129,9 +133,9 @@ class LogEntryAnimator {
 
 class ColorStateManager {
   private static readonly DEFAULT_COLOR_CYCLE: ColorPhaseConfig[] = [
-    { color: '#86c8ff', duration: 5000 },
-    { color: '#12a4e3', duration: 5000 },
-    { color: '#0b6288', duration: 3000 },
+    { color: 'var(--lcars-color-logger-bright)', duration: 5000 },
+    { color: 'var(--lcars-color-logger-medium)', duration: 5000 },
+    { color: 'var(--lcars-color-logger-dark)', duration: 3000 },
   ];
 
   private timer: NodeJS.Timeout | undefined;
@@ -353,7 +357,7 @@ export class LoggerWidget extends Widget {
     FONT_FAMILY: 'Antonio',
     FONT_WEIGHT: 'normal',
     TEXT_ANCHOR: 'start' as const,
-    TEXT_COLOR: '#86c8ff'
+    TEXT_COLOR: 'var(--lcars-color-logger-bright-blue)'
   };
 
   private entries: LogEntry[] = [];

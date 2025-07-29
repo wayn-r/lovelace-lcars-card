@@ -70,7 +70,7 @@ export class EntityTextWidget extends Widget {
     return new RectangleElement(
       `${this.id}_leading_rect`,
       {
-        fill: appearanceConfig.fill || '#99CCFF',
+        fill: appearanceConfig.fill || 'var(--lcars-color-entity-text)',
         width: EntityTextWidget.LEADING_RECT_WIDTH,
         height: height
       },
@@ -95,7 +95,7 @@ export class EntityTextWidget extends Widget {
     return new RectangleElement(
       `${this.id}_label_rect`,
       {
-        fill: appearanceConfig.fill || '#99CCFF',
+        fill: appearanceConfig.fill || 'var(--lcars-color-entity-text)',
         width: labelConfig.width || EntityTextWidget.DEFAULT_LABEL_WIDTH,
         height: height,
         text: labelText,
@@ -131,7 +131,7 @@ export class EntityTextWidget extends Widget {
       `${this.id}_value_text`,
       {
         text: textContent,
-        fill: valueConfig.fill || '#FFFFFF',
+        fill: valueConfig.fill || 'var(--lcars-color-white)',
         fontFamily: valueConfig.fontFamily || 'Antonio',
         fontWeight: valueConfig.fontWeight || 'normal',
         textTransform: valueConfig.textTransform || 'uppercase'

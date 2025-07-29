@@ -7,11 +7,38 @@ import { Color, ColorStateContext, ComputedElementColors, ColorResolutionDefault
 
 export class ColorResolver {
   static lightenColor(color: string, percent: number): string {
-    return ColorResolver.adjustBrightness(color, percent);
+    return `lighten(${color}, ${percent})`;
   }
 
   static darkenColor(color: string, percent: number): string {
+    return `darken(${color}, ${percent})`;
+  }
+
+  static calculateLightenColor(color: string, percent: number): string {
+    return ColorResolver.adjustBrightness(color, percent);
+  }
+
+  static calculateDarkenColor(color: string, percent: number): string {
     return ColorResolver.adjustBrightness(color, -percent);
+  }
+
+  static resolveCssVariable(color: string, element: Element): string {
+    if (color && color.startsWith('var(')) {
+      const varName = color.match(/--[a-zA-Z0-9-]+/)?.[0];
+      if (varName) {
+        const resolvedColor = getComputedStyle(element).getPropertyValue(varName).trim();
+        if (resolvedColor) {
+          return resolvedColor;
+        }
+      }
+    }
+    return color;
+  }
+
+  static isColor(strColor: string): boolean {
+    const s = new Option().style;
+    s.color = strColor;
+    return s.color !== '';
   }
 
   static parseColorToRgb(colorStr: string): [number, number, number] | null {
