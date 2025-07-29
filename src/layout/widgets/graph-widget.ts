@@ -29,12 +29,14 @@ class GraphButtonFactory {
     config: GraphButtonConfig,
     hass?: HomeAssistant,
     requestUpdateCallback?: () => void,
-    getShadowElement?: (id: string) => Element | null
+    getShadowElement?: (id: string) => Element | null,
+    originalIndex?: number
   ): RectangleElement {
     const { entityConfig, index, dimensions, parentGraphId } = config;
     
     const stateName = `${parentGraphId}_${entityConfig.id}_visible`;
-    const buttonColor = this.determineButtonColor(entityConfig, index);
+    const colorIndex = originalIndex ?? index;
+    const buttonColor = this.determineButtonColor(entityConfig, colorIndex);
     
     const buttonProps = this.createButtonProps(buttonColor, entityConfig.id, stateName, dimensions.height);
     const layoutConfig = this.createButtonLayoutConfig(dimensions, index, parentGraphId);
@@ -182,8 +184,9 @@ export class GraphWidget extends Widget {
       this.determineGraphHeight()
     );
 
-    const buttonElements = toggleableButtons.map((config, index) => 
-      GraphButtonFactory.createToggleButton(
+    const buttonElements = toggleableButtons.map((config, index) => {
+      const originalIndex = this.entityConfigs.findIndex(c => c.id === config.id);
+      return GraphButtonFactory.createToggleButton(
         {
           entityConfig: config,
           index,
@@ -192,9 +195,10 @@ export class GraphWidget extends Widget {
         },
         this.hass,
         this.requestUpdateCallback,
-        this.getShadowElement
-      )
-    );
+        this.getShadowElement,
+        originalIndex
+      );
+    });
 
     return [this.graphElement, ...buttonElements];
   }
