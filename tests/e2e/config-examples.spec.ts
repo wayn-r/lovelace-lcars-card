@@ -8,6 +8,60 @@ import './test-helpers';
 import { mockSensorData } from './test-data';
 import os from 'os';
 
+function generateThemeCss(): string {
+  try {
+    const themePath = path.resolve(process.cwd(), 'common/lovelace_theme.yaml');
+    const themeYaml = fs.readFileSync(themePath, 'utf8');
+    const themeData = yaml.load(themeYaml) as Record<string, any>;
+    
+    // Extract the theme configuration (assuming it's under a key like 'lcars_theme')
+    const themeKey = Object.keys(themeData)[0];
+    const themeConfig = themeData[themeKey] as Record<string, string>;
+    
+    const resolvedColors: Record<string, string> = {};
+    const variableRegex = /var\((--[a-zA-Z0-9-]+)\)/;
+
+    function resolveValue(key: string, value: string): string {
+      if (resolvedColors[key]) {
+        return resolvedColors[key];
+      }
+
+      const match = value.match(variableRegex);
+      if (match) {
+        const varName = match[1];
+        const referencedKey = varName.replace(/^--/, '');
+        
+        const referencedValue = themeConfig[referencedKey];
+
+        if (referencedValue) {
+          const resolved = resolveValue(referencedKey, referencedValue);
+          resolvedColors[key] = resolved;
+          return resolved;
+        }
+      }
+      
+      resolvedColors[key] = value;
+      return value;
+    }
+
+    for (const [key, value] of Object.entries(themeConfig)) {
+      if (typeof value === 'string') {
+        resolveValue(key, value);
+      }
+    }
+    
+    // Generate CSS custom properties
+    const cssVariables = Object.entries(resolvedColors)
+      .map(([key, value]) => `  --${key}: ${value};`)
+      .join('\n');
+    
+    return `:root {\n${cssVariables}\n}`;
+  } catch (error) {
+    console.warn('Failed to load theme for e2e tests:', error);
+    return '';
+  }
+}
+
 const EXAMPLES_DIR = path.resolve(process.cwd(), 'yaml-config-examples');
 
 const exampleFiles = fs
@@ -140,6 +194,15 @@ for (const filePath of exampleFiles) {
       const url = await dashboard.link();
 
       await page.goto(url, { timeout: 60_000 });
+
+      // Inject theme CSS variables into the page
+      const themeCss = generateThemeCss();
+      if (themeCss) {
+        console.log('Injecting theme CSS into e2e test page...');
+        await page.addStyleTag({ content: themeCss });
+      } else {
+        console.warn('No theme CSS available for injection');
+      }
 
       const card = page.locator('lovelace-lcars-card').first();
 
