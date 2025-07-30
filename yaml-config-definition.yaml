@@ -20,9 +20,9 @@ groups: <array>                  # Required: Defines groups of elements. Element
                                    #   Full ID becomes "group_id.id" (e.g., "navigation.status_light").
         type: <string>             # Required: The type of LCARS element.
                                    #   Options: "rectangle", "text", "endcap", "elbow",
-                                   #            "chisel-endcap", "top_header", "logger-widget", "graph-widget".
+                                   #            "chisel-endcap", "top_header", "logger-widget", "graph-widget", "weather-icon".
         entity: <string|array>     # Optional: Home Assistant entity ID or array of entity IDs.
-                                   #   Required for 'graph-widget' and 'entity-text-widget'.
+                                   #   Required for 'graph-widget', 'entity-text-widget', and 'weather-icon'.
                                    #   For 'graph-widget', this can be:
                                    #     - A single entity ID string
                                    #     - An array of entity ID strings

@@ -63,3 +63,5 @@ lcars_theme:
   lcars-color-environmental-logger-bright: var(--lcars-color-logger-bright)
   lcars-color-environmental-logger-medium: var(--lcars-color-logger-medium)
   lcars-color-environmental-logger-dark: var(--lcars-color-logger-dark)
+
+  lcars-color-environmental-weather-icon: var(--lcars-color-dark-blue)

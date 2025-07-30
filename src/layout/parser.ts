@@ -5,6 +5,7 @@ import { RectangleElement } from './elements/rectangle.js';
 import { TextElement } from './elements/text.js';
 import { EndcapElement } from './elements/endcap.js';
 import { ElbowElement } from './elements/elbow.js';
+import { WeatherIcon } from './widgets/weather-icon';
 import { ChiselEndcapElement } from './elements/chisel_endcap.js';
 import { WidgetRegistry } from './widgets/registry.js';
 import { parseCardConfig, type ParsedConfig } from '../parsers/schema.js';
@@ -245,7 +246,8 @@ export class ConfigParser {
       'rectangle': RectangleElement,
       'endcap': EndcapElement,
       'elbow': ElbowElement,
-      'chisel-endcap': ChiselEndcapElement
+      'chisel-endcap': ChiselEndcapElement,
+      'weather-icon': WeatherIcon,
     };
 
     const normalizedType = type.toLowerCase().trim();

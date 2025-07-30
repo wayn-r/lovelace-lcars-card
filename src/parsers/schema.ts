@@ -198,6 +198,7 @@ const elementTypeEnum = z.enum([
   'entity-text-widget',
   'logger-widget',
   'graph-widget',
+  'weather-icon',
 ]).or(z.string()); // Allow unknown types for backwards compatibility
 
 const elementSchema = z.object({
@@ -252,12 +253,12 @@ const refinedElementSchema = elementSchema.refine(data => {
         }
         return typeof data.entity === 'string' && data.entity.length > 0;
     }
-    if (data.type === 'entity-text-widget') {
+    if (data.type === 'entity-text-widget' || data.type === 'weather-icon') {
         return typeof data.entity === 'string' && data.entity.length > 0;
     }
     return true;
 }, {
-    message: "For 'graph-widget', 'entity' must be a non-empty string or a non-empty array of valid entities (string or object with id). For 'entity-text-widget', 'entity' must be a non-empty string.",
+    message: "For 'graph-widget', 'entity' must be a non-empty string or a non-empty array of valid entities (string or object with id). For 'entity-text-widget' and 'weather-icon', 'entity' must be a non-empty string.",
     path: ['entity'],
 });
 
