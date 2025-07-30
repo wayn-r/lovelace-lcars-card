@@ -163,34 +163,60 @@ export class EntityTextWidget extends Widget {
 
     // Inject dynamic text updating when content is resolved from an entity.
     if (!valueConfig.content) {
-      const entityId = this.props.entity || '';
+      const entityIds = Array.isArray(this.props.entity) ? this.props.entity : [this.props.entity || ''];
       const attribute = this.props.attribute || 'state';
 
       valueText.updateHass = function (this: typeof valueText, hass?: HomeAssistant): void {
         TextElement.prototype.updateHass.call(this, hass);
 
-        const newValue = EntityValueResolver.resolveEntityValue(
-          { entity: entityId, attribute, fallback: 'Unavailable' },
-          hass
-        );
+        let combinedValue: string;
+        if (entityIds.length === 2) {
+            const value1 = EntityValueResolver.resolveEntityValue(
+                { entity: entityIds[0], attribute, fallback: 'Unavailable' },
+                hass
+            );
+            const value2 = EntityValueResolver.resolveEntityValue(
+                { entity: entityIds[1], attribute, fallback: 'Unavailable' },
+                hass
+            );
+            combinedValue = `${value1} (${value2})`;
+        } else {
+            combinedValue = EntityValueResolver.resolveEntityValue(
+                { entity: entityIds[0], attribute, fallback: 'Unavailable' },
+                hass
+            );
+        }
 
-        if (newValue !== (this as unknown as TextElement).props.text) {
-          (this as unknown as TextElement).props.text = newValue;
+        if (combinedValue !== (this as unknown as TextElement).props.text) {
+          (this as unknown as TextElement).props.text = combinedValue;
           this.requestUpdateCallback?.();
         }
       } as any;
 
       // Add entity change detection to integrate with ColorResolver's change detection system
       valueText.entityChangesDetected = function (this: typeof valueText, hass: HomeAssistant): boolean {
-        const newValue = EntityValueResolver.resolveEntityValue(
-          { entity: entityId, attribute, fallback: 'Unavailable' },
-          hass
-        );
+        let combinedValue: string;
+        if (entityIds.length === 2) {
+            const value1 = EntityValueResolver.resolveEntityValue(
+                { entity: entityIds[0], attribute, fallback: 'Unavailable' },
+                hass
+            );
+            const value2 = EntityValueResolver.resolveEntityValue(
+                { entity: entityIds[1], attribute, fallback: 'Unavailable' },
+                hass
+            );
+            combinedValue = `${value1} (${value2})`;
+        } else {
+            combinedValue = EntityValueResolver.resolveEntityValue(
+                { entity: entityIds[0], attribute, fallback: 'Unavailable' },
+                hass
+            );
+        }
 
-        const hasChanged = newValue !== (this as unknown as TextElement).props.text;
+        const hasChanged = combinedValue !== (this as unknown as TextElement).props.text;
         
         if (hasChanged) {
-          (this as unknown as TextElement).props.text = newValue;
+          (this as unknown as TextElement).props.text = combinedValue;
           return true;
         }
 
@@ -220,7 +246,7 @@ export class EntityTextWidget extends Widget {
       return labelConfig.content;
     }
 
-    const entityId = this.props.entity || '';
+    const entityId = Array.isArray(this.props.entity) ? this.props.entity[0] : this.props.entity || '';
     return EntityValueResolver.resolveEntityFriendlyName(
       entityId,
       this.hass,
@@ -229,21 +255,29 @@ export class EntityTextWidget extends Widget {
   }
 
   private resolveValueText(): string {
-    const entityId = this.props.entity || '';
+    const entityIds = Array.isArray(this.props.entity) ? this.props.entity : [this.props.entity || ''];
     const attribute = this.props.attribute || 'state';
-
-    return EntityValueResolver.resolveEntityValue(
-      {
-        entity: entityId,
-        attribute: attribute,
-        fallback: 'Unavailable'
-      },
-      this.hass
-    );
+    
+    if (entityIds.length === 2) {
+        const value1 = EntityValueResolver.resolveEntityValue(
+            { entity: entityIds[0], attribute, fallback: 'Unavailable' },
+            this.hass
+        );
+        const value2 = EntityValueResolver.resolveEntityValue(
+            { entity: entityIds[1], attribute, fallback: 'Unavailable' },
+            this.hass
+        );
+        return `${value1} (${value2})`;
+    } else {
+        return EntityValueResolver.resolveEntityValue(
+            { entity: entityIds[0], attribute, fallback: 'Unavailable' },
+            this.hass
+        );
+    }
   }
 
   private addDefaultLabelInteraction(labelRect: RectangleElement): void {
-    const entityId = this.props.entity;
+    const entityId = Array.isArray(this.props.entity) ? this.props.entity[0] : this.props.entity;
     
     if (!this.hasButtonConfig(labelRect) && entityId) {
       labelRect.props.button = {

@@ -23,6 +23,8 @@ groups: <array>                  # Required: Defines groups of elements. Element
                                    #            "chisel-endcap", "top_header", "logger-widget", "graph-widget", "weather-icon".
         entity: <string|array>     # Optional: Home Assistant entity ID or array of entity IDs.
                                    #   Required for 'graph-widget', 'entity-text-widget', and 'weather-icon'.
+                                   #   For 'entity-text-widget', this can be a single entity ID string or an array of up to two entity ID strings.
+                                   #   When two are provided, the second entity's state will be displayed in parentheses.
                                    #   For 'graph-widget', this can be:
                                    #     - A single entity ID string
                                    #     - An array of entity ID strings

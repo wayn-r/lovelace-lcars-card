@@ -253,12 +253,25 @@ const refinedElementSchema = elementSchema.refine(data => {
         }
         return typeof data.entity === 'string' && data.entity.length > 0;
     }
-    if (data.type === 'entity-text-widget' || data.type === 'weather-icon') {
+    if (data.type === 'entity-text-widget') {
+        if (typeof data.entity === 'string') {
+            return data.entity.length > 0;
+        }
+        if (Array.isArray(data.entity)) {
+            return (
+                data.entity.length > 0 &&
+                data.entity.length <= 2 &&
+                data.entity.every(e => typeof e === 'string' && e.length > 0)
+            );
+        }
+        return false;
+    }
+    if (data.type === 'weather-icon') {
         return typeof data.entity === 'string' && data.entity.length > 0;
     }
     return true;
 }, {
-    message: "For 'graph-widget', 'entity' must be a non-empty string or a non-empty array of valid entities (string or object with id). For 'entity-text-widget' and 'weather-icon', 'entity' must be a non-empty string.",
+    message: "For 'graph-widget', 'entity' must be a non-empty string or a non-empty array of valid entities (string or object with id). For 'entity-text-widget', 'entity' must be a non-empty string or an array of up to two non-empty strings. For 'weather-icon', 'entity' must be a non-empty string.",
     path: ['entity'],
 });
 
