@@ -50,6 +50,9 @@ export class EntityTextWidget extends Widget {
 
     this.addDefaultLabelInteraction(labelRect);
 
+    // Synchronize hover states between leading and label rectangles
+    this.syncHoverStates(leadingRect, labelRect);
+
     return [bounds, leadingRect, labelRect, valueText];
   }
 
@@ -66,11 +69,15 @@ export class EntityTextWidget extends Widget {
 
   private createLeadingRectangle(bounds: RectangleElement, height: number): RectangleElement {
     const appearanceConfig = this.getAppearanceConfig();
+    const baseColor = appearanceConfig.fill || 'var(--lcars-color-entity-text)';
     
     return new RectangleElement(
       `${this.id}_leading_rect`,
       {
-        fill: appearanceConfig.fill || 'var(--lcars-color-entity-text)',
+        fill: {
+          default: baseColor,
+          hover: `lighten(${baseColor}, 20)`
+        },
         width: EntityTextWidget.LEADING_RECT_WIDTH,
         height: height
       },
@@ -91,11 +98,15 @@ export class EntityTextWidget extends Widget {
     const labelText = this.resolveLabelText();
     const labelConfig = this.getLabelConfig();
     const appearanceConfig = this.getAppearanceConfig();
+    const baseColor = appearanceConfig.fill || 'var(--lcars-color-entity-text)';
 
     return new RectangleElement(
       `${this.id}_label_rect`,
       {
-        fill: appearanceConfig.fill || 'var(--lcars-color-entity-text)',
+        fill: {
+          default: baseColor,
+          hover: `lighten(${baseColor}, 20)`
+        },
         width: labelConfig.width || EntityTextWidget.DEFAULT_LABEL_WIDTH,
         height: height,
         text: labelText,
@@ -258,9 +269,46 @@ export class EntityTextWidget extends Widget {
   private hasButtonConfig(element: LayoutElement): boolean {
     return Boolean(element.props.button?.enabled);
   }
+
+  /**
+   * Links hover state between two rectangles so that hovering over one affects both.
+   */
+  private syncHoverStates(rect1: RectangleElement, rect2: RectangleElement): void {
+    const attachListeners = () => {
+      const el1 = this.getShadowElement?.(rect1.id);
+      const el2 = this.getShadowElement?.(rect2.id);
+
+      if (!el1 || !el2) {
+        // Elements not yet rendered; try again on next animation frame.
+        requestAnimationFrame(attachListeners);
+        return;
+      }
+
+      const enterHandler = (_ev: Event) => {
+        rect1.elementIsHovering = true;
+        rect2.elementIsHovering = true;
+      };
+
+      const leaveHandler = (ev: Event) => {
+        const related = (ev as MouseEvent).relatedTarget as Node | null;
+        if (related && (el1.contains(related) || el2.contains(related))) {
+          return; // Pointer moved within combined area; ignore.
+        }
+        rect1.elementIsHovering = false;
+        rect2.elementIsHovering = false;
+      };
+
+      [el1, el2].forEach((el) => {
+        el.addEventListener('mouseenter', enterHandler);
+        el.addEventListener('mouseleave', leaveHandler);
+      });
+    };
+
+    attachListeners();
+  }
 }
 
 WidgetRegistry.registerWidget('entity-text-widget', (id, props, layoutConfig, hass, reqUpd, getEl) => {
   const widget = new EntityTextWidget(id, props, layoutConfig, hass, reqUpd, getEl);
   return widget.expand();
-}); 
+});

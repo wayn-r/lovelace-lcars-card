@@ -190,8 +190,8 @@ describe('EntityTextWidget', () => {
       const leadingRect = elements[1] as RectangleElement;
       const labelRect = elements[2] as RectangleElement;
       
-      expect(leadingRect.props.fill).toBe('#0000FF');
-      expect(labelRect.props.fill).toBe('#0000FF');
+      expect((leadingRect.props.fill as any).default).toBe('#0000FF');
+      expect((labelRect.props.fill as any).default).toBe('#0000FF');
     });
   });
 
