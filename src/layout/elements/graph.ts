@@ -249,7 +249,7 @@ export class GraphElement extends LayoutElement {
         <line 
           x1="${this.layout.x}" y1="${y}" 
           x2="${this.layout.x + this.layout.width}" y2="${y}" 
-          stroke="${this.props.grid?.fill ?? 'var(--lcars-color-background)'}" stroke-width="2" stroke-opacity="0.5" />
+          stroke="${this.props.grid?.fill ?? 'var(--lcars-color-graph-background)'}" stroke-width="2" stroke-opacity="0.5" />
       `);
 
       const textX = this.layout.x + 5;
