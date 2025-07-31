@@ -706,7 +706,7 @@ describe('GraphElement', () => {
       expect(result).toBeDefined();
       
       const templateJSON = JSON.stringify(result);
-      expect(templateJSON).toContain('var(--lcars-color-background)'); // Default grid line color
+      expect(templateJSON).toContain('var(--lcars-color-graph-background)'); // Default grid line color
       expect(templateJSON).toContain('white'); // Default label color
     });
 
