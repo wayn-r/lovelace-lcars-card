@@ -66,7 +66,8 @@ export class TextElement extends LayoutElement {
             return fontSize;
         }
         
-        return this.props.fontSize || 16;
+        const resolvedFontSize = this.props.fontSize || 16;
+        return resolvedFontSize;
     }
 
     private resolveLetterSpacing(text: string, fontSize: number, fontFamily: string, fontWeight: string): string | number {
@@ -78,7 +79,8 @@ export class TextElement extends LayoutElement {
             return letterSpacing;
         }
         
-        return this.props.letterSpacing || 'normal';
+        const resolvedLetterSpacing = this.props.letterSpacing || 'normal';
+        return resolvedLetterSpacing;
     }
 
     private extractNumericHeight(): number | null {
@@ -93,9 +95,11 @@ export class TextElement extends LayoutElement {
         const metrics = FontManager.getFontMetrics(fontFamily, fontWeight as any);
         if (metrics) {
             const capHeightRatio = Math.abs(metrics.capHeight) || CAP_HEIGHT_RATIO;
-            return heightPx / capHeightRatio;
+            const calculatedFontSize = heightPx / capHeightRatio;
+            return calculatedFontSize;
         } else {
-            return heightPx * 0.8;
+            const fallbackFontSize = heightPx * 0.8;
+            return fallbackFontSize;
         }
     }
 
@@ -188,21 +192,27 @@ export class TextElement extends LayoutElement {
         
         if (dominantBaseline === 'middle') {
             const totalHeight = (metrics.bottom - metrics.top) * fontSize;
-            return y + totalHeight / 2 + metrics.top * fontSize;
+            const calculatedY = y + totalHeight / 2 + metrics.top * fontSize;
+            return calculatedY;
         } else if (dominantBaseline === 'hanging') {
-            return y + metrics.top * fontSize;
+            const calculatedY = y + metrics.top * fontSize;
+            return calculatedY;
         } else {
-            return y + (-metrics.ascent * fontSize);
+            const calculatedY = y + (-metrics.ascent * fontSize);
+            return calculatedY;
         }
     }
 
     private calculateFallbackTextY(y: number, height: number, dominantBaseline: string): number {
         if (dominantBaseline === 'middle') {
-            return y + height / 2;
+            const calculatedY = y + height / 2;
+            return calculatedY;
         } else if (dominantBaseline === 'hanging') {
-            return y;
+            const calculatedY = y;
+            return calculatedY;
         } else {
-            return y + height * 0.8;
+            const calculatedY = y + height * 0.8;
+            return calculatedY;
         }
     }
 
