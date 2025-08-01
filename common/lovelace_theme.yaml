@@ -11,6 +11,7 @@ lcars_theme:
   lcars-color-default-cyan: "#00ffff"
   lcars-color-active-blue: "#0066AA"
   lcars-color-light-grey-blue: "#9ec9ce"
+  lcars-color-grey-blue: "#7a9ca5"
   lcars-color-dodger-blue: "#12a4e3"
   lcars-color-light-sky-blue: "#86c8ff"
   lcars-color-turquoise: "#3ad8e6"
@@ -42,7 +43,7 @@ lcars_theme:
   lcars-color-environmental-main-header-lower-bar-3: var(--lcars-color-light-sky-blue)
   lcars-color-environmental-main-header-lower-bar-4: var(--lcars-color-dodger-blue)
 
-  lcars-color-environmental-button-1: var(--lcars-color-turqoise)
+  lcars-color-environmental-button-1: var(--lcars-color-turquoise)
   lcars-color-environmental-button-2: var(--lcars-color-light-cyan)
   lcars-color-environmental-button-3: var(--lcars-color-grey-blue)
   lcars-color-environmental-button-4: var(--lcars-color-aqua)
