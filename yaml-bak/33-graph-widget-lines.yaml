@@ -1,12 +1,5 @@
-# Lovelace LCARS Card Configuration Example
-#
-# This example demonstrates various configurations for the graph widget.
-# Each graph includes up to 5 entities with different options.
-# All animateds are disabled for consistent automated testing.
-
 type: custom:lovelace-lcars-card
 card_title: Graph Widget Examples
-
 groups:
   - group_id: nav_header
     elements:
@@ -28,7 +21,6 @@ groups:
             to: container
             element_point: topLeft
             target_point: topLeft
-
   - group_id: graphs
     elements:
       - id: graph_1
@@ -57,7 +49,6 @@ groups:
           - id: sensor.ep1_kitchen_temperature
             animated: false
             color: "#FFCC66"
-
   - group_id: graph_2
     elements:
       - id: graph_2
@@ -73,8 +64,7 @@ groups:
         entity:
           - id: sensor.living_room_temperature
             animated: false
-            color: "#CC66FF" # Reverting to match graph_1 entity color
-
+            color: "#CC66FF"
   - group_id: graph_3
     elements:
       - id: graph_3
@@ -90,8 +80,7 @@ groups:
         entity:
           - id: sensor.living_room_humidity
             animated: false
-            color: "#FF66CC" # Reverting to match graph_1 entity color
-
+            color: "#FF66CC"
   - group_id: graph_4
     elements:
       - id: graph_4
@@ -107,8 +96,7 @@ groups:
         entity:
           - id: sensor.kevv_temperature
             animated: false
-            color: "#66FFCC" # Reverting to match graph_1 entity color
-
+            color: "#66FFCC"
   - group_id: graph_5
     elements:
       - id: graph_5
@@ -124,8 +112,10 @@ groups:
         entity:
           - id: sensor.kevv_relative_humidity
             animated: false
-            color: "#66CCFF" # Reverting to match graph_1 entity color
-
+            color: "#66CCFF"
+        grid:
+          num_lines: 5
+          fill: "#F00"
   - group_id: graph_6
     elements:
       - id: graph_6
@@ -141,4 +131,4 @@ groups:
         entity:
           - id: sensor.ep1_kitchen_temperature
             animated: false
-            color: "#FFCC66" # Reverting to match graph_1 entity color
+            color: "#FFCC66"
