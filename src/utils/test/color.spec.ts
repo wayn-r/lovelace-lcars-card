@@ -1,7 +1,9 @@
 /// <reference types="vitest" />
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Color } from '../color';
+import { ColorResolver } from '../color-resolver';
 import { DynamicColorConfig, StatefulColorConfig } from '../../types';
+import { EMBEDDED_THEME_YAML } from '../embedded-theme';
 
 describe('Color', () => {
   describe('static color handling', () => {
@@ -138,13 +140,122 @@ describe('Color', () => {
       expect(color.toString()).toBe('#test');
     });
 
-    it('withFallback creates new instance', () => {
+      it('withFallback creates new instance', () => {
       const original = Color.from('#test');
       const withNewFallback = original.withFallback('newFallback');
       
       expect(original.fallback).toBe('transparent');
       expect(withNewFallback.fallback).toBe('newFallback');
       expect(original).not.toBe(withNewFallback);
+    });
+  });
+
+  // ============================================================================
+  // Color Class Integration Tests (from comprehensive-fallback.spec.ts)
+  // ============================================================================
+
+  describe('Color Class Integration with Fallback System', () => {
+    beforeEach(() => {
+      // Reset the static state before each test
+      (ColorResolver as any)._resolvedThemeColors = null;
+      (ColorResolver as any)._themeLoadPromise = null;
+
+      // Mock getComputedStyle to return empty (simulate missing CSS variables)
+      global.getComputedStyle = vi.fn().mockReturnValue({
+        getPropertyValue: vi.fn().mockReturnValue(''), // Return empty string to simulate missing CSS variable
+      });
+
+      // Use the actual embedded theme data from the build process
+      const colors = (ColorResolver as any)._parseThemeYaml(EMBEDDED_THEME_YAML);
+      (ColorResolver as any)._resolvedThemeColors = colors;
+    });
+
+    describe('Entity Text Widget Colors', () => {
+      it('should resolve entity text colors through Color class', () => {
+        const color = new Color('var(--lcars-color-entity-text)', 'transparent');
+        const resolved = color.resolve(); // No element provided, should use fallback
+        expect(resolved).toBe('#5ca8ea');
+      });
+
+      it('should resolve white text colors through Color class', () => {
+        const color = new Color('var(--lcars-color-white)', 'transparent');
+        const resolved = color.resolve();
+        expect(resolved).toBe('#FFFFFF');
+      });
+    });
+
+    describe('Color Function Processing', () => {
+      it('should resolve CSS variables in lighten() functions', () => {
+        const color = new Color('lighten(var(--lcars-color-blue), 20)', 'transparent');
+        const resolved = color.resolve(undefined, undefined, undefined, undefined);
+        // Should resolve the variable first, then apply lighten
+        expect(resolved).not.toBe('lighten(var(--lcars-color-blue), 20)');
+        expect(resolved).toMatch(/^#[0-9a-fA-F]{6}$/); // Should be a hex color
+      });
+
+      it('should resolve CSS variables in darken() functions', () => {
+        const color = new Color('darken(var(--lcars-color-cyan), 30)', 'transparent');
+        const resolved = color.resolve(undefined, undefined, undefined, undefined);
+        // Should resolve the variable first, then apply darken
+        expect(resolved).not.toBe('darken(var(--lcars-color-cyan), 30)');
+        expect(resolved).toMatch(/^#[0-9a-fA-F]{6}$/); // Should be a hex color
+      });
+    });
+
+    describe('CSS Variable Resolution in Color Class', () => {
+      it('should handle CSS variables with fallback when element is null', () => {
+        const color = new Color('var(--lcars-color-blue)', 'transparent');
+        const resolved = color.resolve(null);
+        expect(resolved).toBe('#5ca8ea');
+      });
+
+      it('should handle CSS variables with fallback when element is undefined', () => {
+        const color = new Color('var(--lcars-color-cyan)', 'red');
+        const resolved = color.resolve();
+        expect(resolved).toBe('#04bfd8');
+      });
+
+      it('should use fallback for unknown CSS variables', () => {
+        const color = new Color('var(--unknown-variable)', 'fallback-color');
+        const resolved = color.resolve();
+        // CSS variable resolution returns original string when not found, then Color class uses fallback
+        expect(resolved).toBe('var(--unknown-variable)');
+      });
+
+      it('should resolve nested CSS variables through Color class', () => {
+        // Test with a variable that references another variable
+        const color = new Color('var(--lcars-color-logger-bright)', 'transparent');
+        const resolved = color.resolve();
+        expect(resolved).toBe('#86c8ff'); // Should resolve to light-sky-blue as per embedded theme
+      });
+    });
+
+    describe('Color class with stateful configurations and CSS variables', () => {
+      it('should resolve CSS variables in stateful configurations', () => {
+        const statefulConfig: StatefulColorConfig = {
+          default: 'var(--lcars-color-blue)',
+          hover: 'var(--lcars-color-cyan)',
+          active: '#ff0000'
+        };
+
+        const color = Color.from(statefulConfig);
+        
+        // Test default state
+        expect(color.resolve('test', 'fill', undefined, {})).toBe('#5ca8ea');
+        
+        // Test hover state
+        expect(color.resolve('test', 'fill', undefined, { isCurrentlyHovering: true })).toBe('#04bfd8');
+        
+        // Test active state (should not use CSS variable resolution)
+        expect(color.resolve('test', 'fill', undefined, { isCurrentlyActive: true })).toBe('#ff0000');
+      });
+
+      it('should handle CSS variables in RGB array format', () => {
+        // This tests fallback when CSS variable resolution fails in array context
+        const color = new Color('var(--lcars-color-environmental-button-1)', 'transparent');
+        const resolved = color.resolve();
+        expect(resolved).toBe('#3ad8e6');
+      });
     });
   });
 }); 

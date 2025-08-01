@@ -38,26 +38,12 @@ export class GraphElement extends LayoutElement {
 
   private subscribeToStateChanges(): void {
     this.unsubscribeFromStateChanges = stateManager.onStateChange((event: StateChangeEvent) => {
-        const stateNamePrefix = `${this.id}_`;
-        const stateNameSuffix = `_visible`;
-
-        if (event.elementId.startsWith(stateNamePrefix) && event.elementId.endsWith(stateNameSuffix)) {
-            const entityId = event.elementId.substring(stateNamePrefix.length, event.elementId.length - stateNameSuffix.length);
-            
-            // Ensure we are not accidentally picking up a state change from a widget with a similar name
-            if (!this.entityConfigs.some(config => config.id === entityId)) {
-                return;
-            }
-
-            if (event.toState === 'visible') {
-                this.startEntityAnimation(entityId);
-            } else if (event.toState === 'hidden') {
-                if (this.animations.has(entityId)) {
-                    this.animations.get(entityId)?.kill();
-                    this.animations.delete(entityId);
-                }
-            }
+        const entityId = this.extractEntityIdFromEvent(event);
+        if (!entityId || !this.isValidEntityForGraph(entityId)) {
+            return;
         }
+
+        this.handleEntityStateChange(entityId, event.toState);
     });
   }
 
@@ -106,37 +92,17 @@ export class GraphElement extends LayoutElement {
         return;
     }
 
-    if (this.animations.has(entityId)) {
-        this.animations.get(entityId)?.kill();
-        this.animations.delete(entityId);
-    }
-
-    const config = this.entityConfigs.find(c => c.id === entityId);
+    this.stopExistingAnimation(entityId);
+    const config = this.findEntityConfig(entityId);
     if (!config) return;
 
-    const getElement = this.getShadowElement;
-    const originalIndex = this.entityConfigs.findIndex(ec => ec.id === entityId);
-    const gradientId = `grad-${this.id}-${originalIndex}`;
-    const gradient = getElement(gradientId);
-
+    const gradient = this.getEntityGradientElement(entityId);
     if (!gradient) {
         requestAnimationFrame(() => this.startEntityAnimation(entityId));
         return;
     }
 
-    gsap.set(gradient, { attr: { spreadMethod: 'pad' } });
-    const animation = gsap.fromTo(gradient, 
-        { attr: { x1: '-100%', x2: '0%' } },
-        { 
-            attr: { x1: '0%', x2: '100%' },
-            duration: (config.duration || 3000) / 1000,
-            ease: 'none',
-            onComplete: () => {
-                this.startContinuousAnimation(gradient, entityId);
-            }
-        }
-    );
-    this.animations.set(entityId, animation);
+    this.createInitialAnimation(gradient, config, entityId);
   }
 
   private startContinuousAnimation(gradient: Element, entityId: string): void {
@@ -157,8 +123,10 @@ export class GraphElement extends LayoutElement {
 
   renderDefs(): SVGTemplateResult {
     const gradients = this.entityConfigs.map((config, index) => {
-        const color = config.color || lineGradients[index % lineGradients.length].color;
-        return { color };
+        const defaultColor = lineGradients[index % lineGradients.length].color;
+        const color = config.color || defaultColor;
+        const resolvedColor = ColorResolver.resolveCssVariable(color, this.getShadowElement?.(this.id));
+        return { color: resolvedColor };
     });
 
       return svg`
@@ -203,7 +171,7 @@ export class GraphElement extends LayoutElement {
       const gradientId = this.gradientIds[originalIndex % this.gradientIds.length];
 
       if (config.animated === false) {
-        return svg`<path d="${path}" fill="none" stroke="${ColorResolver.resolveCssVariable(config.color || lineGradients[originalIndex % lineGradients.length].color, this.getShadowElement?.(this.id) as Element)}" stroke-width="4" />`;
+        return svg`<path d="${path}" fill="none" stroke="${ColorResolver.resolveCssVariable(config.color || lineGradients[originalIndex % lineGradients.length].color, this.getShadowElement?.(this.id))}" stroke-width="4" />`;
       }
       
       return svg`<path d="${path}" fill="none" stroke="url(#${gradientId})" stroke-width="4" />`;
@@ -238,38 +206,10 @@ export class GraphElement extends LayoutElement {
       return null;
     }
 
-    const numGraphLines = this.props.grid?.num_lines ?? 6;
-    const [min, max] = nice(minMax.minVal, minMax.maxVal, numGraphLines - 1);
+    const gridConfig = this.getGridConfiguration(minMax);
+    const gridElements = this.createGridElements(gridConfig);
 
-    const elements = [];
-    for (let i = 0; i < numGraphLines; i++) {
-      const value = min + (i * (max - min) / (numGraphLines - 1));
-      const y = this.layout.y + this.layout.height - ((value - min) / (max - min)) * this.layout.height;
-      elements.push(svg`
-        <line 
-          x1="${this.layout.x}" y1="${y}" 
-          x2="${this.layout.x + this.layout.width}" y2="${y}" 
-          stroke="${this.props.grid?.fill ?? 'var(--lcars-color-graph-background)'}" stroke-width="2" stroke-opacity="0.5" />
-      `);
-
-      const textX = this.layout.x + 5;
-      
-      elements.push(svg`
-        <text
-          x="${textX}"
-          y="${y}"
-          dominant-baseline="middle"
-          font-family="Antonio, sans-serif"
-          fill="${this.props.grid?.label_fill ?? 'white'}"
-          font-size="14px"
-          text-anchor="start"
-        >
-          ${value % 1 === 0 ? value.toFixed(0) : value.toFixed(1)}
-        </text>
-      `);
-    }
-
-    return svg`<g>${elements}</g>`;
+    return svg`<g>${gridElements}</g>`;
   }
 
   private getMinMaxValues(): { minVal: number; maxVal: number } | null {
@@ -334,5 +274,121 @@ export class GraphElement extends LayoutElement {
     }
 
     return allPoints;
+  }
+
+  private extractEntityIdFromEvent(event: StateChangeEvent): string | null {
+    const stateNamePrefix = `${this.id}_`;
+    const stateNameSuffix = `_visible`;
+
+    if (event.elementId.startsWith(stateNamePrefix) && event.elementId.endsWith(stateNameSuffix)) {
+      return event.elementId.substring(stateNamePrefix.length, event.elementId.length - stateNameSuffix.length);
+    }
+    return null;
+  }
+
+  private isValidEntityForGraph(entityId: string): boolean {
+    return this.entityConfigs.some(config => config.id === entityId);
+  }
+
+  private handleEntityStateChange(entityId: string, newState: string): void {
+    if (newState === 'visible') {
+      this.startEntityAnimation(entityId);
+    } else if (newState === 'hidden') {
+      this.stopExistingAnimation(entityId);
+    }
+  }
+
+  private stopExistingAnimation(entityId: string): void {
+    if (this.animations.has(entityId)) {
+      this.animations.get(entityId)?.kill();
+      this.animations.delete(entityId);
+    }
+  }
+
+  private findEntityConfig(entityId: string): RichEntityConfig | undefined {
+    return this.entityConfigs.find(c => c.id === entityId);
+  }
+
+  private getEntityGradientElement(entityId: string): Element | null {
+    const originalIndex = this.entityConfigs.findIndex(ec => ec.id === entityId);
+    const gradientId = `grad-${this.id}-${originalIndex}`;
+    return this.getShadowElement!(gradientId);
+  }
+
+  private createInitialAnimation(gradient: Element, config: RichEntityConfig, entityId: string): void {
+    gsap.set(gradient, { attr: { spreadMethod: 'pad' } });
+    const animationDuration = (config.duration || 3000) / 1000;
+    
+    const animation = gsap.fromTo(gradient, 
+      { attr: { x1: '-100%', x2: '0%' } },
+      { 
+        attr: { x1: '0%', x2: '100%' },
+        duration: animationDuration,
+        ease: 'none',
+        onComplete: () => {
+          this.startContinuousAnimation(gradient, entityId);
+        }
+      }
+    );
+    this.animations.set(entityId, animation);
+  }
+
+  private getGridConfiguration(minMax: { minVal: number; maxVal: number }) {
+    const numGraphLines = this.props.grid?.num_lines ?? 6;
+    const [min, max] = nice(minMax.minVal, minMax.maxVal, numGraphLines - 1);
+    
+    return {
+      numLines: numGraphLines,
+      min,
+      max,
+      strokeColor: ColorResolver.resolveCssVariable(
+        this.props.grid?.fill ?? 'var(--lcars-color-graph-background)', 
+        this.getShadowElement?.(this.id)
+      ),
+      textFill: this.props.grid?.label_fill ?? 'white'
+    };
+  }
+
+  private createGridElements(gridConfig: any): SVGTemplateResult[] {
+    const elements = [];
+    const { numLines, min, max, strokeColor, textFill } = gridConfig;
+
+    for (let i = 0; i < numLines; i++) {
+      const value = min + (i * (max - min) / (numLines - 1));
+      const y = this.layout.y + this.layout.height - ((value - min) / (max - min)) * this.layout.height;
+      
+      elements.push(this.createGridLine(y, strokeColor));
+      elements.push(this.createGridLabel(value, y, textFill));
+    }
+
+    return elements;
+  }
+
+  private createGridLine(y: number, strokeColor: string): SVGTemplateResult {
+    return svg`
+      <line 
+        x1="${this.layout.x}" y1="${y}" 
+        x2="${this.layout.x + this.layout.width}" y2="${y}" 
+        stroke="${strokeColor}" stroke-width="2" stroke-opacity="0.5" />
+    `;
+  }
+
+  private createGridLabel(value: number, y: number, textFill: string): SVGTemplateResult {
+    const textX = this.layout.x + 5;
+    const displayValue = value % 1 === 0 ? value.toFixed(0) : value.toFixed(1);
+    
+    return svg`
+      <text
+        x="${textX}"
+        y="${y}"
+        dominant-baseline="middle"
+        font-family="Antonio, sans-serif"
+        fill="${textFill}"
+        font-size="14px"
+        text-anchor="start"
+      >
+        ${displayValue}
+      </text>
+    `;
   }
 } 

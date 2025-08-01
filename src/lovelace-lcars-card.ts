@@ -12,11 +12,12 @@ import { LayoutEngine, Group } from './layout/engine.js';
 import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext, AnimationManager } from './utils/animation.js';
-import { colorResolver } from './utils/color-resolver.js';
+import { colorResolver, ColorResolver } from './utils/color-resolver.js';
 import { stateManager } from './utils/state-manager.js';
 import { StoreProvider, StateChangeEvent } from './core/store.js';
 import { FontManager } from './utils/font-manager.js';
 import { ConfigValidator, logValidationResult } from './utils/config-validator.js';
+
 
 import { editorStyles } from './styles/styles.js';
 
@@ -66,6 +67,10 @@ export class LcarsCard extends LitElement {
     super();
     this._fontsReady = new Promise<void>((resolve) => {
       this._resolveFontsReady = resolve;
+    });
+    
+    ColorResolver.preloadThemeColors().catch(error => {
+      console.warn('Failed to preload theme fallback colors:', error);
     });
   }
 
@@ -162,7 +167,7 @@ export class LcarsCard extends LitElement {
       if (hasConfigChanged) {
         this._performLayoutCalculation(this._containerRect);
       } else if (hasHassChanged && this._lastHassStates) {
-        const hasSignificantEntityChanges = colorResolver.hasSignificantEntityChanges(
+        const hasSignificantEntityChanges = colorResolver.elementEntityStatesChanged(
           this._layoutEngine.layoutGroups,
           this._lastHassStates,
           this.hass
@@ -175,7 +180,7 @@ export class LcarsCard extends LitElement {
     }
 
     if (hasHassChanged && this.hass && this._lastHassStates) {
-      colorResolver.detectsDynamicColorChanges(
+      colorResolver.scheduleDynamicColorChangeDetection(
         this._layoutEngine.layoutGroups,
         this.hass,
         () => this._refreshElementRenders()
@@ -308,164 +313,45 @@ export class LcarsCard extends LitElement {
   }
 
   private _performLayoutCalculation(rect: DOMRect): void {
-    if (!this._config || !rect || rect.width <= 0 || rect.height <= 0) {
-        console.warn("[_performLayoutCalculation] Skipping, invalid config or rect", this._config, rect);
-        return;
+    const isValidLayoutRequest = this._config && rect && rect.width > 0 && rect.height > 0;
+    if (!isValidLayoutRequest) {
+      console.warn('Skipping layout calculation - invalid config or dimensions');
+      return;
     }
 
     try {
-      const svgElement = this.shadowRoot?.querySelector('.card-container svg') as SVGSVGElement | null;
-      if (svgElement) {
-        (this._layoutEngine as any).tempSvgContainer = svgElement;
-      }
+      this._setupLayoutEngine(rect);
+      const groups = this._createLayoutGroups();
+      this._initializeAnimationSystem(groups);
+      this._cleanupPreviousAnimations();
       
-      this._layoutEngine.clearLayout();
-      
-      const getShadowElement = (id: string): Element | null => {
-        return this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
-      };
-      
-      const groups = parseConfig(this._config, this.hass, () => { 
-        this._refreshElementRenders(); 
-      }, getShadowElement); 
-      
-      groups.forEach((group: Group) => { 
-        this._layoutEngine.addGroup(group); 
-      });
-
-      const animationContext: AnimationContext = {
-        elementId: 'card',
-        getShadowElement: getShadowElement,
-        hass: this.hass,
-        requestUpdateCallback: () => this.requestUpdate()
-      };
-      
-      const elementsMap = new Map<string, LayoutElement>();
-      groups.forEach(group => {
-        group.elements.forEach(element => {
-          elementsMap.set(element.id, element);
-        });
-      });
-      
-      stateManager.setAnimationContext(animationContext, elementsMap);
-      this._initializeElementStates(groups);
-      this._setupStateChangeHandling(elementsMap);
-      
-      for (const group of this._layoutEngine.layoutGroups) {
-        for (const element of group.elements) {
-          try {
-            element.cleanupAnimations();
-          } catch (error) {
-            console.error("[_performLayoutCalculation] Error clearing element state", element.id, error);
-          }
-        }
-      }
-
-      const inputRect = new DOMRect(rect.x, rect.y, rect.width, rect.height);
-      
-      const requiredHeight = this._calculateRequiredHeight(rect.width, rect.height);
-      
-      const finalContainerRect = new DOMRect(rect.x, rect.y, rect.width, requiredHeight);
-      const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(finalContainerRect, { dynamicHeight: true });
-      
+      const containerRect = this._calculateFinalContainerRect(rect);
+      const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(containerRect, { dynamicHeight: true });
       this._calculatedHeight = layoutDimensions.height;
 
-      const newTemplates = this._renderAllElements();
-
-      const TOP_MARGIN = 8;
-      
-      const newViewBox = `0 ${-TOP_MARGIN} ${rect.width} ${this._calculatedHeight + TOP_MARGIN}`;
-
-      
-      if (JSON.stringify(newTemplates.map(t => ({s: t.strings, v: (t.values || []).map(val => String(val))}))) !==
-          JSON.stringify(this._layoutElementTemplates.map(t => ({s:t.strings, v: (t.values || []).map(val => String(val))}))) || newViewBox !== this._viewBox) {
-          this._layoutElementTemplates = newTemplates;
-          this._viewBox = newViewBox;
-          this.requestUpdate();
-          
-          this.updateComplete.then(() => {
-            this._setupAllElementListeners();
-            stateManager.setInitialAnimationStates(groups);
-            this._triggerOnLoadAnimations(groups);
-          });
+      const shouldUpdateLayout = this._shouldUpdateLayout(rect);
+      if (shouldUpdateLayout) {
+        this._applyLayoutChanges(groups);
       }
-      
     } catch (error) {
-      console.error("[_performLayoutCalculation] Layout calculation failed with error:", error);
-      console.error("[_performLayoutCalculation] Error stack:", (error as Error).stack);
-      this._layoutElementTemplates = [];
-      this._viewBox = `0 0 ${rect.width} 100`;
-      this._calculatedHeight = 100;
+      this._handleLayoutError(error, rect);
     }
   }
 
   private _refreshElementRenders(): void {
-    if (!this._config || !this._containerRect || this._layoutEngine.layoutGroups.length === 0) {
-        return;
+    const canRefresh = this._config && this._containerRect && this._layoutEngine.layoutGroups.length > 0;
+    if (!canRefresh) {
+      return;
     }
 
-    this._layoutEngine.layoutGroups.forEach(group => {
-        group.elements.forEach(el => {
-            const layoutEl = el as LayoutElement; 
-            if (layoutEl.updateHass) {
-                layoutEl.updateHass(this.hass);
-            }
-        });
-    });
-
-    const elementIds = this._layoutEngine.layoutGroups.flatMap(group => 
-        group.elements.map(el => el.id)
-    );
-
-    const animationStates = animationManager.collectAnimationStates(
-        elementIds,
-        (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null
-    );
-
-    const newTemplates = this._layoutEngine.layoutGroups.flatMap(group =>
-        group.elements
-            .map(el => {
-              try {
-                const elementTemplate = el.render();
-                if (!elementTemplate) {
-                  return null;
-                }
-
-                const currentState = stateManager.getState(el.id);
-                const isVisible = currentState !== 'hidden';
-                
-                if (!isVisible) {
-                  return svg`<g style="visibility: hidden; opacity: 0; pointer-events: none;">${elementTemplate}</g>`;
-                }
-                
-                return elementTemplate;
-              } catch (error) {
-                console.error("[LcarsCard] Error rendering element", el.id, error);
-                return null;
-              }
-            })
-            .filter((template): template is SVGTemplateResult => template !== null)
-    );
+    this._updateElementsWithLatestHass();
+    const animationStates = this._collectCurrentAnimationStates();
+    const newTemplates = this._renderVisibleElements();
 
     this._layoutElementTemplates = newTemplates;
-    
     this.requestUpdate();
 
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            this._setupAllElementListeners();
-            
-            if (animationStates.size > 0) {
-                const context: AnimationContext = {
-                    elementId: '',
-                    getShadowElement: (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null,
-                    hass: this.hass,
-                    requestUpdateCallback: this.requestUpdate.bind(this)
-                };
-                animationManager.restoreAnimationStates(animationStates, context, () => {});
-            }
-        });
-    });
+    this._schedulePostRenderUpdates(animationStates);
   }
 
   private _handleResize(entries: ResizeObserverEntry[]): void {
@@ -637,5 +523,163 @@ export class LcarsCard extends LitElement {
 
   private _getShadowElement(id: string): Element | null {
     return this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
+  }
+
+  private _setupLayoutEngine(rect: DOMRect): void {
+    const svgElement = this.shadowRoot?.querySelector('.card-container svg') as SVGSVGElement | null;
+    if (svgElement) {
+      (this._layoutEngine as any).tempSvgContainer = svgElement;
+    }
+    this._layoutEngine.clearLayout();
+  }
+
+  private _createLayoutGroups(): Group[] {
+    const getShadowElement = (id: string): Element | null => 
+      this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
+    
+    const groups = parseConfig(this._config, this.hass, () => this._refreshElementRenders(), getShadowElement);
+    groups.forEach((group: Group) => this._layoutEngine.addGroup(group));
+    return groups;
+  }
+
+  private _initializeAnimationSystem(groups: Group[]): void {
+    const getShadowElement = (id: string): Element | null => 
+      this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
+
+    const animationContext: AnimationContext = {
+      elementId: 'card',
+      getShadowElement,
+      hass: this.hass,
+      requestUpdateCallback: () => this.requestUpdate()
+    };
+
+    const elementsMap = new Map<string, LayoutElement>();
+    groups.forEach(group => {
+      group.elements.forEach(element => {
+        elementsMap.set(element.id, element);
+      });
+    });
+
+    stateManager.setAnimationContext(animationContext, elementsMap);
+    this._initializeElementStates(groups);
+    this._setupStateChangeHandling(elementsMap);
+  }
+
+  private _cleanupPreviousAnimations(): void {
+    for (const group of this._layoutEngine.layoutGroups) {
+      for (const element of group.elements) {
+        try {
+          element.cleanupAnimations();
+        } catch (error) {
+          console.error('Error clearing element state', element.id, error);
+        }
+      }
+    }
+  }
+
+  private _calculateFinalContainerRect(rect: DOMRect): DOMRect {
+    const requiredHeight = this._calculateRequiredHeight(rect.width, rect.height);
+    return new DOMRect(rect.x, rect.y, rect.width, requiredHeight);
+  }
+
+  private _shouldUpdateLayout(rect: DOMRect): boolean {
+    const newTemplates = this._renderAllElements();
+    const topMargin = 8;
+    const newViewBox = `0 ${-topMargin} ${rect.width} ${this._calculatedHeight + topMargin}`;
+
+    const templatesChanged = JSON.stringify(newTemplates.map(t => ({s: t.strings, v: (t.values || []).map(val => String(val))}))) !==
+      JSON.stringify(this._layoutElementTemplates.map(t => ({s: t.strings, v: (t.values || []).map(val => String(val))})));
+    
+    const viewBoxChanged = newViewBox !== this._viewBox;
+    
+    if (templatesChanged || viewBoxChanged) {
+      this._layoutElementTemplates = newTemplates;
+      this._viewBox = newViewBox;
+      return true;
+    }
+    return false;
+  }
+
+  private _applyLayoutChanges(groups: Group[]): void {
+    this.requestUpdate();
+    this.updateComplete.then(() => {
+      this._setupAllElementListeners();
+      stateManager.setInitialAnimationStates(groups);
+      this._triggerOnLoadAnimations(groups);
+    });
+  }
+
+  private _handleLayoutError(error: any, rect: DOMRect): void {
+    console.error('Layout calculation failed:', error);
+    this._layoutElementTemplates = [];
+    this._viewBox = `0 0 ${rect.width} 100`;
+    this._calculatedHeight = 100;
+  }
+
+  private _updateElementsWithLatestHass(): void {
+    this._layoutEngine.layoutGroups.forEach(group => {
+      group.elements.forEach(el => {
+        const layoutEl = el as LayoutElement;
+        if (layoutEl.updateHass) {
+          layoutEl.updateHass(this.hass);
+        }
+      });
+    });
+  }
+
+  private _collectCurrentAnimationStates(): Map<string, any> {
+    const elementIds = this._layoutEngine.layoutGroups.flatMap(group => 
+      group.elements.map(el => el.id)
+    );
+
+    return animationManager.collectAnimationStates(
+      elementIds,
+      (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null
+    );
+  }
+
+  private _renderVisibleElements(): SVGTemplateResult[] {
+    return this._layoutEngine.layoutGroups.flatMap(group =>
+      group.elements
+        .map(el => {
+          try {
+            const elementTemplate = el.render();
+            if (!elementTemplate) {
+              return null;
+            }
+
+            const currentState = stateManager.getState(el.id);
+            const isVisible = currentState !== 'hidden';
+            
+            if (!isVisible) {
+              return svg`<g style="visibility: hidden; opacity: 0; pointer-events: none;">${elementTemplate}</g>`;
+            }
+            
+            return elementTemplate;
+          } catch (error) {
+            console.error('Error rendering element', el.id, error);
+            return null;
+          }
+        })
+        .filter((template): template is SVGTemplateResult => template !== null)
+    );
+  }
+
+  private _schedulePostRenderUpdates(animationStates: Map<string, any>): void {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        this._setupAllElementListeners();
+        
+        if (animationStates.size > 0) {
+          const context: AnimationContext = {
+            elementId: '',
+            getShadowElement: (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null,
+            hass: this.hass,
+            requestUpdateCallback: this.requestUpdate.bind(this)
+          };
+          animationManager.restoreAnimationStates(animationStates, context, () => {});
+        }
+      });
+    });
   }
 }

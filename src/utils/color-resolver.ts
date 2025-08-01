@@ -4,41 +4,172 @@ import { LayoutElementProps } from '../layout/engine';
 import { HomeAssistant } from 'custom-card-helpers';
 import { Group } from '../layout/engine.js';
 import { Color, ColorStateContext, ComputedElementColors, ColorResolutionDefaults } from './color.js';
+import yaml from 'js-yaml';
+import { EMBEDDED_THEME_YAML } from './embedded-theme.js';
+
+interface ThemeConfig {
+  [key: string]: string | Record<string, string>;
+}
+
+interface ResolvedThemeColors {
+  [key: string]: string;
+}
 
 export class ColorResolver {
-  static lightenColor(color: string, percent: number): string {
+  private static _resolvedThemeColors: ResolvedThemeColors | null = null;
+  private static _themeLoadPromise: Promise<ResolvedThemeColors> | null = null;
+
+  static createLightenExpression(color: string, percent: number): string {
     return `lighten(${color}, ${percent})`;
   }
 
-  static darkenColor(color: string, percent: number): string {
+  static createDarkenExpression(color: string, percent: number): string {
     return `darken(${color}, ${percent})`;
   }
 
-  static calculateLightenColor(color: string, percent: number): string {
-    return ColorResolver.adjustBrightness(color, percent);
+  static calculateLightenedColor(color: string, percent: number): string {
+    return ColorResolver.adjustColorBrightness(color, percent);
   }
 
-  static calculateDarkenColor(color: string, percent: number): string {
-    return ColorResolver.adjustBrightness(color, -percent);
+  static calculateDarkenedColor(color: string, percent: number): string {
+    return ColorResolver.adjustColorBrightness(color, -percent);
   }
 
-  static resolveCssVariable(color: string, element: Element): string {
-    if (color && color.startsWith('var(')) {
-      const varName = color.match(/--[a-zA-Z0-9-]+/)?.[0];
-      if (varName) {
-        const resolvedColor = getComputedStyle(element).getPropertyValue(varName).trim();
-        if (resolvedColor) {
-          return resolvedColor;
-        }
-      }
+  static async preloadThemeColors(): Promise<void> {
+    await this.getResolvedThemeColors();
+  }
+
+  static resolveCssVariable(color: string, element?: Element | null): string {
+    if (!this.isCssVariable(color)) {
+      return color;
     }
-    return color;
+
+    const varName = this.extractVariableName(color);
+    if (!varName) {
+      return color;
+    }
+
+    const domResolvedColor = this.tryResolvingFromDom(varName, element);
+    if (domResolvedColor) {
+      return domResolvedColor;
+    }
+
+    const themeResolvedColor = this.tryResolvingFromTheme(varName);
+    return themeResolvedColor || color;
+  }
+
+  static getFallbackColorFromTheme(varName: string): string | undefined {
+    const colors = this.getResolvedThemeColorsSync();
+    return colors[varName];
+  }
+
+  private static getResolvedThemeColorsSync(): ResolvedThemeColors {
+    return this._resolvedThemeColors || {};
+  }
+
+  private static async getResolvedThemeColors(): Promise<ResolvedThemeColors> {
+    if (this._resolvedThemeColors) {
+      return this._resolvedThemeColors;
+    }
+
+    if (this._themeLoadPromise) {
+      return this._themeLoadPromise;
+    }
+
+    this._themeLoadPromise = this._loadThemeColors();
+    this._resolvedThemeColors = await this._themeLoadPromise;
+    this._themeLoadPromise = null;
+
+    return this._resolvedThemeColors;
+  }
+
+  private static async _loadThemeColors(): Promise<ResolvedThemeColors> {
+    try {
+      const embeddedTheme = this._getEmbeddedThemeData();
+      if (embeddedTheme) {
+        return this._parseThemeYaml(embeddedTheme);
+      }
+
+      console.log('Using embedded theme data as fallback');
+      return this._parseThemeYaml(EMBEDDED_THEME_YAML);
+    } catch (error) {
+      console.error('Failed to load theme colors for fallback:', error);
+      return {};
+    }
+  }
+
+  private static _getEmbeddedThemeData(): string | null {
+    // Try global variable (for build-time embedding)
+    const globalTheme = (globalThis as any).__LCARS_THEME_FALLBACK__;
+    if (globalTheme) {
+      return globalTheme;
+    }
+
+    // Try to read from a script tag (alternative embedding method)
+    const scriptTag = document.querySelector('script[data-lcars-theme]');
+    if (scriptTag) {
+      return scriptTag.textContent || null;
+    }
+
+    return null;
+  }
+
+  private static _parseThemeYaml(yamlContent: string): ResolvedThemeColors {
+    try {
+      const themeData = yaml.load(yamlContent) as Record<string, any>;
+      
+      // Extract the theme configuration (assuming it's under 'lcars_theme')
+      const themeKey = 'lcars_theme';
+      const themeConfig = themeData[themeKey] as ThemeConfig;
+      
+      if (!themeConfig) {
+        console.warn('No lcars_theme found in theme YAML');
+        return {};
+      }
+
+      return this._resolveCssVariables(themeConfig);
+    } catch (error) {
+      console.error('Failed to parse theme YAML:', error);
+      return {};
+    }
+  }
+
+  private static _resolveCssVariables(themeConfig: ThemeConfig): ResolvedThemeColors {
+    const resolvedColors: ResolvedThemeColors = {};
+    const variableRegex = /var\((--[a-zA-Z0-9-]+)\)/;
+    const resolutionStack = new Set<string>();
+
+    const resolveValue = (key: string, value: string): string => {
+      if (resolvedColors[key]) {
+        return resolvedColors[key];
+      }
+
+      if (this._hasCircularReference(key, resolutionStack)) {
+        console.warn(`Circular reference detected for theme variable: ${key}`);
+        resolvedColors[key] = value;
+        return value;
+      }
+
+      return this._resolveVariableValue(key, value, themeConfig, resolvedColors, resolutionStack, variableRegex, resolveValue);
+    };
+
+    this._processThemeConfig(themeConfig, resolveValue);
+    return resolvedColors;
   }
 
   static isColor(strColor: string): boolean {
-    const s = new Option().style;
-    s.color = strColor;
-    return s.color !== '';
+    try {
+      const s = new Option().style;
+      s.color = strColor;
+      return s.color !== '';
+    } catch (error) {
+      // Fallback for test environment or when Option is not available
+      // Check for common color formats
+      const hexMatch = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(strColor);
+      const rgbMatch = /^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*[\d.]+)?\s*\)$/i.test(strColor);
+      const colorNameMatch = /^(red|green|blue|white|black|yellow|cyan|magenta|transparent)$/i.test(strColor);
+      return hexMatch || rgbMatch || colorNameMatch;
+    }
   }
 
   static parseColorToRgb(colorStr: string): [number, number, number] | null {
@@ -73,7 +204,7 @@ export class ColorResolver {
     }).join('')}`;
   }
 
-  static adjustBrightness(color: string, percent: number): string {
+  static adjustColorBrightness(color: string, percent: number): string {
     const rgb = ColorResolver.parseColorToRgb(color);
     if (!rgb) return color;
 
@@ -146,7 +277,7 @@ export class ColorResolver {
     return color.resolve(elementId, animationProperty, animationContext, stateContext);
   }
 
-  detectsDynamicColorChanges(
+  scheduleDynamicColorChangeDetection(
     layoutGroups: Group[],
     hass: HomeAssistant,
     refreshCallback: () => void,
@@ -173,7 +304,7 @@ export class ColorResolver {
     return entityIds;
   }
 
-  hasSignificantEntityChanges(
+  elementEntityStatesChanged(
     layoutGroups: Group[],
     lastHassStates: { [entityId: string]: any } | undefined,
     currentHass: HomeAssistant
@@ -515,6 +646,78 @@ export class ColorResolver {
     const ratio = (numericValue - lower) / (upper - lower);
     const interp = lowerColor.map((c, idx) => Math.round(c + (upperColor[idx] - c) * ratio));
     return `rgb(${interp[0]},${interp[1]},${interp[2]})`;
+  }
+
+  private static isCssVariable(color: string): boolean {
+    return Boolean(color && color.startsWith('var('));
+  }
+
+  private static extractVariableName(color: string): string | null {
+    return color.match(/--[a-zA-Z0-9-]+/)?.[0] || null;
+  }
+
+  private static tryResolvingFromDom(varName: string, element?: Element | null): string | null {
+    if (!element) {
+      return null;
+    }
+
+    try {
+      const resolvedColor = getComputedStyle(element).getPropertyValue(varName).trim();
+      return resolvedColor || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  private static tryResolvingFromTheme(varName: string): string | null {
+    return this.getFallbackColorFromTheme(varName.replace(/^--/, '')) || null;
+  }
+
+  private static _hasCircularReference(key: string, resolutionStack: Set<string>): boolean {
+    return resolutionStack.has(key);
+  }
+
+  private static _resolveVariableValue(
+    key: string, 
+    value: string, 
+    themeConfig: ThemeConfig, 
+    resolvedColors: ResolvedThemeColors, 
+    resolutionStack: Set<string>, 
+    variableRegex: RegExp, 
+    resolveValue: (key: string, value: string) => string
+  ): string {
+    resolutionStack.add(key);
+
+    const match = value.match(variableRegex);
+    if (match) {
+      const varName = match[1];
+      const referencedKey = varName.replace(/^--/, '');
+      const referencedValue = themeConfig[referencedKey] as string;
+
+      if (referencedValue) {
+        const resolved = resolveValue(referencedKey, referencedValue);
+        resolvedColors[key] = resolved;
+        resolutionStack.delete(key);
+        return resolved;
+      }
+    }
+
+    resolvedColors[key] = value;
+    resolutionStack.delete(key);
+    return value;
+  }
+
+  private static _processThemeConfig(themeConfig: ThemeConfig, resolveValue: (key: string, value: string) => string): void {
+    for (const key in themeConfig) {
+      if (typeof themeConfig[key] === 'string') {
+        resolveValue(key, themeConfig[key] as string);
+      } else {
+        const subConfig = themeConfig[key] as Record<string, string>;
+        for (const subKey in subConfig) {
+          resolveValue(subKey, subConfig[subKey]);
+        }
+      }
+    }
   }
 }
 

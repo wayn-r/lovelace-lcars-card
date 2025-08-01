@@ -36,7 +36,7 @@ class GraphButtonFactory {
     
     const stateName = `${parentGraphId}_${entityConfig.id}_visible`;
     const colorIndex = originalIndex ?? index;
-    const buttonColor = this.determineButtonColor(entityConfig, colorIndex);
+    const buttonColor = this.determineButtonColor(entityConfig, colorIndex, getShadowElement, parentGraphId);
     
     const buttonProps = this.createButtonProps(buttonColor, entityConfig.id, stateName, dimensions.height);
     const layoutConfig = this.createButtonLayoutConfig(dimensions, index, parentGraphId);
@@ -85,8 +85,16 @@ class GraphButtonFactory {
     };
   }
 
-  private static determineButtonColor(entityConfig: RichEntityConfig, index: number): string {
-    return entityConfig.color || lineGradients[index % lineGradients.length].color;
+  private static determineButtonColor(
+    entityConfig: RichEntityConfig, 
+    index: number,
+    getShadowElement?: (id: string) => Element | null,
+    parentGraphId?: string
+  ): string {
+    const color = entityConfig.color || lineGradients[index % lineGradients.length].color;
+    // Use dummy element for fallback resolution if getShadowElement not available
+    const element = getShadowElement?.(parentGraphId || 'fallback');
+    return ColorResolver.resolveCssVariable(color, element);
   }
 
   private static createButtonProps(

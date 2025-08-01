@@ -55,41 +55,15 @@ export class Color {
     stateContext?: ColorStateContext
   ): string {
     if (isStatefulColorConfig(this._value)) {
-      const selectedColorValue = this._resolveStateBasedColorValue(this._value, stateContext);
-      
-      if (selectedColorValue !== undefined) {
-        const stateColor = new Color(selectedColorValue, this._fallback);
-        return stateColor.resolve(elementId, animationProperty, animationContext, stateContext);
-      }
-      
-      return this._fallback;
+      return this._resolveStatefulColor(elementId, animationProperty, animationContext, stateContext);
     }
 
     if (isDynamicColorConfig(this._value)) {
-      if (elementId && animationProperty && animationContext) {
-        const resolved = colorResolver.resolveColor(
-          this._value,
-          elementId,
-          animationProperty,
-          animationContext,
-          undefined,
-          'transparent'
-        );
-        return (resolved ?? '') || this._getStaticFallbackColor(elementId ? animationContext?.getShadowElement?.(elementId) || undefined : undefined);
-      } else {
-        const resolved = colorResolver.resolveColor(
-          this._value,
-          elementId || 'fallback',
-          undefined,
-          animationContext,
-          undefined,
-          'transparent'
-        );
-        return (resolved ?? '') || this._getStaticFallbackColor(elementId ? animationContext?.getShadowElement?.(elementId) || undefined : undefined);
-      }
+      return this._resolveDynamicColor(elementId, animationProperty, animationContext);
     }
 
-    return this._formatStaticColorValue(this._value, elementId ? animationContext?.getShadowElement?.(elementId) || undefined : undefined) || this._fallback;
+    const shadowElement = this._getShadowElement(elementId, animationContext);
+    return this._formatStaticColorValue(this._value, shadowElement) || this._fallback;
   }
 
   get value(): ColorValue {
@@ -137,29 +111,16 @@ export class Color {
     statefulConfig: StatefulColorConfig,
     stateContext?: ColorStateContext
   ): ColorValue | undefined {
-    if (stateContext?.isCurrentlyActive && statefulConfig.active !== undefined) {
+    if (this._shouldUseActiveState(statefulConfig, stateContext)) {
       return statefulConfig.active;
     }
 
-    if (statefulConfig.state_name && statefulConfig.state_map) {
-        const currentState = stateManager.getState(statefulConfig.state_name);
-        const colorStateKey = currentState ? statefulConfig.state_map[currentState] : undefined;
-
-        if (colorStateKey) {
-            // Type-safe access to dynamic properties by casting to Record<string, any>
-            const configAsRecord = statefulConfig as Record<string, any>;
-            const hoverKey = `${colorStateKey}_hover`;
-            
-            if (stateContext?.isCurrentlyHovering && configAsRecord[hoverKey] !== undefined) {
-                return configAsRecord[hoverKey];
-            }
-            if (configAsRecord[colorStateKey] !== undefined) {
-                return configAsRecord[colorStateKey];
-            }
-        }
+    const stateMapColor = this._resolveFromStateMap(statefulConfig, stateContext);
+    if (stateMapColor !== undefined) {
+      return stateMapColor;
     }
     
-    if (stateContext?.isCurrentlyHovering && statefulConfig.hover !== undefined) {
+    if (this._shouldUseHoverState(statefulConfig, stateContext)) {
       return statefulConfig.hover;
     }
     
@@ -168,38 +129,20 @@ export class Color {
 
   private _formatStaticColorValue(color: ColorValue, element?: Element): string {
     if (typeof color === 'string' && color.trim().length > 0) {
-        const trimmedColor = color.trim();
-
-        const lightenMatch = trimmedColor.match(/^lighten\((.+),\s*(\d+%?)\)$/);
-        if (lightenMatch && element) {
-            const baseColor = this._formatStaticColorValue(lightenMatch[1], element);
-            const percent = parseFloat(lightenMatch[2]);
-            if (ColorResolver.isColor(baseColor)) {
-                const resolvedBaseColor = ColorResolver.resolveCssVariable(baseColor, element);
-                return ColorResolver.calculateLightenColor(resolvedBaseColor, percent);
-            }
-        }
-
-        const darkenMatch = trimmedColor.match(/^darken\((.+),\s*(\d+%?)\)$/);
-        if (darkenMatch && element) {
-            const baseColor = this._formatStaticColorValue(darkenMatch[1], element);
-            const percent = parseFloat(darkenMatch[2]);
-            if (ColorResolver.isColor(baseColor)) {
-                const resolvedBaseColor = ColorResolver.resolveCssVariable(baseColor, element);
-                return ColorResolver.calculateDarkenColor(resolvedBaseColor, percent);
-            }
-        }
-        
-        return trimmedColor; // Ensure a string is always returned if it's a string color
+      const trimmedColor = color.trim();
+      
+      const processedColor = this._processColorFunctions(trimmedColor, element) ||
+                           this._processCssVariables(trimmedColor, element) ||
+                           trimmedColor;
+      
+      return processedColor;
     }
     
-    if (Array.isArray(color) && 
-        color.length === 3 && 
-        color.every(component => typeof component === 'number')) {
+    if (this._isRgbArray(color)) {
       return `rgb(${color[0]},${color[1]},${color[2]})`;
     }
     
-    return this._fallback; // Final fallback to ensure string return
+    return this._fallback;
   }
 
   private _getStaticFallbackColor(element?: Element): string {
@@ -214,5 +157,129 @@ export class Color {
     }
     
     return this._fallback;
+  }
+
+  private _resolveStatefulColor(
+    elementId?: string,
+    animationProperty?: 'fill' | 'stroke' | 'textColor',
+    animationContext?: AnimationContext,
+    stateContext?: ColorStateContext
+  ): string {
+    const selectedColorValue = this._resolveStateBasedColorValue(this._value as StatefulColorConfig, stateContext);
+    
+    if (selectedColorValue !== undefined) {
+      const stateColor = new Color(selectedColorValue, this._fallback);
+      return stateColor.resolve(elementId, animationProperty, animationContext, stateContext);
+    }
+    
+    return this._fallback;
+  }
+
+  private _resolveDynamicColor(
+    elementId?: string,
+    animationProperty?: 'fill' | 'stroke' | 'textColor',
+    animationContext?: AnimationContext
+  ): string {
+    const hasCompleteContext = elementId && animationProperty && animationContext;
+    const fallbackElementId = elementId || 'fallback';
+    
+    const resolved = colorResolver.resolveColor(
+      this._value,
+      hasCompleteContext ? elementId : fallbackElementId,
+      hasCompleteContext ? animationProperty : undefined,
+      animationContext,
+      undefined,
+      'transparent'
+    );
+    
+    const shadowElement = this._getShadowElement(elementId, animationContext);
+    return resolved || this._getStaticFallbackColor(shadowElement);
+  }
+
+  private _getShadowElement(elementId?: string, animationContext?: AnimationContext): Element | undefined {
+    return elementId ? animationContext?.getShadowElement?.(elementId) || undefined : undefined;
+  }
+
+  private _shouldUseActiveState(config: StatefulColorConfig, stateContext?: ColorStateContext): boolean {
+    return !!(stateContext?.isCurrentlyActive && config.active !== undefined);
+  }
+
+  private _shouldUseHoverState(config: StatefulColorConfig, stateContext?: ColorStateContext): boolean {
+    return !!(stateContext?.isCurrentlyHovering && config.hover !== undefined);
+  }
+
+  private _resolveFromStateMap(config: StatefulColorConfig, stateContext?: ColorStateContext): ColorValue | undefined {
+    if (!config.state_name || !config.state_map) {
+      return undefined;
+    }
+
+    const currentState = stateManager.getState(config.state_name);
+    const colorStateKey = currentState ? config.state_map[currentState] : undefined;
+
+    if (colorStateKey) {
+      const configAsRecord = config as Record<string, any>;
+      const hoverKey = `${colorStateKey}_hover`;
+      
+      if (stateContext?.isCurrentlyHovering && configAsRecord[hoverKey] !== undefined) {
+        return configAsRecord[hoverKey];
+      }
+      
+      if (configAsRecord[colorStateKey] !== undefined) {
+        return configAsRecord[colorStateKey];
+      }
+    }
+
+    return undefined;
+  }
+
+  private _processColorFunctions(color: string, element?: Element): string | null {
+    const lightenMatch = color.match(/^lighten\((.+),\s*(\d+%?)\)$/);
+    if (lightenMatch) {
+      return this._processLightenFunction(lightenMatch[1], lightenMatch[2], element);
+    }
+
+    const darkenMatch = color.match(/^darken\((.+),\s*(\d+%?)\)$/);
+    if (darkenMatch) {
+      return this._processDarkenFunction(darkenMatch[1], darkenMatch[2], element);
+    }
+
+    return null;
+  }
+
+  private _processLightenFunction(baseColorStr: string, percentStr: string, element?: Element): string | null {
+    const baseColor = this._formatStaticColorValue(baseColorStr, element);
+    const percent = parseFloat(percentStr);
+    
+    if (ColorResolver.isColor(baseColor)) {
+      const resolvedBaseColor = ColorResolver.resolveCssVariable(baseColor, element);
+      return ColorResolver.calculateLightenedColor(resolvedBaseColor, percent);
+    }
+    
+    return null;
+  }
+
+  private _processDarkenFunction(baseColorStr: string, percentStr: string, element?: Element): string | null {
+    const baseColor = this._formatStaticColorValue(baseColorStr, element);
+    const percent = parseFloat(percentStr);
+    
+    if (ColorResolver.isColor(baseColor)) {
+      const resolvedBaseColor = ColorResolver.resolveCssVariable(baseColor, element);
+      return ColorResolver.calculateDarkenedColor(resolvedBaseColor, percent);
+    }
+    
+    return null;
+  }
+
+  private _processCssVariables(color: string, element?: Element): string | null {
+    if (color.startsWith('var(')) {
+      return ColorResolver.resolveCssVariable(color, element);
+    }
+    return null;
+  }
+
+  private _isRgbArray(color: ColorValue): color is [number, number, number] {
+    return Array.isArray(color) && 
+           color.length === 3 && 
+           color.every(component => typeof component === 'number');
   }
 } 
