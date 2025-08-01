@@ -10,6 +10,8 @@
         "dev": "vite",
         "prestart": "node flatten-codebase.js && node git-history-diff.js",
         "start": "vite",
+        "embed-theme": "node scripts/embed-theme.js",
+        "prebuild": "npm run embed-theme",
         "build": "tsc && vite build",
         "preview": "vite preview",
         "test": "vitest run",
@@ -28,7 +30,9 @@
     "devDependencies": {
         "@mermaid-js/mermaid-cli": "^11.4.2",
         "@playwright/test": "^1.53.1",
+        "@rollup/plugin-yaml": "^4.1.2",
         "@types/d3-array": "^3.2.1",
+        "@types/js-yaml": "^4.0.9",
         "@types/sortablejs": "^1.15.8",
         "@typescript-eslint/eslint-plugin": "^8.38.0",
         "@typescript-eslint/parser": "^8.38.0",
