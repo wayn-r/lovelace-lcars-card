@@ -11,6 +11,9 @@ git_history_diff.md
 test-results.xml
 notepads/
 
+# Auto-generated theme embedding
+src/utils/embedded-theme.ts
+
 /test-results/
 /tests/e2e/config-examples.spec.ts-snapshots/
 /.claude/
