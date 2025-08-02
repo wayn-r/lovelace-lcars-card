@@ -16,7 +16,7 @@
         "preview": "vite preview",
         "test": "vitest run",
         "test:ui": "vitest ui",
-        "test:e2e": "npm run build && playwright test",
+        "test:e2e": "NODE_NO_WARNINGS=1 node tests/e2e/setup-e2e.js && npm run build --silent && NODE_NO_WARNINGS=1 bash -c 'playwright test --reporter=line \"$@\" 2>&1 | grep -v -E \"(INFO \\\\(|homeassistant\\\\.|Setting up|Setup of domain|Registered new|Loaded |SyncWorker|Create cache|2025-|Pool recreating|Received unknown command|libturbojpeg|Support for the running Python|DeprecationWarning|Requirement already satisfied|Attempting install|turbojpeg library automatically)\" | grep -v \"^$\"' -- ",
         "coverage": "vitest run --coverage"
     },
     "keywords": [
