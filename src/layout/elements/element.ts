@@ -3,10 +3,10 @@ import { HomeAssistant } from "custom-card-helpers";
 import { SVGTemplateResult, svg } from 'lit';
 import { StretchContext } from '../engine.js';
 import { Button } from '../../utils/button.js';
-import { ColorValue } from '../../types';
+import { ColorValue, isStatefulColorConfig } from '../../types';
 import { animationManager, AnimationContext } from '../../utils/animation.js';
-import { colorResolver } from '../../utils/color-resolver.js';
-import { ComputedElementColors, ColorResolutionDefaults } from '../../utils/color.js';
+import { colorResolver, ColorResolver } from '../../utils/color-resolver.js';
+import { ComputedElementColors, ColorResolutionDefaults } from '../../types.js';
 import { OffsetCalculator } from '../../utils/offset-calculator.js';
 
 export abstract class LayoutElement {
@@ -103,15 +103,15 @@ export abstract class LayoutElement {
 
     protected hasStatefulColors(): boolean {
         const { fill, stroke, textColor } = this.props;
-        return this.colorIsStateful(fill) || 
-               this.colorIsStateful(stroke) || 
-               this.colorIsStateful(textColor);
+        return Boolean(
+            this.colorIsStateful(fill) || 
+            this.colorIsStateful(stroke) || 
+            this.colorIsStateful(textColor)
+        );
     }
 
     private colorIsStateful(color: any): boolean {
-        return Boolean(color && typeof color === 'object' && 
-                      ('default' in color || 'hover' in color || 'active' in color) &&
-                      !('entity' in color) && !('mapping' in color));
+        return isStatefulColorConfig(color);
     }
 
     setupInteractiveListeners(): void {
@@ -783,16 +783,7 @@ export abstract class LayoutElement {
         animationManager.animateElementProperty(this.id, property, value, duration, this.getShadowElement);
     }
 
-    protected resolveDynamicColorWithAnimation(colorConfig: ColorValue, property: 'fill' | 'stroke' = 'fill'): string | undefined {
-        const context: AnimationContext = {
-            elementId: this.id,
-            getShadowElement: this.getShadowElement,
-            hass: this.hass,
-            requestUpdateCallback: this.requestUpdateCallback
-        };
-        
-        return colorResolver.resolveColor(colorConfig, this.id, property, context, undefined, 'transparent');
-    }
+
 
     protected resolveElementColors(options: ColorResolutionDefaults = {}): ComputedElementColors {
         const context: AnimationContext = {
@@ -820,9 +811,7 @@ export abstract class LayoutElement {
         return colorResolver.createButtonPropsWithResolvedColors(this.id, this.props, context, stateContext);
     }
 
-    protected resolveDynamicColor(colorConfig: ColorValue): string | undefined {
-        return colorResolver.resolveColor(colorConfig, this.id, undefined, undefined, undefined, 'transparent');
-    }
+
 
     public entityChangesDetected(hass: HomeAssistant): boolean {
         if (!hass) return false;
@@ -853,7 +842,10 @@ export abstract class LayoutElement {
             if (value === undefined) return;
 
             if (typeof value === 'object') {
-                const resolved = colorResolver.resolveColor(value, this.id, propName as any, animationContext, stateContext, 'transparent');
+                const resolved = ColorResolver.resolve(value)
+                    .withAnimation(this.id, propName as any, animationContext)
+                    .withState(stateContext)
+                    .withFallback('transparent');
                 if (cache[propName] !== resolved) {
                     cache[propName] = resolved;
                     changed = true;

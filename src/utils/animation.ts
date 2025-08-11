@@ -674,25 +674,8 @@ export class ColorAnimationUtils {
   }
 
   static parseColorToRgb(color: string): { r: number; g: number; b: number } | null {
-    const hexMatch = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
-    if (hexMatch) {
-      return {
-        r: parseInt(hexMatch[1], 16),
-        g: parseInt(hexMatch[2], 16),
-        b: parseInt(hexMatch[3], 16)
-      };
-    }
-
-    const rgbMatch = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i.exec(color);
-    if (rgbMatch) {
-      return {
-        r: parseInt(rgbMatch[1], 10),
-        g: parseInt(rgbMatch[2], 10),
-        b: parseInt(rgbMatch[3], 10)
-      };
-    }
-
-    return null;
+    const rgb = ColorResolver.parseColorToRgb(color);
+    return rgb ? { r: rgb[0], g: rgb[1], b: rgb[2] } : null;
   }
 
 

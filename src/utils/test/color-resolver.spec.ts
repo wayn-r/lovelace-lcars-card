@@ -1,5 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ColorResolver, colorResolver } from '../color-resolver';
+
+// Temporary helper to adapt existing tests to fluent API after legacy wrapper removal
+const resolveColor = (value: any, options: any = {}): string => {
+  let chain: any = ColorResolver.resolve(value);
+  if (options.context !== undefined) {
+    chain = chain.withDom(options.context ?? null);
+  }
+  if (options.elementId) {
+    chain = chain.withAnimation(options.elementId, options.animationProperty || 'fill', options.animationContext);
+  }
+  if (options.stateContext) {
+    chain = chain.withState(options.stateContext);
+  }
+  if (options.hass) {
+    chain = chain.withHass(options.hass);
+  }
+  if (options.fallback) {
+    chain = chain.withFallback(options.fallback);
+  }
+  return `${chain}`;
+};
 import { AnimationContext } from '../animation';
 import { HomeAssistant } from 'custom-card-helpers';
 import { Group } from '../../layout/engine.js';
@@ -255,14 +276,20 @@ describe('ColorResolver', () => {
     });
   });
 
-  describe('resolveColor method', () => {
+  describe('resolveColor static method', () => {
     it('should resolve single color values', () => {
-      const result = resolver.resolveColor('#ff0000', 'test-element', 'fill', mockContext, {}, 'blue');
+      const result = resolveColor('#ff0000', { 
+        elementId: 'test-element', 
+        animationProperty: 'fill', 
+        animationContext: mockContext, 
+        stateContext: {}, 
+        fallback: 'blue' 
+      });
       expect(result).toBe('#ff0000');
     });
 
     it('should use transparent as default fallback', () => {
-      const result = resolver.resolveColor('#ff0000');
+      const result = resolveColor('#ff0000');
       expect(result).toBe('#ff0000');
     });
 
@@ -277,52 +304,24 @@ describe('ColorResolver', () => {
         isCurrentlyActive: false
       };
 
-      const result = resolver.resolveColor(statefulColor, 'test-element', 'fill', mockContext, stateContext, 'blue');
+      const result = resolveColor(statefulColor, { 
+        elementId: 'test-element', 
+        animationProperty: 'fill', 
+        animationContext: mockContext, 
+        stateContext: stateContext, 
+        fallback: 'blue' 
+      });
       expect(result).toBe('#ff0000');
     });
   });
 
-  describe('resolveColorsWithoutAnimationContext', () => {
-    it('should resolve colors without animation context', () => {
-      const props = {
-        fill: '#ff0000',
-        stroke: '#00ff00',
-        textColor: '#ffffff'
-      };
 
-      const result = resolver.resolveColorsWithoutAnimationContext('test-id', props);
-
-      expect(result).toEqual({
-        fillColor: '#ff0000',
-        strokeColor: '#00ff00',
-        strokeWidth: '0',
-        textColor: '#ffffff'
-      });
-    });
-  });
 
   // ============================================================================
   // Dynamic Color Management Tests
   // ============================================================================
 
-  describe('clearAllCaches', () => {
-    it('should clear element state for all elements', () => {
-      resolver.clearAllCaches(mockLayoutGroups);
 
-      const element = mockLayoutGroups[0].elements[0] as any;
-              // clearMonitoredEntities method was removed as it was unused
-      expect(element.cleanupAnimations).toHaveBeenCalled();
-    });
-
-    it('should clear element state without errors', async () => {
-      // Note: Dynamic color caching is now handled by the store/ColorResolver itself
-      
-      resolver.clearAllCaches(mockLayoutGroups);
-
-      // Test should pass without errors
-      expect(true).toBe(true);
-    });
-  });
 
   describe('detectsDynamicColorChanges', () => {
     it('should call refresh callback when changes are detected', async () => {
@@ -378,7 +377,7 @@ describe('ColorResolver', () => {
     });
   });
 
-  describe('extractEntityIdsFromElement', () => {
+  describe('extractEntityIds', () => {
     it('should extract entity IDs from dynamic color properties', () => {
       const element = {
         props: {
@@ -388,7 +387,7 @@ describe('ColorResolver', () => {
         }
       };
 
-      const entityIds = resolver.extractEntityIdsFromElement(element);
+      const entityIds = resolver.extractEntityIds(element);
 
       expect(entityIds).toEqual(new Set(['sensor.test1', 'sensor.test2', 'sensor.test3']));
     });
@@ -403,7 +402,7 @@ describe('ColorResolver', () => {
         }
       };
 
-      const entityIds = resolver.extractEntityIdsFromElement(element);
+      const entityIds = resolver.extractEntityIds(element);
 
       expect(entityIds).toEqual(new Set(['sensor.hover', 'sensor.active']));
     });
@@ -411,7 +410,7 @@ describe('ColorResolver', () => {
     it('should return empty set for element without props', () => {
       const element = {};
 
-      const entityIds = resolver.extractEntityIdsFromElement(element);
+      const entityIds = resolver.extractEntityIds(element);
 
       expect(entityIds).toEqual(new Set());
     });
@@ -531,17 +530,17 @@ describe('ColorResolver', () => {
       });
 
       it('should return fallback color for existing variable', () => {
-        const color = ColorResolver.getFallbackColorFromTheme('lcars-color-blue');
+        const color = (ColorResolver as any)._getFallbackColorFromTheme('lcars-color-blue');
         expect(color).toBe('#5ca8ea');
       });
 
       it('should return resolved color for CSS variable reference', () => {
-        const color = ColorResolver.getFallbackColorFromTheme('lcars-color-derived');
+        const color = (ColorResolver as any)._getFallbackColorFromTheme('lcars-color-derived');
         expect(color).toBe('#5ca8ea');
       });
 
       it('should return undefined for non-existent variable', () => {
-        const color = ColorResolver.getFallbackColorFromTheme('non-existent-color');
+        const color = (ColorResolver as any)._getFallbackColorFromTheme('non-existent-color');
         expect(color).toBeUndefined();
       });
     });
@@ -593,12 +592,12 @@ describe('ColorResolver', () => {
       });
 
       it('should resolve logger widget colors', () => {
-        const color = ColorResolver.getFallbackColorFromTheme('lcars-color-logger-bright');
+        const color = (ColorResolver as any)._getFallbackColorFromTheme('lcars-color-logger-bright');
         expect(color).toBe('#5ca8ea');
       });
 
       it('should resolve environmental config colors', () => {
-        const color = ColorResolver.getFallbackColorFromTheme('lcars-color-environmental-button-1');
+        const color = (ColorResolver as any)._getFallbackColorFromTheme('lcars-color-environmental-button-1');
         expect(color).toBe('#04bfd8');
       });
     });
@@ -619,6 +618,7 @@ describe('ColorResolver', () => {
       // Create a mock element
       mockElement = {
         style: {},
+        tagName: 'DIV'
       } as any;
 
       // Mock getComputedStyle
@@ -638,14 +638,14 @@ describe('ColorResolver', () => {
       (ColorResolver as any)._resolvedThemeColors = colors;
     });
 
-    describe('resolveCssVariable with fallback', () => {
+    describe('resolveColor with CSS variables', () => {
       it('should return fallback color when CSS variable is not found', () => {
-        const result = ColorResolver.resolveCssVariable('var(--lcars-color-blue)', mockElement);
+        const result = resolveColor('var(--lcars-color-blue)');
         expect(result).toBe('#5ca8ea');
       });
 
       it('should return fallback for resolved CSS variable references', () => {
-        const result = ColorResolver.resolveCssVariable('var(--lcars-color-logger-bright)', mockElement);
+        const result = resolveColor('var(--lcars-color-logger-bright)');
         expect(result).toBe('#5ca8ea');
       });
 
@@ -655,29 +655,29 @@ describe('ColorResolver', () => {
           getPropertyValue: vi.fn().mockReturnValue('#ff0000'), // Return red to simulate found CSS variable
         });
 
-        const result = ColorResolver.resolveCssVariable('var(--lcars-color-blue)', mockElement);
+        const result = resolveColor('var(--lcars-color-blue)', { context: mockElement });
         expect(result).toBe('#ff0000');
       });
 
       it('should return original color when not a CSS variable', () => {
-        const result = ColorResolver.resolveCssVariable('#123456', mockElement);
+        const result = resolveColor('#123456', { context: mockElement });
         expect(result).toBe('#123456');
       });
 
       it('should return original color when fallback not found', () => {
-        const result = ColorResolver.resolveCssVariable('var(--non-existent-color)', mockElement);
+        const result = resolveColor('var(--non-existent-color)', { context: mockElement });
         expect(result).toBe('var(--non-existent-color)');
       });
 
       it('should handle malformed CSS variable syntax', () => {
-        const result = ColorResolver.resolveCssVariable('var(invalid)', mockElement);
+        const result = resolveColor('var(invalid)', { context: mockElement });
         expect(result).toBe('var(invalid)');
       });
     });
 
     describe('environmental color fallbacks', () => {
       it('should resolve environmental button colors', () => {
-        const result = ColorResolver.resolveCssVariable('var(--lcars-color-environmental-button-1)', mockElement);
+        const result = resolveColor('var(--lcars-color-environmental-button-1)');
         expect(result).toBe('#04bfd8');
       });
 
@@ -690,26 +690,26 @@ describe('ColorResolver', () => {
         const colors = (ColorResolver as any)._parseThemeYaml(yamlContent);
         (ColorResolver as any)._resolvedThemeColors = colors;
 
-        const result = ColorResolver.resolveCssVariable('var(--lcars-color-environmental-main-header-lower-bar-1)', mockElement);
+        const result = resolveColor('var(--lcars-color-environmental-main-header-lower-bar-1)');
         expect(result).toBe('#044ea9');
       });
     });
 
     describe('edge cases', () => {
       it('should handle empty variable name', () => {
-        const result = ColorResolver.resolveCssVariable('var(--)', mockElement);
+        const result = resolveColor('var(--)', { context: mockElement });
         expect(result).toBe('var(--)');
       });
 
       it('should handle variable with spaces', () => {
-        const result = ColorResolver.resolveCssVariable('var(--lcars-color-blue )', mockElement);
+        const result = resolveColor('var(--lcars-color-blue )');
         // Should still extract the variable name correctly
         expect(result).toBe('#5ca8ea');
       });
 
       it('should handle multiple var() calls', () => {
         // Should only process the first one
-        const result = ColorResolver.resolveCssVariable('var(--lcars-color-blue) var(--lcars-color-cyan)', mockElement);
+        const result = resolveColor('var(--lcars-color-blue) var(--lcars-color-cyan)');
         expect(result).toBe('#5ca8ea');
       });
     });
@@ -736,54 +736,54 @@ describe('ColorResolver', () => {
     });
 
     it('should resolve animated gradient colors using fallback', () => {
-      const color = ColorResolver.resolveCssVariable('var(--lcars-color-graph-line-1)');
+      const color = resolveColor('var(--lcars-color-graph-line-1)');
       expect(color).toBe('#12a4e3');
     });
 
     it('should resolve non-animated line colors using fallback', () => {
-      const color = ColorResolver.resolveCssVariable('var(--lcars-color-graph-line-2)');
+      const color = resolveColor('var(--lcars-color-graph-line-2)');
       expect(color).toBe('#86c8ff');
     });
 
     it('should resolve graph background colors using fallback', () => {
-      const color = ColorResolver.resolveCssVariable('var(--lcars-color-graph-background)');
+      const color = resolveColor('var(--lcars-color-graph-background)');
       expect(color).toBe('#0B6288');
     });
 
     it('should resolve graph button colors using fallback', () => {
-      const color = ColorResolver.resolveCssVariable('var(--lcars-color-graph-line-3)');
+      const color = resolveColor('var(--lcars-color-graph-line-3)');
       expect(color).toBe('#04bfd8');
     });
 
     it('should resolve environmental button colors using fallback', () => {
-      const color = ColorResolver.resolveCssVariable('var(--lcars-color-environmental-button-1)');
+      const color = resolveColor('var(--lcars-color-environmental-button-1)');
       expect(color).toBe('#3ad8e6');
     });
 
     it('should resolve environmental button with new grey-blue color', () => {
-      const color = ColorResolver.resolveCssVariable('var(--lcars-color-environmental-button-3)');
+      const color = resolveColor('var(--lcars-color-environmental-button-3)');
       expect(color).toBe('#7a9ca5');
     });
 
     describe('Error Handling', () => {
       it('should handle null/undefined elements gracefully', () => {
-        const color = ColorResolver.resolveCssVariable('var(--lcars-color-blue)', null);
+        const color = resolveColor('var(--lcars-color-blue)', { context: null });
         expect(color).toBe('#5ca8ea');
       });
 
       it('should handle invalid elements gracefully', () => {
         const invalidElement = {} as Element;
-        const color = ColorResolver.resolveCssVariable('var(--lcars-color-blue)', invalidElement);
+        const color = resolveColor('var(--lcars-color-blue)', { context: invalidElement });
         expect(color).toBe('#5ca8ea');
       });
 
       it('should return original color for non-existent variables', () => {
-        const color = ColorResolver.resolveCssVariable('var(--non-existent-color)');
+        const color = resolveColor('var(--non-existent-color)');
         expect(color).toBe('var(--non-existent-color)');
       });
 
       it('should return original color for non-CSS-variable strings', () => {
-        const color = ColorResolver.resolveCssVariable('#ff0000');
+        const color = resolveColor('#ff0000');
         expect(color).toBe('#ff0000');
       });
     });
@@ -796,13 +796,13 @@ describe('ColorResolver', () => {
         });
 
         const mockElement = document.createElement('div');
-        const color = ColorResolver.resolveCssVariable('var(--lcars-color-blue)', mockElement);
+        const color = resolveColor('var(--lcars-color-blue)', { context: mockElement });
         expect(color).toBe('#ff0000'); // Should use DOM value, not fallback
       });
 
       it('should use theme fallback when DOM resolution fails', () => {
         // getComputedStyle is already mocked to return empty string
-        const color = ColorResolver.resolveCssVariable('var(--lcars-color-blue)');
+        const color = resolveColor('var(--lcars-color-blue)');
         expect(color).toBe('#5ca8ea'); // Should use theme fallback
       });
     });

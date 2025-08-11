@@ -49,6 +49,31 @@ export function isStatefulColorConfig(value: any): value is StatefulColorConfig 
 }
 
 // ============================================================================
+// Color Resolution Context Types (shared between Color and ColorResolver)
+// ============================================================================
+
+export type ColorState = 'default' | 'hover' | 'active';
+
+export interface ColorStateContext {
+  isCurrentlyHovering?: boolean;
+  isCurrentlyActive?: boolean;
+}
+
+export interface ComputedElementColors {
+  fillColor: string;
+  strokeColor: string;
+  strokeWidth: string;
+  textColor: string;
+}
+
+export interface ColorResolutionDefaults {
+  fallbackFillColor?: string;
+  fallbackStrokeColor?: string;
+  fallbackStrokeWidth?: string;
+  fallbackTextColor?: string;
+}
+
+// ============================================================================
 // YAML Configuration Types
 // ============================================================================
 

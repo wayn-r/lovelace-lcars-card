@@ -1,11 +1,19 @@
-import { ColorValue, DynamicColorConfig, isDynamicColorConfig } from '../types';
-import { AnimationContext, animationManager } from './animation';
+import { ColorValue, DynamicColorConfig, isDynamicColorConfig, isStatefulColorConfig, ColorStateContext, ComputedElementColors, ColorResolutionDefaults, StatefulColorConfig } from '../types';
+import { AnimationContext } from './animation';
 import { LayoutElementProps } from '../layout/engine';
 import { HomeAssistant } from 'custom-card-helpers';
 import { Group } from '../layout/engine.js';
-import { Color, ColorStateContext, ComputedElementColors, ColorResolutionDefaults } from './color.js';
 import yaml from 'js-yaml';
 import { EMBEDDED_THEME_YAML } from './embedded-theme.js';
+import { stateManager } from './state-manager';
+
+export type ColorChain = string & {
+  withDom(ctx: Element | null): ColorChain;
+  withAnimation(id: string, prop: 'fill' | 'stroke' | 'textColor', ctx: AnimationContext): ColorChain;
+  withState(ctx: ColorStateContext): ColorChain;
+  withHass(hass: HomeAssistant): ColorChain;
+  withFallback(color: string): ColorChain;
+};
 
 interface ThemeConfig {
   [key: string]: string | Record<string, string>;
@@ -15,9 +23,21 @@ interface ResolvedThemeColors {
   [key: string]: string;
 }
 
+interface ResolveColorOptions {
+  elementId?: string;
+  animationProperty?: 'fill' | 'stroke' | 'textColor';
+  animationContext?: AnimationContext;
+  stateContext?: ColorStateContext;
+  hass?: HomeAssistant;
+  context?: Element | { themeOnly: true } | null;
+  fallback?: string;
+}
+
 export class ColorResolver {
   private static _resolvedThemeColors: ResolvedThemeColors | null = null;
   private static _themeLoadPromise: Promise<ResolvedThemeColors> | null = null;
+  private dynamicColorCheckScheduled: boolean = false;
+  private refreshTimeout?: ReturnType<typeof setTimeout>;
 
   static createLightenExpression(color: string, percent: number): string {
     return `lighten(${color}, ${percent})`;
@@ -36,38 +56,231 @@ export class ColorResolver {
   }
 
   static async preloadThemeColors(): Promise<void> {
-    await this.getResolvedThemeColors();
+    await this._getResolvedThemeColors();
   }
 
-  static resolveCssVariable(color: string, element?: Element | null): string {
-    if (!this.isCssVariable(color)) {
-      return color;
+  static resolve(value: string | ColorValue | DynamicColorConfig): ColorChain {
+    const options: ResolveColorOptions & { value: string | ColorValue | DynamicColorConfig } = {
+      value,
+      fallback: 'transparent'
+    } as any;
+
+    const builder: any = {
+      withDom(context: Element | null) {
+        options.context = context;
+        return builder as ColorChain;
+      },
+      withAnimation(id: string, property: 'fill' | 'stroke' | 'textColor', ctx: AnimationContext) {
+        options.elementId = id;
+        options.animationProperty = property;
+        options.animationContext = ctx;
+        return builder as ColorChain;
+      },
+      withState(state: ColorStateContext) {
+        options.stateContext = state;
+        return builder as ColorChain;
+      },
+      withHass(hass: HomeAssistant) {
+        options.hass = hass;
+        return builder as ColorChain;
+      },
+      withFallback(color: string) {
+        options.fallback = color;
+        return builder as ColorChain;
+      },
+      toString() {
+        return ColorResolver._internalResolve(options.value, options);
+      },
+      valueOf() {
+        return ColorResolver._internalResolve(options.value, options);
+      }
+    };
+
+    return builder as ColorChain;
+  }
+
+
+
+  private static _internalResolve(
+    colorOrConfig: string | DynamicColorConfig | ColorValue,
+    options: ResolveColorOptions = {}
+  ): string {
+    const {
+      elementId,
+      animationContext,
+      stateContext,
+      hass,
+      context,
+      fallback = 'transparent'
+    } = options;
+
+    if (elementId) {
+      const effectiveContext = context ?? animationContext?.getShadowElement?.(elementId) ?? null;
+      const nestedOptions: ResolveColorOptions = { ...options, context: effectiveContext, hass: animationContext?.hass || hass };
+      delete (nestedOptions as any).elementId;
+      delete (nestedOptions as any).animationProperty;
+      delete (nestedOptions as any).animationContext;
+      return this._internalResolve(colorOrConfig as any, nestedOptions);
     }
 
-    const varName = this.extractVariableName(color);
+    if (Array.isArray(colorOrConfig)) {
+      const normalized = this._normalizeToString(colorOrConfig);
+      return normalized || fallback;
+    }
+
+    if (typeof colorOrConfig === 'object' && isDynamicColorConfig(colorOrConfig)) {
+      return this._resolveDynamicColor(colorOrConfig, hass, fallback);
+    }
+
+    if (typeof colorOrConfig === 'object' && isStatefulColorConfig(colorOrConfig)) {
+      return this._resolveStatefulColor(colorOrConfig, options, fallback);
+    }
+
+    if (typeof colorOrConfig !== 'string') {
+      const normalized = this._normalizeToString(colorOrConfig as any);
+      return normalized || fallback;
+    }
+
+    const color = colorOrConfig as string;
+
+    if (this._isCssVar(color)) {
+      return this._resolveCssVariable(color, context);
+    }
+
+    if (this._isDynamicJsonString(color)) {
+      try {
+        const config = JSON.parse(color) as DynamicColorConfig;
+        if (isDynamicColorConfig(config)) {
+          return this._resolveDynamicColor(config, hass, fallback);
+        }
+      } catch {
+      }
+    }
+
+    const trimmedColor = color.trim();
+
+    const lightenMatch = trimmedColor.match(/^lighten\((.+),\s*(\d+%?)\)$/);
+    if (lightenMatch) {
+      const baseColor = this._internalResolve(lightenMatch[1], options);
+      const percent = parseFloat(lightenMatch[2]);
+      return this.calculateLightenedColor(baseColor, percent);
+    }
+
+    const darkenMatch = trimmedColor.match(/^darken\((.+),\s*(\d+%?)\)$/);
+    if (darkenMatch) {
+      const baseColor = this._internalResolve(darkenMatch[1], options);
+      const percent = parseFloat(darkenMatch[2]);
+      return this.calculateDarkenedColor(baseColor, percent);
+    }
+
+    return trimmedColor;
+  }
+
+  static _resolveCssVariable(
+    color: string,
+    elementOrContext?: Element | { themeOnly: true } | null
+  ): string {
+    const varName = this._extractCssVarName(color);
     if (!varName) {
       return color;
     }
 
-    const domResolvedColor = this.tryResolvingFromDom(varName, element);
-    if (domResolvedColor) {
-      return domResolvedColor;
+    if (elementOrContext && typeof elementOrContext === 'object' && 'themeOnly' in elementOrContext) {
+      const themeResolvedColor = this._getFallbackColorFromTheme(varName.replace(/^--/, ''));
+      return themeResolvedColor || color;
     }
 
-    const themeResolvedColor = this.tryResolvingFromTheme(varName);
+    if (elementOrContext && 'tagName' in elementOrContext) {
+      try {
+        const resolvedColor = getComputedStyle(elementOrContext as Element).getPropertyValue(varName).trim();
+        if (resolvedColor) {
+          return resolvedColor;
+        }
+      } catch (error) {
+      }
+    }
+
+    const themeResolvedColor = this._getFallbackColorFromTheme(varName.replace(/^--/, ''));
     return themeResolvedColor || color;
   }
 
-  static getFallbackColorFromTheme(varName: string): string | undefined {
-    const colors = this.getResolvedThemeColorsSync();
+  private static _resolveDynamicColor(
+    config: DynamicColorConfig,
+    hass: HomeAssistant | undefined,
+    fallback: string
+  ): string {
+    if (!hass) {
+      return this._normalizeToString(config.default) || fallback;
+    }
+
+    const rawValue = this._readEntityValue(config, hass);
+    if (rawValue === undefined || rawValue === null) {
+      return this._normalizeToString(config.default) || fallback;
+    }
+
+    const exactMatch = config.mapping[rawValue as keyof typeof config.mapping];
+    if (exactMatch !== undefined) {
+      return this._normalizeToString(exactMatch) || fallback;
+    }
+
+    const hasNumericMapping = Object.keys(config.mapping).some(key => !Number.isNaN(parseFloat(key)));
+    if (!hasNumericMapping) {
+      return this._normalizeToString(config.default) || fallback;
+    }
+
+    const numericValue = typeof rawValue === 'number' ? rawValue : parseFloat(rawValue);
+    if (Number.isNaN(numericValue)) {
+      return this._normalizeToString(config.default) || fallback;
+    }
+
+    return this._interpolateColor(config, numericValue, fallback);
+  }
+
+  private static _interpolateColor(config: DynamicColorConfig, numericValue: number, fallback: string): string {
+    const numericStops: number[] = Object.keys(config.mapping)
+      .map(k => parseFloat(k))
+      .filter(v => !Number.isNaN(v))
+      .sort((a, b) => a - b);
+
+    if (numericStops.length === 0) {
+      return this._normalizeToString(config.default) || fallback;
+    }
+
+    let lower = numericStops[0];
+    let upper = numericStops[numericStops.length - 1];
+
+    for (let i = 0; i < numericStops.length; i++) {
+      const stop = numericStops[i];
+      if (stop <= numericValue) lower = stop;
+      if (stop >= numericValue) { upper = stop; break; }
+    }
+
+    if (lower === upper) {
+      return this._normalizeToString(config.mapping[String(lower)]) || this._normalizeToString(config.default) || fallback;
+    }
+
+    const lowerColor = ColorResolver.parseColorToRgb(this._normalizeToString(config.mapping[String(lower)]) || '');
+    const upperColor = ColorResolver.parseColorToRgb(this._normalizeToString(config.mapping[String(upper)]) || '');
+
+    if (!lowerColor || !upperColor) {
+      return this._normalizeToString(config.default) || fallback;
+    }
+
+    const ratio = (numericValue - lower) / (upper - lower);
+    const interp = lowerColor.map((c, idx) => Math.round(c + (upperColor[idx] - c) * ratio));
+    return `rgb(${interp[0]},${interp[1]},${interp[2]})`;
+  }
+
+  static _getFallbackColorFromTheme(varName: string): string | undefined {
+    const colors = this._getResolvedThemeColorsSync();
     return colors[varName];
   }
 
-  private static getResolvedThemeColorsSync(): ResolvedThemeColors {
+  private static _getResolvedThemeColorsSync(): ResolvedThemeColors {
     return this._resolvedThemeColors || {};
   }
 
-  private static async getResolvedThemeColors(): Promise<ResolvedThemeColors> {
+  private static async _getResolvedThemeColors(): Promise<ResolvedThemeColors> {
     if (this._resolvedThemeColors) {
       return this._resolvedThemeColors;
     }
@@ -99,13 +312,11 @@ export class ColorResolver {
   }
 
   private static _getEmbeddedThemeData(): string | null {
-    // Try global variable (for build-time embedding)
     const globalTheme = (globalThis as any).__LCARS_THEME_FALLBACK__;
     if (globalTheme) {
       return globalTheme;
     }
 
-    // Try to read from a script tag (alternative embedding method)
     const scriptTag = document.querySelector('script[data-lcars-theme]');
     if (scriptTag) {
       return scriptTag.textContent || null;
@@ -117,11 +328,8 @@ export class ColorResolver {
   private static _parseThemeYaml(yamlContent: string): ResolvedThemeColors {
     try {
       const themeData = yaml.load(yamlContent) as Record<string, any>;
-      
-      // Extract the theme configuration (assuming it's under 'lcars_theme')
       const themeKey = 'lcars_theme';
       const themeConfig = themeData[themeKey] as ThemeConfig;
-      
       if (!themeConfig) {
         console.warn('No lcars_theme found in theme YAML');
         return {};
@@ -140,20 +348,40 @@ export class ColorResolver {
     const resolutionStack = new Set<string>();
 
     const resolveValue = (key: string, value: string): string => {
-      if (resolvedColors[key]) {
-        return resolvedColors[key];
-      }
-
-      if (this._hasCircularReference(key, resolutionStack)) {
+      if (resolvedColors[key]) return resolvedColors[key];
+      
+      if (resolutionStack.has(key)) {
         console.warn(`Circular reference detected for theme variable: ${key}`);
-        resolvedColors[key] = value;
-        return value;
+        return resolvedColors[key] = value;
       }
 
-      return this._resolveVariableValue(key, value, themeConfig, resolvedColors, resolutionStack, variableRegex, resolveValue);
+      resolutionStack.add(key);
+      const match = value.match(variableRegex);
+      
+      if (match) {
+        const referencedKey = match[1].replace(/^--/, '');
+        const referencedValue = themeConfig[referencedKey] as string;
+        if (referencedValue) {
+          const resolved = resolveValue(referencedKey, referencedValue);
+          resolutionStack.delete(key);
+          return resolvedColors[key] = resolved;
+        }
+      }
+
+      resolutionStack.delete(key);
+      return resolvedColors[key] = value;
     };
 
-    this._processThemeConfig(themeConfig, resolveValue);
+    for (const [key, value] of Object.entries(themeConfig)) {
+      if (typeof value === 'string') {
+        resolveValue(key, value);
+      } else if (value && typeof value === 'object') {
+        for (const [subKey, subValue] of Object.entries(value as Record<string, string>)) {
+          resolveValue(subKey, subValue);
+        }
+      }
+    }
+
     return resolvedColors;
   }
 
@@ -163,8 +391,6 @@ export class ColorResolver {
       s.color = strColor;
       return s.color !== '';
     } catch (error) {
-      // Fallback for test environment or when Option is not available
-      // Check for common color formats
       const hexMatch = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(strColor);
       const rgbMatch = /^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*[\d.]+)?\s*\)$/i.test(strColor);
       const colorNameMatch = /^(red|green|blue|white|black|yellow|cyan|magenta|transparent)$/i.test(strColor);
@@ -175,7 +401,7 @@ export class ColorResolver {
   static parseColorToRgb(colorStr: string): [number, number, number] | null {
     if (!colorStr) return null;
 
-    const hexMatch = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(colorStr);
+    const hexMatch = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(colorStr);
     if (hexMatch) {
       let hex = hexMatch[1];
       if (hex.length === 3) {
@@ -227,14 +453,37 @@ export class ColorResolver {
     colorDefaults: ColorResolutionDefaults = {},
     interactiveState: ColorStateContext = {}
   ): ComputedElementColors {
-    const resolvedDefaults = this.setDefaultColorValues(colorDefaults);
-    const colorInstances = this.createColorInstances(elementProps, resolvedDefaults);
+    const resolvedDefaults = this._getResolvedDefaults(colorDefaults);
+    const dom = animationContext.getShadowElement?.(elementId) ?? null;
+
+    const resolve = (value: any, property: 'fill' | 'stroke' | 'textColor', fallback: string) => {
+      return String(
+        ColorResolver
+          .resolve(value as any)
+          .withFallback(fallback)
+          .withDom(dom)
+          .withAnimation(elementId, property, animationContext)
+          .withState(interactiveState)
+      );
+    };
+
+    const fillColor = elementProps.fill !== undefined
+      ? resolve(elementProps.fill, 'fill', resolvedDefaults.fallbackFillColor)
+      : resolvedDefaults.fallbackFillColor;
+
+    const strokeColor = elementProps.stroke !== undefined
+      ? resolve(elementProps.stroke, 'stroke', resolvedDefaults.fallbackStrokeColor)
+      : resolvedDefaults.fallbackStrokeColor;
+
+    const textColor = elementProps.textColor !== undefined
+      ? resolve(elementProps.textColor, 'textColor', resolvedDefaults.fallbackTextColor)
+      : resolvedDefaults.fallbackTextColor;
 
     return {
-      fillColor: colorInstances.fillColor.resolve(elementId, 'fill', animationContext, interactiveState),
-      strokeColor: colorInstances.strokeColor.resolve(elementId, 'stroke', animationContext, interactiveState),
+      fillColor,
+      strokeColor,
       strokeWidth: elementProps.strokeWidth?.toString() ?? resolvedDefaults.fallbackStrokeWidth,
-      textColor: colorInstances.textColor.resolve(elementId, 'textColor', animationContext, interactiveState)
+      textColor
     };
   }
 
@@ -248,33 +497,36 @@ export class ColorResolver {
       fallbackTextColor: 'white'
     }, interactiveState);
     
-    return this.buildPropsWithResolvedColors(originalElementProps, computedColors);
+    return this._buildPropsWithResolvedColors(originalElementProps, computedColors);
   }
 
-  resolveColorsWithoutAnimationContext(
-    elementId: string,
-    elementProps: LayoutElementProps,
-    colorDefaults: ColorResolutionDefaults = {},
-    interactiveState: ColorStateContext = {}
-  ): ComputedElementColors {
-    const basicAnimationContext = this.createBasicAnimationContext(elementId);
-    return this.resolveAllElementColors(elementId, elementProps, basicAnimationContext, colorDefaults, interactiveState);
-  }
+  extractEntityIds(input: any): Set<string> {
+    const entityIds = new Set<string>();
+    const props = input?.props || input;
+    if (!props) return entityIds;
 
-  resolveColor(
-    colorValue: ColorValue,
-    elementId?: string,
-    animationProperty?: 'fill' | 'stroke' | 'textColor',
-    animationContext?: AnimationContext,
-    stateContext?: ColorStateContext,
-    fallback: string = 'transparent'
-  ): string {
-    if (isDynamicColorConfig(colorValue)) {
-      return this.resolveDynamicColorValue(colorValue, animationContext?.hass, fallback);
+    const extractFromColor = (colorProp: ColorValue | undefined) => {
+      if (colorProp && typeof colorProp === 'object' && 'entity' in colorProp && colorProp.entity) {
+        entityIds.add(colorProp.entity);
+      }
+    };
+
+    extractFromColor(props.fill);
+    extractFromColor(props.stroke);
+    extractFromColor(props.textColor);
+
+    if (props.button) {
+      extractFromColor(props.button.hover_fill);
+      extractFromColor(props.button.active_fill);
+      extractFromColor(props.button.hover_text_color);
+      extractFromColor(props.button.active_text_color);
     }
 
-    const color = Color.withFallback(colorValue, fallback);
-    return color.resolve(elementId, animationProperty, animationContext, stateContext);
+    if (props.entity) {
+      entityIds.add(props.entity);
+    }
+
+    return entityIds;
   }
 
   scheduleDynamicColorChangeDetection(
@@ -286,22 +538,8 @@ export class ColorResolver {
     if (this.dynamicColorCheckScheduled) {
       return;
     }
-    
-    this.scheduleColorChangeCheck(layoutGroups, hass, refreshCallback, checkDelay);
-  }
 
-  extractEntityIdsFromElement(element: { props?: LayoutElementProps }): Set<string> {
-    const entityIds = new Set<string>();
-    
-    if (!element.props) {
-      return entityIds;
-    }
-    
-    this.extractEntityIdsFromColorProperties(element.props, entityIds);
-    this.extractEntityIdsFromButtonProperties(element.props, entityIds);
-    this.extractEntityIdsFromWidgetProperties(element.props, entityIds);
-    
-    return entityIds;
+    this._scheduleColorChangeCheck(layoutGroups, hass, refreshCallback, checkDelay);
   }
 
   elementEntityStatesChanged(
@@ -312,16 +550,8 @@ export class ColorResolver {
     if (!lastHassStates) {
       return false;
     }
-    
-    return this.checkForSignificantChangesInGroups(layoutGroups, lastHassStates, currentHass);
-  }
 
-  clearAllCaches(layoutGroups: Group[]): void {
-    for (const group of layoutGroups) {
-      for (const element of group.elements) {
-        this.clearElementState(element);
-      }
-    }
+    return this._checkForSignificantChangesInGroups(layoutGroups, lastHassStates, currentHass);
   }
 
   cleanup(): void {
@@ -333,10 +563,7 @@ export class ColorResolver {
     }
   }
 
-  private dynamicColorCheckScheduled: boolean = false;
-  private refreshTimeout?: ReturnType<typeof setTimeout>;
-
-  private setDefaultColorValues(colorDefaults: ColorResolutionDefaults) {
+  private _getResolvedDefaults(colorDefaults: ColorResolutionDefaults) {
     return {
       fallbackFillColor: colorDefaults.fallbackFillColor || 'none',
       fallbackStrokeColor: colorDefaults.fallbackStrokeColor || 'none',
@@ -345,51 +572,19 @@ export class ColorResolver {
     };
   }
 
-  private createColorInstances(elementProps: LayoutElementProps, resolvedDefaults: ReturnType<typeof this.setDefaultColorValues>) {
-    return {
-      fillColor: elementProps.fill !== undefined 
-        ? Color.withFallback(elementProps.fill, resolvedDefaults.fallbackFillColor)
-        : Color.from(resolvedDefaults.fallbackFillColor),
-      strokeColor: elementProps.stroke !== undefined
-        ? Color.withFallback(elementProps.stroke, resolvedDefaults.fallbackStrokeColor) 
-        : Color.from(resolvedDefaults.fallbackStrokeColor),
-      textColor: elementProps.textColor !== undefined
-        ? Color.withFallback(elementProps.textColor, resolvedDefaults.fallbackTextColor)
-        : Color.from(resolvedDefaults.fallbackTextColor)
-    };
-  }
-
-  private buildPropsWithResolvedColors(
+  private _buildPropsWithResolvedColors(
     originalElementProps: LayoutElementProps, 
     computedColors: ComputedElementColors
   ): LayoutElementProps {
-    const propsWithResolvedColors = { ...originalElementProps };
-
-    if (originalElementProps.fill !== undefined) {
-      propsWithResolvedColors.fill = computedColors.fillColor;
-    }
-    
-    if (originalElementProps.stroke !== undefined) {
-      propsWithResolvedColors.stroke = computedColors.strokeColor;
-    }
-
-    if (originalElementProps.textColor !== undefined) {
-      propsWithResolvedColors.textColor = computedColors.textColor;
-    }
-
-    return propsWithResolvedColors;
-  }
-
-  private createBasicAnimationContext(elementId: string): AnimationContext {
     return {
-      elementId,
-      getShadowElement: undefined,
-      hass: undefined,
-      requestUpdateCallback: undefined
+      ...originalElementProps,
+      ...(originalElementProps.fill !== undefined && { fill: computedColors.fillColor }),
+      ...(originalElementProps.stroke !== undefined && { stroke: computedColors.strokeColor }),
+      ...(originalElementProps.textColor !== undefined && { textColor: computedColors.textColor })
     };
   }
 
-  private scheduleColorChangeCheck(
+  private _scheduleColorChangeCheck(
     layoutGroups: Group[],
     hass: HomeAssistant,
     refreshCallback: () => void,
@@ -405,7 +600,7 @@ export class ColorResolver {
       this.dynamicColorCheckScheduled = false;
       this.refreshTimeout = undefined;
       
-      const needsRefresh = this.performDynamicColorCheck(layoutGroups, hass);
+      const needsRefresh = this._performDynamicColorCheck(layoutGroups, hass);
       
       if (needsRefresh) {
         refreshCallback();
@@ -413,313 +608,163 @@ export class ColorResolver {
     }, checkDelay);
   }
 
-  private clearElementState(element: { cleanupAnimations?: () => void; id: string }): void {
-    if (typeof element.cleanupAnimations === 'function') {
-      element.cleanupAnimations();
-    }
-    
-    animationManager.cleanupElementAnimationTracking(element.id);
-  }
-
-  private extractEntityIdsFromColorProperties(props: LayoutElementProps, entityIds: Set<string>): void {
-    this.extractFromColorProperty(props.fill, entityIds);
-    this.extractFromColorProperty(props.stroke, entityIds);
-    this.extractFromColorProperty(props.textColor, entityIds);
-  }
-
-  private extractEntityIdsFromButtonProperties(props: LayoutElementProps, entityIds: Set<string>): void {
-    if (props.button) {
-      this.extractFromColorProperty(props.button.hover_fill, entityIds);
-      this.extractFromColorProperty(props.button.active_fill, entityIds);
-      this.extractFromColorProperty(props.button.hover_text_color, entityIds);
-      this.extractFromColorProperty(props.button.active_text_color, entityIds);
-    }
-  }
-
-  private extractEntityIdsFromWidgetProperties(props: LayoutElementProps, entityIds: Set<string>): void {
-    if (props.entity) {
-      entityIds.add(props.entity);
-    }
-  }
-
-  private extractFromColorProperty(colorProp: ColorValue, entityIds: Set<string>): void {
-    if (colorProp && typeof colorProp === 'object' && 'entity' in colorProp && colorProp.entity) {
-      entityIds.add(colorProp.entity);
-    }
-  }
-
-  private checkForSignificantChangesInGroups(
+  private _checkForSignificantChangesInGroups(
     layoutGroups: Group[],
     lastHassStates: { [entityId: string]: any },
     currentHass: HomeAssistant
   ): boolean {
     for (const group of layoutGroups) {
       for (const element of group.elements) {
-        if (this.elementHasSignificantChanges(element, lastHassStates, currentHass)) {
+        if (element.props && this._hasElementChanges(element.props, lastHassStates, currentHass)) {
           return true;
         }
       }
     }
-    
     return false;
   }
 
-  private elementHasSignificantChanges(
-    element: { props?: LayoutElementProps },
-    lastHassStates: { [entityId: string]: any },
-    currentHass: HomeAssistant
-  ): boolean {
-    if (!element.props) {
-      return false;
-    }
-    
-    return this.hasEntityBasedTextChanges(element.props, lastHassStates, currentHass) ||
-           this.hasEntityBasedColorChanges(element.props, lastHassStates, currentHass);
-  }
-
-  private hasEntityBasedTextChanges(
+  private _hasElementChanges(
     props: LayoutElementProps,
-    lastHassStates: { [entityId: string]: any },
+    lastStates: { [entityId: string]: any },
     currentHass: HomeAssistant
   ): boolean {
-    if (props.text && typeof props.text === 'string') {
-      return this.checkEntityReferencesInText(props.text, lastHassStates, currentHass);
+    if (props.text && typeof props.text === 'string' && 
+        ColorResolver._textContainsChangedEntityRef(props.text, lastStates, currentHass)) {
+      return true;
     }
-    return false;
-  }
 
-  private hasEntityBasedColorChanges(
-    props: LayoutElementProps,
-    lastHassStates: { [entityId: string]: any },
-    currentHass: HomeAssistant
-  ): boolean {
     const colorProps = [props.fill, props.stroke, props.textColor];
-    
-    for (const colorProp of colorProps) {
-      if (this.isEntityBasedColor(colorProp)) {
-        if (this.checkEntityReferencesInText(colorProp as string, lastHassStates, currentHass)) {
-          return true;
+    return colorProps.some(colorProp => 
+      typeof colorProp === 'string' && 
+      colorProp.includes('states[') && 
+      ColorResolver._textContainsChangedEntityRef(colorProp, lastStates, currentHass)
+    );
+  }
+
+  private _performDynamicColorCheck(layoutGroups: Group[], hass: HomeAssistant): boolean {
+    for (const group of layoutGroups) {
+      for (const element of group.elements) {
+        try {
+          if (typeof element.entityChangesDetected === 'function' && 
+              element.entityChangesDetected(hass)) {
+            return true;
+          }
+        } catch (error) {
+          console.warn('Error checking entity changes for element:', element.id, error);
         }
       }
     }
-    
     return false;
   }
-
-  private isEntityBasedColor(colorProp: ColorValue): boolean {
-    return typeof colorProp === 'string' && colorProp.includes('states[');
+  private static _resolveStatefulColor(
+    config: StatefulColorConfig,
+    options: ResolveColorOptions,
+    fallback: string
+  ): string {
+    const selectedColorValue = this._resolveStateBasedColorValue(config, options.stateContext);
+    if (selectedColorValue !== undefined) {
+      return this._internalResolve(selectedColorValue, options);
+    }
+    return fallback;
   }
 
-  private checkEntityReferencesInText(
+  private static _resolveStateBasedColorValue(
+    statefulConfig: StatefulColorConfig,
+    stateContext?: ColorStateContext
+  ): ColorValue | undefined {
+    if (this._shouldUseActiveState(statefulConfig, stateContext)) {
+      return statefulConfig.active;
+    }
+
+    const stateMapColor = this._resolveFromStateMap(statefulConfig, stateContext);
+    if (stateMapColor !== undefined) {
+      return stateMapColor;
+    }
+
+    if (this._shouldUseHoverState(statefulConfig, stateContext)) {
+      return statefulConfig.hover;
+    }
+
+    return statefulConfig.default;
+  }
+
+  private static _shouldUseActiveState(config: StatefulColorConfig, stateContext?: ColorStateContext): boolean {
+    return !!(stateContext?.isCurrentlyActive && config.active !== undefined);
+  }
+
+  private static _shouldUseHoverState(config: StatefulColorConfig, stateContext?: ColorStateContext): boolean {
+    return !!(stateContext?.isCurrentlyHovering && config.hover !== undefined);
+  }
+
+  private static _resolveFromStateMap(config: StatefulColorConfig, stateContext?: ColorStateContext): ColorValue | undefined {
+    if (!config.state_name || !config.state_map) {
+      return undefined;
+    }
+
+    const currentState = stateManager.getState(config.state_name);
+    const colorStateKey = currentState ? config.state_map[currentState] : undefined;
+
+    if (colorStateKey) {
+      const configAsRecord = config as Record<string, any>;
+      const hoverKey = `${colorStateKey}_hover`;
+
+      if (stateContext?.isCurrentlyHovering && configAsRecord[hoverKey] !== undefined) {
+        return configAsRecord[hoverKey];
+      }
+
+      if (configAsRecord[colorStateKey] !== undefined) {
+        return configAsRecord[colorStateKey];
+      }
+    }
+
+    return undefined;
+  }
+
+  private static _normalizeToString(value: ColorValue | undefined): string | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value) && value.length === 3 && value.every(component => typeof component === 'number')) {
+      return `rgb(${value[0]},${value[1]},${value[2]})`;
+    }
+    return undefined;
+  }
+
+  private static _extractCssVarName(color: string): string | null {
+    return color.match(/--[a-zA-Z0-9-]+/)?.[0] || null;
+  }
+
+  private static _isCssVar(color: string): boolean {
+    return Boolean(color && color.startsWith('var('));
+  }
+
+  private static _isDynamicJsonString(color: string): boolean {
+    return color.startsWith('{') && color.includes('entity');
+  }
+
+  private static _readEntityValue(config: DynamicColorConfig, hass: HomeAssistant): any {
+    const entityStateObj = hass.states[config.entity];
+    if (!entityStateObj) return undefined;
+    const attrName = config.attribute || 'state';
+    return attrName === 'state' ? entityStateObj.state : entityStateObj.attributes?.[attrName];
+  }
+
+  private static _textContainsChangedEntityRef(
     text: string,
     lastHassStates: { [entityId: string]: any },
     currentHass: HomeAssistant
   ): boolean {
     const entityMatches = text.match(/states\['([^']+)'\]/g);
     if (!entityMatches) return false;
-    
     for (const match of entityMatches) {
       const entityIdMatch = match.match(/states\['([^']+)'\]/);
       if (entityIdMatch) {
         const entityId = entityIdMatch[1];
         const oldState = lastHassStates[entityId]?.state;
         const newState = currentHass.states[entityId]?.state;
-        
-        if (oldState !== newState) {
-          return true;
-        }
+        if (oldState !== newState) return true;
       }
     }
-    
     return false;
   }
-
-  private performDynamicColorCheck(layoutGroups: Group[], hass: HomeAssistant): boolean {
-    let needsRefresh = false;
-    const elementsToCheck = this.collectElementsForChecking(layoutGroups);
-    
-    for (const { element } of elementsToCheck) {
-      if (this.checkElementEntityChanges(element, hass)) {
-        needsRefresh = true;
-      }
-    }
-    
-    return needsRefresh;
-  }
-
-      private collectElementsForChecking(layoutGroups: Group[]): Array<{ element: { entityChangesDetected?: (hass: HomeAssistant) => boolean; id: string } }> {
-        const elementsToCheck: Array<{ element: { entityChangesDetected?: (hass: HomeAssistant) => boolean; id: string } }> = [];
-    
-    for (const group of layoutGroups) {
-      for (const element of group.elements) {
-        elementsToCheck.push({ element });
-      }
-    }
-    
-    return elementsToCheck;
-  }
-
-  private checkElementEntityChanges(element: { entityChangesDetected?: (hass: HomeAssistant) => boolean; id: string }, hass: HomeAssistant): boolean {
-    try {
-      return typeof element.entityChangesDetected === 'function' 
-        ? element.entityChangesDetected(hass)
-        : false;
-    } catch (error) {
-      console.warn('Error checking entity changes for element:', element.id, error);
-      return false;
-    }
-  }
-
-  private resolveDynamicColorValue(
-    config: DynamicColorConfig,
-    hass: HomeAssistant | undefined,
-    fallback: string = 'transparent'
-  ): string {
-    const normaliseColor = (value: ColorValue | undefined): string | undefined => {
-      if (value === undefined) return undefined;
-      if (typeof value === 'string') return value;
-      if (Array.isArray(value) && value.length === 3) {
-        return `rgb(${value[0]},${value[1]},${value[2]})`;
-      }
-      return undefined;
-    };
-
-    if (!hass) {
-      return normaliseColor(config.default) || fallback;
-    }
-
-    const entityStateObj = hass.states[config.entity];
-    if (!entityStateObj) {
-      return normaliseColor(config.default) || fallback;
-    }
-
-    const attrName = config.attribute || 'state';
-    const rawValue: any = attrName === 'state' ? entityStateObj.state : entityStateObj.attributes?.[attrName];
-
-    if (rawValue === undefined || rawValue === null) {
-      return normaliseColor(config.default) || fallback;
-    }
-
-    const exactMatch = config.mapping[rawValue as keyof typeof config.mapping];
-    if (exactMatch !== undefined) {
-      return normaliseColor(exactMatch) || fallback;
-    }
-
-    if (!config.interpolate) {
-      return normaliseColor(config.default) || fallback;
-    }
-
-    const numericValue = typeof rawValue === 'number' ? rawValue : parseFloat(rawValue);
-    if (Number.isNaN(numericValue)) {
-      return normaliseColor(config.default) || fallback;
-    }
-
-    const numericStops: number[] = Object.keys(config.mapping)
-      .map(k => parseFloat(k))
-      .filter(v => !Number.isNaN(v))
-      .sort((a, b) => a - b);
-
-    if (numericStops.length === 0) {
-      return normaliseColor(config.default) || fallback;
-    }
-
-    let lower = numericStops[0];
-    let upper = numericStops[numericStops.length - 1];
-
-    for (let i = 0; i < numericStops.length; i++) {
-      const stop = numericStops[i];
-      if (stop <= numericValue) lower = stop;
-      if (stop >= numericValue) { upper = stop; break; }
-    }
-
-    if (lower === upper) {
-      return normaliseColor(config.mapping[String(lower)]) || normaliseColor(config.default) || fallback;
-    }
-
-    const lowerColor = ColorResolver.parseColorToRgb(normaliseColor(config.mapping[String(lower)]) || '');
-    const upperColor = ColorResolver.parseColorToRgb(normaliseColor(config.mapping[String(upper)]) || '');
-
-    if (!lowerColor || !upperColor) {
-      return normaliseColor(config.default) || fallback;
-    }
-
-    const ratio = (numericValue - lower) / (upper - lower);
-    const interp = lowerColor.map((c, idx) => Math.round(c + (upperColor[idx] - c) * ratio));
-    return `rgb(${interp[0]},${interp[1]},${interp[2]})`;
-  }
-
-  private static isCssVariable(color: string): boolean {
-    return Boolean(color && color.startsWith('var('));
-  }
-
-  private static extractVariableName(color: string): string | null {
-    return color.match(/--[a-zA-Z0-9-]+/)?.[0] || null;
-  }
-
-  private static tryResolvingFromDom(varName: string, element?: Element | null): string | null {
-    if (!element) {
-      return null;
-    }
-
-    try {
-      const resolvedColor = getComputedStyle(element).getPropertyValue(varName).trim();
-      return resolvedColor || null;
-    } catch (error) {
-      return null;
-    }
-  }
-
-  private static tryResolvingFromTheme(varName: string): string | null {
-    return this.getFallbackColorFromTheme(varName.replace(/^--/, '')) || null;
-  }
-
-  private static _hasCircularReference(key: string, resolutionStack: Set<string>): boolean {
-    return resolutionStack.has(key);
-  }
-
-  private static _resolveVariableValue(
-    key: string, 
-    value: string, 
-    themeConfig: ThemeConfig, 
-    resolvedColors: ResolvedThemeColors, 
-    resolutionStack: Set<string>, 
-    variableRegex: RegExp, 
-    resolveValue: (key: string, value: string) => string
-  ): string {
-    resolutionStack.add(key);
-
-    const match = value.match(variableRegex);
-    if (match) {
-      const varName = match[1];
-      const referencedKey = varName.replace(/^--/, '');
-      const referencedValue = themeConfig[referencedKey] as string;
-
-      if (referencedValue) {
-        const resolved = resolveValue(referencedKey, referencedValue);
-        resolvedColors[key] = resolved;
-        resolutionStack.delete(key);
-        return resolved;
-      }
-    }
-
-    resolvedColors[key] = value;
-    resolutionStack.delete(key);
-    return value;
-  }
-
-  private static _processThemeConfig(themeConfig: ThemeConfig, resolveValue: (key: string, value: string) => string): void {
-    for (const key in themeConfig) {
-      if (typeof themeConfig[key] === 'string') {
-        resolveValue(key, themeConfig[key] as string);
-      } else {
-        const subConfig = themeConfig[key] as Record<string, string>;
-        for (const subKey in subConfig) {
-          resolveValue(subKey, subConfig[subKey]);
-        }
-      }
-    }
-  }
 }
-
 export const colorResolver = new ColorResolver();
-

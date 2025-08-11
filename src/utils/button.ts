@@ -2,7 +2,7 @@ import { svg, SVGTemplateResult } from "lit";
 import { HomeAssistant } from "custom-card-helpers";
 import { colorResolver } from "./color-resolver.js";
 import { AnimationContext } from "./animation.js";
-import { ColorStateContext } from "./color.js";
+import { ColorStateContext } from "../types.js";
 import { Action } from "../types.js";
 import { ActionProcessor } from "./action-helpers.js";
 import { stateManager } from "./state-manager.js";

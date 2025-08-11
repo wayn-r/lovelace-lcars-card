@@ -72,7 +72,7 @@ class LogEntryAnimator {
     const element = this.context.getShadowElement?.(this.elementId);
     if (!element) return Promise.resolve();
 
-    const resolvedEndColor = ColorResolver.resolveCssVariable(endColor, element);
+    const resolvedEndColor = ColorResolver.resolve(endColor).withDom(element);
 
     return new Promise<void>(resolve => {
       gsap.to(element, {
@@ -87,7 +87,7 @@ class LogEntryAnimator {
   public resetColor(color: string): void {
     const element = this.context.getShadowElement?.(this.elementId);
     if (element) {
-      const resolvedColor = ColorResolver.resolveCssVariable(color, element);
+      const resolvedColor = ColorResolver.resolve(color).withDom(element);
       gsap.set(element, { fill: resolvedColor });
     }
   }

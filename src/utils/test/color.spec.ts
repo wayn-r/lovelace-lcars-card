@@ -48,24 +48,24 @@ describe('Color', () => {
 
     it('resolves default state', () => {
       const color = Color.from(statefulConfig);
-      const resolved = color.resolve('test-element', 'fill', undefined, {});
+      const resolved = `${ColorResolver.resolve(color.value).withFallback(color.fallback).withState({})}`;
       expect(resolved).toBe('#blue');
     });
 
     it('resolves hover state', () => {
       const color = Color.from(statefulConfig);
-      const resolved = color.resolve('test-element', 'fill', undefined, {
+      const resolved = `${ColorResolver.resolve(color.value).withFallback(color.fallback).withState({
         isCurrentlyHovering: true
-      });
+      })}`;
       expect(resolved).toBe('#lightblue');
     });
 
     it('resolves active state (priority over hover)', () => {
       const color = Color.from(statefulConfig);
-      const resolved = color.resolve('test-element', 'fill', undefined, {
+      const resolved = `${ColorResolver.resolve(color.value).withFallback(color.fallback).withState({
         isCurrentlyHovering: true,
         isCurrentlyActive: true
-      });
+      })}`;
       expect(resolved).toBe('#darkblue');
     });
 
@@ -76,8 +76,8 @@ describe('Color', () => {
       };
       
       const color = Color.from(nestedConfig);
-      expect(color.resolve('test', 'fill', undefined, {})).toBe('rgb(255,0,0)');
-      expect(color.resolve('test', 'fill', undefined, { isCurrentlyHovering: true })).toBe('#green');
+      expect(`${ColorResolver.resolve(color.value).withFallback(color.fallback).withState({})}`).toBe('rgb(255,0,0)');
+      expect(`${ColorResolver.resolve(color.value).withFallback(color.fallback).withState({ isCurrentlyHovering: true })}`).toBe('#green');
     });
   });
 
@@ -173,13 +173,13 @@ describe('Color', () => {
     describe('Entity Text Widget Colors', () => {
       it('should resolve entity text colors through Color class', () => {
         const color = new Color('var(--lcars-color-entity-text)', 'transparent');
-        const resolved = color.resolve(); // No element provided, should use fallback
+        const resolved = `${ColorResolver.resolve(color.value).withFallback(color.fallback)}`; // No element provided, should use fallback
         expect(resolved).toBe('#5ca8ea');
       });
 
       it('should resolve white text colors through Color class', () => {
         const color = new Color('var(--lcars-color-white)', 'transparent');
-        const resolved = color.resolve();
+        const resolved = `${ColorResolver.resolve(color.value).withFallback(color.fallback)}`;
         expect(resolved).toBe('#FFFFFF');
       });
     });
@@ -187,7 +187,7 @@ describe('Color', () => {
     describe('Color Function Processing', () => {
       it('should resolve CSS variables in lighten() functions', () => {
         const color = new Color('lighten(var(--lcars-color-blue), 20)', 'transparent');
-        const resolved = color.resolve(undefined, undefined, undefined, undefined);
+        const resolved = `${ColorResolver.resolve(color.value).withFallback(color.fallback)}`;
         // Should resolve the variable first, then apply lighten
         expect(resolved).not.toBe('lighten(var(--lcars-color-blue), 20)');
         expect(resolved).toMatch(/^#[0-9a-fA-F]{6}$/); // Should be a hex color
@@ -195,7 +195,7 @@ describe('Color', () => {
 
       it('should resolve CSS variables in darken() functions', () => {
         const color = new Color('darken(var(--lcars-color-cyan), 30)', 'transparent');
-        const resolved = color.resolve(undefined, undefined, undefined, undefined);
+        const resolved = `${ColorResolver.resolve(color.value).withFallback(color.fallback)}`;
         // Should resolve the variable first, then apply darken
         expect(resolved).not.toBe('darken(var(--lcars-color-cyan), 30)');
         expect(resolved).toMatch(/^#[0-9a-fA-F]{6}$/); // Should be a hex color
@@ -205,19 +205,19 @@ describe('Color', () => {
     describe('CSS Variable Resolution in Color Class', () => {
       it('should handle CSS variables with fallback when element is null', () => {
         const color = new Color('var(--lcars-color-blue)', 'transparent');
-        const resolved = color.resolve(null);
+        const resolved = `${ColorResolver.resolve(color.value).withFallback(color.fallback).withDom(null)}`;
         expect(resolved).toBe('#5ca8ea');
       });
 
       it('should handle CSS variables with fallback when element is undefined', () => {
         const color = new Color('var(--lcars-color-cyan)', 'red');
-        const resolved = color.resolve();
+        const resolved = `${ColorResolver.resolve(color.value).withFallback(color.fallback)}`;
         expect(resolved).toBe('#04bfd8');
       });
 
       it('should use fallback for unknown CSS variables', () => {
         const color = new Color('var(--unknown-variable)', 'fallback-color');
-        const resolved = color.resolve();
+        const resolved = `${ColorResolver.resolve(color.value).withFallback(color.fallback)}`;
         // CSS variable resolution returns original string when not found, then Color class uses fallback
         expect(resolved).toBe('var(--unknown-variable)');
       });
@@ -225,7 +225,7 @@ describe('Color', () => {
       it('should resolve nested CSS variables through Color class', () => {
         // Test with a variable that references another variable
         const color = new Color('var(--lcars-color-logger-bright)', 'transparent');
-        const resolved = color.resolve();
+        const resolved = `${ColorResolver.resolve(color.value).withFallback(color.fallback)}`;
         expect(resolved).toBe('#86c8ff'); // Should resolve to light-sky-blue as per embedded theme
       });
     });
@@ -241,19 +241,19 @@ describe('Color', () => {
         const color = Color.from(statefulConfig);
         
         // Test default state
-        expect(color.resolve('test', 'fill', undefined, {})).toBe('#5ca8ea');
+        expect(`${ColorResolver.resolve(color.value).withFallback(color.fallback).withState({})}`).toBe('#5ca8ea');
         
         // Test hover state
-        expect(color.resolve('test', 'fill', undefined, { isCurrentlyHovering: true })).toBe('#04bfd8');
+        expect(`${ColorResolver.resolve(color.value).withFallback(color.fallback).withState({ isCurrentlyHovering: true })}`).toBe('#04bfd8');
         
         // Test active state (should not use CSS variable resolution)
-        expect(color.resolve('test', 'fill', undefined, { isCurrentlyActive: true })).toBe('#ff0000');
+        expect(`${ColorResolver.resolve(color.value).withFallback(color.fallback).withState({ isCurrentlyActive: true })}`).toBe('#ff0000');
       });
 
       it('should handle CSS variables in RGB array format', () => {
         // This tests fallback when CSS variable resolution fails in array context
         const color = new Color('var(--lcars-color-environmental-button-1)', 'transparent');
-        const resolved = color.resolve();
+        const resolved = `${ColorResolver.resolve(color.value).withFallback(color.fallback)}`;
         expect(resolved).toBe('#3ad8e6');
       });
     });

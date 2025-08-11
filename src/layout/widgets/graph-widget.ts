@@ -94,7 +94,7 @@ class GraphButtonFactory {
     const color = entityConfig.color || lineGradients[index % lineGradients.length].color;
     // Use dummy element for fallback resolution if getShadowElement not available
     const element = getShadowElement?.(parentGraphId || 'fallback');
-    return ColorResolver.resolveCssVariable(color, element);
+    return `${ColorResolver.resolve(color).withDom(element ?? null)}`;
   }
 
   private static createButtonProps(

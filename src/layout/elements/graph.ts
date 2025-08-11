@@ -125,8 +125,12 @@ export class GraphElement extends LayoutElement {
     const gradients = this.entityConfigs.map((config, index) => {
         const defaultColor = lineGradients[index % lineGradients.length].color;
         const color = config.color || defaultColor;
-        const resolvedColor = ColorResolver.resolveCssVariable(color, this.getShadowElement?.(this.id));
-        return { color: resolvedColor };
+      const resolvedColor = color.startsWith('var(')
+        ? color
+        : ColorResolver.resolve(color)
+            .withDom(this.getShadowElement?.(this.id) ?? null)
+            .toString();
+      return { color: resolvedColor };
     });
 
       return svg`
@@ -170,9 +174,15 @@ export class GraphElement extends LayoutElement {
       const originalIndex = this.entityConfigs.findIndex(ec => ec.id === config.id);
       const gradientId = this.gradientIds[originalIndex % this.gradientIds.length];
 
-      if (config.animated === false) {
-        return svg`<path d="${path}" fill="none" stroke="${ColorResolver.resolveCssVariable(config.color || lineGradients[originalIndex % lineGradients.length].color, this.getShadowElement?.(this.id))}" stroke-width="4" />`;
-      }
+       if (config.animated === false) {
+         const baseColor = config.color || lineGradients[originalIndex % lineGradients.length].color;
+         const strokeColor = baseColor.startsWith('var(')
+           ? baseColor
+           : ColorResolver.resolve(baseColor)
+               .withDom(this.getShadowElement?.(this.id) ?? null)
+               .toString();
+         return svg`<path d="${path}" fill="none" stroke="${strokeColor}" stroke-width="4" />`;
+       }
       
       return svg`<path d="${path}" fill="none" stroke="url(#${gradientId})" stroke-width="4" />`;
     }).filter(p => p !== null);
@@ -341,10 +351,7 @@ export class GraphElement extends LayoutElement {
       numLines: numGraphLines,
       min,
       max,
-      strokeColor: ColorResolver.resolveCssVariable(
-        this.props.grid?.fill ?? 'var(--lcars-color-graph-background)', 
-        this.getShadowElement?.(this.id)
-      ),
+      strokeColor: this.props.grid?.fill ?? 'var(--lcars-color-graph-background)',
       textFill: this.props.grid?.label_fill ?? 'white'
     };
   }
