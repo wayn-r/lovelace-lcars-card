@@ -20,7 +20,7 @@ groups: <array>                  # Required: Defines groups of elements. Element
                                    #   Full ID becomes "group_id.id" (e.g., "navigation.status_light").
         type: <string>             # Required: The type of LCARS element.
                                    #   Options: "rectangle", "text", "endcap", "elbow",
-                                   #            "chisel-endcap", "top_header", "logger-widget", "graph-widget", "weather-icon".
+                                   #            "chisel-endcap", "top_header", "logger-widget", "graph-widget", "vertical-slider", "weather-icon".
         entity: <string|array>     # Optional: Home Assistant entity ID or array of entity IDs.
                                    #   Required for 'graph-widget', 'entity-text-widget', and 'weather-icon'.
                                    #   For 'entity-text-widget', this can be a single entity ID string or an array of up to two entity ID strings.
@@ -41,6 +41,30 @@ groups: <array>                  # Required: Defines groups of elements. Element
           num_lines: <number>        # Optional: The number of horizontal grid lines to display. Default: 6.
           fill: <color_property>     # Optional: The color for the grid lines. Default: '#0b6288'.
           label_fill: <color_property> # Optional: The color for the grid line labels. Default: 'white'.
+
+        # === Vertical Slider Widget Specific ===
+        #   The vertical slider widget renders one or more stacked sliders similar to LCARS bars.
+        #   It accepts a single entity ID or an array mixing strings and objects for customization.
+        #   Object format: { id, color?, label?, min?, max?, attribute? }
+        #   - id: Required HA entity id. Its numeric state is used.
+        #   - color: Optional bar color override.
+        #   - label: Optional label beneath the bar; defaults to entity friendly name.
+        #   - min/max: Optional numeric range; defaults to 0..100.
+        #   - attribute: Optional attribute name to read and control instead of the entity state (e.g., for climate thermostats: "temperature", "target_temp_high", "target_temp_low").
+        appearance:
+          fill: <color_property>     # Background of the slider track. Default: var(--lcars-color-graph-background).
+        text:
+          fill: <color_property>     # Color for labels and value readouts. Default: white.
+        layout:
+          width: <number|string_percentage>   # Overall widget width.
+          height: <number|string_percentage>  # Overall widget height.
+        grid:
+          num_lines: <number>        # Number of horizontal segment bands inside each slider. Default: 8.
+        # Additional sizing options on element root:
+        spacing: <number>            # Horizontal spacing between sliders in pixels. Default: 14.
+        top_padding: <number>        # Top padding above tracks. Default: 6.
+        label_height: <number>       # Height reserved at bottom for value and label lines. Default: 28.
+        use_floats: <boolean>        # If true, slider interaction uses floating-point values instead of integers. Default: false.
         appearance:                # Optional: Defines the static visual style of the element's shape.
           fill: <color_property>     # Primary fill color.
           stroke: <color_property>   # Outline/border color for the element's shape.

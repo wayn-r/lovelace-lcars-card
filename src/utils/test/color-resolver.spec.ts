@@ -737,12 +737,12 @@ describe('ColorResolver', () => {
 
     it('should resolve animated gradient colors using fallback', () => {
       const color = resolveColor('var(--lcars-color-graph-line-1)');
-      expect(color).toBe('#12a4e3');
+      expect(color).toBe('#044ea9');
     });
 
     it('should resolve non-animated line colors using fallback', () => {
       const color = resolveColor('var(--lcars-color-graph-line-2)');
-      expect(color).toBe('#86c8ff');
+      expect(color).toBe('#04bfd8');
     });
 
     it('should resolve graph background colors using fallback', () => {
@@ -752,7 +752,7 @@ describe('ColorResolver', () => {
 
     it('should resolve graph button colors using fallback', () => {
       const color = resolveColor('var(--lcars-color-graph-line-3)');
-      expect(color).toBe('#04bfd8');
+      expect(color).toBe('#86c8ff');
     });
 
     it('should resolve environmental button colors using fallback', () => {

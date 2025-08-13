@@ -29,9 +29,15 @@ lcars_theme:
 
   # Graph Widget Colors
   lcars-color-graph-background: var(--lcars-color-teal)
-  lcars-color-graph-line-1: var(--lcars-color-dodger-blue)
-  lcars-color-graph-line-2: var(--lcars-color-light-sky-blue)
-  lcars-color-graph-line-3: var(--lcars-color-dark-turquoise)
+  lcars-color-graph-line-1: var(--lcars-color-dark-blue)
+  lcars-color-graph-line-2: var(--lcars-color-dark-turquoise)
+  lcars-color-graph-line-3: var(--lcars-color-light-sky-blue)
+
+  # Vertical Slider Widget Colors
+  lcars-color-vertical-slider-background: var(--lcars-color-blue)
+  lcars-color-vertical-slider-line-1: var(--lcars-color-dodger-blue)
+  lcars-color-vertical-slider-line-2: var(--lcars-color-light-sky-blue)
+  lcars-color-vertical-slider-line-3: var(--lcars-color-dark-turquoise)
 
   # Environmental Config Colors
   lcars-color-environmental-main-header-text: var(--lcars-color-blue)

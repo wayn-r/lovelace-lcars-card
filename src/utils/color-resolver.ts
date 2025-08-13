@@ -2,6 +2,7 @@ import { ColorValue, DynamicColorConfig, isDynamicColorConfig, isStatefulColorCo
 import { AnimationContext } from './animation';
 import { LayoutElementProps } from '../layout/engine';
 import { HomeAssistant } from 'custom-card-helpers';
+import { EntityValueResolver } from './entity-value-resolver';
 import { Group } from '../layout/engine.js';
 import yaml from 'js-yaml';
 import { EMBEDDED_THEME_YAML } from './embedded-theme.js';
@@ -39,21 +40,7 @@ export class ColorResolver {
   private dynamicColorCheckScheduled: boolean = false;
   private refreshTimeout?: ReturnType<typeof setTimeout>;
 
-  static createLightenExpression(color: string, percent: number): string {
-    return `lighten(${color}, ${percent})`;
-  }
-
-  static createDarkenExpression(color: string, percent: number): string {
-    return `darken(${color}, ${percent})`;
-  }
-
-  static calculateLightenedColor(color: string, percent: number): string {
-    return ColorResolver.adjustColorBrightness(color, percent);
-  }
-
-  static calculateDarkenedColor(color: string, percent: number): string {
-    return ColorResolver.adjustColorBrightness(color, -percent);
-  }
+  // Removed unused expression helpers in favor of a single brightness adjuster
 
   static async preloadThemeColors(): Promise<void> {
     await this._getResolvedThemeColors();
@@ -163,14 +150,14 @@ export class ColorResolver {
     if (lightenMatch) {
       const baseColor = this._internalResolve(lightenMatch[1], options);
       const percent = parseFloat(lightenMatch[2]);
-      return this.calculateLightenedColor(baseColor, percent);
+      return this.adjustColorBrightness(baseColor, percent);
     }
 
     const darkenMatch = trimmedColor.match(/^darken\((.+),\s*(\d+%?)\)$/);
     if (darkenMatch) {
       const baseColor = this._internalResolve(darkenMatch[1], options);
       const percent = parseFloat(darkenMatch[2]);
-      return this.calculateDarkenedColor(baseColor, percent);
+      return this.adjustColorBrightness(baseColor, -percent);
     }
 
     return trimmedColor;
@@ -742,10 +729,7 @@ export class ColorResolver {
   }
 
   private static _readEntityValue(config: DynamicColorConfig, hass: HomeAssistant): any {
-    const entityStateObj = hass.states[config.entity];
-    if (!entityStateObj) return undefined;
-    const attrName = config.attribute || 'state';
-    return attrName === 'state' ? entityStateObj.state : entityStateObj.attributes?.[attrName];
+    return EntityValueResolver.readEntityRaw(hass, config.entity, config.attribute);
   }
 
   private static _textContainsChangedEntityRef(

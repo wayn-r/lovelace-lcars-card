@@ -56,6 +56,13 @@ interface ElementProps {
   grid?: {
     num_lines?: number;
   };
+  // vertical slider widget specific
+  min?: number;
+  max?: number;
+  spacing?: number;
+  top_padding?: number;
+  label_height?: number;
+  use_floats?: boolean;
 }
 
 interface LayoutConfig {
@@ -85,7 +92,7 @@ export class ConfigParser {
     requestUpdateCallback?: () => void, 
     getShadowElement?: (id: string) => Element | null
   ): Group[] {
-    const validatedConfig = this.validateConfig(config);
+    const validatedConfig = this._validateConfig(config);
     
     if (!validatedConfig.groups) {
       throw new Error('Invalid configuration: groups array is required');
@@ -94,10 +101,10 @@ export class ConfigParser {
     return validatedConfig.groups.map(groupConfig => {
       const layoutElements: LayoutElement[] = groupConfig.elements.flatMap(elementConfig => {
         const fullId = `${groupConfig.group_id}.${elementConfig.id}`;
-        const props = this.convertElementProps(elementConfig);
-        const layoutConfig = this.convertLayoutConfig(elementConfig.layout);
+        const props = this._convertElementProps(elementConfig);
+        const layoutConfig = this._convertLayoutConfig(elementConfig.layout);
         
-        return this.createLayoutElements(
+        return this._createLayoutElements(
           fullId,
           elementConfig.type,
           props,
@@ -112,14 +119,12 @@ export class ConfigParser {
     });
   }
 
-  private static validateConfig(config: unknown): ParsedConfig {
+  private static _validateConfig(config: unknown): ParsedConfig {
     try {
       return parseCardConfig(config);
     } catch (error) {
       if (error instanceof ZodError) {
-        const groupsError = error.errors.find(e => 
-          e.path.length === 1 && e.path[0] === 'groups'
-        );
+        const groupsError = error.errors.find(e => e.path.length === 1 && e.path[0] === 'groups');
         
         if (groupsError) {
           throw new Error('Invalid configuration: groups array is required');
@@ -129,7 +134,7 @@ export class ConfigParser {
     }
   }
 
-  private static convertElementProps(elementConfig: any): ElementProps {
+  private static _convertElementProps(elementConfig: any): ElementProps {
     const appearance = elementConfig.appearance || {};
     const text = elementConfig.text || {};
 
@@ -165,7 +170,6 @@ export class ConfigParser {
       animations: elementConfig.animations,
       
       entity: elementConfig.entity,
-      entity_id: elementConfig.entity,
       attribute: elementConfig.attribute,
       label: elementConfig.label,
       value: elementConfig.value,
@@ -175,16 +179,20 @@ export class ConfigParser {
       maxLines: text.max_lines,
       lineSpacing: text.line_spacing,
       color_cycle: text.color_cycle,
-      grid: elementConfig.grid,
+       grid: elementConfig.grid,
+       // Vertical slider widget specific properties
+       min: elementConfig.min,
+       max: elementConfig.max,
+       spacing: elementConfig.spacing,
+       top_padding: elementConfig.top_padding,
+       label_height: elementConfig.label_height,
+       use_floats: elementConfig.use_floats,
     };
 
-    // Handle text color differently for text elements vs other elements
     if (text.fill !== undefined) {
       if (elementConfig.type === 'text') {
-        // For text elements, text.fill becomes the fill property
         props.fill = text.fill;
       } else {
-        // For other elements, text.fill becomes textColor
         props.textColor = text.fill;
       }
     }
@@ -192,7 +200,7 @@ export class ConfigParser {
     return props;
   }
 
-  private static convertLayoutConfig(layout?: any): LayoutConfig {
+  private static _convertLayoutConfig(layout?: any): LayoutConfig {
     if (!layout) return {};
     
     const engineLayout: LayoutConfig = {};
@@ -227,7 +235,7 @@ export class ConfigParser {
     return engineLayout;
   }
 
-  private static createLayoutElements(
+  private static _createLayoutElements(
     id: string,
     type: string,
     props: ElementProps,

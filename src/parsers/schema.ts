@@ -1,29 +1,11 @@
 import { z } from 'zod';
 
-/*
-  Typed configuration layer based on the existing YAML configuration definition in src/types.ts.
-  This is an initial draft – the goal is to provide strict runtime validation for configs while we
-  gradually migrate the codebase to consume the typed result instead of performing manual shape
-  conversions.
-*/
-
-// -----------------------------------------------------------------------------
 // Primitive helpers
-// -----------------------------------------------------------------------------
-
-// Numeric or string based length (eg. 100, "100", "100px", "25%")
 const sizeSchema = z.union([z.number(), z.string()]);
 
-// State value string (kept loose for now – we will narrow once the state machine DSL is finalised)
 const stateString = z.string();
 
-// Very permissive colour value placeholder.  Will be refined once the colour system stabilises.
-// Accepts: CSS string, RGB array, dynamic colour config object, stateful colour config object, etc.
 const colorValueSchema = z.any();
-
-// -----------------------------------------------------------------------------
-// Appearance & Text
-// -----------------------------------------------------------------------------
 
 const appearanceSchema = z.object({
   fill: colorValueSchema.optional(),
@@ -52,7 +34,6 @@ const textSchema = z.object({
   right_content: z.string().optional(),
   offsetX: z.union([z.number(), z.string()]).optional(),
   offsetY: z.union([z.number(), z.string()]).optional(),
-  // Logger widget specific properties
   max_lines: z.number().optional(),
   line_spacing: sizeSchema.optional(),
   text_color: colorValueSchema.optional(),
@@ -61,10 +42,6 @@ const textSchema = z.object({
     duration: z.number(),
   })).optional(),
 });
-
-// -----------------------------------------------------------------------------
-// Layout (anchor / stretch)
-// -----------------------------------------------------------------------------
 
 const anchorSchema = z.object({
   to: z.string(),
@@ -92,35 +69,24 @@ const layoutSchema = z.object({
   stretch: stretchSchema.optional(),
 });
 
-// -----------------------------------------------------------------------------
-// Button & Actions (kept permissive for first pass)
-// -----------------------------------------------------------------------------
-
-// Unified Action schema matching the Action interface in types.ts
 const actionSchema: z.ZodType<any> = z.object({
   action: z.enum(['call-service', 'navigate', 'url', 'toggle', 'more-info', 'none', 'set_state', 'toggle_state']),
   
-  // Home Assistant service actions
   service: z.string().optional(),
   service_data: z.record(z.any()).optional(),
   target: z.record(z.any()).optional(),
   
-  // Navigation actions
   navigation_path: z.string().optional(),
   
-  // URL actions
   url_path: z.string().optional(),
   
-  // Entity actions
   entity: z.string().optional(),
   
-  // Custom state management actions
   target_element_ref: z.string().optional(),
   state: z.string().optional(),
   states: z.array(z.string()).optional(),
-  actions: z.array(z.lazy(() => actionSchema)).optional(), // Recursive for multi-action sequences
+  actions: z.array(z.lazy(() => actionSchema)).optional(),
   
-  // Common properties
   confirmation: z.union([
     z.boolean(),
     z.object({
@@ -134,7 +100,6 @@ const actionSchema: z.ZodType<any> = z.object({
 
 const multiActionSchema = z.union([actionSchema, z.array(actionSchema)]);
 
-// Hold can optionally include a duration plus either a single action or array of actions
 const holdActionSchema = z.union([
   actionSchema,
   z.array(actionSchema),
@@ -150,7 +115,6 @@ const holdActionSchema = z.union([
   }, { message: 'hold must specify "action" or "actions"' })
 ]);
 
-// Update buttonSchema to use the new helpers
 const buttonSchema = z.object({
   enabled: z.boolean().optional(),
   actions: z.object({
@@ -159,10 +123,6 @@ const buttonSchema = z.object({
     double_tap: multiActionSchema.optional(),
   }).optional(),
 }).optional();
-
-// -----------------------------------------------------------------------------
-// Entity Text Widget
-// -----------------------------------------------------------------------------
 
 const entityTextLabelSchema = z.object({
   content: z.string().optional(),
@@ -184,10 +144,6 @@ const entityTextValueSchema = z.object({
   textTransform: z.string().optional(),
 });
 
-// -----------------------------------------------------------------------------
-// Element
-// -----------------------------------------------------------------------------
-
 const elementTypeEnum = z.enum([
   'rectangle',
   'text',
@@ -198,8 +154,9 @@ const elementTypeEnum = z.enum([
   'entity-text-widget',
   'logger-widget',
   'graph-widget',
+  'vertical-slider',
   'weather-icon',
-]).or(z.string()); // Allow unknown types for backwards compatibility
+]).or(z.string());
 
 const elementSchema = z.object({
   id: z.string().min(1),
@@ -213,12 +170,11 @@ const elementSchema = z.object({
   text: textSchema.optional(),
   layout: layoutSchema.optional(),
   button: buttonSchema.optional(),
-  state_management: z.any().optional(), // To be replaced when state machine typing is implemented
+  state_management: z.any().optional(),
   visibility_rules: z.any().optional(),
   visibility_triggers: z.any().optional(),
   animations: z.any().optional(),
   
-  // Entity text widget specific fields
   entity: z.union([
     z.string(),
     z.array(
@@ -230,6 +186,10 @@ const elementSchema = z.object({
                 toggleable: z.boolean().optional(),
                 animated: z.boolean().optional(),
                 duration: z.number().optional(),
+                label: z.string().optional(),
+                min: z.number().optional(),
+                max: z.number().optional(),
+                 attribute: z.string().optional(),
             }),
         ])
     ),
@@ -237,21 +197,34 @@ const elementSchema = z.object({
   attribute: z.string().optional(),
   label: entityTextLabelSchema.optional(),
   value: entityTextValueSchema.optional(),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  spacing: z.number().optional(),
+  top_padding: z.number().optional(),
+  label_height: z.number().optional(),
+  use_floats: z.boolean().optional(),
 });
+
+function isValidEntityConfig(entity: unknown): boolean {
+  if (!entity) return false;
+  if (Array.isArray(entity)) {
+    return entity.length > 0 && entity.every(e => {
+      if (typeof e === 'string') return e.length > 0;
+      if (typeof e === 'object' && e !== null && 'id' in e) {
+        return typeof (e as { id: any }).id === 'string' && (e as { id: string }).id.length > 0;
+      }
+      return false;
+    });
+  }
+  return typeof entity === 'string' && entity.length > 0;
+}
 
 const refinedElementSchema = elementSchema.refine(data => {
     if (data.type === 'graph-widget') {
-        if (!data.entity) return false;
-        if (Array.isArray(data.entity)) {
-            return data.entity.length > 0 && data.entity.every(e => {
-                if (typeof e === 'string') return e.length > 0;
-                if (typeof e === 'object' && e !== null && 'id' in e) {
-                    return typeof (e as {id:any}).id === 'string' && (e as {id:string}).id.length > 0;
-                }
-                return false;
-            });
-        }
-        return typeof data.entity === 'string' && data.entity.length > 0;
+        return isValidEntityConfig(data.entity);
+    }
+    if (data.type === 'vertical-slider') {
+        return isValidEntityConfig(data.entity);
     }
     if (data.type === 'entity-text-widget') {
         if (typeof data.entity === 'string') {
@@ -275,30 +248,21 @@ const refinedElementSchema = elementSchema.refine(data => {
     path: ['entity'],
 });
 
-// -----------------------------------------------------------------------------
-// Group & Card
-// -----------------------------------------------------------------------------
-
 const groupSchema = z.object({
   group_id: z.string().min(1),
-  elements: z.array(refinedElementSchema), // Allow empty arrays for backward compatibility
+  elements: z.array(refinedElementSchema),
 });
 
 const cardConfigSchema = z.object({
   type: z.string().default('lovelace-lcars-card'),
   title: z.string().optional(),
-  groups: z.array(groupSchema), // Allow empty arrays for backward compatibility
+  groups: z.array(groupSchema),
   state_management: z.any().optional(),
 });
 
 export const lcarsCardConfigSchema = cardConfigSchema;
 export type ParsedConfig = z.infer<typeof lcarsCardConfigSchema>;
 
-/**
- * Runtime configuration validation helper.
- *
- * Throws a ZodError if validation fails.
- */
 export function parseCardConfig(config: unknown): ParsedConfig {
   return lcarsCardConfigSchema.parse(config);
 } 
