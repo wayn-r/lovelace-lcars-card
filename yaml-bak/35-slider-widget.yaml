@@ -1,0 +1,70 @@
+type: custom:lovelace-lcars-card
+card_title: Slider Widget Example
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: Slider widget
+          right_content: example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: sliders
+    elements:
+      - id: slider_single
+        type: vertical-slider
+        entity: input_number.bedroom_climate
+        appearance:
+          fill: var(--lcars-color-graph-background)
+        text:
+          fill: var(--lcars-color-white)
+        grid:
+          num_lines: 15
+        spacing: 14
+        top_padding: 6
+        label_height: 50
+        layout:
+          offsetY: 400
+          width: 70
+          height: 210
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+      - id: slider_multi
+        type: vertical-slider
+        entity:
+          - id: climate.living_room
+            label: L R
+            color: "#044ea9"
+            min: 0
+            max: 110
+          - id: sensor.ep1_kitchen_temperature
+            label: RESP
+            min: 0
+            max: 110
+          - id: sensor.kevv_temperature
+            label: NEURO
+            min: 0
+            max: 110
+        grid:
+          num_lines: 15
+        spacing: 14
+        top_padding: 6
+        label_height: 50
+        layout:
+          offsetY: 100
+          width: 220
+          height: 200
