@@ -1,0 +1,38 @@
+type: custom:lovelace-lcars-card
+card_title: Entity Metric Widget Example
+groups:
+  - group_id: nav_header
+    elements:
+      - id: main_header
+        type: top_header
+        appearance:
+          fill: "#CC6600"
+        text:
+          left_content: entity-metric widget
+          right_content: example
+          fill: "#99CCFF"
+          fontSize: 18
+          fontWeight: bold
+          fontFamily: Antonio
+        layout:
+          width: 100%
+          height: 40
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: main_display
+    elements:
+      - id: widget
+        type: entity-metric-widget
+        entity: sensor.kevv_wind_speed
+        appearance:
+          rounded: right
+        layout:
+          offsetY: 10
+          anchor:
+            to: nav_header.main_header
+            element_point: topLeft
+            target_point: bottomLeft
+        value:
+          fontWeight: bold

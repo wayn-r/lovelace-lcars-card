@@ -31,7 +31,20 @@ export class RectangleElement extends LayoutElement {
     }
     
     const rx = this.props.rx ?? this.props.cornerRadius ?? 0;
-    const pathData = ShapeGenerator.generateRectangle(x, y, width, height, rx);
+    const pathData = this.props.cornerRadii
+      ? ShapeGenerator.generateRectangleCorners(
+          x,
+          y,
+          width,
+          height,
+          {
+            topLeft: this.props.cornerRadii.topLeft,
+            topRight: this.props.cornerRadii.topRight,
+            bottomRight: this.props.cornerRadii.bottomRight,
+            bottomLeft: this.props.cornerRadii.bottomLeft,
+          }
+        )
+      : ShapeGenerator.generateRectangle(x, y, width, height, rx);
     
     return this.renderPathWithButtonSupport(pathData, x, y, width, height, rx);
   }

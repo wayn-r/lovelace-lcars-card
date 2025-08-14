@@ -12,6 +12,7 @@ const appearanceSchema = z.object({
   stroke: colorValueSchema.optional(),
   strokeWidth: z.number().optional(),
   cornerRadius: z.number().optional(),
+  rounded: z.enum(['left', 'right', 'both']).optional(),
   direction: z.enum(['left', 'right']).optional(),
   orientation: z.enum(['top-left', 'top-right', 'bottom-left', 'bottom-right']).optional(),
   bodyWidth: sizeSchema.optional(),
@@ -133,6 +134,7 @@ const entityTextLabelSchema = z.object({
   fill: colorValueSchema.optional(),
   offsetX: z.number().optional(),
   textTransform: z.string().optional(),
+  cutout: z.boolean().optional(),
 });
 
 const entityTextValueSchema = z.object({
@@ -142,6 +144,18 @@ const entityTextValueSchema = z.object({
   fill: colorValueSchema.optional(),
   offsetX: z.number().optional(),
   textTransform: z.string().optional(),
+});
+
+const entityMetricUnitSchema = z.object({
+  content: z.string().optional(),
+  width: z.number().optional(),
+  height: z.number().optional(),
+  fontFamily: z.string().optional(),
+  fontWeight: z.union([z.string(), z.number()]).optional(),
+  fill: colorValueSchema.optional(),
+  offsetX: z.number().optional(),
+  textTransform: z.string().optional(),
+  cutout: z.boolean().optional(),
 });
 
 const elementTypeEnum = z.enum([
@@ -156,6 +170,7 @@ const elementTypeEnum = z.enum([
   'graph-widget',
   'vertical-slider',
   'weather-icon',
+  'entity-metric-widget',
 ]).or(z.string());
 
 const elementSchema = z.object({
@@ -197,6 +212,7 @@ const elementSchema = z.object({
   attribute: z.string().optional(),
   label: entityTextLabelSchema.optional(),
   value: entityTextValueSchema.optional(),
+  unit: entityMetricUnitSchema.optional(),
   min: z.number().optional(),
   max: z.number().optional(),
   spacing: z.number().optional(),
@@ -239,12 +255,25 @@ const refinedElementSchema = elementSchema.refine(data => {
         }
         return false;
     }
+    if (data.type === 'entity-metric-widget') {
+        if (typeof data.entity === 'string') {
+            return data.entity.length > 0;
+        }
+        if (Array.isArray(data.entity)) {
+            return (
+                data.entity.length > 0 &&
+                data.entity.length <= 2 &&
+                data.entity.every(e => typeof e === 'string' && e.length > 0)
+            );
+        }
+        return false;
+    }
     if (data.type === 'weather-icon') {
         return typeof data.entity === 'string' && data.entity.length > 0;
     }
     return true;
 }, {
-    message: "For 'graph-widget', 'entity' must be a non-empty string or a non-empty array of valid entities (string or object with id). For 'entity-text-widget', 'entity' must be a non-empty string or an array of up to two non-empty strings. For 'weather-icon', 'entity' must be a non-empty string.",
+    message: "For 'graph-widget', 'entity' must be a non-empty string or a non-empty array of valid entities (string or object with id). For 'entity-text-widget' and 'entity-metric-widget', 'entity' must be a non-empty string or an array of up to two non-empty strings. For 'weather-icon', 'entity' must be a non-empty string.",
     path: ['entity'],
 });
 

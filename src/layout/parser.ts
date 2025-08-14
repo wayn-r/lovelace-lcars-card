@@ -47,6 +47,7 @@ interface ElementProps {
   attribute?: string;
   label?: any;
   value?: any;
+  unit?: any;
   appearance?: any;
   // Logger widget specific properties
   maxLines?: number;
@@ -173,6 +174,7 @@ export class ConfigParser {
       attribute: elementConfig.attribute,
       label: elementConfig.label,
       value: elementConfig.value,
+      unit: elementConfig.unit,
       appearance: elementConfig.appearance,
       
       // Logger widget specific properties

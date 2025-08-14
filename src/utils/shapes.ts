@@ -245,6 +245,34 @@ export class ShapeGenerator {
         return this.buildPath(points);
     }
 
+    /**
+     * Generates a rectangle path with independent corner radii.
+     */
+    static generateRectangleCorners(
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        radii: { topLeft?: number; topRight?: number; bottomRight?: number; bottomLeft?: number } = {}
+    ): string {
+        if (!this.dimensionsAreValid(width, height, 'generateRectangleCorners')) {
+            return this.buildPath(this.createFallbackPoints(x, y));
+        }
+
+        const tl = Math.max(0, radii.topLeft ?? 0);
+        const tr = Math.max(0, radii.topRight ?? 0);
+        const br = Math.max(0, radii.bottomRight ?? 0);
+        const bl = Math.max(0, radii.bottomLeft ?? 0);
+
+        const points: [number, number, number][] = [
+            [x, y, tl],
+            [x + width, y, tr],
+            [x + width, y + height, br],
+            [x, y + height, bl]
+        ];
+        return this.buildPath(points);
+    }
+
     static generateTriangle(
         sideLength: number,
         direction: Direction,

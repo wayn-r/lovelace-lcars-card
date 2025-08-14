@@ -26,6 +26,9 @@ lcars_theme:
 
   # Entity Text Widget Colors
   lcars-color-entity-text: var(--lcars-color-blue)
+  
+  # Entity Metric Widget Colors
+  lcars-color-entity-metric: var(--lcars-color-blue)
 
   # Graph Widget Colors
   lcars-color-graph-background: var(--lcars-color-teal)

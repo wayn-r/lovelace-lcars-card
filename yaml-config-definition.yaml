@@ -20,7 +20,7 @@ groups: <array>                  # Required: Defines groups of elements. Element
                                    #   Full ID becomes "group_id.id" (e.g., "navigation.status_light").
         type: <string>             # Required: The type of LCARS element.
                                    #   Options: "rectangle", "text", "endcap", "elbow",
-                                   #            "chisel-endcap", "top_header", "logger-widget", "graph-widget", "vertical-slider", "weather-icon".
+                                    #            "chisel-endcap", "top_header", "logger-widget", "graph-widget", "vertical-slider", "weather-icon", "entity-metric-widget".
         entity: <string|array>     # Optional: Home Assistant entity ID or array of entity IDs.
                                    #   Required for 'graph-widget', 'entity-text-widget', and 'weather-icon'.
                                    #   For 'entity-text-widget', this can be a single entity ID string or an array of up to two entity ID strings.
@@ -42,7 +42,42 @@ groups: <array>                  # Required: Defines groups of elements. Element
           fill: <color_property>     # Optional: The color for the grid lines. Default: '#0b6288'.
           label_fill: <color_property> # Optional: The color for the grid line labels. Default: 'white'.
 
-        # === Vertical Slider Widget Specific ===
+         # === Entity Metric Widget Specific ===
+         #   A pill-style metric widget that shows: [Label Pill] [Value Text] [Unit Pill]
+         #   - Uses the entity friendly name for the label when label.content is omitted
+         #   - Uses the entity's state or the specified attribute for the value when value.content is omitted
+         #   - Uses the entity's unit_of_measurement attribute for the unit when unit.content is omitted
+         #   - Rounded corners are enabled by default; override via appearance.cornerRadius
+         label:                         # Optional overrides for the label pill text and sizing
+           content: <string>              # Text for the label pill. Defaults to entity friendly name
+           width: <number>                # Width of the label pill in px. Default: 200
+           height: <number>               # Font-cap height used to compute font size. Default: 80% of widget height
+           fontFamily: <string>
+           fontWeight: <string|number>
+           fill: <color_property>         # Text color inside the pill (cutout). Default: inherits
+           offsetX: <number>              # Horizontal spacing between leading edge and label pill
+           textTransform: <string>        # Default: uppercase
+         value:                         # Optional overrides for the middle numeric value text
+           content: <string>              # Value text. Defaults to entity state or selected attribute
+           fontFamily: <string>
+           fontWeight: <string|number>
+           fill: <color_property>         # Default: var(--lcars-color-white)
+           offsetX: <number>              # Horizontal spacing between label pill and value text
+           textTransform: <string>
+         unit:                          # Optional overrides for the trailing unit pill
+           content: <string>              # Defaults to entity attribute 'unit_of_measurement'
+           width: <number>                # Pill width in px. Default: 60
+           height: <number>               # Pill height. Default: widget height
+           fontFamily: <string>
+           fontWeight: <string|number>
+           fill: <color_property>         # Pill fill color; defaults to appearance.fill
+           offsetX: <number>              # Horizontal spacing between value text and unit pill
+           textTransform: <string>
+         appearance:
+           fill: <color_property>         # Pill background color and default value text color. Default: var(--lcars-color-entity-metric)
+           rounded: <string>              # Which outer side(s) are rounded: 'left' | 'right' | 'both'. Default: none. The inside edges are always square.
+
+         # === Vertical Slider Widget Specific ===
         #   The vertical slider widget renders one or more stacked sliders similar to LCARS bars.
         #   It accepts a single entity ID or an array mixing strings and objects for customization.
         #   Object format: { id, color?, label?, min?, max?, attribute? }
