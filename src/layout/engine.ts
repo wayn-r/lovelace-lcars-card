@@ -136,7 +136,22 @@ export class LayoutEngine {
         console.warn('LayoutEngine: Some elements could not be calculated in single pass');
         return { width: containerRect.width, height: containerRect.height };
       }
-      
+
+      const firstPassBounds = this.getLayoutBounds();
+      const needsSecondPass = options?.dynamicHeight && firstPassBounds.height !== containerRect.height;
+      if (!needsSecondPass) {
+        return firstPassBounds;
+      }
+
+      const updatedRect = new DOMRect(
+        containerRect.x,
+        containerRect.y,
+        containerRect.width,
+        firstPassBounds.height
+      );
+      this.containerRect = updatedRect;
+      this.elements.forEach(el => el.resetLayout());
+      this.calculateLayoutSinglePass();
       return this.getLayoutBounds();
     } catch (error) {
       if (error instanceof Error) {

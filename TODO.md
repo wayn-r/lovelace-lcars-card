@@ -7,7 +7,6 @@
     - there may be something similar with graphs, but I've only noticed it in the same interface taht the logger is running simultaneously
 
 ### Layout
-- elbow second anchor seems to break the elbow: if the yaml configurator is opened and the same configuration is saved again, the elbow seems to restore
 - elements aren't anchoring to expect graph points: this seems likely isolated to the button area not being considered for the anchor position
 
 ### YAML Config
