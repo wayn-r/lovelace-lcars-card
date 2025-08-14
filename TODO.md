@@ -7,7 +7,8 @@
     - there may be something similar with graphs, but I've only noticed it in the same interface taht the logger is running simultaneously
 
 ### Layout
-- elements aren't anchoring to expect graph points: this seems likely isolated to the button area not being considered for the anchor position
+- elements aren't anchoring to expected graph points: this seems likely isolated to the button area not being considered for the anchor position
+- elements aren't anchoring to expected metric-entity widget points: likely same as above
 
 ### YAML Config
 - this runs extremely slow when the config gets complex
