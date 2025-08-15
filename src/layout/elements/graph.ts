@@ -125,12 +125,12 @@ export class GraphElement extends LayoutElement {
     const gradients = this.entityConfigs.map((config, index) => {
         const defaultColor = lineGradients[index % lineGradients.length].color;
         const color = config.color || defaultColor;
-      const resolvedColor = color.startsWith('var(')
-        ? color
-        : ColorResolver.resolve(color)
-            .withDom(this.getShadowElement?.(this.id) ?? null)
-            .toString();
-      return { color: resolvedColor };
+        const dom = this.getShadowElement?.(this.id) ?? null;
+        const resolvedColor = ColorResolver
+          .resolve(color)
+          .withDom(dom)
+          .toString();
+        return { color: resolvedColor };
     });
 
       return svg`
@@ -176,11 +176,8 @@ export class GraphElement extends LayoutElement {
 
        if (config.animated === false) {
          const baseColor = config.color || lineGradients[originalIndex % lineGradients.length].color;
-         const strokeColor = baseColor.startsWith('var(')
-           ? baseColor
-           : ColorResolver.resolve(baseColor)
-               .withDom(this.getShadowElement?.(this.id) ?? null)
-               .toString();
+         const dom = this.getShadowElement?.(this.id) ?? null;
+         const strokeColor = ColorResolver.resolve(baseColor).withDom(dom).toString();
          return svg`<path d="${path}" fill="none" stroke="${strokeColor}" stroke-width="4" />`;
        }
       
@@ -351,13 +348,16 @@ export class GraphElement extends LayoutElement {
   private getGridConfiguration(minMax: { minVal: number; maxVal: number }) {
     const numGraphLines = this.props.grid?.num_lines ?? 6;
     const [min, max] = nice(minMax.minVal, minMax.maxVal, numGraphLines - 1);
-    
+    const dom = this.getShadowElement?.(this.id) ?? null;
+    const strokeColorRaw = this.props.grid?.fill ?? 'var(--lcars-color-graph-background)';
+    const textFillRaw = this.props.grid?.label_fill ?? 'white';
+
     return {
       numLines: numGraphLines,
       min,
       max,
-      strokeColor: this.props.grid?.fill ?? 'var(--lcars-color-graph-background)',
-      textFill: this.props.grid?.label_fill ?? 'white'
+      strokeColor: ColorResolver.resolve(strokeColorRaw).withDom(dom).toString(),
+      textFill: ColorResolver.resolve(textFillRaw).withDom(dom).toString()
     };
   }
 
