@@ -21,9 +21,9 @@ groups:
             to: container
             element_point: topLeft
             target_point: topLeft
-  - group_id: main_display
+  - group_id: widgets
     elements:
-      - id: widget
+      - id: widget1
         type: entity-metric-widget
         entity: sensor.kevv_wind_speed
         appearance:
@@ -34,5 +34,17 @@ groups:
             to: nav_header.main_header
             element_point: topLeft
             target_point: bottomLeft
+        value:
+          fontWeight: bold
+      - id: widget2
+        type: entity-metric-widget
+        entity: sensor.kevv_wind_speed
+        appearance:
+          rounded: left
+        layout:
+          anchor:
+            to: widgets.widget1
+            element_point: topLeft
+            target_point: topRight
         value:
           fontWeight: bold
