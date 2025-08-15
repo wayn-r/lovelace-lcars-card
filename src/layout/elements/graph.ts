@@ -78,7 +78,7 @@ export class GraphElement extends LayoutElement {
     this.animations.clear();
 
     const visibleEntityConfigs = this.entityConfigs.filter(config => {
-        const stateName = `${this.id}_${config.id}_visible`;
+        const stateName = `${this.getStateIdBase()}_${config.id}_visible`;
         return stateManager.getState(stateName) !== 'hidden';
     });
 
@@ -161,7 +161,7 @@ export class GraphElement extends LayoutElement {
     }
 
     const visibleEntityConfigs = this.entityConfigs.filter(config => {
-        const stateName = `${this.id}_${config.id}_visible`;
+        const stateName = `${this.getStateIdBase()}_${config.id}_visible`;
         return stateManager.getState(stateName) !== 'hidden';
     });
     const allPoints = this.calculateAllPoints();
@@ -287,7 +287,7 @@ export class GraphElement extends LayoutElement {
   }
 
   private extractEntityIdFromEvent(event: StateChangeEvent): string | null {
-    const stateNamePrefix = `${this.id}_`;
+    const stateNamePrefix = `${this.getStateIdBase()}_`;
     const stateNameSuffix = `_visible`;
 
     if (event.elementId.startsWith(stateNamePrefix) && event.elementId.endsWith(stateNameSuffix)) {
@@ -317,6 +317,11 @@ export class GraphElement extends LayoutElement {
 
   private findEntityConfig(entityId: string): RichEntityConfig | undefined {
     return this.entityConfigs.find(c => c.id === entityId);
+  }
+
+  private getStateIdBase(): string {
+    const base = (this.props as any)?.stateIdBase;
+    return typeof base === 'string' && base.length > 0 ? base : this.id;
   }
 
   private getEntityGradientElement(entityId: string): Element | null {

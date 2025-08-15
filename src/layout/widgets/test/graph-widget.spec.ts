@@ -71,9 +71,11 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      expect(elements).toHaveLength(2); // Graph + 1 toggle button (single entities are toggleable by default)
-      expect(elements[0]).toBeInstanceOf(GraphElement);
+      expect(elements).toHaveLength(3); // Bounds + Graph + 1 toggle button
+      expect(elements[0]).toBeInstanceOf(RectangleElement); // bounds
       expect(elements[0].id).toBe('test_graph');
+      expect(elements[1]).toBeInstanceOf(GraphElement);
+      expect(elements[1].id).toBe('test_graph_graph');
     });
 
     it('should create widget with array of string entities', () => {
@@ -87,10 +89,11 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      expect(elements).toHaveLength(3); // Graph + 2 toggle buttons
-      expect(elements[0]).toBeInstanceOf(GraphElement);
-      expect(elements[1]).toBeInstanceOf(RectangleElement);
+      expect(elements).toHaveLength(4); // Bounds + Graph + 2 toggle buttons
+      expect(elements[0]).toBeInstanceOf(RectangleElement); // bounds
+      expect(elements[1]).toBeInstanceOf(GraphElement);
       expect(elements[2]).toBeInstanceOf(RectangleElement);
+      expect(elements[3]).toBeInstanceOf(RectangleElement);
     });
 
     it('should create widget with rich entity configuration', () => {
@@ -109,9 +112,10 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      expect(elements).toHaveLength(2); // Graph + 1 toggle button (humidity is not toggleable)
-      expect(elements[0]).toBeInstanceOf(GraphElement);
-      expect(elements[1]).toBeInstanceOf(RectangleElement);
+      expect(elements).toHaveLength(3); // Bounds + Graph + 1 toggle button (humidity is not toggleable)
+      expect(elements[0]).toBeInstanceOf(RectangleElement); // bounds
+      expect(elements[1]).toBeInstanceOf(GraphElement);
+      expect(elements[2]).toBeInstanceOf(RectangleElement);
     });
 
     it('should create elements with correct IDs', () => {
@@ -125,9 +129,10 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      expect(elements[0].id).toBe('id_test_graph');
-      expect(elements[1].id).toBe('id_test_graph_button_0');
-      expect(elements[2].id).toBe('id_test_graph_button_1');
+      expect(elements[0].id).toBe('id_test_graph'); // bounds id
+      expect(elements[1].id).toBe('id_test_graph_graph');
+      expect(elements[2].id).toBe('id_test_graph_button_0');
+      expect(elements[3].id).toBe('id_test_graph_button_1');
     });
   });
 
@@ -254,9 +259,9 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      expect(elements).toHaveLength(3); // Graph + 2 toggle buttons (temperature & pressure)
+      expect(elements).toHaveLength(4); // Bounds + Graph + 2 toggle buttons (temperature & pressure)
       
-      const buttons = elements.slice(1) as RectangleElement[];
+      const buttons = elements.slice(2) as RectangleElement[];
       expect(buttons[0].id).toBe('toggle_test_button_0');
       expect(buttons[1].id).toBe('toggle_test_button_1');
     });
@@ -272,7 +277,7 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      const buttons = elements.slice(1) as RectangleElement[];
+      const buttons = elements.slice(2) as RectangleElement[];
       
       expect(buttons[0].props.text).toBe('temperature');
       expect(buttons[1].props.text).toBe('humidity');
@@ -294,7 +299,7 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      const buttons = elements.slice(1) as RectangleElement[];
+      const buttons = elements.slice(2) as RectangleElement[];
       
       expect(buttons[0].props.fill.default).toBe('#FF0000');
       expect(buttons[1].props.fill.default).toBe('var(--lcars-color-graph-line-2)');
@@ -311,7 +316,7 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      const button = elements[1] as RectangleElement;
+      const button = elements[2] as RectangleElement;
       
       expect(button.props.button?.enabled).toBe(true);
       expect(button.props.button?.actions?.tap?.action).toBe('toggle_state');
@@ -332,7 +337,7 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      const buttons = elements.slice(1) as RectangleElement[];
+      const buttons = elements.slice(2) as RectangleElement[];
       
       expect(buttons).toHaveLength(2);
       expect(buttons[0].layoutConfig.width).toBe(180);
@@ -354,7 +359,7 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      const buttons = elements.slice(1) as RectangleElement[];
+      const buttons = elements.slice(2) as RectangleElement[];
       
       expect(buttons).toHaveLength(8);
       
@@ -383,7 +388,7 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      const buttons = elements.slice(1) as RectangleElement[];
+      const buttons = elements.slice(2) as RectangleElement[];
       
       // Check that all buttons fit within the graph height
       const graphHeight = 300;
@@ -408,10 +413,10 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      const button = elements[1] as RectangleElement;
+      const button = elements[2] as RectangleElement;
       
       expect(button.layoutConfig.anchor).toEqual({
-        anchorTo: 'anchor_test',
+        anchorTo: 'anchor_test_graph',
         anchorPoint: 'topLeft',
         targetAnchorPoint: 'topRight'
       });
@@ -429,7 +434,7 @@ describe('GraphWidget', () => {
       );
 
       const elements = widget.expand();
-      const buttons = elements.slice(1) as RectangleElement[];
+      const buttons = elements.slice(2) as RectangleElement[];
       
       // First button should have the startYOffset
       const firstOffset = buttons[0].layoutConfig.offsetY!;
@@ -646,9 +651,11 @@ describe('GraphWidget', () => {
 
       const graphElement = (widget as any).graphElement;
       
-      expect(graphElement.id).toBe('param_test');
-      expect(graphElement.props).toBe(props);
-      expect(graphElement.layoutConfig).toBe(layoutConfig);
+      expect(graphElement.id).toBe('param_test_graph');
+      expect(graphElement.props.entity).toBe(props.entity);
+      expect(graphElement.props.fill).toBe(props.fill);
+      expect(graphElement.props.stateIdBase).toBe('param_test');
+      expect(graphElement.layoutConfig).toEqual({});
       expect(graphElement.hass).toBe(mockHass);
       expect(graphElement.requestUpdateCallback).toBe(mockRequestUpdate);
       expect(graphElement.getShadowElement).toBe(mockGetShadowElement);
@@ -685,9 +692,10 @@ describe('GraphWidget Registry Integration', () => {
     );
 
     expect(elements).not.toBeNull();
-    expect(elements).toHaveLength(2); // Graph + 1 button
-    expect(elements![0]).toBeInstanceOf(GraphElement);
-    expect(elements![1]).toBeInstanceOf(RectangleElement);
+    expect(elements).toHaveLength(3); // Bounds + Graph + 1 button
+    expect(elements![0]).toBeInstanceOf(RectangleElement);
+    expect(elements![1]).toBeInstanceOf(GraphElement);
+    expect(elements![2]).toBeInstanceOf(RectangleElement);
   });
 
   it('should handle registry calls with different configurations', () => {
@@ -702,7 +710,7 @@ describe('GraphWidget Registry Integration', () => {
     );
 
     expect(multiEntityElements).not.toBeNull();
-    expect(multiEntityElements).toHaveLength(4); // Graph + 3 buttons
+    expect(multiEntityElements).toHaveLength(5); // Bounds + Graph + 3 buttons
   });
 
   it('should return null for unknown widget types', () => {

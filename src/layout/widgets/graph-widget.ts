@@ -147,7 +147,7 @@ class GraphButtonFactory {
       width: dimensions.width,
       height: dimensions.height,
       anchor: {
-        anchorTo: parentGraphId,
+        anchorTo: `${parentGraphId}_graph`,
         anchorPoint: 'topLeft',
         targetAnchorPoint: 'topRight',
       },
@@ -159,6 +159,7 @@ class GraphButtonFactory {
 
 export class GraphWidget extends Widget {
   private graphElement: GraphElement;
+  private static readonly BUTTON_GAP_X: number = 20;
   private entityConfigs: RichEntityConfig[] = [];
   private entityIds: string[];
   private lastHistory?: HistoryMap;
@@ -182,16 +183,49 @@ export class GraphWidget extends Widget {
 
   public expand(): LayoutElement[] {
     const toggleableButtons = this.getToggleableEntityConfigs();
-    
-    if (toggleableButtons.length === 0) {
-      return [this.graphElement];
-    }
 
+    const graphHeight = this.determineGraphHeight();
+    const graphWidth = this.getConfiguredGraphWidth();
+
+    // Calculate button dimensions (if any)
     const dimensions = GraphButtonFactory.calculateButtonDimensions(
       toggleableButtons.length,
-      this.determineGraphHeight()
+      graphHeight
     );
 
+    // Create invisible bounds rectangle which carries the public widget ID
+    const boundsWidth = toggleableButtons.length > 0
+      ? graphWidth + GraphWidget.BUTTON_GAP_X + dimensions.width
+      : graphWidth;
+
+    const boundsLayoutConfig: LayoutConfigOptions = {
+      ...this.layoutConfig,
+      width: boundsWidth,
+      height: graphHeight,
+    };
+
+    const bounds = new RectangleElement(
+      this.id,
+      { fill: 'none', stroke: 'none' },
+      boundsLayoutConfig,
+      this.hass,
+      this.requestUpdateCallback,
+      this.getShadowElement
+    );
+
+    // Anchor the visual graph element to the top-left of the bounds
+    const graphLayoutConfig: LayoutConfigOptions = {
+      width: graphWidth,
+      height: graphHeight,
+      anchor: {
+        anchorTo: this.id,
+        anchorPoint: 'topLeft',
+        targetAnchorPoint: 'topLeft',
+      },
+    };
+    this.graphElement.layoutConfig = graphLayoutConfig;
+
+    // Build buttons (if any)
     const buttonElements = toggleableButtons.map((config, index) => {
       const originalIndex = this.entityConfigs.findIndex(c => c.id === config.id);
       return GraphButtonFactory.createToggleButton(
@@ -199,7 +233,7 @@ export class GraphWidget extends Widget {
           entityConfig: config,
           index,
           dimensions,
-          parentGraphId: this.id
+          parentGraphId: this.id,
         },
         this.hass,
         this.requestUpdateCallback,
@@ -208,7 +242,7 @@ export class GraphWidget extends Widget {
       );
     });
 
-    return [this.graphElement, ...buttonElements];
+    return [bounds, this.graphElement, ...buttonElements];
   }
 
   public updateHass(hass?: HomeAssistant): void {
@@ -235,10 +269,11 @@ export class GraphWidget extends Widget {
   }
 
   private createGraphElement(): void {
+    // The visual graph element gets a distinct ID and anchors to bounds at expand() time
     this.graphElement = new GraphElement(
-      this.id,
-      this.props,
-      this.layoutConfig,
+      `${this.id}_graph`,
+      { ...this.props, stateIdBase: this.id },
+      {},
       this.hass,
       this.requestUpdateCallback,
       this.getShadowElement
@@ -252,6 +287,10 @@ export class GraphWidget extends Widget {
 
   private determineGraphHeight(): number {
     return typeof this.layoutConfig.height === 'number' ? this.layoutConfig.height : 200;
+  }
+
+  private getConfiguredGraphWidth(): number {
+    return typeof this.layoutConfig.width === 'number' ? this.layoutConfig.width : 300;
   }
 
   private hasValidEntityConfiguration(hass?: HomeAssistant): boolean {
