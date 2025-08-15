@@ -211,7 +211,7 @@ groups:
           fill: "#12a4e3"
         label:
           fontFamily: Antonio
-          content: Temperature (actual)
+          content: Temperature (feel)
         value:
           fontFamily: Antonio
           fill: "#5ca8ea"
@@ -418,6 +418,22 @@ groups:
             to: environmental-buttons.main
             element_point: topLeft
             target_point: topRight
+      - id: bar-2
+        type: rectangle
+        appearance:
+          fill: "#7addee"
+        layout:
+          height: 15
+          offsetX: 5
+          anchor:
+            to: environmental-lower-section.bar-1
+            element_point: topLeft
+            target_point: topRight
+          stretch:
+            target1:
+              id: environmental-lower-section.elbow
+              edge: left
+              padding: -5
       - id: elbow
         type: elbow
         appearance:
@@ -426,29 +442,29 @@ groups:
           bodyWidth: 80
           armHeight: 15
         layout:
-          width: 180
+          width: 320
           height: 80
           offsetX: 5
+          offsetY: 10
           anchor:
-            to: environmental-lower-section.bar-1
-            element_point: topLeft
-            target_point: topRight
+            to: environmental-header.bar-4
+            element_point: topRight
+            target_point: bottomRight
+          stretch:
+            target1:
+              id: container
+              edge: bottom
       - id: graph
         type: graph-widget
         entity:
           - id: sensor.living_room_temperature
-            animated: false
-          - id: sensor.living_room_humidity
-            duration: 1000
+            duration: 2000
           - id: sensor.kevv_temperature
             duration: 2000
+          - id: sensor.living_room_humidity
+            duration: 3000
           - id: sensor.kevv_relative_humidity
             duration: 3000
-          - id: sensor.ep1_kitchen_temperature
-            toggleable: false
-            animated: false
-        grid:
-          num_lines: 5
         layout:
           width: 500
           height: 150
@@ -468,3 +484,65 @@ groups:
             to: environmental-header.bar-1
             element_point: bottomCenter
             target_point: topCenter
+      - id: sliders
+        type: vertical-slider
+        entity:
+          - id: climate.living_room
+            attribute: target_temp_high
+            label: high
+            color: "#044ea9"
+          - id: climate.living_room
+            attribute: target_temp_low
+            label: low
+          - id: sensor.living_room_temperature
+            label: current
+        grid:
+          num_lines: 15
+        spacing: 14
+        top_padding: 6
+        label_height: 50
+        layout:
+          offsetY: 25
+          width: 220
+          height: 200
+          anchor:
+            to: environmental-lower-section.elbow
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: metric-widgets
+    elements:
+      - id: widget1
+        type: entity-metric-widget
+        entity: sensor.kevv_wind_speed
+        appearance:
+          rounded: right
+        layout:
+          offsetY: 10
+          anchor:
+            to: environmental-lower-section.bar-2
+            element_point: topRight
+            target_point: bottomRight
+        value:
+          fontWeight: bold
+      - id: widget2
+        type: entity-metric-widget
+        entity: sensor.openweathermap_cloud_coverage
+        appearance:
+          rounded: right
+        layout:
+          offsetY: 30
+          anchor:
+            to: metric-widgets.widget1
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: widget3
+        type: entity-metric-widget
+        entity: sensor.openweathermap_dew_point_temperature
+        appearance:
+          rounded: right
+        layout:
+          offsetY: 30
+          anchor:
+            to: metric-widgets.widget2
+            element_point: topLeft
+            target_point: bottomLeft
