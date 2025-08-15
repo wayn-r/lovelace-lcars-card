@@ -7,6 +7,8 @@ import { Button } from '../../utils/button.js';
 import { EntityValueResolver } from '../../utils/entity-value-resolver.js';
 import { ColorValue } from '../../types.js';
 import { HomeAssistant } from 'custom-card-helpers';
+import { FontManager } from '../../utils/font-manager.js';
+import { CAP_HEIGHT_RATIO } from '../../utils/shapes.js';
 
 export interface EntityMetricLabelConfig {
   content?: string;
@@ -49,7 +51,7 @@ export interface EntityMetricAppearanceConfig {
 export class EntityMetricWidget extends Widget {
   private static readonly DEFAULT_LABEL_WIDTH = 200;
   private static readonly DEFAULT_HEIGHT = 25;
-  private static readonly DEFAULT_LABEL_OFFSET_X = 6;
+  private static readonly DEFAULT_LABEL_OFFSET_X = 0;
   private static readonly DEFAULT_VALUE_OFFSET_X = 10;
   private static readonly DEFAULT_UNIT_OFFSET_X = 10;
   private static readonly DEFAULT_UNIT_WIDTH = 60;
@@ -57,7 +59,38 @@ export class EntityMetricWidget extends Widget {
   public expand(): LayoutElement[] {
     const height = (this.layoutConfig.height as number) || EntityMetricWidget.DEFAULT_HEIGHT;
 
-    const bounds = this._createBoundsElement();
+    const labelConfig = this._getLabelConfig();
+    const valueConfig = this._getValueConfig();
+    const unitConfig = this._getUnitConfig();
+
+    const labelWidth = labelConfig.width || EntityMetricWidget.DEFAULT_LABEL_WIDTH;
+    const unitWidth = unitConfig.width || EntityMetricWidget.DEFAULT_UNIT_WIDTH;
+    const unitHeight = unitConfig.height || height;
+
+    const labelOffsetX = labelConfig.offsetX || EntityMetricWidget.DEFAULT_LABEL_OFFSET_X;
+    const valueOffsetX = valueConfig.offsetX || EntityMetricWidget.DEFAULT_VALUE_OFFSET_X;
+    const unitOffsetX = unitConfig.offsetX || EntityMetricWidget.DEFAULT_UNIT_OFFSET_X;
+
+    const valueTextContent = valueConfig.content || this._resolveValueText();
+    const valueFontFamily = valueConfig.fontFamily || 'Antonio';
+    const valueFontWeight = (valueConfig.fontWeight as string) || 'bold';
+    const valueTextTransform = valueConfig.textTransform || 'uppercase';
+
+    const metrics = FontManager.getFontMetrics(valueFontFamily, valueFontWeight);
+    const capHeightRatio = Math.abs(metrics?.capHeight ?? 0) || CAP_HEIGHT_RATIO;
+    const valueFontSize = height / capHeightRatio;
+    const measuredValueWidth = FontManager.measureTextWidth(valueTextContent || '', {
+      fontFamily: valueFontFamily,
+      fontSize: valueFontSize,
+      fontWeight: valueFontWeight,
+      letterSpacing: 'normal',
+      textTransform: valueTextTransform,
+    } as any);
+
+    const boundsWidth = labelOffsetX + labelWidth + valueOffsetX + measuredValueWidth + unitOffsetX + unitWidth;
+    const boundsHeight = Math.max(height, unitHeight);
+
+    const bounds = this._createBoundsElement(boundsWidth, boundsHeight);
     const labelRect = this._createLabelPill(bounds, height);
     const valueText = this._createValueText(labelRect, height);
     const unitRect = this._createUnitPill(valueText, height);
@@ -68,11 +101,16 @@ export class EntityMetricWidget extends Widget {
     return [bounds, labelRect, valueText, unitRect];
   }
 
-  private _createBoundsElement(): RectangleElement {
+  private _createBoundsElement(width?: number, height?: number): RectangleElement {
+    const layoutConfig = {
+      ...this.layoutConfig,
+      width: width ?? this.layoutConfig.width,
+      height: height ?? this.layoutConfig.height,
+    } as any;
     return new RectangleElement(
       this.id,
       { fill: 'none', stroke: 'none' },
-      this.layoutConfig,
+      layoutConfig,
       this.hass,
       this.requestUpdateCallback,
       this.getShadowElement
