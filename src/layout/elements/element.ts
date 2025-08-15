@@ -197,9 +197,12 @@ export abstract class LayoutElement {
     }
 
     canCalculateLayout(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-        return this.checkAnchorDependencies(elementsMap, dependencies) &&
-               this.checkStretchDependencies(elementsMap, dependencies) &&
-               this.checkSpecialDependencies(elementsMap, dependencies);
+        // Important: do not short-circuit these checks so that all dependencies
+        // (anchor and stretch) are collected for the dependency graph
+        const anchorReady = this.checkAnchorDependencies(elementsMap, dependencies);
+        const stretchReady = this.checkStretchDependencies(elementsMap, dependencies);
+        const specialReady = this.checkSpecialDependencies(elementsMap, dependencies);
+        return anchorReady && stretchReady && specialReady;
     }
 
     private checkAnchorDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
