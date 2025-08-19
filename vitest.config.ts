@@ -11,7 +11,6 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       reportsDirectory: './coverage'
     },
-    reporters: ['default', 'junit'],
-    outputFile: 'test-results.xml',
+    reporters: ['default'],
   },
 });
