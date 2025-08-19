@@ -110,7 +110,7 @@ describe('ChiselEndcapElement', () => {
       chiselEndcapElement = new ChiselEndcapElement('ce-btn-init', props, {}, mockHass, mockRequestUpdate);
 
       expect(Button).toHaveBeenCalledOnce();
-      expect(Button).toHaveBeenCalledWith('ce-btn-init', props, mockHass, mockRequestUpdate, undefined);
+      expect(Button).toHaveBeenCalledWith('ce-btn-init', props, mockHass, mockRequestUpdate, undefined, undefined);
       expect(chiselEndcapElement.button).toBeDefined();
     });
 

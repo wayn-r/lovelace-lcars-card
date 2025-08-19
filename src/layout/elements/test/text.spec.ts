@@ -101,7 +101,7 @@ describe('TextElement', () => {
       textElement = new TextElement('txt-btn-init', props, {}, mockHass, mockRequestUpdate);
 
       expect(Button).toHaveBeenCalledOnce();
-      expect(Button).toHaveBeenCalledWith('txt-btn-init', props, mockHass, mockRequestUpdate, undefined);
+      expect(Button).toHaveBeenCalledWith('txt-btn-init', props, mockHass, mockRequestUpdate, undefined, undefined);
       expect(textElement.button).toBeDefined();
     });
 

@@ -67,8 +67,13 @@ export class AnimationManager {
   private elementAnimationStates = new Map<string, { lastKnownEntityStates: Map<string, any> }>();
   private activeTimelines = new Map<string, ReversibleTimeline[]>();
   private elementsMap?: Map<string, import('../layout/elements/element.js').LayoutElement>;
+  private readonly transformPropagator: TransformPropagator;
 
   private static isGsapInitialized = false;
+
+  constructor(prop?: TransformPropagator) {
+    this.transformPropagator = prop ?? transformPropagator;
+  }
 
   static initializeGsap(): void {
     if (!AnimationManager.isGsapInitialized) {
@@ -214,7 +219,7 @@ export class AnimationManager {
     );
     
     if (result.affectsPositioning) {
-      transformPropagator.processAnimationWithPropagation(
+      this.transformPropagator.processAnimationWithPropagation(
         elementId,
         animationConfig as any,
         result.syncData
@@ -250,7 +255,7 @@ export class AnimationManager {
     }
     gsap.killTweensOf(`[id="${elementId}"]`);
     
-    transformPropagator.stopAnimationPropagation(elementId);
+    this.transformPropagator.stopAnimationPropagation(elementId);
   }
 
   reverseAnimation(elementId: string, animationIndex?: number): boolean {
@@ -277,7 +282,7 @@ export class AnimationManager {
       targetTimeline.timeline.reverse();
       targetTimeline.isReversed = true;
       
-      transformPropagator.reverseAnimationPropagation(elementId, targetTimeline.animationConfig as any);
+      this.transformPropagator.reverseAnimationPropagation(elementId, targetTimeline.animationConfig as any);
     } else {
       targetTimeline.timeline.play();
       targetTimeline.isReversed = false;
@@ -681,7 +686,8 @@ export class ColorAnimationUtils {
 
 }
 
-export const animationManager = new AnimationManager();
+// Fallback process-wide instance for legacy callers. New code should use CardRuntime.
+export const animationManager = new AnimationManager(transformPropagator);
 
 export class Animation {
   readonly elementId: string;

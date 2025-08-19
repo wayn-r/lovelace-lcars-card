@@ -96,7 +96,7 @@ class MessageStore {
 }
 
 export class LoggerService {
-  private static instance: LoggerService | null = null;
+  static instance: LoggerService | null = null;
   
   private messageStore: MessageStore;
   private unsubscribe?: () => void;
@@ -104,7 +104,7 @@ export class LoggerService {
   private lastStateSnapshot?: Record<string, HassEntityState>;
   private processingCallbacks = new Set<(message: LogMessage) => void>();
 
-  private constructor() {
+  constructor() {
     this.messageStore = new MessageStore(5);
   }
 
@@ -114,6 +114,7 @@ export class LoggerService {
     }
     return LoggerService.instance;
   }
+
 
   registerWidget(
     maxLines: number,
@@ -179,6 +180,7 @@ export class LoggerService {
   reset(): void {
     this.destroy();
     this.messageStore.clear();
+    // For tests requiring a new instance after reset
     LoggerService.instance = null;
   }
 
@@ -231,5 +233,3 @@ export class LoggerService {
     }
   }
 }
-
-export const loggerService = LoggerService.getInstance(); 

@@ -11,8 +11,8 @@ export class RectangleElement extends LayoutElement {
   button?: Button;
   _loggerWidget?: LoggerWidget;
 
-  constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
-    super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+  constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null, runtime?: any) {
+    super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime);
   }
 
   /**

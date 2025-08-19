@@ -1,4 +1,4 @@
-import { ColorValue, DynamicColorConfig, isDynamicColorConfig, isStatefulColorConfig, ColorStateContext, ComputedElementColors, ColorResolutionDefaults, StatefulColorConfig } from '../types';
+import { ColorValue, DynamicColorConfig, isDynamicColorConfig, isStatefulColorConfig, ColorStateContext, ComputedElementColors, ColorResolutionDefaults, StatefulColorConfig } from '../types.js';
 import { AnimationContext } from './animation';
 import { LayoutElementProps } from '../layout/engine';
 import { HomeAssistant } from 'custom-card-helpers';
@@ -6,7 +6,8 @@ import { EntityValueResolver } from './entity-value-resolver';
 import { Group } from '../layout/engine.js';
 import yaml from 'js-yaml';
 import { EMBEDDED_THEME_YAML } from './embedded-theme.js';
-import { stateManager } from './state-manager';
+// access to state must be provided via runtime at setup time
+let getStateAccessor: ((name: string) => string | undefined) | null = null;
 
 export type ColorChain = string & {
   withDom(ctx: Element | null): ColorChain;
@@ -44,6 +45,10 @@ export class ColorResolver {
 
   static async preloadThemeColors(): Promise<void> {
     await this._getResolvedThemeColors();
+  }
+
+  static setStateAccessor(accessor: (name: string) => string | undefined): void {
+    getStateAccessor = accessor;
   }
 
   static resolve(value: string | ColorValue | DynamicColorConfig): ColorChain {
@@ -688,7 +693,7 @@ export class ColorResolver {
       return undefined;
     }
 
-    const currentState = stateManager.getState(config.state_name);
+    const currentState = getStateAccessor ? getStateAccessor(config.state_name) : undefined;
     const colorStateKey = currentState ? config.state_map[currentState] : undefined;
 
     if (colorStateKey) {

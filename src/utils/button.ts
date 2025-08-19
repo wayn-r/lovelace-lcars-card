@@ -5,7 +5,7 @@ import { AnimationContext } from "./animation.js";
 import { ColorStateContext } from "../types.js";
 import { Action } from "../types.js";
 import { ActionProcessor } from "./action-helpers.js";
-import { stateManager } from "./state-manager.js";
+import { CardRuntime } from "../core/runtime.js";
 
 export type ButtonProperty = 'fill' | 'stroke' | 'strokeWidth';
 
@@ -15,19 +15,22 @@ export class Button {
     private _requestUpdateCallback?: () => void;
     private _id: string;
     private _getShadowElement?: (id: string) => Element | null;
+    private _runtime?: CardRuntime;
 
     constructor(
         id: string, 
         props: any, 
         hass?: HomeAssistant, 
         requestUpdateCallback?: () => void, 
-        getShadowElement?: (id: string) => Element | null
+        getShadowElement?: (id: string) => Element | null,
+        runtime?: CardRuntime
     ) {
         this._id = id;
         this._props = props;
         this._hass = hass;
         this._requestUpdateCallback = requestUpdateCallback;
         this._getShadowElement = getShadowElement;
+        this._runtime = runtime;
     }
 
     private buildAnimationContext(): AnimationContext {
@@ -171,12 +174,13 @@ export class Button {
 
     private executeCustomAction(action: Action): void {
         try {
+            const sm = this._runtime?.state;
             switch (action.action) {
                 case 'set_state':
-                    stateManager.executeSetStateAction(action);
+                    sm?.executeSetStateAction(action);
                     break;
                 case 'toggle_state':
-                    stateManager.executeToggleStateAction(action);
+                    sm?.executeToggleStateAction(action);
                     break;
                 default:
                     console.warn(`[${this._id}] Unknown custom action: ${action.action}`);

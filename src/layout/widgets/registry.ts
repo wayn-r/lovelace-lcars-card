@@ -4,7 +4,8 @@ export type WidgetFactory = (
   layoutConfig: import('../engine.js').LayoutConfigOptions,
   hass?: import('custom-card-helpers').HomeAssistant,
   requestUpdateCallback?: () => void,
-  getShadowElement?: (id: string) => Element | null
+  getShadowElement?: (id: string) => Element | null,
+  runtime?: import('../../core/runtime.js').CardRuntime
 ) => import('../elements/element.js').LayoutElement[];
 
 export class WidgetRegistry {
@@ -21,11 +22,12 @@ export class WidgetRegistry {
     layoutConfig: import('../engine.js').LayoutConfigOptions = {},
     hass?: import('custom-card-helpers').HomeAssistant,
     requestUpdateCallback?: () => void,
-    getShadowElement?: (id: string) => Element | null
+    getShadowElement?: (id: string) => Element | null,
+    runtime?: import('../../core/runtime.js').CardRuntime
   ): import('../elements/element.js').LayoutElement[] | null {
     const factory = this.registry.get(type.trim().toLowerCase());
     if (!factory) return null;
-    return factory(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+    return factory(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime);
   }
 }
 

@@ -3,24 +3,21 @@ import { LoggerWidget } from '../logger-widget.js';
 import { WidgetRegistry } from '../registry.js';
 import { TextElement } from '../../elements/text.js';
 import { RectangleElement } from '../../elements/rectangle.js';
-import { loggerService } from '../../../utils/logger-service.js';
 import { FontManager } from '../../../utils/font-manager.js';
 import { animationManager } from '../../../utils/animation.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { LogMessage } from '../../../types.js';
 import gsap from 'gsap';
 
-// Mock the logger service
-vi.mock('../../../utils/logger-service.js', () => ({
-  loggerService: {
-    registerWidget: vi.fn(() => vi.fn()),
-    updateHass: vi.fn(),
-    getMessages: vi.fn(() => []),
-    addMessages: vi.fn(),
-    addMessagesInOrder: vi.fn(),
-    clearMessages: vi.fn()
-  }
-}));
+// Mock a simple LoggerService class to be used as fallback/runtime logger
+class MockLoggerService {
+  registerWidget = vi.fn(() => vi.fn());
+  updateHass = vi.fn();
+  getMessages = vi.fn(() => []);
+  addMessages = vi.fn();
+  addMessagesInOrder = vi.fn();
+  clearMessages = vi.fn();
+}
 
 // Mock FontManager
 vi.mock('../../../utils/font-manager.js', () => ({
@@ -113,25 +110,31 @@ const mockLogMessages: LogMessage[] = [
   }
 ];
 
+function createRuntime() {
+  return {
+    logger: new MockLoggerService(),
+  } as any;
+}
+
 describe('LoggerWidget', () => {
   let widget: LoggerWidget;
   let mockRequestUpdate: () => void;
   let mockGetShadowElement: (id: string) => Element | null;
-  let mockLoggerService: any;
   let mockFontManager: any;
+  let runtime: any;
 
   beforeEach(() => {
     mockRequestUpdate = vi.fn();
     mockGetShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
-    mockLoggerService = vi.mocked(loggerService);
     mockFontManager = vi.mocked(FontManager);
+    runtime = createRuntime();
     
     // Reset all mocks
     vi.clearAllMocks();
     
     // Set up default mock returns
-    mockLoggerService.getMessages.mockReturnValue([]);
-    mockLoggerService.registerWidget.mockReturnValue(vi.fn());
+    runtime.logger.getMessages.mockReturnValue([]);
+    runtime.logger.registerWidget.mockReturnValue(vi.fn());
   });
 
   afterEach(() => {
@@ -147,15 +150,16 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       expect(widget).toBeDefined();
-      expect(mockLoggerService.registerWidget).toHaveBeenCalledWith(
+      expect(runtime.logger.registerWidget).toHaveBeenCalledWith(
         LoggerWidget.DEFAULTS.MAX_LINES,
         expect.any(Function)
       );
-      expect(mockLoggerService.updateHass).toHaveBeenCalledWith(mockHass);
+      expect(runtime.logger.updateHass).toHaveBeenCalledWith(mockHass);
     });
 
     it('should create widget with custom maxLines', () => {
@@ -165,10 +169,11 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
-      expect(mockLoggerService.registerWidget).toHaveBeenCalledWith(
+      expect(runtime.logger.registerWidget).toHaveBeenCalledWith(
         10,
         expect.any(Function)
       );
@@ -181,11 +186,12 @@ describe('LoggerWidget', () => {
         {},
         undefined,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       expect(widget).toBeDefined();
-      expect(mockLoggerService.updateHass).not.toHaveBeenCalled();
+      expect(runtime.logger.updateHass).not.toHaveBeenCalled();
     });
 
     it('should handle resize correctly', () => {
@@ -195,7 +201,8 @@ describe('LoggerWidget', () => {
         { height: 200 },
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       widget.handleResize();
@@ -211,7 +218,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -233,7 +241,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -251,7 +260,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       // Height should be maxLines * lineSpacing
@@ -264,13 +274,13 @@ describe('LoggerWidget', () => {
 
   describe('Message Processing and Display', () => {
     beforeEach(() => {
-      mockLoggerService.getMessages.mockReturnValue(mockLogMessages.slice(0, 2));
+      runtime.logger.getMessages.mockReturnValue(mockLogMessages.slice(0, 2));
     });
 
     it('should populate entries from existing messages', () => {
       // Ensure the mock returns messages
       vi.clearAllMocks();
-      mockLoggerService.getMessages.mockReturnValue(mockLogMessages.slice(0, 2));
+      runtime.logger.getMessages.mockReturnValue(mockLogMessages.slice(0, 2));
       
       widget = new LoggerWidget(
         'populate_test',
@@ -278,10 +288,11 @@ describe('LoggerWidget', () => {
         { width: 400 },
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
-      expect(mockLoggerService.getMessages).toHaveBeenCalled();
+      expect(runtime.logger.getMessages).toHaveBeenCalled();
       // The widget should be created successfully and getMessages should be called during initialization
     });
 
@@ -292,11 +303,12 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       // Get the callback passed to registerWidget
-      const messageCallback = mockLoggerService.registerWidget.mock.calls[0][1];
+      const messageCallback = runtime.logger.registerWidget.mock.calls[0][1];
       
       // Test message processing
       const newMessage: LogMessage = {
@@ -320,7 +332,7 @@ describe('LoggerWidget', () => {
       vi.clearAllMocks();
       
       // Mock FontManager to return width that exceeds widget width
-      mockFontManager.measureTextWidth.mockImplementation((text) => {
+      mockFontManager.measureTextWidth.mockImplementation((text: string) => {
         if (text === longText) return 500;
         if (text === '…') return 10;
         return text.length * 8;
@@ -332,15 +344,16 @@ describe('LoggerWidget', () => {
         { width: 200 },
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       // Get the message callback from registerWidget and test it with a long message
-      const messageCallback = mockLoggerService.registerWidget.mock.calls[0][1];
+      const messageCallback = runtime.logger.registerWidget.mock.calls[0][1];
       
       // Set up the bounds element with proper width
       if (widget['boundsElement']) {
-        widget['boundsElement'].layout = { x: 0, y: 0, width: 200, height: 100, calculated: true };
+        widget['boundsElement'].layout = { x: 0, y: 0, width: 200, height: 100, calculated: true } as any;
       }
       
       // Test message processing with long text
@@ -373,7 +386,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -393,7 +407,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -415,7 +430,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       // DistanceParser should be called with the lineSpacing value
@@ -444,7 +460,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -464,7 +481,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -482,12 +500,13 @@ describe('LoggerWidget', () => {
         {},
         undefined,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       widget.updateHass(mockHass);
       
-      expect(mockLoggerService.updateHass).toHaveBeenCalledWith(mockHass);
+      expect(runtime.logger.updateHass).toHaveBeenCalledWith(mockHass);
     });
 
     it('should not update hass if same instance', () => {
@@ -497,14 +516,15 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       vi.clearAllMocks();
       
       widget.updateHass(mockHass);
       
-      expect(mockLoggerService.updateHass).not.toHaveBeenCalled();
+      expect(runtime.logger.updateHass).not.toHaveBeenCalled();
     });
 
     it('should handle bounds element hass updates', () => {
@@ -514,7 +534,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -536,7 +557,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const newMessages = [
@@ -546,8 +568,8 @@ describe('LoggerWidget', () => {
 
       widget.updateLogMessages(newMessages);
 
-      expect(mockLoggerService.clearMessages).toHaveBeenCalled();
-      expect(mockLoggerService.addMessagesInOrder).toHaveBeenCalledWith(newMessages);
+      expect(runtime.logger.clearMessages).toHaveBeenCalled();
+      expect(runtime.logger.addMessagesInOrder).toHaveBeenCalledWith(newMessages);
       expect(mockRequestUpdate).toHaveBeenCalled();
     });
   });
@@ -555,7 +577,7 @@ describe('LoggerWidget', () => {
   describe('Widget Destruction and Cleanup', () => {
     it('should clean up resources on destroy', () => {
       const mockUnsubscribe = vi.fn();
-      mockLoggerService.registerWidget.mockReturnValue(mockUnsubscribe);
+      runtime.logger.registerWidget.mockReturnValue(mockUnsubscribe);
 
       widget = new LoggerWidget(
         'cleanup_test',
@@ -563,7 +585,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       widget.destroy();
@@ -578,7 +601,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       // Should not throw on multiple destroy calls
@@ -598,11 +622,12 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       // Test animation by triggering a message
-      const messageCallback = mockLoggerService.registerWidget.mock.calls[0][1];
+      const messageCallback = runtime.logger.registerWidget.mock.calls[0][1];
       const testMessage: LogMessage = {
         id: 'anim_msg',
         text: 'Animated message',
@@ -624,7 +649,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       widget.handleResize(); // This triggers entry reset
@@ -644,7 +670,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -662,7 +689,8 @@ describe('LoggerWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -678,14 +706,16 @@ describe('LoggerWidget Registry Integration', () => {
   let mockHass: HomeAssistant;
   let mockRequestUpdate: () => void;
   let mockGetShadowElement: (id: string) => Element | null;
+  let runtime: any;
 
   beforeEach(() => {
     mockHass = {} as HomeAssistant;
     mockRequestUpdate = vi.fn();
     mockGetShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
     vi.clearAllMocks();
-    vi.mocked(loggerService).getMessages.mockReturnValue([]);
-    vi.mocked(loggerService).registerWidget.mockReturnValue(vi.fn());
+    runtime = createRuntime();
+    runtime.logger.getMessages.mockReturnValue([]);
+    runtime.logger.registerWidget.mockReturnValue(vi.fn());
   });
 
   afterEach(() => {
@@ -700,7 +730,8 @@ describe('LoggerWidget Registry Integration', () => {
       {},
       mockHass,
       mockRequestUpdate,
-      mockGetShadowElement
+      mockGetShadowElement,
+      runtime
     );
 
     expect(elements).not.toBeNull();
@@ -723,7 +754,8 @@ describe('LoggerWidget Registry Integration', () => {
       { height: 200 },
       mockHass,
       mockRequestUpdate,
-      mockGetShadowElement
+      mockGetShadowElement,
+      runtime
     );
 
     expect(customElements).not.toBeNull();
@@ -738,7 +770,8 @@ describe('LoggerWidget Registry Integration', () => {
       {},
       mockHass,
       mockRequestUpdate,
-      mockGetShadowElement
+      mockGetShadowElement,
+      runtime
     );
 
     expect(elements).toBeNull();

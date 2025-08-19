@@ -13,8 +13,8 @@ import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext, AnimationManager } from './utils/animation.js';
 import { colorResolver, ColorResolver } from './utils/color-resolver.js';
-import { stateManager } from './utils/state-manager.js';
 import { StoreProvider, StateChangeEvent } from './core/store.js';
+import { CardRuntime, RuntimeFactory } from './core/runtime.js';
 import { FontManager } from './utils/font-manager.js';
 import { ConfigValidator, logValidationResult } from './utils/config-validator.js';
 
@@ -60,6 +60,7 @@ export class LcarsCard extends LitElement {
   private _layoutInitialized = false;
   private _fontsReady: Promise<void>;
   private _resolveFontsReady!: () => void;
+  private _runtime?: CardRuntime;
 
   static styles = [editorStyles];
 
@@ -88,9 +89,20 @@ export class LcarsCard extends LitElement {
     logValidationResult(validation);
 
     this._config = normalizedConfig;
+    this._ensureRuntime();
     this._lastConfig = config;
     
     this.requestUpdate(); 
+  }
+
+  private _ensureRuntime(): void {
+    if (this._runtime) return;
+    const getShadowElement = (id: string): Element | null => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
+    this._runtime = RuntimeFactory.create({
+      requestUpdate: () => this._refreshElementRenders(),
+      getShadowElement,
+      hass: this.hass
+    });
   }
 
   private normalizeConfig(config: any): LcarsCardConfig {
@@ -248,7 +260,7 @@ export class LcarsCard extends LitElement {
     this._resizeObserver?.disconnect();
     
     colorResolver.cleanup();
-    stateManager.cleanup();
+    this._runtime?.state.cleanup();
     
     for (const group of this._layoutEngine.layoutGroups) {
       for (const element of group.elements) {
@@ -454,10 +466,11 @@ export class LcarsCard extends LitElement {
   }
 
   private _initializeElementStates(groups: Group[]): void {
+    const sm = this._runtime!.state;
     groups.forEach(group => {
       group.elements.forEach(element => {
         if (element.props.state_management || element.props.animations) {
-          stateManager.initializeElementState(
+          sm.initializeElementState(
             element.id,
             element.props.state_management,
             element.props.animations
@@ -468,9 +481,8 @@ export class LcarsCard extends LitElement {
   }
 
   private _setupStateChangeHandling(elementsMap: Map<string, LayoutElement>): void {
-    StoreProvider.getStore().onStateChange((event: StateChangeEvent) => {
-      console.log(`[LcarsCard] State change: ${event.elementId} -> ${event.toState}`);
-      
+    const sm = this._runtime!.state;
+    sm.onStateChange((_event: StateChangeEvent) => {
       this.requestUpdate();
     });
   }
@@ -485,7 +497,7 @@ export class LcarsCard extends LitElement {
               return null;
             }
 
-            const currentState = stateManager.getState(el.id);
+            const currentState = this._runtime!.state.getState(el.id);
             const isVisible = currentState !== 'hidden';
             
             if (!isVisible) {
@@ -503,10 +515,11 @@ export class LcarsCard extends LitElement {
   }
 
   private _triggerOnLoadAnimations(groups: Group[]): void {
+    const sm = this._runtime!.state;
     groups.forEach(group => {
       group.elements.forEach(element => {
         if (element.props.animations?.on_load) {
-          stateManager.triggerLifecycleAnimation(element.id, 'on_load');
+          sm.triggerLifecycleAnimation(element.id, 'on_load');
         }
       });
     });
@@ -537,7 +550,7 @@ export class LcarsCard extends LitElement {
     const getShadowElement = (id: string): Element | null => 
       this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
     
-    const groups = parseConfig(this._config, this.hass, () => this._refreshElementRenders(), getShadowElement);
+    const groups = parseConfig(this._config, this.hass, () => this._refreshElementRenders(), getShadowElement, this._runtime);
     groups.forEach((group: Group) => this._layoutEngine.addGroup(group));
     return groups;
   }
@@ -560,7 +573,8 @@ export class LcarsCard extends LitElement {
       });
     });
 
-    stateManager.setAnimationContext(animationContext, elementsMap);
+    const sm = this._runtime!.state;
+    sm.setAnimationContext(animationContext, elementsMap);
     this._initializeElementStates(groups);
     this._setupStateChangeHandling(elementsMap);
   }
@@ -604,7 +618,7 @@ export class LcarsCard extends LitElement {
     this.requestUpdate();
     this.updateComplete.then(() => {
       this._setupAllElementListeners();
-      stateManager.setInitialAnimationStates(groups);
+      this._runtime!.state.setInitialAnimationStates(groups);
       this._triggerOnLoadAnimations(groups);
     });
   }
@@ -639,6 +653,7 @@ export class LcarsCard extends LitElement {
   }
 
   private _renderVisibleElements(): SVGTemplateResult[] {
+    const sm = this._runtime!.state;
     return this._layoutEngine.layoutGroups.flatMap(group =>
       group.elements
         .map(el => {
@@ -648,7 +663,7 @@ export class LcarsCard extends LitElement {
               return null;
             }
 
-            const currentState = stateManager.getState(el.id);
+            const currentState = sm.getState(el.id);
             const isVisible = currentState !== 'hidden';
             
             if (!isVisible) {
@@ -657,7 +672,7 @@ export class LcarsCard extends LitElement {
             
             return elementTemplate;
           } catch (error) {
-            console.error('Error rendering element', el.id, error);
+            console.error("[LcarsCard] Error rendering element", el.id, error);
             return null;
           }
         })

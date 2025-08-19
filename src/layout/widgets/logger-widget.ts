@@ -4,9 +4,10 @@ import { Widget } from './widget.js';
 import { LayoutElement } from '../elements/element.js';
 import { WidgetRegistry } from './registry.js';
 import { LogMessage, TextConfig } from '../../types.js';
+import { CardRuntime } from '../../core/runtime.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
-import { loggerService } from '../../utils/logger-service.js';
+import { LoggerService } from '../../utils/logger-service.js';
 import { DistanceParser } from '../../utils/animation.js';
 import { animationManager, AnimationContext, AnimationConfig } from '../../utils/animation.js';
 import { ColorResolver } from '../../utils/color-resolver.js';
@@ -398,27 +399,28 @@ export class LoggerWidget extends Widget {
     layoutConfig: LayoutConfigOptions = {},
     hass?: HomeAssistant,
     requestUpdateCallback?: () => void,
-    getShadowElement?: (id: string) => Element | null
+    getShadowElement?: (id: string) => Element | null,
+    runtime?: CardRuntime
   ) {
-    super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+    super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime);
     
     this.initialize();
     
     if (hass) {
-      loggerService.updateHass(hass);
+      (this.runtimeLogger()).updateHass(hass);
     }
   }
   
   updateHass(hass?: HomeAssistant): void {
     if (!hass || this.hass === hass) return;
     
-    loggerService.updateHass(hass);
+    (this.runtimeLogger()).updateHass(hass);
     this.hass = hass;
   }
 
   updateLogMessages(messages: LogMessage[]): void {
-    loggerService.clearMessages();
-    loggerService.addMessagesInOrder(messages);
+    (this.runtimeLogger()).clearMessages();
+    (this.runtimeLogger()).addMessagesInOrder(messages);
     this.entries.forEach(entry => entry.hide());
     this.populateFromExisting();
     this.requestUpdateCallback?.();
@@ -463,7 +465,7 @@ export class LoggerWidget extends Widget {
       this.populateFromExisting();
     }
     
-    this.unsubscribe ??= loggerService.registerWidget(
+    this.unsubscribe ??= (this.runtimeLogger()).registerWidget(
       this.maxLines,
       (message) => this.enqueueMessage(message)
     );
@@ -480,7 +482,8 @@ export class LoggerWidget extends Widget {
       this.layoutConfig,
       this.hass,
       this.requestUpdateCallback,
-      this.getShadowElement
+      this.getShadowElement,
+      (this as any).runtime
     );
     
     const widget = this;
@@ -535,7 +538,7 @@ export class LoggerWidget extends Widget {
       fontWeight: this.props.fontWeight || LoggerWidget.DEFAULTS.FONT_WEIGHT,
     };
 
-    loggerService.getMessages()
+    (this.runtimeLogger()).getMessages()
       .slice(0, this.maxLines)
       .forEach((message, messageIndex) => {
         const entry = this.entries.find(e => e.getText() === message.text);
@@ -655,10 +658,14 @@ export class LoggerWidget extends Widget {
   public getLayoutConfig() {
     return this.layoutConfig;
   }
+
+  private runtimeLogger(): LoggerService {
+    return (this as any).runtime?.logger ?? (this as any)._fallbackLogger ?? ((this as any)._fallbackLogger = new LoggerService());
+  }
 }
 
-WidgetRegistry.registerWidget('logger-widget', (id, props, layoutConfig, hass, reqUpd, getEl) => {
-  const widget = new LoggerWidget(id, props, layoutConfig, hass, reqUpd, getEl);
+WidgetRegistry.registerWidget('logger-widget', (id, props, layoutConfig, hass, reqUpd, getEl, runtime) => {
+  const widget = new LoggerWidget(id, props, layoutConfig, hass, reqUpd, getEl, runtime);
   const elements = widget.expand();
   
   if (elements.length > 0) {

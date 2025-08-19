@@ -6,6 +6,7 @@ import { Button } from '../../utils/button.js';
 import { ColorValue, isStatefulColorConfig } from '../../types';
 import { animationManager, AnimationContext } from '../../utils/animation.js';
 import { colorResolver, ColorResolver } from '../../utils/color-resolver.js';
+import { CardRuntime } from '../../core/runtime.js';
 import { ComputedElementColors, ColorResolutionDefaults } from '../../types.js';
 import { OffsetCalculator } from '../../utils/offset-calculator.js';
 
@@ -20,6 +21,7 @@ export abstract class LayoutElement {
     public button?: Button;
     public getShadowElement?: (id: string) => Element | null;
     protected containerRect?: DOMRect;
+    protected _runtime?: CardRuntime;
     
     private isHovering = false;
     private isActive = false;
@@ -34,13 +36,14 @@ export abstract class LayoutElement {
     private readonly boundHandleTouchEnd: () => void;
     private readonly boundHandleTouchCancel: () => void;
 
-    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
+    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null, _runtime?: CardRuntime) {
         this.id = id;
         this.props = props;
         this.layoutConfig = layoutConfig;
         this.hass = hass;
         this.requestUpdateCallback = requestUpdateCallback;
         this.getShadowElement = getShadowElement;
+        this._runtime = _runtime;
 
         this.boundHandleMouseEnter = this.handleMouseEnter.bind(this);
         this.boundHandleMouseLeave = this.handleMouseLeave.bind(this);
@@ -50,10 +53,10 @@ export abstract class LayoutElement {
         this.boundHandleTouchEnd = this.handleTouchEnd.bind(this);
         this.boundHandleTouchCancel = this.handleTouchCancel.bind(this);
 
-        animationManager.initializeElementAnimationTracking(id);
+        (this._runtime?.animations ?? animationManager).initializeElementAnimationTracking(id);
 
         if (props.button?.enabled) {
-            this.button = new Button(id, props, hass, requestUpdateCallback, getShadowElement);
+            this.button = new Button(id, props, hass, requestUpdateCallback, getShadowElement, this._runtime);
         }
 
         this.resetLayout();
@@ -783,7 +786,7 @@ export abstract class LayoutElement {
 
     animate(property: string, value: any, duration: number = 0.5): void {
         if (!this.layout.calculated) return;
-        animationManager.animateElementProperty(this.id, property, value, duration, this.getShadowElement);
+        (this._runtime?.animations ?? animationManager).animateElementProperty(this.id, property, value, duration, this.getShadowElement);
     }
 
 
@@ -864,7 +867,7 @@ export abstract class LayoutElement {
     }
 
     public cleanupAnimations(): void {
-        animationManager.stopAllAnimationsForElement(this.id);
+        (this._runtime?.animations ?? animationManager).stopAllAnimationsForElement(this.id);
     }
 
     updateHass(hass?: HomeAssistant): void {

@@ -39,30 +39,31 @@ vi.mock('d3-array', () => ({
   nice: vi.fn().mockImplementation((min, max, count) => [min, max]),
 }));
 
-// Mock state manager
-vi.mock('../../../utils/state-manager.js', () => ({
-  stateManager: {
-    onStateChange: vi.fn(),
-    getState: vi.fn(),
-  },
-}));
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GraphElement, lineGradients, RichEntityConfig } from '../graph.js';
 import { Button } from '../../../utils/button.js';
 import { gsap } from 'gsap';
 import { nice } from 'd3-array';
-import { stateManager } from '../../../utils/state-manager.js';
 import { HistoryMap } from '../../../utils/data-fetcher.js';
 import { LayoutElementProps } from '../../engine.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { svg, SVGTemplateResult } from 'lit';
+
+function createRuntime() {
+  return {
+    state: {
+      onStateChange: vi.fn(() => () => {}),
+      getState: vi.fn(),
+    },
+  } as any;
+}
 
 describe('GraphElement', () => {
   let graphElement: GraphElement;
   const mockHass: HomeAssistant = {} as HomeAssistant;
   const mockRequestUpdate = vi.fn();
   const mockGetShadowElement = vi.fn();
+  let runtime: any;
 
   // Helper function to create valid HistoryPoint objects
   const createHistoryPoint = (state: string, timestamp: string, entityId: string = 'sensor.test') => ({
@@ -75,14 +76,15 @@ describe('GraphElement', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (stateManager.onStateChange as any).mockReturnValue(() => {});
-    (stateManager.getState as any).mockReturnValue('visible');
+    runtime = createRuntime();
+    (runtime.state.onStateChange as any).mockReturnValue(() => {});
+    (runtime.state.getState as any).mockReturnValue('visible');
     (nice as any).mockImplementation((min: number, max: number, count?: number) => [min, max]);
   });
 
   describe('Constructor and Initialization', () => {
     it('should instantiate correctly with minimal arguments', () => {
-      graphElement = new GraphElement('graph-min', {}, {});
+      graphElement = new GraphElement('graph-min', {}, {}, undefined, undefined, undefined, runtime);
       expect(graphElement.id).toBe('graph-min');
       expect(graphElement.props).toEqual({});
       expect(graphElement.layoutConfig).toEqual({});
@@ -92,33 +94,33 @@ describe('GraphElement', () => {
 
     it('should instantiate Button if button.enabled is true in props', () => {
       const props = { button: { enabled: true } };
-      graphElement = new GraphElement('graph-btn-init', props, {}, mockHass, mockRequestUpdate);
+      graphElement = new GraphElement('graph-btn-init', props as any, {}, mockHass, mockRequestUpdate, undefined, runtime);
 
       expect(Button).toHaveBeenCalledOnce();
-      expect(Button).toHaveBeenCalledWith('graph-btn-init', props, mockHass, mockRequestUpdate, undefined);
+      expect(Button).toHaveBeenCalledWith('graph-btn-init', props, mockHass, mockRequestUpdate, undefined, runtime);
       expect(graphElement.button).toBeDefined();
     });
 
     it('should NOT instantiate Button if button.enabled is false or button prop is missing', () => {
-      graphElement = new GraphElement('graph-no-btn1', { button: { enabled: false } }, {});
+      graphElement = new GraphElement('graph-no-btn1', { button: { enabled: false } } as any, {}, undefined, undefined, undefined, runtime);
       expect(Button).not.toHaveBeenCalled();
       expect(graphElement.button).toBeUndefined();
 
       vi.clearAllMocks();
 
-      graphElement = new GraphElement('graph-no-btn2', {}, {});
+      graphElement = new GraphElement('graph-no-btn2', {}, {}, undefined, undefined, undefined, runtime);
       expect(Button).not.toHaveBeenCalled();
       expect(graphElement.button).toBeUndefined();
     });
 
     it('should subscribe to state changes on construction', () => {
-      graphElement = new GraphElement('graph-state', {}, {});
-      expect(stateManager.onStateChange).toHaveBeenCalledOnce();
-      expect(typeof (stateManager.onStateChange as any).mock.calls[0][0]).toBe('function');
+      graphElement = new GraphElement('graph-state', {} as any, {}, undefined, undefined, undefined, runtime);
+      expect(runtime.state.onStateChange).toHaveBeenCalledOnce();
+      expect(typeof (runtime.state.onStateChange as any).mock.calls[0][0]).toBe('function');
     });
 
     it('should initialize with empty history and entity configs', () => {
-      graphElement = new GraphElement('graph-empty', {}, {});
+      graphElement = new GraphElement('graph-empty', {}, {}, undefined, undefined, undefined, runtime);
       expect((graphElement as any).historyMap).toEqual({});
       expect((graphElement as any).entityConfigs).toEqual([]);
       expect((graphElement as any).gradientIds).toHaveLength(lineGradients.length); // Default to lineGradients.length
@@ -129,7 +131,7 @@ describe('GraphElement', () => {
 
   describe('setHistory', () => {
     beforeEach(() => {
-      graphElement = new GraphElement('graph-history', {}, {}, mockHass, mockRequestUpdate);
+      graphElement = new GraphElement('graph-history', {}, {}, mockHass, mockRequestUpdate, undefined, runtime);
     });
 
     it('should set history map and request update', () => {
@@ -160,7 +162,7 @@ describe('GraphElement', () => {
 
   describe('setEntityConfigs', () => {
     beforeEach(() => {
-      graphElement = new GraphElement('graph-configs', {}, {}, mockHass, mockRequestUpdate);
+      graphElement = new GraphElement('graph-configs', {}, {}, mockHass, mockRequestUpdate, undefined, runtime);
     });
 
     it('should set entity configs and update gradient IDs', () => {
@@ -191,12 +193,12 @@ describe('GraphElement', () => {
 
   describe('cleanup', () => {
     beforeEach(() => {
-      graphElement = new GraphElement('graph-cleanup', {}, {});
+      graphElement = new GraphElement('graph-cleanup', {}, {}, undefined, undefined, undefined, runtime);
     });
 
     it('should kill all animations and clear the map', () => {
-      const mockAnim1 = { kill: vi.fn() };
-      const mockAnim2 = { kill: vi.fn() };
+      const mockAnim1 = { kill: vi.fn() } as any;
+      const mockAnim2 = { kill: vi.fn() } as any;
       (graphElement as any).animations.set('entity1', mockAnim1);
       (graphElement as any).animations.set('entity2', mockAnim2);
 
@@ -218,7 +220,7 @@ describe('GraphElement', () => {
 
   describe('renderDefs', () => {
     beforeEach(() => {
-      graphElement = new GraphElement('graph-defs', {}, {});
+      graphElement = new GraphElement('graph-defs', {}, {}, undefined, undefined, undefined, runtime);
     });
 
     it('should render gradients for each entity config', () => {
@@ -273,12 +275,12 @@ describe('GraphElement', () => {
 
   describe('renderShape', () => {
     beforeEach(() => {
-      graphElement = new GraphElement('graph-render', {}, {});
-      graphElement.layout = { x: 10, y: 20, width: 200, height: 100, calculated: true };
+      graphElement = new GraphElement('graph-render', {}, {}, undefined, undefined, undefined, runtime);
+      graphElement.layout = { x: 10, y: 20, width: 200, height: 100, calculated: true } as any;
     });
 
     it('should return null if layout is not calculated', () => {
-      graphElement.layout.calculated = false;
+      graphElement.layout.calculated = false as any;
       const result = (graphElement as any).renderShape();
       expect(result).toBeNull();
     });
@@ -312,7 +314,7 @@ describe('GraphElement', () => {
       graphElement.setHistory(historyMap);
 
       // Ensure the entity is visible
-      (stateManager.getState as any).mockImplementation((stateName: string) => {
+      (runtime.state.getState as any).mockImplementation((stateName: string) => {
         if (stateName === 'graph-render_sensor.temperature_visible') {
           return 'visible';
         }
@@ -342,7 +344,7 @@ describe('GraphElement', () => {
       graphElement.setHistory(historyMap);
 
       // Ensure the entity is visible
-      (stateManager.getState as any).mockImplementation(() => 'visible');
+      (runtime.state.getState as any).mockImplementation(() => 'visible');
 
       const result = (graphElement as any).renderShape();
       expect(result).toBeDefined();
@@ -372,7 +374,7 @@ describe('GraphElement', () => {
       graphElement.setHistory(historyMap);
 
       // Mock one entity as hidden
-      (stateManager.getState as any).mockImplementation((stateName: string) => {
+      (runtime.state.getState as any).mockImplementation((stateName: string) => {
         if (stateName === 'graph-render_sensor.humidity_visible') {
           return 'hidden';
         }
@@ -396,7 +398,7 @@ describe('GraphElement', () => {
       } else {
         // If no paths are found, that means the filtering is working but maybe too aggressively
         // Let's verify at least one entity was supposed to be visible
-        expect((stateManager.getState as any).mock.calls.some((call: any) => 
+        expect((runtime.state.getState as any).mock.calls.some((call: any) => 
           call[0] === 'graph-render_sensor.temperature_visible'
         )).toBe(true);
         
@@ -420,7 +422,7 @@ describe('GraphElement', () => {
       graphElement.setHistory(historyMap);
 
       // Ensure the entity is visible
-      (stateManager.getState as any).mockImplementation(() => 'visible');
+      (runtime.state.getState as any).mockImplementation(() => 'visible');
 
       const result = (graphElement as any).renderShape();
       expect(result).toBeDefined();
@@ -434,7 +436,8 @@ describe('GraphElement', () => {
 
   describe('State change handling', () => {
     beforeEach(() => {
-      graphElement = new GraphElement('graph-state', {}, {}, mockHass, mockRequestUpdate, mockGetShadowElement);
+      runtime = createRuntime();
+      graphElement = new GraphElement('graph-state', {} as any, {}, mockHass, mockRequestUpdate, mockGetShadowElement, runtime);
     });
 
     it('should start animation when entity becomes visible', () => {
@@ -444,7 +447,7 @@ describe('GraphElement', () => {
       const startAnimationSpy = vi.spyOn(graphElement as any, 'startEntityAnimation');
       
       // Simulate state change event
-      const stateChangeCallback = (stateManager.onStateChange as any).mock.calls[0][0];
+      const stateChangeCallback = (runtime.state.onStateChange as any).mock.calls[0][0];
       stateChangeCallback({
         elementId: 'graph-state_sensor.temperature_visible',
         toState: 'visible',
@@ -457,11 +460,11 @@ describe('GraphElement', () => {
       const configs: RichEntityConfig[] = [{ id: 'sensor.temperature' }];
       graphElement.setEntityConfigs(configs);
       
-      const mockAnimation = { kill: vi.fn() };
+      const mockAnimation = { kill: vi.fn() } as any;
       (graphElement as any).animations.set('sensor.temperature', mockAnimation);
       
       // Simulate state change event
-      const stateChangeCallback = (stateManager.onStateChange as any).mock.calls[0][0];
+      const stateChangeCallback = (runtime.state.onStateChange as any).mock.calls[0][0];
       stateChangeCallback({
         elementId: 'graph-state_sensor.temperature_visible',
         toState: 'hidden',
@@ -475,7 +478,7 @@ describe('GraphElement', () => {
       const startAnimationSpy = vi.spyOn(graphElement as any, 'startEntityAnimation');
       
       // Simulate state change event for different element
-      const stateChangeCallback = (stateManager.onStateChange as any).mock.calls[0][0];
+      const stateChangeCallback = (runtime.state.onStateChange as any).mock.calls[0][0];
       stateChangeCallback({
         elementId: 'other-element_sensor.temperature_visible',
         toState: 'visible',
@@ -487,7 +490,8 @@ describe('GraphElement', () => {
 
   describe('Animation handling', () => {
     beforeEach(() => {
-      graphElement = new GraphElement('graph-anim', {}, {}, mockHass, mockRequestUpdate, mockGetShadowElement);
+      runtime = createRuntime();
+      graphElement = new GraphElement('graph-anim', {} as any, {}, mockHass, mockRequestUpdate, mockGetShadowElement, runtime);
     });
 
     it('should setup animations for visible entities', () => {
@@ -497,7 +501,7 @@ describe('GraphElement', () => {
       ];
       graphElement.setEntityConfigs(configs);
       
-      (stateManager.getState as any).mockImplementation((stateName: string) => {
+      (runtime.state.getState as any).mockImplementation((stateName: string) => {
         if (stateName === 'graph-anim_sensor.humidity_visible') {
           return 'hidden';
         }
@@ -554,8 +558,9 @@ describe('GraphElement', () => {
 
   describe('Data calculations', () => {
     beforeEach(() => {
-      graphElement = new GraphElement('graph-calc', {}, {});
-      graphElement.layout = { x: 0, y: 0, width: 200, height: 100, calculated: true };
+      runtime = createRuntime();
+      graphElement = new GraphElement('graph-calc', {} as any, {}, undefined, undefined, undefined, runtime);
+      graphElement.layout = { x: 0, y: 0, width: 200, height: 100, calculated: true } as any;
     });
 
     it('should calculate min/max values from history data', () => {
@@ -648,8 +653,9 @@ describe('GraphElement', () => {
 
   describe('Grid rendering', () => {
     beforeEach(() => {
-      graphElement = new GraphElement('graph-grid', {}, {});
-      graphElement.layout = { x: 0, y: 0, width: 200, height: 100, calculated: true };
+      runtime = createRuntime();
+      graphElement = new GraphElement('graph-grid', {} as any, {}, undefined, undefined, undefined, runtime);
+      graphElement.layout = { x: 0, y: 0, width: 200, height: 100, calculated: true } as any;
     });
 
     it('should use custom grid properties from props', () => {
@@ -661,7 +667,7 @@ describe('GraphElement', () => {
           fill: '#FF0000',
           label_fill: '#00FF00',
         },
-      };
+      } as any;
       
       const historyMap: HistoryMap = {
         'sensor.temperature': [
@@ -677,7 +683,7 @@ describe('GraphElement', () => {
       });
 
       // Ensure entity is visible
-      (stateManager.getState as any).mockImplementation(() => 'visible');
+      (runtime.state.getState as any).mockImplementation(() => 'visible');
 
       const result = (graphElement as any).renderShape(); // Test through renderShape to get grid lines
       expect(result).toBeDefined();
@@ -700,7 +706,7 @@ describe('GraphElement', () => {
       graphElement.setHistory(historyMap);
 
       // Ensure entity is visible
-      (stateManager.getState as any).mockImplementation(() => 'visible');
+      (runtime.state.getState as any).mockImplementation(() => 'visible');
 
       const result = (graphElement as any).renderShape(); // Test through renderShape to get grid lines
       expect(result).toBeDefined();
@@ -725,7 +731,7 @@ describe('GraphElement', () => {
       (nice as any).mockImplementation((min: number, max: number) => [20.0, 26.0]);
 
       // Ensure entity is visible
-      (stateManager.getState as any).mockImplementation(() => 'visible');
+      (runtime.state.getState as any).mockImplementation(() => 'visible');
 
       const result = (graphElement as any).renderShape(); // Test through renderShape to get grid lines
       expect(result).toBeDefined();
@@ -738,9 +744,10 @@ describe('GraphElement', () => {
 
   describe('Button integration', () => {
     beforeEach(() => {
-      const props = { button: { enabled: true, text: 'Graph Toggle' } };
-      graphElement = new GraphElement('graph-button', props, {}, mockHass, mockRequestUpdate);
-      graphElement.layout = { x: 10, y: 20, width: 200, height: 100, calculated: true };
+      const props = { button: { enabled: true, text: 'Graph Toggle' } } as any;
+      runtime = createRuntime();
+      graphElement = new GraphElement('graph-button', props, {}, mockHass, mockRequestUpdate, undefined, runtime);
+      graphElement.layout = { x: 10, y: 20, width: 200, height: 100, calculated: true } as any;
     });
 
     it('should render button when button is enabled', () => {
@@ -758,7 +765,7 @@ describe('GraphElement', () => {
       graphElement.setHistory(historyMap);
       
       // Ensure entity is visible
-      (stateManager.getState as any).mockImplementation(() => 'visible');
+      (runtime.state.getState as any).mockImplementation(() => 'visible');
 
       const result = graphElement.render();
       expect(result).toBeDefined();

@@ -99,7 +99,7 @@ describe('EndcapElement', () => {
       endcapElement = new EndcapElement('ec-btn-init', props, {}, mockHass, mockRequestUpdate);
 
       expect(Button).toHaveBeenCalledOnce();
-      expect(Button).toHaveBeenCalledWith('ec-btn-init', props, mockHass, mockRequestUpdate, undefined);
+      expect(Button).toHaveBeenCalledWith('ec-btn-init', props, mockHass, mockRequestUpdate, undefined, undefined);
       expect(endcapElement.button).toBeDefined();
     });
 

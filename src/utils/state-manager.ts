@@ -1,8 +1,8 @@
 import { AnimationDefinition, ElementStateManagementConfig, AnimationSequence, StateChangeAnimationConfig } from '../types.js';
-import { animationManager, AnimationContext, DistanceParser } from './animation.js';
+import { animationManager, AnimationContext, DistanceParser, AnimationManager } from './animation.js';
 import { LayoutElement } from '../layout/elements/element.js';
 import { Group } from '../layout/engine.js';
-import { transformPropagator } from './transform-propagator.js';
+import { transformPropagator, TransformPropagator } from './transform-propagator.js';
 import gsap from 'gsap';
 import { ReactiveStore, StoreProvider, StateChangeEvent } from '../core/store.js';
 
@@ -12,9 +12,13 @@ export class StateManager {
   private store: ReactiveStore;
   private elementsMap?: Map<string, LayoutElement>;
   private animationContext?: AnimationContext;
+  private animations: AnimationManager;
+  private transforms: TransformPropagator;
 
-  constructor(requestUpdateCallback?: () => void) {
-    this.store = StoreProvider.getStore();
+  constructor(requestUpdateCallback?: () => void, store?: ReactiveStore, animations?: AnimationManager, transforms?: TransformPropagator) {
+    this.store = store ?? StoreProvider.getStore();
+    this.animations = animations ?? animationManager;
+    this.transforms = transforms ?? transformPropagator;
     
     if (requestUpdateCallback) {
       this.store.subscribe(() => {
@@ -40,11 +44,11 @@ export class StateManager {
     this.elementsMap = elementsMap;
     
     if (elementsMap) {
-      animationManager.setElementsMap(elementsMap);
+      this.animations.setElementsMap(elementsMap);
     }
     
     if (elementsMap && context.getShadowElement) {
-      transformPropagator.initialize(elementsMap, context.getShadowElement);
+      this.transforms.initialize(elementsMap, context.getShadowElement);
     }
   }
 
@@ -148,7 +152,7 @@ export class StateManager {
     );
 
     if (matchingAnimation) {
-      const activeTimelines = animationManager.getActiveTimelines(elementId);
+      const activeTimelines = this.animations.getActiveTimelines(elementId);
       
       if (activeTimelines && activeTimelines.length > 0) {
         const currentAnimation = activeTimelines[activeTimelines.length - 1];
@@ -162,7 +166,7 @@ export class StateManager {
         
         if (isReverseTransition && !currentAnimation.isReversed) {
           console.log(`[StateManager] Reversing existing animation for ${elementId} (${fromState} -> ${newState})`);
-          animationManager.reverseAnimation(elementId);
+          this.animations.reverseAnimation(elementId);
           return;
         } else {
           console.log(`[StateManager] Stopping existing animation and starting new one for ${elementId} (${fromState} -> ${newState})`);
@@ -173,11 +177,11 @@ export class StateManager {
             const currentX = parseFloat(gsap.getProperty(targetElement, "x") as string);
             const currentY = parseFloat(gsap.getProperty(targetElement, "y") as string);
             const initialValues = { opacity: currentOpacity, x: currentX, y: currentY };
-            animationManager.stopAllAnimationsForElement(elementId);
+            this.animations.stopAllAnimationsForElement(elementId);
             gsap.set(targetElement, { opacity: currentOpacity, x: currentX, y: currentY });
             this.executeAnimation(elementId, matchingAnimation, initialValues);
           } else {
-            animationManager.stopAllAnimationsForElement(elementId);
+            this.animations.stopAllAnimationsForElement(elementId);
             this.executeAnimation(elementId, matchingAnimation);
           }
         }
@@ -240,7 +244,7 @@ export class StateManager {
 
     const animationConfig = this.convertToAnimationConfig(animationDef);
     if (animationConfig) {
-      animationManager.executeAnimation(elementId, animationConfig, this.animationContext, gsap, initialValues);
+      this.animations.executeAnimation(elementId, animationConfig, this.animationContext, gsap, initialValues);
     }
   }
 
@@ -287,7 +291,7 @@ export class StateManager {
     if (!animationDef) return;
 
     if ('steps' in animationDef) {
-      animationManager.executeAnimationSequence(elementId, animationDef, this.animationContext, gsap);
+      this.animations.executeAnimationSequence(elementId, animationDef, this.animationContext, gsap);
       return;
     }
 
@@ -438,7 +442,7 @@ export class StateManager {
       return false;
     }
 
-    return animationManager.reverseAnimation(elementId);
+    return this.animations.reverseAnimation(elementId);
   }
 
   reverseAllAnimations(elementId: string): void {
@@ -447,12 +451,10 @@ export class StateManager {
       return;
     }
 
-    animationManager.reverseAllAnimations(elementId);
+    this.animations.reverseAllAnimations(elementId);
   }
 
   stopAnimations(elementId: string): void {
-    animationManager.stopAllAnimationsForElement(elementId);
+    this.animations.stopAllAnimationsForElement(elementId);
   }
 }
-
-export const stateManager = new StateManager(); 

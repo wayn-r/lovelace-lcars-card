@@ -3,7 +3,6 @@ import { LayoutElement } from './element.js';
 import { HistoryMap } from '../../utils/data-fetcher.js';
 import { gsap } from 'gsap';
 import { nice } from 'd3-array';
-import { stateManager } from '../../utils/state-manager.js';
 import { StateChangeEvent } from '../../core/store.js';
 import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
 import { HomeAssistant } from 'custom-card-helpers';
@@ -30,21 +29,22 @@ export class GraphElement extends LayoutElement {
   private animations: Map<string, gsap.core.Tween> = new Map();
   private unsubscribeFromStateChanges?: () => void;
 
-  constructor(id: string, props: LayoutElementProps, layoutConfig: LayoutConfigOptions, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
-    super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+  constructor(id: string, props: LayoutElementProps, layoutConfig: LayoutConfigOptions, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null, runtime?: any) {
+    super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime);
     this.updateGradientIds();
     this.subscribeToStateChanges();
   }
 
   private subscribeToStateChanges(): void {
-    this.unsubscribeFromStateChanges = stateManager.onStateChange((event: StateChangeEvent) => {
+    const sm = (this as any)._runtime?.state;
+    this.unsubscribeFromStateChanges = sm?.onStateChange?.((event: StateChangeEvent) => {
         const entityId = this.extractEntityIdFromEvent(event);
         if (!entityId || !this.isValidEntityForGraph(entityId)) {
             return;
         }
 
         this.handleEntityStateChange(entityId, event.toState);
-    });
+    }) || undefined;
   }
 
   setHistory(historyMap: HistoryMap): void {
@@ -77,9 +77,10 @@ export class GraphElement extends LayoutElement {
     this.animations.forEach(a => a.kill());
     this.animations.clear();
 
+    const sm = (this as any)._runtime?.state;
     const visibleEntityConfigs = this.entityConfigs.filter(config => {
         const stateName = `${this.getStateIdBase()}_${config.id}_visible`;
-        return stateManager.getState(stateName) !== 'hidden';
+        return sm?.getState?.(stateName) !== 'hidden';
     });
 
     visibleEntityConfigs.forEach(config => {
@@ -160,9 +161,10 @@ export class GraphElement extends LayoutElement {
       return svg`<text x="${textX}" y="${textY}" fill="orange">Insufficient data</text>`;
     }
 
+    const sm2 = (this as any)._runtime?.state;
     const visibleEntityConfigs = this.entityConfigs.filter(config => {
         const stateName = `${this.getStateIdBase()}_${config.id}_visible`;
-        return stateManager.getState(stateName) !== 'hidden';
+        return sm2?.getState?.(stateName) !== 'hidden';
     });
     const allPoints = this.calculateAllPoints();
 

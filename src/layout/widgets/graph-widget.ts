@@ -6,7 +6,7 @@ import { RectangleElement } from '../elements/rectangle.js';
 import { WidgetRegistry } from './registry.js';
 import { getSensorHistory, HistoryMap } from '../../utils/data-fetcher.js';
 import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
-import { stateManager } from '../../utils/state-manager.js';
+import { CardRuntime } from '../../core/runtime.js';
 import { ColorResolver } from '../../utils/color-resolver.js';
 import { EntityValueResolver } from '../../utils/entity-value-resolver.js';
 
@@ -30,7 +30,8 @@ class GraphButtonFactory {
     hass?: HomeAssistant,
     requestUpdateCallback?: () => void,
     getShadowElement?: (id: string) => Element | null,
-    originalIndex?: number
+    originalIndex?: number,
+    runtime?: CardRuntime
   ): RectangleElement {
     const { entityConfig, index, dimensions, parentGraphId } = config;
     
@@ -47,7 +48,8 @@ class GraphButtonFactory {
       layoutConfig,
       hass,
       requestUpdateCallback,
-      getShadowElement
+      getShadowElement,
+      runtime
     );
   }
 
@@ -170,9 +172,10 @@ export class GraphWidget extends Widget {
     layoutConfig: LayoutConfigOptions,
     hass?: HomeAssistant,
     requestUpdateCallback?: () => void,
-    getShadowElement?: (id: string) => Element | null
+    getShadowElement?: (id: string) => Element | null,
+    runtime?: CardRuntime
   ) {
-    super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+    super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime);
 
     this.entityConfigs = this.parseEntityConfigs();
     this.entityIds = this.entityConfigs.map(config => config.id);
@@ -210,7 +213,8 @@ export class GraphWidget extends Widget {
       boundsLayoutConfig,
       this.hass,
       this.requestUpdateCallback,
-      this.getShadowElement
+      this.getShadowElement,
+      (this as any).runtime
     );
 
     // Anchor the visual graph element to the top-left of the bounds
@@ -238,7 +242,8 @@ export class GraphWidget extends Widget {
         this.hass,
         this.requestUpdateCallback,
         this.getShadowElement,
-        originalIndex
+        originalIndex,
+        (this as any).runtime
       );
     });
 
@@ -262,8 +267,9 @@ export class GraphWidget extends Widget {
   private initializeEntityStates(): void {
     this.entityConfigs.forEach(config => {
       const stateName = `${this.id}_${config.id}_visible`;
-      if (stateManager.getState(stateName) === undefined) {
-        stateManager.registerState(stateName, "visible");
+      const sm = (this as any).runtime?.state;
+      if (sm && sm.getState(stateName) === undefined) {
+        sm.registerState(stateName, "visible");
       }
     });
   }
@@ -276,7 +282,8 @@ export class GraphWidget extends Widget {
       {},
       this.hass,
       this.requestUpdateCallback,
-      this.getShadowElement
+      this.getShadowElement,
+      (this as any).runtime
     );
     this.graphElement.setEntityConfigs(this.entityConfigs);
   }
@@ -317,7 +324,7 @@ export class GraphWidget extends Widget {
   }
 }
 
-WidgetRegistry.registerWidget('graph-widget', (id, props, layoutConfig, hass, reqUpd, getEl) => {
-  const widget = new GraphWidget(id, props, layoutConfig, hass, reqUpd, getEl);
+WidgetRegistry.registerWidget('graph-widget', (id, props, layoutConfig, hass, reqUpd, getEl, runtime) => {
+  const widget = new GraphWidget(id, props, layoutConfig, hass, reqUpd, getEl, runtime);
   return widget.expand();
 }); 

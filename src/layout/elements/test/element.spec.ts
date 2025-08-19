@@ -124,7 +124,7 @@ describe('LayoutElement', () => {
     it('should instantiate Button if props.button.enabled is true', () => {
       const props: LayoutElementProps = { button: { enabled: true, text: 'Click' } };
       element = new MockLayoutElement('btn-test', props, {}, mockHass, mockRequestUpdate);
-      expect(Button).toHaveBeenCalledWith('btn-test', props, mockHass, mockRequestUpdate, undefined);
+      expect(Button).toHaveBeenCalledWith('btn-test', props, mockHass, mockRequestUpdate, undefined, undefined);
       expect(element.button).toBeDefined();
       expect(mockButtonInstance.id).toBe('btn-test');
     });

@@ -151,7 +151,7 @@ describe('RectangleElement', () => {
       rectangleElement = new RectangleElement('rect-btn-init', props, {}, mockHass, mockRequestUpdate);
 
       expect(Button).toHaveBeenCalled();
-      expect(Button).toHaveBeenCalledWith('rect-btn-init', props, mockHass, mockRequestUpdate, undefined);
+      expect(Button).toHaveBeenCalledWith('rect-btn-init', props, mockHass, mockRequestUpdate, undefined, undefined);
       expect(rectangleElement.button).toBeDefined();
     });
 

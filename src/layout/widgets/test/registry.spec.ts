@@ -10,6 +10,7 @@ describe('Widget Registry', () => {
   let mockGetShadowElement: (id: string) => Element | null;
   let mockFactory: WidgetFactory;
   let mockElement: LayoutElement;
+  let runtime: any;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -17,6 +18,7 @@ describe('Widget Registry', () => {
     mockHass = {} as HomeAssistant;
     mockRequestUpdate = vi.fn();
     mockGetShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
+    runtime = { }; // runtime is optional in signature
     
     mockElement = new RectangleElement('mock-element');
     mockFactory = vi.fn().mockReturnValue([mockElement]);
@@ -32,7 +34,7 @@ describe('Widget Registry', () => {
       
       const result = WidgetRegistry.expandWidget('testwidget', 'test-id');
       expect(result).toEqual([mockElement]);
-      expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined);
+      expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined, undefined);
     });
 
     it('should register widget factory with case-insensitive type', () => {
@@ -87,12 +89,12 @@ describe('Widget Registry', () => {
       const result = WidgetRegistry.expandWidget('registeredWidget', 'test-id');
       
       expect(result).toEqual([mockElement]);
-      expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined);
+      expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined, undefined);
     });
 
     it('should expand widget with all parameters', () => {
-      const props = { customProp: 'value' };
-      const layoutConfig = { offsetX: 10 };
+      const props = { customProp: 'value' } as any;
+      const layoutConfig = { offsetX: 10 } as any;
       
       const result = WidgetRegistry.expandWidget(
         'registeredWidget', 
@@ -101,7 +103,8 @@ describe('Widget Registry', () => {
         layoutConfig, 
         mockHass, 
         mockRequestUpdate, 
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
       
       expect(result).toEqual([mockElement]);
@@ -111,7 +114,8 @@ describe('Widget Registry', () => {
         layoutConfig, 
         mockHass, 
         mockRequestUpdate, 
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
     });
 
@@ -140,7 +144,7 @@ describe('Widget Registry', () => {
       const result = WidgetRegistry.expandWidget('  registeredWidget  ', 'test-id');
       
       expect(result).toEqual([mockElement]);
-      expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined);
+      expect(mockFactory).toHaveBeenCalledWith('test-id', {}, {}, undefined, undefined, undefined, undefined);
     });
 
     it('should use case-insensitive lookup for expansion', () => {
@@ -157,7 +161,7 @@ describe('Widget Registry', () => {
 
   describe('WidgetFactory type compliance', () => {
     it('should accept factory with correct signature', () => {
-      const validFactory: WidgetFactory = (id, props, layoutConfig, hass, callback, getShadow) => {
+      const validFactory: WidgetFactory = (id, props, layoutConfig, hass, callback, getShadow, runtime) => {
         return [new RectangleElement(id)];
       };
       
@@ -180,7 +184,7 @@ describe('Widget Registry', () => {
   describe('integration scenarios', () => {
     it('should support widget factory that creates complex widget hierarchies', () => {
       const complexFactory: WidgetFactory = (id, props, layoutConfig) => {
-        const container = new RectangleElement(`${id}_container`, props, layoutConfig);
+        const container = new RectangleElement(`${id}_container`, props as any, layoutConfig as any);
         const child1 = new RectangleElement(`${id}_child1`);
         const child2 = new RectangleElement(`${id}_child2`);
         return [container, child1, child2];
@@ -188,7 +192,7 @@ describe('Widget Registry', () => {
       
       WidgetRegistry.registerWidget('complexWidget', complexFactory);
       
-      const result = WidgetRegistry.expandWidget('complexWidget', 'complex-test', { width: 100 }, { offsetX: 5 });
+      const result = WidgetRegistry.expandWidget('complexWidget', 'complex-test', { width: 100 } as any, { offsetX: 5 } as any);
       
       expect(result).toHaveLength(3);
       expect(result![0].id).toBe('complex-test_container');
@@ -197,8 +201,8 @@ describe('Widget Registry', () => {
     });
 
     it('should handle widget factory that accesses all provided parameters', () => {
-      const parameterAccessFactory: WidgetFactory = (id, props, layoutConfig, hass, callback, getShadow) => {
-        const element = new RectangleElement(id, props, layoutConfig, hass, callback, getShadow);
+      const parameterAccessFactory: WidgetFactory = (id, props, layoutConfig, hass, callback, getShadow, runtimeArg) => {
+        const element = new RectangleElement(id, props as any, layoutConfig as any, hass, callback, getShadow);
         return [element];
       };
       
@@ -207,11 +211,12 @@ describe('Widget Registry', () => {
       const result = WidgetRegistry.expandWidget(
         'parameterWidget',
         'param-test',
-        { fill: 'red' },
-        { width: 50 },
+        { fill: 'red' } as any,
+        { width: 50 } as any,
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
       
       expect(result).toHaveLength(1);

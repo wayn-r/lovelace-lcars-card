@@ -10,6 +10,7 @@ import { ChiselEndcapElement } from './elements/chisel_endcap.js';
 import { WidgetRegistry } from './widgets/registry.js';
 import { parseCardConfig, type ParsedConfig } from '../parsers/schema.js';
 import { ZodError } from 'zod';
+import { CardRuntime } from '../core/runtime.js';
 
 interface ElementProps {
   fill?: string;
@@ -91,7 +92,8 @@ export class ConfigParser {
     config: unknown, 
     hass?: HomeAssistant, 
     requestUpdateCallback?: () => void, 
-    getShadowElement?: (id: string) => Element | null
+    getShadowElement?: (id: string) => Element | null,
+    runtime?: CardRuntime
   ): Group[] {
     const validatedConfig = this._validateConfig(config);
     
@@ -112,7 +114,8 @@ export class ConfigParser {
           layoutConfig,
           hass,
           requestUpdateCallback,
-          getShadowElement
+          getShadowElement,
+          runtime
         );
       });
 
@@ -244,9 +247,10 @@ export class ConfigParser {
     layoutConfig: LayoutConfig,
     hass?: HomeAssistant,
     requestUpdateCallback?: () => void,
-    getShadowElement?: (id: string) => Element | null
+    getShadowElement?: (id: string) => Element | null,
+    runtime?: CardRuntime
   ): LayoutElement[] {
-    const widgetResult = WidgetRegistry.expandWidget(type, id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+    const widgetResult = WidgetRegistry.expandWidget(type, id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime);
     if (widgetResult) {
       return widgetResult;
     }
@@ -264,10 +268,16 @@ export class ConfigParser {
     const ElementConstructor = elementConstructors[normalizedType];
 
     if (ElementConstructor) {
+      if (runtime !== undefined) {
+        return [new ElementConstructor(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime as any)];
+      }
       return [new ElementConstructor(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
     }
 
     console.warn(`LCARS Card Parser: Unknown element type "${type}". Defaulting to Rectangle.`);
+    if (runtime !== undefined) {
+      return [new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime as any)];
+    }
     return [new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
   }
 }
@@ -276,7 +286,8 @@ export function parseConfig(
   config: unknown, 
   hass?: HomeAssistant, 
   requestUpdateCallback?: () => void, 
-  getShadowElement?: (id: string) => Element | null
+  getShadowElement?: (id: string) => Element | null,
+  runtime?: CardRuntime
 ): Group[] {
-  return ConfigParser.parseConfig(config, hass, requestUpdateCallback, getShadowElement);
+  return ConfigParser.parseConfig(config, hass, requestUpdateCallback, getShadowElement, runtime);
 }

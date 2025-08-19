@@ -1,6 +1,7 @@
 import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElement } from '../elements/element.js';
+import { CardRuntime } from '../../core/runtime.js';
 
 /**
  * Base class for compound widgets that expand into one or more primitive LayoutElements.
@@ -14,6 +15,7 @@ export abstract class Widget {
   protected hass?: HomeAssistant;
   protected requestUpdateCallback?: () => void;
   protected getShadowElement?: (id: string) => Element | null;
+  protected runtime?: CardRuntime;
 
   constructor(
     id: string,
@@ -21,7 +23,8 @@ export abstract class Widget {
     layoutConfig: LayoutConfigOptions = {},
     hass?: HomeAssistant,
     requestUpdateCallback?: () => void,
-    getShadowElement?: (id: string) => Element | null
+    getShadowElement?: (id: string) => Element | null,
+    runtime?: CardRuntime
   ) {
     this.id = id;
     this.props = props;
@@ -29,6 +32,7 @@ export abstract class Widget {
     this.hass = hass;
     this.requestUpdateCallback = requestUpdateCallback;
     this.getShadowElement = getShadowElement;
+    this.runtime = runtime;
   }
 
   public abstract expand(): LayoutElement[];

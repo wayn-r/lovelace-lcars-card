@@ -3,7 +3,6 @@ import { GraphWidget } from '../graph-widget.js';
 import { WidgetRegistry } from '../registry.js';
 import { GraphElement } from '../../elements/graph.js';
 import { RectangleElement } from '../../elements/rectangle.js';
-import { stateManager } from '../../../utils/state-manager.js';
 import { getSensorHistory } from '../../../utils/data-fetcher.js';
 import { HomeAssistant } from 'custom-card-helpers';
 
@@ -38,25 +37,33 @@ const mockHass = {
   }
 } as any;
 
+function createRuntime() {
+  const stateMap = new Map<string, string>();
+  const state = {
+    getState: (name: string) => stateMap.get(name),
+    registerState: (name: string, value: string) => stateMap.set(name, value),
+    onStateChange: vi.fn(() => () => {})
+  } as any;
+  return { state, __stateMap: stateMap } as any;
+}
+
 describe('GraphWidget', () => {
   let widget: GraphWidget;
   let mockRequestUpdate: () => void;
   let mockGetShadowElement: (id: string) => Element | null;
   let mockGetSensorHistory: any;
+  let runtime: any;
 
   beforeEach(() => {
     mockRequestUpdate = vi.fn();
     mockGetShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
     mockGetSensorHistory = vi.mocked(getSensorHistory);
     mockGetSensorHistory.mockResolvedValue({});
-    
-    // Clear state manager
-    stateManager.clearAll();
+    runtime = createRuntime();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
-    stateManager.clearAll();
   });
 
   describe('Widget Creation and Expansion', () => {
@@ -67,7 +74,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -85,7 +93,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -108,7 +117,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -125,7 +135,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -144,7 +155,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       // Access private property for testing
@@ -160,7 +172,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const entityConfigs = (widget as any).entityConfigs;
@@ -181,7 +194,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const entityConfigs = (widget as any).entityConfigs;
@@ -201,7 +215,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const entityIds = (widget as any).entityIds;
@@ -217,16 +232,17 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
-      expect(stateManager.getState('state_test_sensor.temperature_visible')).toBe('visible');
-      expect(stateManager.getState('state_test_sensor.humidity_visible')).toBe('visible');
+      expect(runtime.state.getState('state_test_sensor.temperature_visible')).toBe('visible');
+      expect(runtime.state.getState('state_test_sensor.humidity_visible')).toBe('visible');
     });
 
     it('should not reinitialize existing states', () => {
       const stateName = 'existing_state_test_sensor.temperature_visible';
-      stateManager.registerState(stateName, 'hidden');
+      runtime.state.registerState(stateName, 'hidden');
 
       widget = new GraphWidget(
         'existing_state_test',
@@ -234,10 +250,11 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
-      expect(stateManager.getState(stateName)).toBe('hidden');
+      expect(runtime.state.getState(stateName)).toBe('hidden');
     });
   });
 
@@ -255,7 +272,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -273,7 +291,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -295,7 +314,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -312,7 +332,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -333,7 +354,8 @@ describe('GraphWidget', () => {
         { height: 200 },
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -355,7 +377,8 @@ describe('GraphWidget', () => {
         { height: 200 },
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -384,7 +407,8 @@ describe('GraphWidget', () => {
         { height: 300 },
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -409,7 +433,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -430,7 +455,8 @@ describe('GraphWidget', () => {
         { height: 200 },
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const elements = widget.expand();
@@ -455,7 +481,8 @@ describe('GraphWidget', () => {
         { height: 150 },
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const graphHeight = (widget as any).determineGraphHeight();
@@ -469,7 +496,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const graphHeight = (widget as any).determineGraphHeight();
@@ -487,7 +515,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       // Allow async operations to complete
@@ -506,7 +535,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       // Allow async operations to complete
@@ -523,7 +553,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       // Test with no previous history
@@ -549,7 +580,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const graphElement = (widget as any).graphElement;
@@ -570,7 +602,8 @@ describe('GraphWidget', () => {
         {},
         undefined,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const fetchSpy = vi.spyOn(widget as any, 'fetchAndUpdateHistory');
@@ -588,7 +621,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const fetchSpy = vi.spyOn(widget as any, 'fetchAndUpdateHistory');
@@ -606,7 +640,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       expect((widget as any).hasValidEntityConfiguration(mockHass)).toBe(true);
@@ -625,7 +660,8 @@ describe('GraphWidget', () => {
         {},
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       expect(setEntityConfigsSpy).toHaveBeenCalledWith([
@@ -646,7 +682,8 @@ describe('GraphWidget', () => {
         layoutConfig,
         mockHass,
         mockRequestUpdate,
-        mockGetShadowElement
+        mockGetShadowElement,
+        runtime
       );
 
       const graphElement = (widget as any).graphElement;
@@ -667,17 +704,18 @@ describe('GraphWidget Registry Integration', () => {
   let mockHass: HomeAssistant;
   let mockRequestUpdate: () => void;
   let mockGetShadowElement: (id: string) => Element | null;
+  let runtime: any;
 
   beforeEach(() => {
     mockHass = {} as HomeAssistant;
     mockRequestUpdate = vi.fn();
     mockGetShadowElement = vi.fn().mockReturnValue(document.createElement('div'));
     vi.mocked(getSensorHistory).mockResolvedValue({});
+    runtime = createRuntime();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
-    stateManager.clearAll();
   });
 
   it('should be registered in widget registry', () => {
@@ -688,7 +726,8 @@ describe('GraphWidget Registry Integration', () => {
       {},
       mockHass,
       mockRequestUpdate,
-      mockGetShadowElement
+      mockGetShadowElement,
+      runtime
     );
 
     expect(elements).not.toBeNull();
@@ -706,7 +745,8 @@ describe('GraphWidget Registry Integration', () => {
       { height: 300 },
       mockHass,
       mockRequestUpdate,
-      mockGetShadowElement
+      mockGetShadowElement,
+      runtime
     );
 
     expect(multiEntityElements).not.toBeNull();
@@ -721,7 +761,8 @@ describe('GraphWidget Registry Integration', () => {
       {},
       mockHass,
       mockRequestUpdate,
-      mockGetShadowElement
+      mockGetShadowElement,
+      runtime
     );
 
     expect(elements).toBeNull();

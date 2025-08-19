@@ -1,6 +1,6 @@
 import { LayoutElement } from '../layout/elements/element.js';
 import { AnimationDefinition } from '../types.js';
-import { StoreProvider, StateChangeEvent } from '../core/store.js';
+import { ReactiveStore, StateChangeEvent, StoreProvider } from '../core/store.js';
 import gsap from 'gsap';
 import { DistanceParser } from './animation.js';
 import { TransformOriginUtils, AnchorPointUtils } from './transform-origin-utils.js';
@@ -59,6 +59,11 @@ export class TransformPropagator {
   private elementTransformStates = new Map<string, ElementTransformState>();
   private storeUnsubscribe?: () => void;
   private activePropagationTimelines = new Map<string, PropagationTimeline[]>();
+  private store?: ReactiveStore;
+
+  setStore(store: ReactiveStore): void {
+    this.store = store;
+  }
 
   initialize(
     elementsMap: Map<string, LayoutElement>,
@@ -76,7 +81,7 @@ export class TransformPropagator {
       this.storeUnsubscribe();
     }
 
-    const store = StoreProvider.getStore();
+    const store = this.store ?? StoreProvider.getStore();
     this.storeUnsubscribe = store.onStateChange((event: StateChangeEvent) => {
       this.handleStateChange(event);
     });
