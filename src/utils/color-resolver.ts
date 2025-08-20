@@ -38,8 +38,8 @@ interface ResolveColorOptions {
 export class ColorResolver {
   private static _resolvedThemeColors: ResolvedThemeColors | null = null;
   private static _themeLoadPromise: Promise<ResolvedThemeColors> | null = null;
-  private dynamicColorCheckScheduled: boolean = false;
-  private refreshTimeout?: ReturnType<typeof setTimeout>;
+  private elementIdToEntityIds: Map<string, Set<string>> = new Map();
+  private entityIdToElementIds: Map<string, Set<string>> = new Map();
 
   // Removed unused expression helpers in favor of a single brightness adjuster
 
@@ -507,6 +507,11 @@ export class ColorResolver {
     extractFromColor(props.stroke);
     extractFromColor(props.textColor);
 
+    if (props.grid) {
+      extractFromColor(props.grid.fill);
+      extractFromColor(props.grid.label_fill);
+    }
+
     if (props.button) {
       extractFromColor(props.button.hover_fill);
       extractFromColor(props.button.active_fill);
@@ -515,23 +520,96 @@ export class ColorResolver {
     }
 
     if (props.entity) {
-      entityIds.add(props.entity);
+      const entityProp = props.entity as unknown;
+      if (typeof entityProp === 'string') {
+        entityIds.add(entityProp);
+      } else if (Array.isArray(entityProp)) {
+        for (const entry of entityProp) {
+          if (typeof entry === 'string') {
+            entityIds.add(entry);
+          } else if (entry && typeof entry === 'object' && 'id' in entry && typeof (entry as any).id === 'string') {
+            entityIds.add((entry as any).id);
+          }
+        }
+      } else if (entityProp && typeof entityProp === 'object' && 'id' in entityProp && typeof (entityProp as any).id === 'string') {
+        entityIds.add((entityProp as any).id);
+      }
+    }
+
+    if (typeof props.text === 'string') {
+      const fromText = ColorResolver._extractEntityRefsFromTextStatic(props.text);
+      fromText.forEach(id => entityIds.add(id));
     }
 
     return entityIds;
   }
 
-  scheduleDynamicColorChangeDetection(
+  buildEntityDependencyIndex(layoutGroups: Group[]): void {
+    this.elementIdToEntityIds.clear();
+    this.entityIdToElementIds.clear();
+    for (const group of layoutGroups) {
+      for (const element of group.elements) {
+        const deps = this.extractEntityIds(element);
+        this._indexElementEntityDeps(element.id, deps);
+      }
+    }
+  }
+
+  processHassChange(
     layoutGroups: Group[],
-    hass: HomeAssistant,
-    refreshCallback: () => void,
-    checkDelay: number = 25
+    lastHassStates: { [entityId: string]: any } | undefined,
+    currentHass: HomeAssistant,
+    refreshCallback: () => void
   ): void {
-    if (this.dynamicColorCheckScheduled) {
+    if (!lastHassStates || !currentHass) {
       return;
     }
 
-    this._scheduleColorChangeCheck(layoutGroups, hass, refreshCallback, checkDelay);
+    if (this.elementIdToEntityIds.size === 0 || this.entityIdToElementIds.size === 0) {
+      this.buildEntityDependencyIndex(layoutGroups);
+    }
+
+    const changedEntities = this._calculateChangedEntities(lastHassStates, currentHass);
+    if (changedEntities.size === 0) {
+      return;
+    }
+
+    const impactedElementIds = new Set<string>();
+    changedEntities.forEach(entityId => {
+      const elements = this.entityIdToElementIds.get(entityId);
+      if (elements) {
+        elements.forEach(elId => impactedElementIds.add(elId));
+      }
+    });
+
+    if (impactedElementIds.size === 0) {
+      return;
+    }
+
+    const elementsById = new Map<string, any>();
+    for (const group of layoutGroups) {
+      for (const element of group.elements) {
+        elementsById.set(element.id, element);
+      }
+    }
+
+    let needsRefresh = false;
+    impactedElementIds.forEach(elementId => {
+      const element = elementsById.get(elementId);
+      if (element && typeof element.entityChangesDetected === 'function') {
+        try {
+          if (element.entityChangesDetected(currentHass)) {
+            needsRefresh = true;
+          }
+        } catch (error) {
+          // ignore element-level errors for change detection
+        }
+      }
+    });
+
+    if (needsRefresh) {
+      refreshCallback();
+    }
   }
 
   elementEntityStatesChanged(
@@ -547,12 +625,8 @@ export class ColorResolver {
   }
 
   cleanup(): void {
-    this.dynamicColorCheckScheduled = false;
-    
-    if (this.refreshTimeout) {
-      clearTimeout(this.refreshTimeout);
-      this.refreshTimeout = undefined;
-    }
+    this.elementIdToEntityIds.clear();
+    this.entityIdToElementIds.clear();
   }
 
   private _getResolvedDefaults(colorDefaults: ColorResolutionDefaults) {
@@ -576,28 +650,42 @@ export class ColorResolver {
     };
   }
 
-  private _scheduleColorChangeCheck(
-    layoutGroups: Group[],
-    hass: HomeAssistant,
-    refreshCallback: () => void,
-    checkDelay: number
-  ): void {
-    this.dynamicColorCheckScheduled = true;
-    
-    if (this.refreshTimeout) {
-      clearTimeout(this.refreshTimeout);
-    }
-    
-    this.refreshTimeout = setTimeout(() => {
-      this.dynamicColorCheckScheduled = false;
-      this.refreshTimeout = undefined;
-      
-      const needsRefresh = this._performDynamicColorCheck(layoutGroups, hass);
-      
-      if (needsRefresh) {
-        refreshCallback();
+  private _indexElementEntityDeps(elementId: string, entityIds: Set<string>): void {
+    this.elementIdToEntityIds.set(elementId, new Set(entityIds));
+    entityIds.forEach(entityId => {
+      const set = this.entityIdToElementIds.get(entityId) || new Set<string>();
+      set.add(elementId);
+      this.entityIdToElementIds.set(entityId, set);
+    });
+  }
+
+  private _calculateChangedEntities(
+    lastHassStates: { [entityId: string]: any },
+    currentHass: HomeAssistant
+  ): Set<string> {
+    const changed = new Set<string>();
+    const trackedEntities = Array.from(this.entityIdToElementIds.keys());
+    for (const entityId of trackedEntities) {
+      const oldEntity = lastHassStates[entityId];
+      const newEntity = currentHass.states[entityId];
+      if (!oldEntity && !newEntity) {
+        continue;
       }
-    }, checkDelay);
+      if (!oldEntity || !newEntity) {
+        changed.add(entityId);
+        continue;
+      }
+      if (oldEntity.state !== newEntity.state) {
+        changed.add(entityId);
+        continue;
+      }
+      const oldAttrs = oldEntity.attributes || {};
+      const newAttrs = newEntity.attributes || {};
+      if (JSON.stringify(oldAttrs) !== JSON.stringify(newAttrs)) {
+        changed.add(entityId);
+      }
+    }
+    return changed;
   }
 
   private _checkForSignificantChangesInGroups(
@@ -647,6 +735,24 @@ export class ColorResolver {
       }
     }
     return false;
+  }
+
+  private static _extractEntityRefsFromTextStatic(text: string): Set<string> {
+    const set = new Set<string>();
+    if (!text || typeof text !== 'string') {
+      return set;
+    }
+    const matches = text.match(/states\['([^']+)'\]/g);
+    if (!matches) {
+      return set;
+    }
+    for (const match of matches) {
+      const m = match.match(/states\['([^']+)'\]/);
+      if (m && m[1]) {
+        set.add(m[1]);
+      }
+    }
+    return set;
   }
   private static _resolveStatefulColor(
     config: StatefulColorConfig,

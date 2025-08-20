@@ -200,20 +200,20 @@ export class LcarsCard extends LitElement {
           this._lastHassStates,
           this.hass
         );
-        
+
         if (hasSignificantEntityChanges) {
           this._performLayoutCalculation(this._containerRect);
         }
+
+        colorResolver.processHassChange(
+          this._layoutEngine.layoutGroups,
+          this._lastHassStates,
+          this.hass,
+          () => this._refreshElementRenders()
+        );
       }
     }
 
-    if (hasHassChanged && this.hass && this._lastHassStates) {
-      colorResolver.scheduleDynamicColorChangeDetection(
-        this._layoutEngine.layoutGroups,
-        this.hass,
-        () => this._refreshElementRenders()
-      );
-    }
 
     if (this.hass) {
       this._lastHassStates = { ...this.hass.states };
@@ -370,6 +370,7 @@ export class LcarsCard extends LitElement {
   private _performFullLayoutRebuild(rect: DOMRect): void {
     this._setupLayoutEngine(rect);
     const groups = this._createLayoutGroups();
+    colorResolver.buildEntityDependencyIndex(groups);
     this._initializeAnimationSystem(groups);
     
     const containerRect = this._calculateFinalContainerRect(rect);
@@ -385,6 +386,7 @@ export class LcarsCard extends LitElement {
   private _performLayoutRecalculation(rect: DOMRect): void {
     this._setupLayoutEngine(rect);
     const groups = this._createLayoutGroups(); // Uses cached graph
+    colorResolver.buildEntityDependencyIndex(groups);
     
     const containerRect = this._calculateFinalContainerRect(rect);
     const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(containerRect, { dynamicHeight: true });

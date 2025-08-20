@@ -323,57 +323,43 @@ describe('ColorResolver', () => {
 
 
 
-  describe('detectsDynamicColorChanges', () => {
-    it('should call refresh callback when changes are detected', async () => {
+  describe('event-driven color change processing', () => {
+    it('should call refresh callback when impacted elements detect changes', () => {
       const refreshCallback = vi.fn();
       const mockElement = mockLayoutGroups[0].elements[0] as any;
       mockElement.entityChangesDetected.mockReturnValue(true);
 
-      resolver.scheduleDynamicColorChangeDetection(mockLayoutGroups, mockHass, refreshCallback, 10);
+      // Build dependencies and simulate hass change
+      resolver.buildEntityDependencyIndex(mockLayoutGroups);
 
-      // Wait for the timeout
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          expect(refreshCallback).toHaveBeenCalled();
-          resolve();
-        }, 20);
-      });
+      const lastStates = { 'sensor.test': { state: 'off', attributes: {} } } as any;
+
+      resolver.processHassChange(
+        mockLayoutGroups,
+        lastStates,
+        mockHass,
+        refreshCallback
+      );
+
+      expect(refreshCallback).toHaveBeenCalled();
     });
 
-    it('should not call refresh callback when no changes are detected', async () => {
+    it('should not call refresh callback when no impacted elements report changes', () => {
       const refreshCallback = vi.fn();
       const mockElement = mockLayoutGroups[0].elements[0] as any;
       mockElement.entityChangesDetected.mockReturnValue(false);
 
-      resolver.scheduleDynamicColorChangeDetection(mockLayoutGroups, mockHass, refreshCallback, 10);
+      resolver.buildEntityDependencyIndex(mockLayoutGroups);
+      const lastStates = { 'sensor.test': { state: 'on', attributes: {} } } as any;
 
-      // Wait for the timeout
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          expect(refreshCallback).not.toHaveBeenCalled();
-          resolve();
-        }, 20);
-      });
-    });
+      resolver.processHassChange(
+        mockLayoutGroups,
+        lastStates,
+        mockHass,
+        refreshCallback
+      );
 
-    it('should throttle multiple calls', async () => {
-      const refreshCallback = vi.fn();
-      const mockElement = mockLayoutGroups[0].elements[0] as any;
-      mockElement.entityChangesDetected.mockReturnValue(true);
-
-      // Make multiple rapid calls
-      resolver.scheduleDynamicColorChangeDetection(mockLayoutGroups, mockHass, refreshCallback, 30);
-      resolver.scheduleDynamicColorChangeDetection(mockLayoutGroups, mockHass, refreshCallback, 30);
-      resolver.scheduleDynamicColorChangeDetection(mockLayoutGroups, mockHass, refreshCallback, 30);
-
-      // Wait for the timeout to complete
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          // Only the first call should have been processed due to throttling
-          expect(refreshCallback).toHaveBeenCalledTimes(1);
-          resolve();
-        }, 50);
-      });
+      expect(refreshCallback).not.toHaveBeenCalled();
     });
   });
 
@@ -458,23 +444,12 @@ describe('ColorResolver', () => {
   });
 
   describe('cleanup', () => {
-    it('should clear scheduled operations', async () => {
-      const refreshCallback = vi.fn();
-
-      // Schedule an operation
-      resolver.scheduleDynamicColorChangeDetection(mockLayoutGroups, mockHass, refreshCallback, 100);
-
-      // Clean up immediately
-      resolver.cleanup();
-
-      // Wait longer than the original delay
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          // Should not have been called due to cleanup
-          expect(refreshCallback).not.toHaveBeenCalled();
-          resolve();
-        }, 150);
-      });
+    it('should clear dependency indexes without throwing', () => {
+      resolver.buildEntityDependencyIndex(mockLayoutGroups);
+      expect(() => resolver.cleanup()).not.toThrow();
+      // After cleanup, processing should rebuild index implicitly and not throw
+      const cb = vi.fn();
+      resolver.processHassChange(mockLayoutGroups, { 'sensor.test': { state: 'off', attributes: {} } } as any, mockHass, cb);
     });
   });
 
