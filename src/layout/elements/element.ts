@@ -903,6 +903,12 @@ export abstract class LayoutElement {
     protected renderText(x: number, y: number, colors: ComputedElementColors): SVGTemplateResult | null {
         if (!this.hasText()) return null;
 
+        const renderLetterSpacing = (ls: any) => {
+            if (ls === undefined || ls === null) return 'normal';
+            if (typeof ls === 'number') return `${ls}px`;
+            return ls;
+        };
+
         return svg`
           <text
             x="${x}"
@@ -911,7 +917,7 @@ export abstract class LayoutElement {
             font-family="${this.props.fontFamily || 'sans-serif'}"
             font-size="${this.props.fontSize || 16}px"
             font-weight="${this.props.fontWeight || 'normal'}"
-            letter-spacing="${this.props.letterSpacing || 'normal'}"
+            letter-spacing="${renderLetterSpacing(this.props.letterSpacing)}"
             text-anchor="${this.props.textAnchor || 'middle'}"
             dominant-baseline="${this.props.dominantBaseline || 'middle'}"
             style="pointer-events: none; text-transform: ${this.props.textTransform || 'none'};"

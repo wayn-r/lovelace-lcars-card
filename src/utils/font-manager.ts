@@ -11,7 +11,13 @@ export class FontManager {
 
   static async ensureFontsLoaded(fontFamilies: string[] = ['Antonio'], timeout = 5000): Promise<void> {
     if (!this.fontsReadyPromise) {
-      const observers = fontFamilies.map((family) => new FontFaceObserver(family).load(null, timeout));
+      // Normalize and preload both normal and bold weights so measurements are stable.
+      const families = fontFamilies.map((f) => this.extractPrimaryFamily(f));
+      const weights: Array<string | number> = ['normal', 'bold'];
+      const observers = families.flatMap((family) => {
+        return weights.map((weight) => new FontFaceObserver(family, { weight }).load(null, timeout));
+      });
+
       this.fontsReadyPromise = Promise.allSettled(observers).then(async () => {
         if (typeof document !== 'undefined' && (document as any).fonts?.ready) {
           try {
@@ -27,11 +33,12 @@ export class FontManager {
   }
 
   static getFontMetrics(fontFamily: string, fontWeight: string | number = 'normal', fontSize = 200): FontMetricsResult | null {
-    const key = `${fontFamily}::${fontWeight}`;
+    const primaryFamily = this.extractPrimaryFamily(fontFamily);
+    const key = `${primaryFamily}::${fontWeight}`;
     if (this.metricsCache.has(key)) return this.metricsCache.get(key)!;
 
     try {
-      const metrics = FontMetrics({ fontFamily, fontWeight, fontSize, origin: 'baseline' });
+      const metrics = FontMetrics({ fontFamily: primaryFamily, fontWeight, fontSize, origin: 'baseline' });
       this.metricsCache.set(key, metrics);
       return metrics;
     } catch {
@@ -47,5 +54,12 @@ export class FontManager {
 
   static clearMetricsCache(): void {
     this.metricsCache.clear();
+  }
+
+  private static extractPrimaryFamily(fontFamily: string): string {
+    if (!fontFamily) return fontFamily;
+    // Split on commas to get the first family, and trim quotes and whitespace
+    const first = fontFamily.split(',')[0]?.trim() || fontFamily;
+    return first.replace(/^['\"]/g, '').replace(/['\"]$/g, '');
   }
 } 

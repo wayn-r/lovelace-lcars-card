@@ -135,6 +135,12 @@ export class TextElement extends LayoutElement {
             fallbackStrokeWidth: '0' 
         });
 
+        const renderLetterSpacing = (ls: any) => {
+            if (ls === undefined || ls === null) return 'normal';
+            if (typeof ls === 'number') return `${ls}px`;
+            return ls;
+        };
+
         return svg`
             <text
                 id=${this.id}
@@ -144,7 +150,7 @@ export class TextElement extends LayoutElement {
                 font-family=${this.props.fontFamily || 'sans-serif'}
                 font-size=${`${this.props.fontSize || 16}px`}
                 font-weight=${this.props.fontWeight || 'normal'}
-                letter-spacing=${this.props.letterSpacing || 'normal'}
+                letter-spacing=${renderLetterSpacing(this.props.letterSpacing)}
                 text-anchor=${textAnchor}
                 dominant-baseline=${dominantBaseline}
                 style="${this.createTextTransformStyle()}"

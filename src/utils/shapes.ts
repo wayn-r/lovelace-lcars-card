@@ -329,19 +329,31 @@ export class TextMeasurement {
                 const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
                 textElement.textContent = transformedText;
                 
-                const fontWeight = font.match(/^(bold|normal|[1-9]00)\s+/) ? 
-                    font.match(/^(bold|normal|[1-9]00)\s+/)?.[1] || 'normal' : 'normal';
-                const fontSizeMatch = font.match(/(\d+(?:\.\d+)?)(?:px|pt|em|rem)/);
-                const fontSize = fontSizeMatch ? parseFloat(fontSizeMatch[1]) : 16;
-                const fontFamily = font.includes(' ') ? 
-                    font.substring(font.lastIndexOf(' ') + 1) : font;
+                const weightMatch = font.match(/^(bold|normal|[1-9]00)\s+/);
+                const fontWeight = weightMatch ? (weightMatch[1] || 'normal') : 'normal';
+                const fontSizeTokenMatch = font.match(/(\d+(?:\.\d+)?(?:px|pt|em|rem))/);
+                const fontSize = fontSizeTokenMatch ? parseFloat(fontSizeTokenMatch[1]) : 16;
+
+                // Extract the full font-family list from the provided CSS font shorthand.
+                // Our font string format is typically: "<weight> <size> <family[, fallback]>".
+                // Capture everything after the first size token to preserve commas and quoted names.
+                let fontFamily = font;
+                if (fontSizeTokenMatch) {
+                    const idx = font.indexOf(fontSizeTokenMatch[1]) + fontSizeTokenMatch[1].length;
+                    fontFamily = font.slice(idx).trim();
+                }
                 
                 textElement.setAttribute("font-family", fontFamily);
                 textElement.setAttribute("font-size", `${fontSize}px`);
                 textElement.setAttribute("font-weight", fontWeight);
                 
                 if (letterSpacing) {
-                    textElement.setAttribute("letter-spacing", letterSpacing);
+                    let ls = letterSpacing;
+                    // If numeric without unit, default to px for consistent measurement
+                    if (/^-?\d+(?:\.\d+)?$/.test(ls)) {
+                        ls = `${ls}px`;
+                    }
+                    textElement.setAttribute("letter-spacing", ls);
                 }
                 
                 svg.appendChild(textElement);
@@ -358,10 +370,10 @@ export class TextMeasurement {
             console.warn("LCARS Card: SVG text measurement failed, falling back to canvas:", e);
         }
         
-        return this.measureCanvasTextWidth(transformedText, font);
+        return this.measureCanvasTextWidth(transformedText, font, letterSpacing);
     }
 
-    static measureCanvasTextWidth(text: string, font: string): number {
+    static measureCanvasTextWidth(text: string, font: string, letterSpacing?: string): number {
         if (!this.canvasContext) {
             try {
                 if (typeof document !== 'undefined' && document.createElement) {
@@ -384,7 +396,19 @@ export class TextMeasurement {
             this.canvasContext.font = font;
             try {
                 const metrics = this.canvasContext.measureText(text);
-                return metrics.width;
+                let width = metrics.width;
+                // Apply letter-spacing if provided
+                if (letterSpacing && text && text.length > 1) {
+                    let spacingPx = 0;
+                    const trimmed = letterSpacing.trim();
+                    if (/^-?\d+(?:\.\d+)?px$/.test(trimmed)) {
+                        spacingPx = parseFloat(trimmed);
+                    } else if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) {
+                        spacingPx = parseFloat(trimmed);
+                    }
+                    width += spacingPx * (text.length - 1);
+                }
+                return width;
             } catch (e) {
                 console.error(`LCARS Card: Error measuring text width for font "${font}".`, e);
             }
