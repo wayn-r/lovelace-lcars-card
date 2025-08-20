@@ -14,7 +14,7 @@ import { LayoutEngine, Group } from './layout/engine.js';
 import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';
 import { animationManager, AnimationContext, AnimationManager } from './utils/animation.js';
-import { colorResolver, ColorResolver } from './utils/color-resolver.js';
+import { ColorResolver } from './utils/color-resolver.js';
 import { StoreProvider, StateChangeEvent } from './core/store.js';
 import { CardRuntime, RuntimeFactory } from './core/runtime.js';
 import { FontManager } from './utils/font-manager.js';
@@ -195,7 +195,7 @@ export class LcarsCard extends LitElement {
       if (hasConfigChanged) {
         this._performLayoutCalculation(this._containerRect);
       } else if (hasHassChanged && this._lastHassStates) {
-        const hasSignificantEntityChanges = colorResolver.elementEntityStatesChanged(
+        const hasSignificantEntityChanges = this._runtime!.colors.elementEntityStatesChanged(
           this._layoutEngine.layoutGroups,
           this._lastHassStates,
           this.hass
@@ -205,7 +205,7 @@ export class LcarsCard extends LitElement {
           this._performLayoutCalculation(this._containerRect);
         }
 
-        colorResolver.processHassChange(
+        this._runtime!.colors.processHassChange(
           this._layoutEngine.layoutGroups,
           this._lastHassStates,
           this.hass,
@@ -277,8 +277,9 @@ export class LcarsCard extends LitElement {
     this._storeUnsubscribe?.();
     this._storeUnsubscribe = undefined;
     
-    colorResolver.cleanup();
-    this._runtime?.state.cleanup();
+    if (this._runtime) {
+      try { this._runtime.destroy(); } catch {}
+    }
     
     this._cleanupElementGraph();
     this._elementGraph = undefined;
@@ -370,7 +371,7 @@ export class LcarsCard extends LitElement {
   private _performFullLayoutRebuild(rect: DOMRect): void {
     this._setupLayoutEngine(rect);
     const groups = this._createLayoutGroups();
-    colorResolver.buildEntityDependencyIndex(groups);
+    this._runtime!.colors.buildEntityDependencyIndex(groups);
     this._initializeAnimationSystem(groups);
     
     const containerRect = this._calculateFinalContainerRect(rect);
@@ -386,7 +387,7 @@ export class LcarsCard extends LitElement {
   private _performLayoutRecalculation(rect: DOMRect): void {
     this._setupLayoutEngine(rect);
     const groups = this._createLayoutGroups(); // Uses cached graph
-    colorResolver.buildEntityDependencyIndex(groups);
+    this._runtime!.colors.buildEntityDependencyIndex(groups);
     
     const containerRect = this._calculateFinalContainerRect(rect);
     const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(containerRect, { dynamicHeight: true });
@@ -762,7 +763,7 @@ export class LcarsCard extends LitElement {
       return new Map();
     }
 
-    return animationManager.collectAnimationStates(
+    return this._runtime!.animations.collectAnimationStates(
       elementIds,
       (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null
     );
@@ -785,7 +786,7 @@ export class LcarsCard extends LitElement {
             hass: this.hass,
             requestUpdateCallback: this.requestUpdate.bind(this)
           };
-          animationManager.restoreAnimationStates(animationStates, context, () => {});
+          this._runtime!.animations.restoreAnimationStates(animationStates, context, () => {});
         }
       });
     });

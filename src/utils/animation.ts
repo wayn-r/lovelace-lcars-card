@@ -450,6 +450,26 @@ export class AnimationManager {
     }
   }
 
+  cleanup(): void {
+    for (const [, timelines] of this.activeTimelines) {
+      for (const reversibleTimeline of timelines) {
+        try {
+          reversibleTimeline.timeline.kill();
+        } catch (error) {
+          // ignore kill errors
+        }
+      }
+    }
+    this.activeTimelines.clear();
+    this.elementAnimationStates.clear();
+    this.positioningEffectsCache = new WeakMap<AnimationConfig, boolean>();
+    try {
+      this.transformPropagator.cleanup();
+    } catch (error) {
+      // ignore
+    }
+  }
+
   private captureInitialState(
     targetElement: Element,
     timeline: gsap.core.Timeline,

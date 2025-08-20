@@ -12,13 +12,14 @@ export class StateManager {
   private elementsMap?: Map<string, LayoutElement>;
   private animationContext?: AnimationContext;
   private animations: AnimationManager;
+  private storeUnsubscribe?: () => void;
 
   constructor(requestUpdateCallback?: () => void, store?: ReactiveStore, animations?: AnimationManager) {
     this.store = store ?? StoreProvider.getStore();
     this.animations = animations ?? animationManager;
     
     if (requestUpdateCallback) {
-      this.store.subscribe(() => {
+      this.storeUnsubscribe = this.store.subscribe(() => {
         requestUpdateCallback();
       });
     }
@@ -412,6 +413,8 @@ export class StateManager {
   }
 
   cleanup(): void {
+    try { this.storeUnsubscribe?.(); } catch {}
+    this.storeUnsubscribe = undefined;
     this.store.cleanup();
   }
 

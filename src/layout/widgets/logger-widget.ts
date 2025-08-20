@@ -436,6 +436,7 @@ export class LoggerWidget extends Widget {
     this.entries = [];
     this.queue = [];
     this.unsubscribe = undefined;
+    try { (this.runtimeLogger()).destroy(); } catch {}
   }
 
   private updateHeight(): void {

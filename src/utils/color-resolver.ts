@@ -6,14 +6,13 @@ import { EntityValueResolver } from './entity-value-resolver';
 import { Group } from '../layout/engine.js';
 import yaml from 'js-yaml';
 import { EMBEDDED_THEME_YAML } from './embedded-theme.js';
-// access to state must be provided via runtime at setup time
-let getStateAccessor: ((name: string) => string | undefined) | null = null;
 
 export type ColorChain = string & {
   withDom(ctx: Element | null): ColorChain;
   withAnimation(id: string, prop: 'fill' | 'stroke' | 'textColor', ctx: AnimationContext): ColorChain;
   withState(ctx: ColorStateContext): ColorChain;
   withHass(hass: HomeAssistant): ColorChain;
+  withStateAccessor(accessor: (name: string) => string | undefined): ColorChain;
   withFallback(color: string): ColorChain;
 };
 
@@ -33,9 +32,11 @@ interface ResolveColorOptions {
   hass?: HomeAssistant;
   context?: Element | { themeOnly: true } | null;
   fallback?: string;
+  stateAccessor?: (name: string) => string | undefined;
 }
 
 export class ColorResolver {
+  private stateAccessor?: (name: string) => string | undefined;
   private static _resolvedThemeColors: ResolvedThemeColors | null = null;
   private static _themeLoadPromise: Promise<ResolvedThemeColors> | null = null;
   private elementIdToEntityIds: Map<string, Set<string>> = new Map();
@@ -47,8 +48,8 @@ export class ColorResolver {
     await this._getResolvedThemeColors();
   }
 
-  static setStateAccessor(accessor: (name: string) => string | undefined): void {
-    getStateAccessor = accessor;
+  setStateAccessor(accessor: (name: string) => string | undefined): void {
+    this.stateAccessor = accessor;
   }
 
   static resolve(value: string | ColorValue | DynamicColorConfig): ColorChain {
@@ -74,6 +75,10 @@ export class ColorResolver {
       },
       withHass(hass: HomeAssistant) {
         options.hass = hass;
+        return builder as ColorChain;
+      },
+      withStateAccessor(accessor: (name: string) => string | undefined) {
+        options.stateAccessor = accessor;
         return builder as ColorChain;
       },
       withFallback(color: string) {
@@ -449,14 +454,16 @@ export class ColorResolver {
     const dom = animationContext.getShadowElement?.(elementId) ?? null;
 
     const resolve = (value: any, property: 'fill' | 'stroke' | 'textColor', fallback: string) => {
-      return String(
-        ColorResolver
-          .resolve(value as any)
-          .withFallback(fallback)
-          .withDom(dom)
-          .withAnimation(elementId, property, animationContext)
-          .withState(interactiveState)
-      );
+      let chain: any = ColorResolver
+        .resolve(value as any)
+        .withFallback(fallback)
+        .withDom(dom)
+        .withAnimation(elementId, property, animationContext)
+        .withState(interactiveState);
+      if (this.stateAccessor) {
+        chain = chain.withStateAccessor(this.stateAccessor);
+      }
+      return String(chain);
     };
 
     const fillColor = elementProps.fill !== undefined
@@ -759,7 +766,11 @@ export class ColorResolver {
     options: ResolveColorOptions,
     fallback: string
   ): string {
-    const selectedColorValue = this._resolveStateBasedColorValue(config, options.stateContext);
+    const selectedColorValue = this._resolveStateBasedColorValue(
+      config,
+      options.stateContext,
+      options.stateAccessor
+    );
     if (selectedColorValue !== undefined) {
       return this._internalResolve(selectedColorValue, options);
     }
@@ -768,13 +779,14 @@ export class ColorResolver {
 
   private static _resolveStateBasedColorValue(
     statefulConfig: StatefulColorConfig,
-    stateContext?: ColorStateContext
+    stateContext?: ColorStateContext,
+    stateAccessor?: (name: string) => string | undefined
   ): ColorValue | undefined {
     if (this._shouldUseActiveState(statefulConfig, stateContext)) {
       return statefulConfig.active;
     }
 
-    const stateMapColor = this._resolveFromStateMap(statefulConfig, stateContext);
+    const stateMapColor = this._resolveFromStateMap(statefulConfig, stateContext, stateAccessor);
     if (stateMapColor !== undefined) {
       return stateMapColor;
     }
@@ -794,12 +806,16 @@ export class ColorResolver {
     return !!(stateContext?.isCurrentlyHovering && config.hover !== undefined);
   }
 
-  private static _resolveFromStateMap(config: StatefulColorConfig, stateContext?: ColorStateContext): ColorValue | undefined {
+  private static _resolveFromStateMap(
+    config: StatefulColorConfig,
+    stateContext?: ColorStateContext,
+    stateAccessor?: (name: string) => string | undefined
+  ): ColorValue | undefined {
     if (!config.state_name || !config.state_map) {
       return undefined;
     }
 
-    const currentState = getStateAccessor ? getStateAccessor(config.state_name) : undefined;
+    const currentState = stateAccessor ? stateAccessor(config.state_name) : undefined;
     const colorStateKey = currentState ? config.state_map[currentState] : undefined;
 
     if (colorStateKey) {
