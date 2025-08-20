@@ -3,7 +3,6 @@ import { ReactiveStore } from './store.js';
 import { StateManager } from '../utils/state-manager.js';
 import { animationManager as globalAnimationManager, AnimationManager } from '../utils/animation.js';
 import { colorResolver as globalColorResolver, ColorResolver } from '../utils/color-resolver.js';
-import { transformPropagator as globalTransformPropagator, TransformPropagator } from '../utils/transform-propagator.js';
 import { LoggerService } from '../utils/logger-service.js';
 
 export interface CardRuntime {
@@ -11,7 +10,6 @@ export interface CardRuntime {
   state: StateManager;
   animations: AnimationManager;
   colors: ColorResolver;
-  transforms: TransformPropagator;
   logger: LoggerService;
   hass?: HomeAssistant;
   getShadowElement: (id: string) => Element | null;
@@ -28,7 +26,6 @@ export class RuntimeFactory {
     const state = new StateManager(params.requestUpdate, store);
 
     const animations = globalAnimationManager;
-    const transforms = globalTransformPropagator;
     const colors = globalColorResolver;
 
     ColorResolver.setStateAccessor((name: string) => state.getState(name));
@@ -40,7 +37,6 @@ export class RuntimeFactory {
       state,
       animations,
       colors,
-      transforms,
       logger,
       hass: params.hass,
       getShadowElement: params.getShadowElement,

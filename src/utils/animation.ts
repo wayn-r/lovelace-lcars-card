@@ -7,6 +7,8 @@ import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
 import { CustomEase } from 'gsap/CustomEase';
 import { AnimationSequence as AnimationSequenceDefinition } from '../types.js';
 import { ColorResolver } from './color-resolver.js';
+import type { LayoutElement } from '../layout/elements/element.js';
+import type { ReactiveStore } from '../core/store.js';
 
 export interface AnimationContext {
   elementId: string;
@@ -80,6 +82,18 @@ export class AnimationManager {
       gsap.registerPlugin(GSDevTools, MotionPathPlugin, CustomEase);
       AnimationManager.isGsapInitialized = true;
     }
+  }
+
+  initializePropagation(
+    elementsMap: Map<string, LayoutElement>,
+    getShadowElement: (id: string) => Element | null,
+    store?: ReactiveStore
+  ): void {
+    this.setElementsMap(elementsMap);
+    if (store) {
+      this.transformPropagator.setStore(store);
+    }
+    this.transformPropagator.initialize(elementsMap, getShadowElement);
   }
 
   initializeElementAnimationTracking(elementId: string): void {
@@ -243,6 +257,18 @@ export class AnimationManager {
   ): void {
     const sequence = AnimationSequence.createFromDefinition(elementId, sequenceDef, context, this);
     sequence.run();
+  }
+
+  processAnimationSequenceWithPropagation(
+    elementId: string,
+    sequenceDef: AnimationSequenceDefinition,
+    baseSyncData: AnimationSyncData
+  ): void {
+    this.transformPropagator.processAnimationSequenceWithPropagation(
+      elementId,
+      sequenceDef as any,
+      baseSyncData
+    );
   }
 
   stopAllAnimationsForElement(elementId: string): void {
@@ -779,13 +805,11 @@ export class AnimationSequence {
       delay: firstAnimation.config.delay
     };
 
-    import('./transform-propagator.js').then(({ transformPropagator }) => {
-      transformPropagator.processAnimationSequenceWithPropagation(
-        this.elementId,
-        sequenceDefinition,
-        baseSyncData
-      );
-    });
+    this.manager.processAnimationSequenceWithPropagation(
+      this.elementId,
+      sequenceDefinition as any,
+      baseSyncData
+    );
 
     let cumulativeDelay = 0;
 

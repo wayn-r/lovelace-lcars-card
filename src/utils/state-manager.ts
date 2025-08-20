@@ -2,7 +2,6 @@ import { AnimationDefinition, ElementStateManagementConfig, AnimationSequence, S
 import { animationManager, AnimationContext, DistanceParser, AnimationManager } from './animation.js';
 import { LayoutElement } from '../layout/elements/element.js';
 import { Group } from '../layout/engine.js';
-import { transformPropagator, TransformPropagator } from './transform-propagator.js';
 import gsap from 'gsap';
 import { ReactiveStore, StoreProvider, StateChangeEvent } from '../core/store.js';
 
@@ -13,12 +12,10 @@ export class StateManager {
   private elementsMap?: Map<string, LayoutElement>;
   private animationContext?: AnimationContext;
   private animations: AnimationManager;
-  private transforms: TransformPropagator;
 
-  constructor(requestUpdateCallback?: () => void, store?: ReactiveStore, animations?: AnimationManager, transforms?: TransformPropagator) {
+  constructor(requestUpdateCallback?: () => void, store?: ReactiveStore, animations?: AnimationManager) {
     this.store = store ?? StoreProvider.getStore();
     this.animations = animations ?? animationManager;
-    this.transforms = transforms ?? transformPropagator;
     
     if (requestUpdateCallback) {
       this.store.subscribe(() => {
@@ -48,7 +45,11 @@ export class StateManager {
     }
     
     if (elementsMap && context.getShadowElement) {
-      this.transforms.initialize(elementsMap, context.getShadowElement);
+      this.animations.initializePropagation(
+        elementsMap,
+        context.getShadowElement,
+        this.store
+      );
     }
   }
 
