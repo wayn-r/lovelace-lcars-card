@@ -36,4 +36,9 @@ export abstract class Widget {
   }
 
   public abstract expand(): LayoutElement[];
+  public onResize(_containerRect?: DOMRect): void {}
+  public updateHass(hass?: HomeAssistant): void {
+    this.hass = hass;
+  }
+  public destroy(): void {}
 } 

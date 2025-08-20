@@ -65,8 +65,9 @@ export class VerticalSliderWidget extends Widget {
   }
 }
 
-WidgetRegistry.registerWidget('vertical-slider', (id, props, layoutConfig, hass, reqUpd, getEl) => {
+WidgetRegistry.registerWidget('vertical-slider', (id, props, layoutConfig, hass, reqUpd, getEl, runtime) => {
   const widget = new VerticalSliderWidget(id, props, layoutConfig, hass, reqUpd, getEl);
+  WidgetRegistry.registerInstance(runtime as any, id, widget);
   return widget.expand();
 });
 

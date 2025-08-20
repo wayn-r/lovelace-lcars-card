@@ -100,7 +100,8 @@ export class TopHeaderWidget extends Widget {
 }
 
 
-WidgetRegistry.registerWidget('top_header', (id, props, layoutConfig, hass, reqUpd, getEl) => {
-  const widget = new TopHeaderWidget(id, props, layoutConfig, hass, reqUpd, getEl);
+WidgetRegistry.registerWidget('top_header', (id, props, layoutConfig, hass, reqUpd, getEl, runtime) => {
+  const widget = new TopHeaderWidget(id, props, layoutConfig, hass, reqUpd, getEl, runtime as any);
+  WidgetRegistry.registerInstance(runtime as any, id, widget);
   return widget.expand();
-}); 
+});

@@ -411,7 +411,7 @@ export class LoggerWidget extends Widget {
     }
   }
   
-  updateHass(hass?: HomeAssistant): void {
+  public override updateHass(hass?: HomeAssistant): void {
     if (!hass || this.hass === hass) return;
     
     (this.runtimeLogger()).updateHass(hass);
@@ -426,7 +426,7 @@ export class LoggerWidget extends Widget {
     this.requestUpdateCallback?.();
   }
 
-  destroy(): void {
+  public override destroy(): void {
     this.unsubscribe?.();
     this.processor = undefined;
     this.entries.forEach(entry => {
@@ -644,7 +644,7 @@ export class LoggerWidget extends Widget {
     await Promise.all([fadeOutPromise, fadeInPromise, slideDownPromise]);
   }
 
-  public handleResize(): void {
+  public override onResize(): void {
     this.entries.forEach(entry => entry.reset());
     this.lineSpacing = this.calculateSpacing();
     this.updateHeight();
@@ -670,11 +670,6 @@ export class LoggerWidget extends Widget {
 
 WidgetRegistry.registerWidget('logger-widget', (id, props, layoutConfig, hass, reqUpd, getEl, runtime) => {
   const widget = new LoggerWidget(id, props, layoutConfig, hass, reqUpd, getEl, runtime);
-  const elements = widget.expand();
-  
-  if (elements.length > 0) {
-    (elements[0] as RectangleElement)._loggerWidget = widget;
-  }
-  
-  return elements;
-}); 
+  WidgetRegistry.registerInstance(runtime, id, widget);
+  return widget.expand();
+});

@@ -205,7 +205,7 @@ describe('LoggerWidget', () => {
         runtime
       );
 
-      widget.handleResize();
+      widget.onResize();
       expect(mockRequestUpdate).toHaveBeenCalled();
     });
   });
@@ -653,7 +653,7 @@ describe('LoggerWidget', () => {
         runtime
       );
 
-      widget.handleResize(); // This triggers entry reset
+      widget.onResize(); // This triggers entry reset
       
       expect(gsap.killTweensOf).toHaveBeenCalled();
     });
@@ -739,7 +739,8 @@ describe('LoggerWidget Registry Integration', () => {
     expect(elements![0]).toBeInstanceOf(RectangleElement);
     
     // Check that widget reference is stored
-    expect((elements![0] as any)._loggerWidget).toBeInstanceOf(LoggerWidget);
+    // With lifecycle API, instances are tracked in WidgetRegistry; no back-reference on elements
+    expect(elements![0]).toBeInstanceOf(RectangleElement);
   });
 
   it('should handle registry calls with custom configuration', () => {

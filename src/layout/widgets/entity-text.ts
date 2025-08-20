@@ -342,7 +342,8 @@ export class EntityTextWidget extends Widget {
   }
 }
 
-WidgetRegistry.registerWidget('entity-text-widget', (id, props, layoutConfig, hass, reqUpd, getEl) => {
-  const widget = new EntityTextWidget(id, props, layoutConfig, hass, reqUpd, getEl);
+WidgetRegistry.registerWidget('entity-text-widget', (id, props, layoutConfig, hass, reqUpd, getEl, runtime) => {
+  const widget = new EntityTextWidget(id, props, layoutConfig, hass, reqUpd, getEl, runtime as any);
+  WidgetRegistry.registerInstance(runtime as any, id, widget);
   return widget.expand();
 });

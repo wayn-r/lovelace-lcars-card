@@ -165,6 +165,7 @@ export class GraphWidget extends Widget {
   private entityConfigs: RichEntityConfig[] = [];
   private entityIds: string[];
   private lastHistory?: HistoryMap;
+  private lastContainerRectKey?: string;
 
   constructor(
     id: string,
@@ -250,11 +251,22 @@ export class GraphWidget extends Widget {
     return [bounds, this.graphElement, ...buttonElements];
   }
 
-  public updateHass(hass?: HomeAssistant): void {
+  public override updateHass(hass?: HomeAssistant): void {
     if (!this.hasValidEntityConfiguration(hass)) return;
-
+    const hassChanged = this.hass !== hass;
+    const firstTime = this.lastHistory === undefined;
     this.hass = hass;
-    this.fetchAndUpdateHistory();
+    if (firstTime || hassChanged) {
+      this.fetchAndUpdateHistory();
+    }
+  }
+
+  public override onResize(containerRect?: DOMRect): void {
+    // Prevent thrashing: only react when width or height actually changes
+    if (!containerRect) return;
+    const key = `${Math.round(containerRect.width)}x${Math.round(containerRect.height)}`;
+    if (key === this.lastContainerRectKey) return;
+    this.lastContainerRectKey = key;
   }
 
   private parseEntityConfigs(): RichEntityConfig[] {
@@ -326,5 +338,6 @@ export class GraphWidget extends Widget {
 
 WidgetRegistry.registerWidget('graph-widget', (id, props, layoutConfig, hass, reqUpd, getEl, runtime) => {
   const widget = new GraphWidget(id, props, layoutConfig, hass, reqUpd, getEl, runtime);
+  WidgetRegistry.registerInstance(runtime, id, widget);
   return widget.expand();
-}); 
+});

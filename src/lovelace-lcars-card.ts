@@ -17,6 +17,7 @@ import { StoreProvider, StateChangeEvent } from './core/store.js';
 import { CardRuntime, RuntimeFactory } from './core/runtime.js';
 import { FontManager } from './utils/font-manager.js';
 import { ConfigValidator, logValidationResult } from './utils/config-validator.js';
+import { WidgetRegistry } from './layout/widgets/registry.js';
 
 
 import { editorStyles } from './styles/styles.js';
@@ -415,13 +416,10 @@ export class LcarsCard extends LitElement {
     
     if (newWidth > 0 && (newWidth !== this._containerRect?.width || newHeight !== this._containerRect?.height)) {
       this._containerRect = new DOMRect(newRect.x, newRect.y, newWidth, newHeight);
-
-      for (const group of this._layoutEngine.layoutGroups) {
-        for (const element of group.elements) {
-          if ((element as any)._loggerWidget) {
-            (element as any)._loggerWidget.handleResize();
-          }
-        }
+      if (this._runtime) {
+        WidgetRegistry.getAllInstances(this._runtime).forEach(w => {
+          try { w.onResize(this._containerRect!); } catch (e) { /* noop */ }
+        });
       }
       
       this._performLayoutCalculation(this._containerRect);
@@ -619,6 +617,13 @@ export class LcarsCard extends LitElement {
       for (const element of group.elements) {
         element.cleanup();
       }
+    }
+    if (this._runtime) {
+      const instances = WidgetRegistry.getAllInstances(this._runtime);
+      instances.forEach(instance => {
+        try { instance.destroy(); } catch (e) { /* noop */ }
+      });
+      WidgetRegistry.clearInstances(this._runtime);
     }
   }
 
