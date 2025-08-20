@@ -238,10 +238,10 @@ export class LcarsCard extends LitElement {
   }
 
   private _scheduleReinitialization(): void {
-    requestAnimationFrame(() => {
+    requestAnimationFrame(async () => {
       if (this._config && this._containerRect) {
         this._needsReinitialization = false;
-        this._performLayoutCalculation(this._containerRect);
+        await this._performLayoutCalculation(this._containerRect);
       }
     });
   }
@@ -262,7 +262,7 @@ export class LcarsCard extends LitElement {
     const rect = container.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) {
       this._containerRect = rect;
-      this._performLayoutCalculation(rect);
+      await this._performLayoutCalculation(rect);
       this._layoutInitialized = true;
     } else {
       requestAnimationFrame(() => this._tryCalculateInitialLayout());
@@ -338,11 +338,17 @@ export class LcarsCard extends LitElement {
     return 0;
   }
 
-  private _performLayoutCalculation(rect: DOMRect): void {
+  private async _performLayoutCalculation(rect: DOMRect): Promise<void> {
     const isValidLayoutRequest = this._config && rect && rect.width > 0 && rect.height > 0;
     if (!isValidLayoutRequest) {
       console.warn('Skipping layout calculation - invalid config or dimensions');
       return;
+    }
+
+    try {
+      await this._fontsReady;
+    } catch (error) {
+      console.warn('Font loading failed, proceeding with layout calculation:', error);
     }
 
     try {
