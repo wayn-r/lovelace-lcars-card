@@ -969,6 +969,36 @@ export abstract class LayoutElement {
         );
     }
 
+    public getRenderKey(): string {
+        const round2 = (value: number): number => Math.round(value * 100) / 100;
+        const shapeSignature = this._getShapeSignature();
+        return [
+            this.id,
+            `${round2(this.layout.x)},${round2(this.layout.y)},${round2(this.layout.width)},${round2(this.layout.height)}`,
+            shapeSignature
+        ].join('|');
+    }
+
+    private _getShapeSignature(): string {
+        const props: any = this.props || {};
+        const cornerRadii = props.cornerRadii
+            ? `${props.cornerRadii.topLeft ?? ''}-${props.cornerRadii.topRight ?? ''}-${props.cornerRadii.bottomRight ?? ''}-${props.cornerRadii.bottomLeft ?? ''}`
+            : '';
+        const bodyWidth = props.bodyWidth !== undefined ? String(props.bodyWidth) : '';
+        const armHeight = props.armHeight !== undefined ? String(props.armHeight) : '';
+        return [
+            props.rx ?? '',
+            props.cornerRadius ?? '',
+            props.direction ?? '',
+            props.orientation ?? '',
+            bodyWidth,
+            armHeight,
+            cornerRadii,
+            props.elbowTextPosition ?? '',
+            props.cutout ? '1' : '0'
+        ].join(':');
+    }
+
     private parseLayoutOffset(offset: string | number | undefined, containerDimension: number): number {
         if (offset === undefined) return 0;
         if (typeof offset === 'number') return offset;

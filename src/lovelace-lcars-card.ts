@@ -1,4 +1,5 @@
 import { LitElement, html, SVGTemplateResult, TemplateResult, svg } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardEditor } from 'custom-card-helpers';
 import { CARD_TYPE, CARD_NAME } from './constants';
@@ -54,6 +55,7 @@ export class LcarsCard extends LitElement {
   @state() private _fontsLoaded = false;
   
   private _layoutEngine: LayoutEngine = new LayoutEngine();
+  private _renderKeys: string[] = [];
   private _resizeObserver?: ResizeObserver;
   private _containerRect?: DOMRect;
   private _lastConfig?: LcarsCardConfig;
@@ -405,9 +407,9 @@ export class LcarsCard extends LitElement {
 
     this._updateElementsWithLatestHass();
     const animationStates = this._collectCurrentAnimationStates();
-    const newTemplates = this._renderVisibleElements();
-
-    this._layoutElementTemplates = newTemplates;
+    const entries = this._renderElementsWithKeys();
+    this._layoutElementTemplates = entries.map(e => e.template);
+    this._renderKeys = entries.map(e => e.key);
     this.requestUpdate();
 
     this._schedulePostRenderUpdates(animationStates);
@@ -494,7 +496,13 @@ export class LcarsCard extends LitElement {
             style=${svgStyle}
           >
             ${defsContent.length > 0 ? svg`<defs>${defsContent}</defs>` : ''}
-            ${svgContent}
+            ${this._layoutElementTemplates.length > 0
+              ? repeat(
+                  this._layoutElementTemplates,
+                  (_t, index) => this._renderKeys[index] || index,
+                  (t) => t
+                )
+              : svgContent}
           </svg>
         </div>
       </ha-card>
@@ -539,31 +547,27 @@ export class LcarsCard extends LitElement {
     });
   }
 
-  private _renderAllElements(): SVGTemplateResult[] {
-    return this._layoutEngine.layoutGroups.flatMap(group =>
-      group.elements
-        .map(el => {
-          try {
-            const elementTemplate = el.render();
-            if (!elementTemplate) {
-              return null;
-            }
-
-            const currentState = this._runtime!.state.getState(el.id);
-            const isVisible = currentState !== 'hidden';
-            
-            if (!isVisible) {
-              return svg`<g style="visibility: hidden; opacity: 0; pointer-events: none;">${elementTemplate}</g>`;
-            }
-            
-            return elementTemplate;
-          } catch (error) {
-            console.error("[LcarsCard] Error rendering element", el.id, error);
-            return null;
+  private _renderElementsWithKeys(): Array<{ key: string; template: SVGTemplateResult }> {
+    const entries: Array<{ key: string; template: SVGTemplateResult }> = [];
+    this._layoutEngine.layoutGroups.forEach(group => {
+      group.elements.forEach(el => {
+        try {
+          const elementTemplate = el.render();
+          if (!elementTemplate) {
+            return;
           }
-        })
-        .filter((template): template is SVGTemplateResult => template !== null)
-    );
+          const currentState = this._runtime!.state.getState(el.id);
+          const isVisible = currentState !== 'hidden';
+          const wrapped = isVisible
+            ? elementTemplate
+            : svg`<g style="visibility: hidden; opacity: 0; pointer-events: none;">${elementTemplate}</g>`;
+          entries.push({ key: el.getRenderKey(), template: wrapped });
+        } catch (error) {
+          console.error("[LcarsCard] Error rendering element", el.id, error);
+        }
+      });
+    });
+    return entries;
   }
 
   private _triggerOnLoadAnimations(groups: Group[]): void {
@@ -682,21 +686,24 @@ export class LcarsCard extends LitElement {
   }
 
   private _shouldUpdateLayout(rect: DOMRect): boolean {
-    const newTemplates = this._renderAllElements();
+    const entries = this._renderElementsWithKeys();
+    const newTemplates = entries.map(e => e.template);
+    const newKeys = entries.map(e => e.key);
     const topMargin = 8;
     const newViewBox = `0 ${-topMargin} ${rect.width} ${this._calculatedHeight + topMargin}`;
 
-    const templatesChanged = JSON.stringify(newTemplates.map(t => ({s: t.strings, v: (t.values || []).map(val => String(val))}))) !==
-      JSON.stringify(this._layoutElementTemplates.map(t => ({s: t.strings, v: (t.values || []).map(val => String(val))})));
-    
+    const prevKeys = this._renderKeys;
+    const templatesChanged = newKeys.length !== prevKeys.length || newKeys.some((k, i) => k !== prevKeys[i]);
     const viewBoxChanged = newViewBox !== this._viewBox;
-    
-    if (templatesChanged || viewBoxChanged) {
+
+    if (templatesChanged) {
       this._layoutElementTemplates = newTemplates;
-      this._viewBox = newViewBox;
-      return true;
+      this._renderKeys = newKeys;
     }
-    return false;
+    if (viewBoxChanged) {
+      this._viewBox = newViewBox;
+    }
+    return templatesChanged || viewBoxChanged;
   }
 
   private _applyLayoutChanges(groups: Group[]): void {
@@ -760,35 +767,8 @@ export class LcarsCard extends LitElement {
   }
 
   private _renderVisibleElements(): SVGTemplateResult[] {
-    const runtime = this._runtime;
-    if (!runtime) {
-      return [];
-    }
-    const sm = runtime.state;
-    return this._layoutEngine.layoutGroups.flatMap(group =>
-      group.elements
-        .map(el => {
-          try {
-            const elementTemplate = el.render();
-            if (!elementTemplate) {
-              return null;
-            }
-
-            const currentState = sm.getState(el.id);
-            const isVisible = currentState !== 'hidden';
-            
-            if (!isVisible) {
-              return svg`<g style="visibility: hidden; opacity: 0; pointer-events: none;">${elementTemplate}</g>`;
-            }
-            
-            return elementTemplate;
-          } catch (error) {
-            console.error("[LcarsCard] Error rendering element", el.id, error);
-            return null;
-          }
-        })
-        .filter((template): template is SVGTemplateResult => template !== null)
-    );
+    const entries = this._renderElementsWithKeys();
+    return entries.map(e => e.template);
   }
 
   private _schedulePostRenderUpdates(animationStates: Map<string, any>): void {
