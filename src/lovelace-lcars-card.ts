@@ -61,6 +61,8 @@ export class LcarsCard extends LitElement {
   private _fontsReady: Promise<void>;
   private _resolveFontsReady!: () => void;
   private _runtime?: CardRuntime;
+  private _storeUnsubscribe?: () => void;
+  private _elementGraph?: Group[];
 
   static styles = [editorStyles];
 
@@ -91,6 +93,9 @@ export class LcarsCard extends LitElement {
     this._config = normalizedConfig;
     this._ensureRuntime();
     this._lastConfig = config;
+    
+    this._cleanupElementGraph();
+    this._elementGraph = undefined;
     
     this.requestUpdate(); 
   }
@@ -131,11 +136,18 @@ export class LcarsCard extends LitElement {
     super.connectedCallback();
     
     AnimationManager.initializeGsap();
-    StoreProvider.getStore().subscribe(() => this._refreshElementRenders());
+    this._storeUnsubscribe = StoreProvider.getStore().subscribe(() => this._refreshElementRenders());
     
     this._resizeObserver = new ResizeObserver((entries) => {
       this._handleResize(entries);
     });
+
+    if (this._needsReinitialization) {
+      this._runtime = undefined;
+      if (this._config) {
+        this._ensureRuntime();
+      }
+    }
 
     if (this._needsReinitialization && this._config && this._containerRect) {
       this._scheduleReinitialization();
@@ -258,15 +270,16 @@ export class LcarsCard extends LitElement {
 
   disconnectedCallback(): void {
     this._resizeObserver?.disconnect();
+    this._storeUnsubscribe?.();
+    this._storeUnsubscribe = undefined;
     
     colorResolver.cleanup();
     this._runtime?.state.cleanup();
     
-    for (const group of this._layoutEngine.layoutGroups) {
-      for (const element of group.elements) {
-        element.cleanup();
-      }
-    }
+    this._cleanupElementGraph();
+    this._elementGraph = undefined;
+    this._runtime = undefined;
+    this._layoutInitialized = false;
 
     this._needsReinitialization = true;
     
@@ -332,25 +345,51 @@ export class LcarsCard extends LitElement {
     }
 
     try {
-      this._setupLayoutEngine(rect);
-      const groups = this._createLayoutGroups();
-      this._initializeAnimationSystem(groups);
-      this._cleanupPreviousAnimations();
+      const isFirstLayoutOrConfigChanged = !this._elementGraph;
       
-      const containerRect = this._calculateFinalContainerRect(rect);
-      const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(containerRect, { dynamicHeight: true });
-      this._calculatedHeight = layoutDimensions.height;
-
-      const shouldUpdateLayout = this._shouldUpdateLayout(rect);
-      if (shouldUpdateLayout) {
-        this._applyLayoutChanges(groups);
+      if (isFirstLayoutOrConfigChanged) {
+        this._performFullLayoutRebuild(rect);
+      } else {
+        this._performLayoutRecalculation(rect);
       }
     } catch (error) {
       this._handleLayoutError(error, rect);
     }
   }
 
+  private _performFullLayoutRebuild(rect: DOMRect): void {
+    this._setupLayoutEngine(rect);
+    const groups = this._createLayoutGroups();
+    this._initializeAnimationSystem(groups);
+    
+    const containerRect = this._calculateFinalContainerRect(rect);
+    const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(containerRect, { dynamicHeight: true });
+    this._calculatedHeight = layoutDimensions.height;
+
+    const shouldUpdateLayout = this._shouldUpdateLayout(rect);
+    if (shouldUpdateLayout) {
+      this._applyLayoutChanges(groups);
+    }
+  }
+
+  private _performLayoutRecalculation(rect: DOMRect): void {
+    this._setupLayoutEngine(rect);
+    const groups = this._createLayoutGroups(); // Uses cached graph
+    
+    const containerRect = this._calculateFinalContainerRect(rect);
+    const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(containerRect, { dynamicHeight: true });
+    this._calculatedHeight = layoutDimensions.height;
+
+    const shouldUpdateLayout = this._shouldUpdateLayout(rect);
+    if (shouldUpdateLayout) {
+      this._applyLayoutRecalculationChanges();
+    }
+  }
+
   private _refreshElementRenders(): void {
+    if (!this.isConnected || !this._runtime) {
+      return;
+    }
     const canRefresh = this._config && this._containerRect && this._layoutEngine.layoutGroups.length > 0;
     if (!canRefresh) {
       return;
@@ -458,6 +497,14 @@ export class LcarsCard extends LitElement {
   }
 
   private _updateLayoutEngineWithHass(): void {
+    if (this._elementGraph) {
+      for (const group of this._elementGraph) {
+        for (const element of group.elements) {
+          element.updateHass(this.hass);
+        }
+      }
+    }
+    
     for (const group of this._layoutEngine.layoutGroups) {
       for (const element of group.elements) {
         element.updateHass(this.hass);
@@ -546,11 +593,37 @@ export class LcarsCard extends LitElement {
     this._layoutEngine.clearLayout();
   }
 
-  private _createLayoutGroups(): Group[] {
+  private _buildElementGraph(): Group[] {
     const getShadowElement = (id: string): Element | null => 
       this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null;
     
-    const groups = parseConfig(this._config, this.hass, () => this._refreshElementRenders(), getShadowElement, this._runtime);
+    return parseConfig(this._config, this.hass, () => this._refreshElementRenders(), getShadowElement, this._runtime);
+  }
+
+  private _ensureElementGraph(): Group[] {
+    if (!this._elementGraph) {
+      this._elementGraph = this._buildElementGraph();
+    }
+    return this._elementGraph;
+  }
+
+  private _cleanupElementGraph(): void {
+    if (this._elementGraph) {
+      for (const group of this._elementGraph) {
+        for (const element of group.elements) {
+          element.cleanup();
+        }
+      }
+    }
+    for (const group of this._layoutEngine.layoutGroups) {
+      for (const element of group.elements) {
+        element.cleanup();
+      }
+    }
+  }
+
+  private _createLayoutGroups(): Group[] {
+    const groups = this._ensureElementGraph();
     groups.forEach((group: Group) => this._layoutEngine.addGroup(group));
     return groups;
   }
@@ -623,6 +696,13 @@ export class LcarsCard extends LitElement {
     });
   }
 
+  private _applyLayoutRecalculationChanges(): void {
+    this.requestUpdate();
+    this.updateComplete.then(() => {
+      this._setupAllElementListeners();
+    });
+  }
+
   private _handleLayoutError(error: any, rect: DOMRect): void {
     console.error('Layout calculation failed:', error);
     this._layoutElementTemplates = [];
@@ -631,6 +711,17 @@ export class LcarsCard extends LitElement {
   }
 
   private _updateElementsWithLatestHass(): void {
+    if (this._elementGraph) {
+      this._elementGraph.forEach(group => {
+        group.elements.forEach(el => {
+          const layoutEl = el as LayoutElement;
+          if (layoutEl.updateHass) {
+            layoutEl.updateHass(this.hass);
+          }
+        });
+      });
+    }
+    
     this._layoutEngine.layoutGroups.forEach(group => {
       group.elements.forEach(el => {
         const layoutEl = el as LayoutElement;
@@ -646,6 +737,10 @@ export class LcarsCard extends LitElement {
       group.elements.map(el => el.id)
     );
 
+    if (!this.isConnected) {
+      return new Map();
+    }
+
     return animationManager.collectAnimationStates(
       elementIds,
       (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null
@@ -653,7 +748,11 @@ export class LcarsCard extends LitElement {
   }
 
   private _renderVisibleElements(): SVGTemplateResult[] {
-    const sm = this._runtime!.state;
+    const runtime = this._runtime;
+    if (!runtime) {
+      return [];
+    }
+    const sm = runtime.state;
     return this._layoutEngine.layoutGroups.flatMap(group =>
       group.elements
         .map(el => {

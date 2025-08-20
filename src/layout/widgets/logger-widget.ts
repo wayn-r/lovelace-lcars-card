@@ -428,6 +428,10 @@ export class LoggerWidget extends Widget {
 
   destroy(): void {
     this.unsubscribe?.();
+    this.processor = undefined;
+    this.entries.forEach(entry => {
+      entry.reset();
+    });
     this.entries.forEach(entry => entry.hide());
     this.entries = [];
     this.queue = [];
