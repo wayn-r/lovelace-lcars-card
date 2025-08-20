@@ -62,12 +62,21 @@ function generateThemeCss(): string {
   }
 }
 
-const EXAMPLES_DIR = path.resolve(process.cwd(), 'yaml-config-examples');
+const DEFAULT_EXAMPLES_DIR = path.resolve(process.cwd(), 'yaml-config-examples');
+const INCLUDE_YAML_BAK = (() => {
+  const flag = (process.env.E2E_INCLUDE_YAML_BAK || '').toLowerCase();
+  return flag === '1' || flag === 'true' || flag === 'yes';
+})();
 
-const exampleFiles = fs
-  .readdirSync(EXAMPLES_DIR)
-  .filter((f) => f.endsWith('.yaml'))
-  .map((f) => path.join(EXAMPLES_DIR, f));
+const SEARCH_DIRS = [DEFAULT_EXAMPLES_DIR, ...(INCLUDE_YAML_BAK ? [path.resolve(process.cwd(), 'yaml-bak')] : [])];
+
+const exampleFiles = SEARCH_DIRS.flatMap((dir) => {
+  if (!fs.existsSync(dir)) return [] as string[];
+  return fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith('.yaml'))
+    .map((f) => path.join(dir, f));
+});
 
 let hass: HomeAssistant<any>;
 
