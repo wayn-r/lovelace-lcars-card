@@ -7,7 +7,7 @@ const stateString = z.string();
 
 const colorValueSchema = z.any();
 
-const appearanceSchema = z.object({
+export const appearanceSchema = z.object({
   fill: colorValueSchema.optional(),
   stroke: colorValueSchema.optional(),
   strokeWidth: z.number().optional(),
@@ -19,7 +19,7 @@ const appearanceSchema = z.object({
   armHeight: sizeSchema.optional(),
 });
 
-const textSchema = z.object({
+export const textSchema = z.object({
   content: z.string().optional(),
   fill: colorValueSchema.optional(),
   fontFamily: z.string().optional(),
@@ -44,24 +44,24 @@ const textSchema = z.object({
   })).optional(),
 });
 
-const anchorSchema = z.object({
+export const anchorSchema = z.object({
   to: z.string(),
   element_point: z.string(),
   target_point: z.string(),
 });
 
-const stretchTargetSchema = z.object({
+export const stretchTargetSchema = z.object({
   id: z.string(),
   edge: z.string(),
   padding: z.number().optional(),
 });
 
-const stretchSchema = z.object({
+export const stretchSchema = z.object({
   target1: stretchTargetSchema,
   target2: stretchTargetSchema.optional(),
 });
 
-const layoutSchema = z.object({
+export const layoutSchema = z.object({
   width: sizeSchema.optional(),
   height: sizeSchema.optional(),
   offsetX: sizeSchema.optional(),
@@ -70,7 +70,7 @@ const layoutSchema = z.object({
   stretch: stretchSchema.optional(),
 });
 
-const actionSchema: z.ZodType<any> = z.object({
+export const actionSchema: z.ZodType<any> = z.object({
   action: z.enum(['call-service', 'navigate', 'url', 'toggle', 'more-info', 'none', 'set_state', 'toggle_state']),
   
   service: z.string().optional(),
@@ -101,7 +101,7 @@ const actionSchema: z.ZodType<any> = z.object({
 
 const multiActionSchema = z.union([actionSchema, z.array(actionSchema)]);
 
-const holdActionSchema = z.union([
+export const holdActionSchema = z.union([
   actionSchema,
   z.array(actionSchema),
   z.object({
@@ -116,7 +116,7 @@ const holdActionSchema = z.union([
   }, { message: 'hold must specify "action" or "actions"' })
 ]);
 
-const buttonSchema = z.object({
+export const buttonSchema = z.object({
   enabled: z.boolean().optional(),
   actions: z.object({
     tap: multiActionSchema.optional(),
@@ -125,7 +125,7 @@ const buttonSchema = z.object({
   }).optional(),
 }).optional();
 
-const entityTextLabelSchema = z.object({
+export const entityTextLabelSchema = z.object({
   content: z.string().optional(),
   width: z.number().optional(),
   height: z.number().optional(),
@@ -137,7 +137,7 @@ const entityTextLabelSchema = z.object({
   cutout: z.boolean().optional(),
 });
 
-const entityTextValueSchema = z.object({
+export const entityTextValueSchema = z.object({
   content: z.string().optional(),
   fontFamily: z.string().optional(),
   fontWeight: z.union([z.string(), z.number()]).optional(),
@@ -146,7 +146,7 @@ const entityTextValueSchema = z.object({
   textTransform: z.string().optional(),
 });
 
-const entityMetricUnitSchema = z.object({
+export const entityMetricUnitSchema = z.object({
   content: z.string().optional(),
   width: z.number().optional(),
   height: z.number().optional(),
@@ -158,7 +158,7 @@ const entityMetricUnitSchema = z.object({
   cutout: z.boolean().optional(),
 });
 
-const elementTypeEnum = z.enum([
+export const elementTypeEnum = z.enum([
   'rectangle',
   'text',
   'endcap',
@@ -173,7 +173,7 @@ const elementTypeEnum = z.enum([
   'entity-metric-widget',
 ]).or(z.string());
 
-const elementSchema = z.object({
+export const elementSchema = z.object({
   id: z.string().min(1),
   type: elementTypeEnum,
   grid: z.object({
@@ -235,7 +235,7 @@ function isValidEntityConfig(entity: unknown): boolean {
   return typeof entity === 'string' && entity.length > 0;
 }
 
-const refinedElementSchema = elementSchema.refine(data => {
+export const refinedElementSchema = elementSchema.refine(data => {
     if (data.type === 'graph-widget') {
         return isValidEntityConfig(data.entity);
     }
@@ -277,12 +277,12 @@ const refinedElementSchema = elementSchema.refine(data => {
     path: ['entity'],
 });
 
-const groupSchema = z.object({
+export const groupSchema = z.object({
   group_id: z.string().min(1),
   elements: z.array(refinedElementSchema),
 });
 
-const cardConfigSchema = z.object({
+export const cardConfigSchema = z.object({
   type: z.string().default('lovelace-lcars-card'),
   title: z.string().optional(),
   groups: z.array(groupSchema),
@@ -291,6 +291,18 @@ const cardConfigSchema = z.object({
 
 export const lcarsCardConfigSchema = cardConfigSchema;
 export type ParsedConfig = z.infer<typeof lcarsCardConfigSchema>;
+export type AppearanceConfig = z.infer<typeof appearanceSchema>;
+export type TextConfig = z.infer<typeof textSchema>;
+export type AnchorConfig = z.infer<typeof anchorSchema>;
+export type StretchTargetConfig = z.infer<typeof stretchTargetSchema>;
+export type StretchConfig = z.infer<typeof stretchSchema>;
+export type LayoutConfig = z.infer<typeof layoutSchema>;
+export type Action = z.infer<typeof actionSchema>;
+export type HoldAction = z.infer<typeof holdActionSchema>;
+export type ButtonConfig = z.infer<typeof buttonSchema>;
+export type ElementConfig = z.infer<typeof refinedElementSchema>;
+export type GroupConfig = z.infer<typeof groupSchema>;
+export type LcarsCardConfig = z.infer<typeof lcarsCardConfigSchema>;
 
 export function parseCardConfig(config: unknown): ParsedConfig {
   return lcarsCardConfigSchema.parse(config);

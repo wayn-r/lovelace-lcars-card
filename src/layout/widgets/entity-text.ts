@@ -41,12 +41,12 @@ export class EntityTextWidget extends Widget {
   private static readonly DEFAULT_VALUE_OFFSET_X = 10;
 
   public expand(): LayoutElement[] {
-    const height = this.layoutConfig.height || EntityTextWidget.DEFAULT_HEIGHT;
+    const height = (typeof this.layoutConfig.height === 'number' ? this.layoutConfig.height : undefined) || EntityTextWidget.DEFAULT_HEIGHT;
 
     const bounds = this.createBoundsElement();
     const leadingRect = this.createLeadingRectangle(bounds, height);
     const labelRect = this.createLabelRectangle(leadingRect, height);
-    const valueText = this.createValueText(labelRect, height);
+    const valueText = this.createValueText(labelRect, height as number);
 
     this.addDefaultLabelInteraction(labelRect);
 
@@ -163,7 +163,7 @@ export class EntityTextWidget extends Widget {
 
     // Inject dynamic text updating when content is resolved from an entity.
     if (!valueConfig.content) {
-      const entityIds = Array.isArray(this.props.entity) ? this.props.entity : [this.props.entity || ''];
+      const entityIds = (Array.isArray(this.props.entity) ? this.props.entity : [this.props.entity || '']).map(e => String(e as any));
       const attribute = this.props.attribute || 'state';
 
       valueText.updateHass = function (this: typeof valueText, hass?: HomeAssistant): void {
@@ -246,7 +246,9 @@ export class EntityTextWidget extends Widget {
       return labelConfig.content;
     }
 
-    const entityId = Array.isArray(this.props.entity) ? this.props.entity[0] : this.props.entity || '';
+    const entityId = Array.isArray(this.props.entity)
+      ? String(this.props.entity[0] ?? '')
+      : String(this.props.entity ?? '');
     return EntityValueResolver.resolveEntityFriendlyName(
       entityId,
       this.hass,
@@ -255,7 +257,7 @@ export class EntityTextWidget extends Widget {
   }
 
   private resolveValueText(): string {
-    const entityIds = Array.isArray(this.props.entity) ? this.props.entity : [this.props.entity || ''];
+    const entityIds = (Array.isArray(this.props.entity) ? this.props.entity : [this.props.entity || '']).map(e => String(e as any));
     const attribute = this.props.attribute || 'state';
     
     if (entityIds.length === 2) {
@@ -277,9 +279,9 @@ export class EntityTextWidget extends Widget {
   }
 
   private addDefaultLabelInteraction(labelRect: RectangleElement): void {
-    const entityId = Array.isArray(this.props.entity) ? this.props.entity[0] : this.props.entity;
+    const entityId = String(Array.isArray(this.props.entity) ? (this.props.entity[0] as any) : (this.props.entity as any));
     
-    if (!this.hasButtonConfig(labelRect) && entityId) {
+    if (!this.hasButtonConfig(labelRect) && entityId && entityId !== 'undefined' && entityId !== '') {
       labelRect.props.button = {
         enabled: true,
         actions: {

@@ -238,7 +238,7 @@ class LogEntry {
         fontSize: this.fontSize,
         fontFamily: this.fontFamily,
         fontWeight: this.fontWeight,
-        textAnchor: this.textAnchor,
+        textAnchor: this.textAnchor as any,
         dominantBaseline: 'auto',
         fillOpacity: 0
       },
@@ -281,7 +281,7 @@ class LogEntry {
   }
 
   setVisible(visible: boolean): void {
-    this.textElement.props.fillOpacity = visible ? 1 : 0;
+    (this.textElement.props as any).fillOpacity = visible ? 1 : 0;
     this.requestUpdateCallback?.();
   }
 
@@ -290,7 +290,7 @@ class LogEntry {
   }
 
   isVisible(): boolean {
-    return this.textElement.props.fillOpacity === 1;
+    return (this.textElement.props as any).fillOpacity === 1;
   }
 
   setOffsetY(offset: number): void {
@@ -523,7 +523,7 @@ export class LoggerWidget extends Widget {
       initialColor,
       this.props.fontSize || LoggerWidget.DEFAULTS.FONT_SIZE,
       this.props.fontFamily || LoggerWidget.DEFAULTS.FONT_FAMILY,
-      this.props.fontWeight || LoggerWidget.DEFAULTS.FONT_WEIGHT,
+      (this.props.fontWeight as any) || LoggerWidget.DEFAULTS.FONT_WEIGHT,
       this.props.textAnchor || LoggerWidget.DEFAULTS.TEXT_ANCHOR,
       this.hass,
       this.requestUpdateCallback,

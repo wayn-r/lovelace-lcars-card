@@ -107,7 +107,7 @@ export class VerticalSliderElement extends LayoutElement {
     const trackHeight = Math.max(1, this.layout.height - labelAreaHeight - topPadding);
 
     const connectorColor = this._resolveColor(this.props.grid?.fill, 'var(--lcars-color-vertical-slider-background)');
-    const labelColor = this._resolveColor(this.props.grid?.label_fill ?? this.props.text?.fill, connectorColor);
+    const labelColor = this._resolveColor(this.props.grid?.label_fill ?? (typeof this.props.text === 'object' ? (this.props.text as any)?.fill : undefined), connectorColor);
 
     const connectorHeight = 6;
     const connectorsWidth = count * trackWidth + (count - 1) * spacing;
@@ -120,7 +120,7 @@ export class VerticalSliderElement extends LayoutElement {
     const bottomExtensionY = this.layout.y + topPadding + trackHeight + extensionGap;
     const bottomConnectorY = bottomExtensionY + bottomExtensionHeight;
 
-    const textCfg = this.props.text || {};
+    const textCfg: any = (typeof this.props.text === 'object' ? this.props.text : {}) || {};
     const valueFontFamily = textCfg.fontFamily || 'Antonio, sans-serif';
     const valueFontSize = (textCfg.fontSize || 18);
     const valueFontWeight = (textCfg.fontWeight || 'bold');

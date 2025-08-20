@@ -1,5 +1,5 @@
 import { HomeAssistant } from 'custom-card-helpers';
-import { Group } from './engine.js';
+import { Group, type LayoutConfigOptions, type LayoutElementProps } from './engine.js';
 import { LayoutElement } from './elements/element.js';
 import './elements/index.js';
 import { ElementRegistry } from './elements/registry.js';
@@ -7,81 +7,6 @@ import { WidgetRegistry } from './widgets/registry.js';
 import { parseCardConfig, type ParsedConfig } from '../parsers/schema.js';
 import { ZodError } from 'zod';
 import { CardRuntime } from '../core/runtime.js';
-
-interface ElementProps {
-  fill?: string;
-  stroke?: string;
-  strokeWidth?: number;
-  rx?: number;
-  direction?: 'left' | 'right';
-  orientation?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-  bodyWidth?: number | string;
-  armHeight?: number | string;
-  text?: string;
-  textColor?: string;
-  fontFamily?: string;
-  fontSize?: number;
-  fontWeight?: string | number;
-  letterSpacing?: string | number;
-  textAnchor?: 'start' | 'middle' | 'end';
-  dominantBaseline?: string;
-  textTransform?: string;
-  cutout?: boolean;
-  elbowTextPosition?: 'arm' | 'body';
-  leftContent?: string;
-  rightContent?: string;
-  textOffsetX?: number | string;
-  textOffsetY?: number | string;
-  button?: {
-    enabled?: boolean;
-    actions?: unknown;
-  };
-  visibility_rules?: unknown;
-  visibility_triggers?: unknown;
-  state_management?: unknown;
-  animations?: unknown;
-  entity?: string | string[];
-  attribute?: string;
-  label?: any;
-  value?: any;
-  unit?: any;
-  appearance?: any;
-  // Logger widget specific properties
-  maxLines?: number;
-  lineSpacing?: number | string;
-  color_cycle?: { color: any; duration: number }[];
-  entity_id?: string;
-  grid?: {
-    num_lines?: number;
-  };
-  // vertical slider widget specific
-  min?: number;
-  max?: number;
-  spacing?: number;
-  top_padding?: number;
-  label_height?: number;
-  use_floats?: boolean;
-}
-
-interface LayoutConfig {
-  width?: number | string;
-  height?: number | string;
-  offsetX?: number | string;
-  offsetY?: number | string;
-  anchor?: {
-    anchorTo: string;
-    anchorPoint: string;
-    targetAnchorPoint: string;
-  };
-  stretch?: {
-    stretchTo1: string;
-    targetStretchAnchorPoint1: string;
-    stretchPadding1: number;
-    stretchTo2?: string;
-    targetStretchAnchorPoint2?: string;
-    stretchPadding2?: number;
-  };
-}
 
 export class ConfigParser {
   static parseConfig(
@@ -134,11 +59,11 @@ export class ConfigParser {
     }
   }
 
-  private static _convertElementProps(elementConfig: any): ElementProps {
+  private static _convertElementProps(elementConfig: any): LayoutElementProps {
     const appearance = elementConfig.appearance || {};
     const text = elementConfig.text || {};
 
-    const props: ElementProps = {
+    const props: LayoutElementProps = {
       fill: appearance.fill,
       stroke: appearance.stroke,
       strokeWidth: appearance.strokeWidth,
@@ -201,10 +126,10 @@ export class ConfigParser {
     return props;
   }
 
-  private static _convertLayoutConfig(layout?: any): LayoutConfig {
+  private static _convertLayoutConfig(layout?: any): LayoutConfigOptions {
     if (!layout) return {};
     
-    const engineLayout: LayoutConfig = {};
+    const engineLayout: LayoutConfigOptions = {};
     
     if (layout.width !== undefined) engineLayout.width = layout.width;
     if (layout.height !== undefined) engineLayout.height = layout.height;
@@ -212,7 +137,7 @@ export class ConfigParser {
     if (layout.offsetY !== undefined) engineLayout.offsetY = layout.offsetY;
     
     if (layout.anchor) {
-      engineLayout.anchor = {
+      (engineLayout as any).anchor = {
         anchorTo: layout.anchor.to,
         anchorPoint: layout.anchor.element_point,
         targetAnchorPoint: layout.anchor.target_point
@@ -239,8 +164,8 @@ export class ConfigParser {
   private static _createLayoutElements(
     id: string,
     type: string,
-    props: ElementProps,
-    layoutConfig: LayoutConfig,
+    props: LayoutElementProps,
+    layoutConfig: LayoutConfigOptions,
     hass?: HomeAssistant,
     requestUpdateCallback?: () => void,
     getShadowElement?: (id: string) => Element | null,

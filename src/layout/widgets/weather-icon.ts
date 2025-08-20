@@ -46,7 +46,7 @@ export class WeatherIcon extends LayoutElement {
     }
 
     private getIcon(): string {
-        const entityId = this.props.entity;
+        const entityId = Array.isArray(this.props.entity) ? this.props.entity[0] as any : (this.props.entity as any);
         if (!entityId || !this.hass || !this.hass.states[entityId]) {
             return 'mdi:weather-sunny';
         }

@@ -191,17 +191,17 @@ export class EntityMetricWidget extends Widget {
         let combinedValue: string;
         if (entityIds.length === 2) {
           const value1 = EntityValueResolver.resolveEntityValue(
-            { entity: entityIds[0], attribute, fallback: 'Unavailable' },
+            { entity: String(entityIds[0] as any), attribute, fallback: 'Unavailable' },
             hass
           );
           const value2 = EntityValueResolver.resolveEntityValue(
-            { entity: entityIds[1], attribute, fallback: 'Unavailable' },
+            { entity: String(entityIds[1] as any), attribute, fallback: 'Unavailable' },
             hass
           );
           combinedValue = `${value1} (${value2})`;
         } else {
           combinedValue = EntityValueResolver.resolveEntityValue(
-            { entity: entityIds[0], attribute, fallback: 'Unavailable' },
+            { entity: String(entityIds[0] as any), attribute, fallback: 'Unavailable' },
             hass
           );
         }
@@ -216,17 +216,17 @@ export class EntityMetricWidget extends Widget {
         let combinedValue: string;
         if (entityIds.length === 2) {
           const value1 = EntityValueResolver.resolveEntityValue(
-            { entity: entityIds[0], attribute, fallback: 'Unavailable' },
+            { entity: String(entityIds[0] as any), attribute, fallback: 'Unavailable' },
             hass
           );
           const value2 = EntityValueResolver.resolveEntityValue(
-            { entity: entityIds[1], attribute, fallback: 'Unavailable' },
+            { entity: String(entityIds[1] as any), attribute, fallback: 'Unavailable' },
             hass
           );
           combinedValue = `${value1} (${value2})`;
         } else {
           combinedValue = EntityValueResolver.resolveEntityValue(
-            { entity: entityIds[0], attribute, fallback: 'Unavailable' },
+            { entity: String(entityIds[0] as any), attribute, fallback: 'Unavailable' },
             hass
           );
         }
@@ -286,7 +286,7 @@ export class EntityMetricWidget extends Widget {
 
   private _resolveBaseColor(): string {
     const appearanceConfig = this._getAppearanceConfig();
-    return (appearanceConfig.fill as string) || 'var(--lcars-color-entity-metric)';
+    return String(appearanceConfig.fill || 'var(--lcars-color-entity-metric)');
   }
 
   private _resolveCornerRadii(which: 'label' | 'unit', height: number): { topLeft: number; topRight: number; bottomRight: number; bottomLeft: number } {
@@ -333,12 +333,12 @@ export class EntityMetricWidget extends Widget {
     const labelConfig = this._getLabelConfig();
     if (labelConfig.content) return labelConfig.content;
 
-    const entityId = Array.isArray(this.props.entity) ? this.props.entity[0] : this.props.entity || '';
+    const entityId = String(Array.isArray(this.props.entity) ? (this.props.entity[0] as any) : (this.props.entity as any) || '');
     return EntityValueResolver.resolveEntityFriendlyName(entityId, this.hass, entityId);
   }
 
   private _resolveValueText(): string {
-    const entityIds = Array.isArray(this.props.entity) ? this.props.entity : [this.props.entity || ''];
+    const entityIds = (Array.isArray(this.props.entity) ? this.props.entity : [this.props.entity || '']).map(e => String(e as any));
     const attribute = this.props.attribute || 'state';
 
     if (entityIds.length === 2) {
@@ -350,7 +350,7 @@ export class EntityMetricWidget extends Widget {
   }
 
   private _resolveUnitText(): string {
-    const entityId = Array.isArray(this.props.entity) ? this.props.entity[0] : this.props.entity || '';
+    const entityId = String(Array.isArray(this.props.entity) ? (this.props.entity[0] as any) : (this.props.entity as any) || '');
     if (!entityId) return '';
     const raw = EntityValueResolver.readEntityRaw(this.hass as HomeAssistant, entityId, 'unit_of_measurement');
     return String(raw || '').toUpperCase();

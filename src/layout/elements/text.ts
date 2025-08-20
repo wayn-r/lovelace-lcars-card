@@ -22,9 +22,9 @@ export class TextElement extends LayoutElement {
             return;
         }
         
-        const text = this.props.text || '';
+        const text = (typeof this.props.text === 'string' ? this.props.text : '') || '';
         const fontFamily = this.props.fontFamily || 'Arial';
-        const fontWeight = this.props.fontWeight || 'normal';
+        const fontWeight = (this.props.fontWeight as any) || 'normal';
         
         const fontSize = this.resolveFontSize(fontFamily, fontWeight);
         const letterSpacing = this.resolveLetterSpacing(text, fontSize, fontFamily, fontWeight);
@@ -47,8 +47,8 @@ export class TextElement extends LayoutElement {
     }
 
     private applyExplicitDimensions(): void {
-        this.intrinsicSize.width = this.props.width!;
-        this.intrinsicSize.height = this.props.height!;
+        this.intrinsicSize.width = typeof this.props.width === 'string' ? 0 : (this.props.width as number);
+        this.intrinsicSize.height = typeof this.props.height === 'string' ? 0 : (this.props.height as number);
         this.intrinsicSize.calculated = true;
     }
 
@@ -62,7 +62,7 @@ export class TextElement extends LayoutElement {
         }
         
         if (this.props.height && !this.props.fontSize) {
-            const fontSize = this.calculateFontSizeFromHeight(this.props.height, fontFamily, fontWeight);
+            const fontSize = this.calculateFontSizeFromHeight(this.props.height as number, fontFamily, fontWeight);
             this.props.fontSize = fontSize;
             return fontSize;
         }

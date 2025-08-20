@@ -16,8 +16,10 @@ export class ElbowElement extends LayoutElement {
     }
   
     calculateIntrinsicSize(container: SVGElement): void {
-        this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 100;
-        this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 100;
+        const widthCandidate = this.props.width ?? this.layoutConfig.width ?? 100;
+        const heightCandidate = this.props.height ?? this.layoutConfig.height ?? 100;
+        this.intrinsicSize.width = typeof widthCandidate === 'string' ? 100 : widthCandidate;
+        this.intrinsicSize.height = typeof heightCandidate === 'string' ? 100 : heightCandidate;
         this.intrinsicSize.calculated = true;
     }
   

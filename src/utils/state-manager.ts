@@ -326,7 +326,13 @@ export class StateManager {
     }
 
     if (animations.on_load) {
-      this.applyInitialAnimationState(targetElement, animations.on_load);
+      const def = animations.on_load as any;
+      if (Array.isArray(def?.steps)) {
+        const first = def.steps?.[0]?.animations?.[0];
+        if (first) this.applyInitialAnimationState(targetElement, first as any);
+      } else {
+        this.applyInitialAnimationState(targetElement, def as any);
+      }
     }
 
     if (animations.on_state_change && Array.isArray(animations.on_state_change)) {

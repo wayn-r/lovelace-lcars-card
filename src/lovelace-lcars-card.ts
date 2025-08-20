@@ -524,7 +524,7 @@ export class LcarsCard extends LitElement {
         if (element.props.state_management || element.props.animations) {
           sm.initializeElementState(
             element.id,
-            element.props.state_management,
+            element.props.state_management as any,
             element.props.animations
           );
         }
@@ -570,7 +570,7 @@ export class LcarsCard extends LitElement {
     const sm = this._runtime!.state;
     groups.forEach(group => {
       group.elements.forEach(element => {
-        if (element.props.animations?.on_load) {
+        if ((element.props.animations as any)?.on_load) {
           sm.triggerLifecycleAnimation(element.id, 'on_load');
         }
       });

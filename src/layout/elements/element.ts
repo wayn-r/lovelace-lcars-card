@@ -194,8 +194,10 @@ export abstract class LayoutElement {
     }
 
     calculateIntrinsicSize(container: SVGElement): void {
-        this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 0;
-        this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 0;
+        const widthCandidate = this.props.width ?? this.layoutConfig.width ?? 0;
+        const heightCandidate = this.props.height ?? this.layoutConfig.height ?? 0;
+        this.intrinsicSize.width = typeof widthCandidate === 'string' ? 0 : widthCandidate;
+        this.intrinsicSize.height = typeof heightCandidate === 'string' ? 0 : heightCandidate;
         this.intrinsicSize.calculated = true;
     }
 

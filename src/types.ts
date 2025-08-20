@@ -1,3 +1,15 @@
+import type {
+  LcarsCardConfig as SchemaLcarsCardConfig,
+  GroupConfig as SchemaGroupConfig,
+  ElementConfig as SchemaElementConfig,
+  AppearanceConfig as SchemaAppearanceConfig,
+  TextConfig as SchemaTextConfig,
+  LayoutConfig as SchemaLayoutConfig,
+  ButtonConfig as SchemaButtonConfig,
+  Action as SchemaAction,
+  HoldAction as SchemaHoldAction,
+} from './parsers/schema.js';
+
 declare global {
   interface Window {
     customCards: Array<{
@@ -74,190 +86,54 @@ export interface ColorResolutionDefaults {
 }
 
 // ============================================================================
-// YAML Configuration Types
+// YAML Configuration Types (Zod schema is the single source of truth)
 // ============================================================================
 
-export interface LcarsCardConfig {
-  type: string;
-  title?: string;
-  groups: GroupConfig[];
-  state_management?: StateManagementConfig;
-}
-
-export interface GroupConfig {
-  group_id: string;
-  elements: ElementConfig[];
-}
-
-export interface ElementConfig {
-  id: string;
-  type: 'rectangle' | 'text' | 'endcap' | 'elbow' | 'chisel-endcap' | 'top_header' | 'logger-widget';
-  appearance?: AppearanceConfig;
-  text?: TextConfig;
-  layout?: LayoutConfig;
-  
-  // Direct properties as per YAML definition
-  button?: ButtonConfig;
-  state_management?: ElementStateManagementConfig;
-  visibility_rules?: VisibilityRulesConfig;
-  visibility_triggers?: VisibilityTriggerConfig[];
-  animations?: AnimationsConfig;
-}
+export type LcarsCardConfig = SchemaLcarsCardConfig;
+export type GroupConfig = SchemaGroupConfig;
+export type ElementConfig = SchemaElementConfig;
+export type AppearanceConfig = SchemaAppearanceConfig;
+export type TextConfig = SchemaTextConfig;
+export type LayoutConfig = SchemaLayoutConfig;
+export type ButtonConfig = SchemaButtonConfig;
 
 // ============================================================================
 // Appearance Configuration
 // ============================================================================
 
-export interface AppearanceConfig {
-  fill?: ColorValue;
-  stroke?: ColorValue;
-  strokeWidth?: number;
-  
-  // Shape-specific properties
-  cornerRadius?: number; // rectangle
-  direction?: 'left' | 'right'; // endcap, chisel-endcap
-  orientation?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'; // elbow
-  bodyWidth?: number; // elbow
-  armHeight?: number; // elbow
-}
+// Backwards compatibility note: detailed properties are governed by schema types above
 
 // ============================================================================
 // Text Configuration
 // ============================================================================
 
-export interface TextConfig {
-  content?: string;
-  fill?: ColorValue;
-  fontFamily?: string;
-  fontSize?: number;
-  fontWeight?: string | number;
-  letterSpacing?: string | number;
-  textAnchor?: 'start' | 'middle' | 'end';
-  dominantBaseline?: string;
-  textTransform?: string;
-  cutout?: boolean;
-  textWidth?: number;  // not implemented yet
-  textHeight?: number;  // not implemented yet
-  elbow_text_position?: 'arm' | 'body'; // elbow specific
-  
-  // top_header specific
-  left_content?: string;
-  right_content?: string;
-}
+// See schema-derived TextConfig above
 
 // ============================================================================
 // Layout Configuration
 // ============================================================================
 
-export interface LayoutConfig {
-  width?: number | string;
-  height?: number | string;
-  offsetX?: number | string;
-  offsetY?: number | string;
-  anchor?: AnchorConfig;
-  stretch?: StretchConfig;
-}
+// See schema-derived LayoutConfig above
 
-export interface AnchorConfig {
-  to: string; // Full ID of target element or "container"
-  element_point: string; // Point on this element
-  target_point: string; // Point on the target
-}
-
-export interface StretchConfig {
-  target1: StretchTargetConfig;
-  target2?: StretchTargetConfig;
-}
-
-export interface StretchTargetConfig {
-  id: string; // Full ID of target element or "container"
-  edge: string; // Edge of target
-  padding?: number;
-}
 
 // ============================================================================
 // Unified Action Model - covers both Home Assistant and Custom actions
 // ============================================================================
 
-export interface Action {
-  // Core action type
-  action: 'call-service' | 'navigate' | 'url' | 'toggle' | 'more-info' | 'none' | 'set_state' | 'toggle_state' | 'toggle_line_visibility';
-  
-  // Home Assistant service actions
-  service?: string;
-  service_data?: Record<string, any>;
-  target?: Record<string, any>;
-  
-  // Navigation actions
-  navigation_path?: string;
-  
-  // URL actions
-  url_path?: string;
-  
-  // Entity actions (toggle, more-info)
-  entity?: string;
-  
-  // Custom state management actions
-  target_element_ref?: string;
-  target_id?: string;
-  entity_id?: string;
-  state?: string;
-  states?: string[];
-  actions?: Action[]; // For multi-action sequences
-  
-  // Common properties
-  confirmation?: boolean | {
-    text?: string;
-    exemptions?: Array<{
-      user: string;
-    }>;
-  };
-}
+export type Action = SchemaAction;
 
 // ============================================================================
 // Button Configuration
 // ============================================================================
 
-export interface ButtonConfig {
-  enabled: boolean;
-  actions?: {
-    /**
-     * A single Action or an array of Actions to execute on tap.
-     */
-    tap?: Action | Action[];
-
-    /**
-     * Action(s) to execute on hold. You can provide either:
-     *   1) A single Action or array of Actions, or
-     *   2) An object that extends Action with an optional duration property.
-     *
-     * Example:
-     *   hold: {
-     *     duration: 750,
-     *     action: 'toggle'
-     *   }
-     */
-    hold?: HoldAction;
-
-    /**
-     * A single Action or an array of Actions to execute on double-tap.
-     */
-    double_tap?: Action | Action[];
-  };
-}
-
 /**
  * A HoldAction is an Action with an optional duration (milliseconds).
  */
-export interface HoldAction extends Action {
-  duration?: number;
-}
+export type HoldAction = SchemaHoldAction;
 
 // Backwards-compatibility type aliases – these now point directly to Action.
 // They will be removed in a future breaking release.
-export type ActionDefinition = Action;
-export type SingleActionDefinition = Action;
-export type HoldActionDefinition = HoldAction;
+
 
 // ============================================================================
 // Home Assistant Actions

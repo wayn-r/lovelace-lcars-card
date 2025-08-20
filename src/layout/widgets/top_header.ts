@@ -10,7 +10,9 @@ const TEXT_GAP = 5;
 export class TopHeaderWidget extends Widget {
   public expand(): LayoutElement[] {
     const fillColor = this.props.fill || '#99CCFF';
-    const height = this.props.height || this.layoutConfig.height || 30;
+    const height = (typeof this.props.height === 'number' ? (this.props.height as number) : undefined)
+      ?? (typeof this.layoutConfig.height === 'number' ? this.layoutConfig.height : undefined)
+      ?? 30;
     const endcapWidth = height * 0.75;
 
     // Invisible bounds rectangle – carries the *public* ID so external

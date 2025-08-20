@@ -2,18 +2,90 @@ import { SVGTemplateResult, html } from 'lit';
 import gsap from 'gsap';
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElement } from './elements/element.js';
+import type { ButtonConfig, ColorValue, ElementStateManagementConfig, AnimationsConfig } from '../types.js';
 
 export interface LayoutElementProps {
-  [key: string]: any;
-  button?: any;
+  // Appearance
+  fill?: ColorValue;
+  stroke?: ColorValue;
+  strokeWidth?: number;
+  rx?: number;
+  cornerRadius?: number;
+  direction?: 'left' | 'right';
+  orientation?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  bodyWidth?: number | string;
+  armHeight?: number | string;
+  cornerRadii?: { topLeft: number; topRight: number; bottomRight: number; bottomLeft: number };
+
+  // Text
+  text?: string;
+  textColor?: ColorValue;
+  fillOpacity?: number;
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: string | number;
+  letterSpacing?: string | number;
+  textAnchor?: 'start' | 'middle' | 'end';
+  dominantBaseline?: string;
+  textTransform?: string;
+  cutout?: boolean;
+  elbowTextPosition?: 'arm' | 'body';
+  leftContent?: string;
+  rightContent?: string;
   textPadding?: number;
   textOffsetX?: number | string;
   textOffsetY?: number | string;
+
+  // Dimensions provided directly as props (some widgets set these)
+  width?: number | string;
+  height?: number | string;
+
+  // Interactions & behavior
+  button?: ButtonConfig | { enabled?: boolean; actions?: unknown };
+  visibility_rules?: unknown;
+  visibility_triggers?: unknown;
+  state_management?: ElementStateManagementConfig;
+  animations?: AnimationsConfig;
+
+  // Element-specific internal hints
+  stateIdBase?: string;
+
+  // Entity-driven props (widgets)
+  entity?: string | string[] | Array<string | { id: string; [key: string]: unknown }>;
+  attribute?: string;
+  label?: unknown;
+  value?: unknown;
+  unit?: unknown;
+  appearance?: unknown;
+  grid?: { num_lines?: number; fill?: ColorValue; label_fill?: ColorValue };
+
+  // Logger widget specific
+  maxLines?: number;
+  lineSpacing?: number | string;
+  color_cycle?: { color: any; duration: number }[];
+  entity_id?: string;
+
+  // Vertical slider specific
+  min?: number;
+  max?: number;
+  spacing?: number;
+  top_padding?: number;
+  label_height?: number;
+  use_floats?: boolean;
 }
 
 export interface LayoutConfigOptions {
-  [key: string]: any;
-  
+  width?: number | string;
+  height?: number | string;
+  offsetX?: number | string;
+  offsetY?: number | string;
+
+  anchor?: {
+    anchorTo: string;
+    anchorPoint: string;
+    targetAnchorPoint: string;
+  };
+
   stretch?: {
     stretchTo1?: string;
     targetStretchAnchorPoint1?: string;

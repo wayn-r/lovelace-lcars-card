@@ -271,9 +271,9 @@ export class GraphWidget extends Widget {
 
   private parseEntityConfigs(): RichEntityConfig[] {
     const rawEntities = Array.isArray(this.props.entity) ? this.props.entity : [this.props.entity];
-    return rawEntities.map(entity => 
-      typeof entity === 'string' ? { id: entity } : entity
-    );
+    return rawEntities
+      .filter((e) => e != null)
+      .map((entity) => (typeof entity === 'string' ? { id: entity } : (entity as any)));
   }
 
   private initializeEntityStates(): void {
@@ -290,7 +290,7 @@ export class GraphWidget extends Widget {
     // The visual graph element gets a distinct ID and anchors to bounds at expand() time
     this.graphElement = new GraphElement(
       `${this.id}_graph`,
-      { ...this.props, stateIdBase: this.id },
+      { ...(this.props as any), stateIdBase: this.id },
       {},
       this.hass,
       this.requestUpdateCallback,

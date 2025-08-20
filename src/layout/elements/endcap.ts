@@ -14,8 +14,10 @@ export class EndcapElement extends LayoutElement {
     }
   
     calculateIntrinsicSize(container: SVGElement): void {
-        this.intrinsicSize.width = this.props.width || this.layoutConfig.width || 40;
-        this.intrinsicSize.height = this.props.height || this.layoutConfig.height || 0; 
+        const widthCandidate = this.props.width ?? this.layoutConfig.width ?? 40;
+        const heightCandidate = this.props.height ?? this.layoutConfig.height ?? 0;
+        this.intrinsicSize.width = typeof widthCandidate === 'string' ? 40 : widthCandidate;
+        this.intrinsicSize.height = typeof heightCandidate === 'string' ? 0 : heightCandidate;
         this.intrinsicSize.calculated = true;
     }
   
