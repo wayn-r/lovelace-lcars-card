@@ -5,11 +5,12 @@ import { LcarsButtonElementConfig } from "../../types.js";
 import { svg, SVGTemplateResult } from "lit";
 import { ShapeGenerator } from "../../utils/shapes.js";
 import { Button } from "../../utils/button.js";
+import type { CardRuntime } from '../../core/runtime.js';
 
 export class RectangleElement extends LayoutElement {
   button?: Button;
 
-  constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null, runtime?: any) {
+  constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null, runtime?: CardRuntime) {
     super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime);
   }
 

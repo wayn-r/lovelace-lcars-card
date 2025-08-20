@@ -1,12 +1,8 @@
 import { HomeAssistant } from 'custom-card-helpers';
 import { Group } from './engine.js';
 import { LayoutElement } from './elements/element.js';
-import { RectangleElement } from './elements/rectangle.js';
-import { TextElement } from './elements/text.js';
-import { EndcapElement } from './elements/endcap.js';
-import { ElbowElement } from './elements/elbow.js';
-import { WeatherIcon } from './widgets/weather-icon';
-import { ChiselEndcapElement } from './elements/chisel_endcap.js';
+import './elements/index.js';
+import { ElementRegistry } from './elements/registry.js';
 import { WidgetRegistry } from './widgets/registry.js';
 import { parseCardConfig, type ParsedConfig } from '../parsers/schema.js';
 import { ZodError } from 'zod';
@@ -255,30 +251,34 @@ export class ConfigParser {
       return widgetResult;
     }
 
-    const elementConstructors: Record<string, new(...args: any[]) => LayoutElement> = {
-      'text': TextElement,
-      'rectangle': RectangleElement,
-      'endcap': EndcapElement,
-      'elbow': ElbowElement,
-      'chisel-endcap': ChiselEndcapElement,
-      'weather-icon': WeatherIcon,
-    };
+    const element = ElementRegistry.createElement(
+      type,
+      id,
+      props,
+      layoutConfig,
+      hass,
+      requestUpdateCallback,
+      getShadowElement,
+      runtime
+    );
 
-    const normalizedType = type.toLowerCase().trim();
-    const ElementConstructor = elementConstructors[normalizedType];
-
-    if (ElementConstructor) {
-      if (runtime !== undefined) {
-        return [new ElementConstructor(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime as any)];
-      }
-      return [new ElementConstructor(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
+    if (element) {
+      return [element];
     }
 
     console.warn(`LCARS Card Parser: Unknown element type "${type}". Defaulting to Rectangle.`);
-    if (runtime !== undefined) {
-      return [new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime as any)];
-    }
-    return [new RectangleElement(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement)];
+    const fallback = ElementRegistry.createElement(
+      'rectangle',
+      id,
+      props,
+      layoutConfig,
+      hass,
+      requestUpdateCallback,
+      getShadowElement,
+      runtime
+    );
+    if (fallback) return [fallback];
+    return [];
   }
 }
 

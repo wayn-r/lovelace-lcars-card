@@ -8,6 +8,7 @@ import {
 import gsap from 'gsap';
 
 import './layout/widgets/index.js';
+import './layout/elements/index.js';
 import { LayoutEngine, Group } from './layout/engine.js';
 import { LayoutElement } from './layout/elements/element.js';
 import { parseConfig } from './layout/parser.js';

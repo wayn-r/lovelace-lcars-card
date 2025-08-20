@@ -1,6 +1,7 @@
 import { LayoutElement } from "./element.js";
 import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant } from "custom-card-helpers";
+import type { CardRuntime } from '../../core/runtime.js';
 import { svg, SVGTemplateResult } from "lit";
 import { ShapeGenerator } from "../../utils/shapes.js";
 import { Button } from "../../utils/button.js";
@@ -8,8 +9,8 @@ import { Button } from "../../utils/button.js";
 export class EndcapElement extends LayoutElement {
     button?: Button;
 
-    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
-        super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null, runtime?: CardRuntime) {
+        super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime);
     }
   
     calculateIntrinsicSize(container: SVGElement): void {

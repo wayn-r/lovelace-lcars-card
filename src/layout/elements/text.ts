@@ -1,6 +1,7 @@
 import { LayoutElement } from "./element.js";
 import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant } from "custom-card-helpers";
+import type { CardRuntime } from '../../core/runtime.js';
 import { svg, SVGTemplateResult } from "lit";
 import { TextMeasurement, CAP_HEIGHT_RATIO } from "../../utils/shapes.js";
 import { FontManager } from "../../utils/font-manager.js";
@@ -11,8 +12,8 @@ const MAX_LETTER_SPACING = 20;
 export class TextElement extends LayoutElement {
     private _cachedMetrics: any = null;
     
-    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null) {
-        super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+    constructor(id: string, props: LayoutElementProps = {}, layoutConfig: LayoutConfigOptions = {}, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null, runtime?: CardRuntime) {
+        super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime);
     }
   
     calculateIntrinsicSize(container: SVGElement): void {

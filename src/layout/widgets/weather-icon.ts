@@ -1,6 +1,7 @@
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElement } from '../elements/element.js';
 import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
+import type { CardRuntime } from '../../core/runtime.js';
 import { SVGTemplateResult, svg } from 'lit';
 
 const WEATHER_ICONS: { [key: string]: string } = {
@@ -34,9 +35,10 @@ export class WeatherIcon extends LayoutElement {
         layoutConfig: LayoutConfigOptions = {},
         hass?: HomeAssistant,
         requestUpdateCallback?: () => void,
-        getShadowElement?: (id: string) => Element | null
+        getShadowElement?: (id: string) => Element | null,
+        runtime?: CardRuntime
     ) {
-        super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement);
+        super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime);
         // Register ha-icon as a custom element if it hasn't been already
         if (!customElements.get('ha-icon')) {
           customElements.define('ha-icon', class extends HTMLElement {});
