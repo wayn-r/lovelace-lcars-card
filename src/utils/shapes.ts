@@ -311,8 +311,39 @@ export class ShapeGenerator {
     }
 }
 
+let canvasContext: CanvasRenderingContext2D | null = null;
+
 export class TextMeasurement {
-    private static canvasContext: CanvasRenderingContext2D | null = null;
+
+    private static _getOrCreateCanvasContext(): CanvasRenderingContext2D | null {
+        if (canvasContext) return canvasContext;
+
+        try {
+            if (typeof document !== 'undefined' && document.createElement) {
+                const canvas = document.createElement('canvas');
+                canvasContext = canvas.getContext('2d', { willReadFrequently: true });
+                return canvasContext;
+            }
+
+            const OffscreenCanvasCtor = (globalThis as any).OffscreenCanvas;
+            if (typeof OffscreenCanvasCtor !== 'undefined') {
+                const offscreen = new OffscreenCanvasCtor(1, 1) as any;
+                const ctx = offscreen.getContext('2d');
+                canvasContext = ctx as CanvasRenderingContext2D | null;
+                return canvasContext;
+            }
+        } catch {
+            canvasContext = null;
+            return canvasContext;
+        }
+
+        canvasContext = null;
+        return canvasContext;
+    }
+
+    static resetForTests(): void {
+        canvasContext = null;
+    }
 
     static measureSvgTextWidth(text: string, font: string, letterSpacing?: string, textTransform?: string): number {
         const transformedText = this.applyTextTransform(text, textTransform);
@@ -374,28 +405,11 @@ export class TextMeasurement {
     }
 
     static measureCanvasTextWidth(text: string, font: string, letterSpacing?: string): number {
-        if (!this.canvasContext) {
+        const ctx = this._getOrCreateCanvasContext();
+        if (ctx) {
+            ctx.font = font;
             try {
-                if (typeof document !== 'undefined' && document.createElement) {
-                    const canvas = document.createElement('canvas');
-                    this.canvasContext = canvas.getContext('2d', { willReadFrequently: true });
-                    if (!this.canvasContext) {
-                        console.warn("LCARS Card: Failed to get 2D context for text measurement. Using fallback.");
-                    }
-                } else {
-                    console.warn("LCARS Card: Cannot create canvas for text measurement (document not available). Using fallback.");
-                    this.canvasContext = null;
-                }
-            } catch (e) {
-                console.error("LCARS Card: Error creating canvas context for text measurement.", e);
-                this.canvasContext = null;
-            }
-        }
-
-        if (this.canvasContext) {
-            this.canvasContext.font = font;
-            try {
-                const metrics = this.canvasContext.measureText(text);
+                const metrics = ctx.measureText(text);
                 let width = metrics.width;
                 // Apply letter-spacing if provided
                 if (letterSpacing && text && text.length > 1) {
@@ -409,8 +423,8 @@ export class TextMeasurement {
                     width += spacingPx * (text.length - 1);
                 }
                 return width;
-            } catch (e) {
-                console.error(`LCARS Card: Error measuring text width for font "${font}".`, e);
+            } catch {
+                
             }
         }
 

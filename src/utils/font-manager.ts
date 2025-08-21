@@ -14,19 +14,21 @@ export class FontManager {
       // Normalize and preload both normal and bold weights so measurements are stable.
       const families = fontFamilies.map((f) => this.extractPrimaryFamily(f));
       const weights: Array<string | number> = ['normal', 'bold'];
-      const observers = families.flatMap((family) => {
-        return weights.map((weight) => new FontFaceObserver(family, { weight }).load(null, timeout));
-      });
+      const canUseFontFaceObserver = typeof document !== 'undefined' && !!(document as any).fonts;
+      const observers = canUseFontFaceObserver
+        ? families.flatMap((family) => weights.map((weight) => new FontFaceObserver(family, { weight }).load(null, timeout)))
+        : [];
 
       this.fontsReadyPromise = Promise.allSettled(observers).then(async () => {
-        if (typeof document !== 'undefined' && (document as any).fonts?.ready) {
+        if (canUseFontFaceObserver && (document as any).fonts?.ready) {
           try {
             await (document as any).fonts.ready;
           } catch {
-            /* ignore */
           }
         }
-        await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+        if (typeof requestAnimationFrame !== 'undefined') {
+          await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+        }
       });
     }
     return this.fontsReadyPromise;

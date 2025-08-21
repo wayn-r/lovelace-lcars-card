@@ -314,9 +314,14 @@ export class ColorResolver {
       return globalTheme;
     }
 
-    const scriptTag = document.querySelector('script[data-lcars-theme]');
-    if (scriptTag) {
-      return scriptTag.textContent || null;
+    try {
+      if (typeof document !== 'undefined') {
+        const scriptTag = document.querySelector('script[data-lcars-theme]');
+        if (scriptTag) {
+          return scriptTag.textContent || null;
+        }
+      }
+    } catch {
     }
 
     return null;

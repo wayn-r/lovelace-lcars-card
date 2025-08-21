@@ -265,8 +265,8 @@ describe('shapes.ts utility functions', () => {
             getContext: vi.fn().mockReturnValue(mockCanvasContext) 
         } as any;
 
-        // Reset internal canvasContext cache in shapes.ts
-        (shapes as any).canvasContext = null;
+        // Reset internal canvasContext cache via helper
+        shapes.TextMeasurement.resetForTests();
 
         // Use jest.spyOn to spy on console
         consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -325,7 +325,7 @@ describe('shapes.ts utility functions', () => {
             (global as any).document = undefined; // Simulate Node.js
             
             // Need to reset the internal canvas context in shapes.ts as it might have been cached with a real document
-            (shapes as any).canvasContext = null; 
+            shapes.TextMeasurement.resetForTests(); 
             
             const width = shapes.TextMeasurement.measureSvgTextWidth('Node', '16px Arial');
             // Should go through fallback calculation
@@ -343,7 +343,7 @@ describe('shapes.ts utility functions', () => {
 
         it('should use fallback estimation if canvas context cannot be created', () => {
             // Reset cached context
-            (shapes as any).canvasContext = null;
+            shapes.TextMeasurement.resetForTests();
             
             // Mock createElement to return an element with getContext returning null
             (document.createElement as any).mockReturnValueOnce({
@@ -359,7 +359,7 @@ describe('shapes.ts utility functions', () => {
         it('should handle document not being available for canvas creation', () => {
             const originalDocument = global.document;
             (global as any).document = undefined;
-            (shapes as any).canvasContext = null; // Reset cache
+            shapes.TextMeasurement.resetForTests(); // Reset cache
 
             shapes.TextMeasurement.measureCanvasTextWidth('Node Canvas', '20px Comic Sans');
             // Should warn but shouldn't crash
