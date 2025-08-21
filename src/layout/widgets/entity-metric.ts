@@ -95,8 +95,8 @@ export class EntityMetricWidget extends Widget {
     const valueText = this._createValueText(labelRect, height);
     const unitRect = this._createUnitPill(valueText, height);
 
-    this._addDefaultLabelInteraction(labelRect);
-    this._syncHoverStates(labelRect, unitRect);
+    this._unifyButtonActions(labelRect, valueText, unitRect);
+    this._syncHoverAcrossElements([labelRect, valueText, unitRect]);
 
     return [bounds, labelRect, valueText, unitRect];
   }
@@ -163,6 +163,10 @@ export class EntityMetricWidget extends Widget {
       {
         text: textContent,
         fill: valueConfig.fill || this._resolveBaseColor(),
+        textColor: {
+          default: valueConfig.fill || this._resolveBaseColor(),
+          hover: `lighten(${valueConfig.fill || this._resolveBaseColor()}, 20)`
+        },
         fontFamily: valueConfig.fontFamily || 'Antonio',
         fontWeight: valueConfig.fontWeight || 'bold',
         textTransform: valueConfig.textTransform || 'uppercase',
@@ -377,30 +381,79 @@ export class EntityMetricWidget extends Widget {
     return Boolean(element.props.button?.enabled);
   }
 
-  private _syncHoverStates(rect1: RectangleElement, rect2: RectangleElement): void {
+  private _syncHoverAcrossElements(elements: LayoutElement[]): void {
     const attachListeners = () => {
-      const el1 = this.getShadowElement?.(rect1.id);
-      const el2 = this.getShadowElement?.(rect2.id);
-      if (!el1 || !el2) {
+      const domEls = elements.map(e => this.getShadowElement?.(e.id) as Element | null);
+      if (domEls.some(d => !d)) {
         requestAnimationFrame(attachListeners);
         return;
       }
-      const enterHandler = (_ev: Event) => {
-        rect1.elementIsHovering = true;
-        rect2.elementIsHovering = true;
+
+      const isWithinAny = (node: Node | null): boolean => {
+        if (!node) return false;
+        return domEls.some(el => el && el.contains(node));
       };
+
+      const enterHandler = (_ev: Event) => {
+        elements.forEach(e => { e.elementIsHovering = true; });
+      };
+
       const leaveHandler = (ev: Event) => {
         const related = (ev as MouseEvent).relatedTarget as Node | null;
-        if (related && (el1.contains(related) || el2.contains(related))) return;
-        rect1.elementIsHovering = false;
-        rect2.elementIsHovering = false;
+        if (isWithinAny(related)) return;
+        elements.forEach(e => { e.elementIsHovering = false; });
       };
-      [el1, el2].forEach((el) => {
+
+      domEls.forEach((el) => {
+        if (!el) return;
         el.addEventListener('mouseenter', enterHandler);
         el.addEventListener('mouseleave', leaveHandler);
       });
     };
     attachListeners();
+  }
+
+  private _unifyButtonActions(labelRect: LayoutElement, valueText: LayoutElement, unitRect: LayoutElement): void {
+    const entityId = String(Array.isArray(this.props.entity) ? (this.props.entity[0] as any) : (this.props.entity as any));
+
+    const primary = (this._hasButtonConfig(labelRect) && labelRect) ||
+                    (this._hasButtonConfig(unitRect) && unitRect) ||
+                    (this._hasButtonConfig(valueText) && valueText) ||
+                    null;
+
+    if (!primary && entityId && entityId !== 'undefined' && entityId !== '') {
+      (labelRect.props as any).button = {
+        enabled: true,
+        actions: { tap: { action: 'more-info', entity: entityId } },
+      };
+      labelRect.button = new Button(
+        labelRect.id,
+        labelRect.props,
+        this.hass,
+        this.requestUpdateCallback,
+        this.getShadowElement
+      );
+    }
+
+    const source = (this._hasButtonConfig(labelRect) && labelRect) ||
+                   (this._hasButtonConfig(unitRect) && unitRect) ||
+                   (this._hasButtonConfig(valueText) && valueText) ||
+                   (entityId && entityId !== 'undefined' && entityId !== '' ? labelRect : null);
+
+    const buttonConfig = source ? (source.props as any).button : undefined;
+
+    [labelRect, valueText, unitRect].forEach((el) => {
+      if (buttonConfig) {
+        (el.props as any).button = buttonConfig;
+        el.button = new Button(
+          el.id,
+          el.props,
+          this.hass,
+          this.requestUpdateCallback,
+          this.getShadowElement
+        );
+      }
+    });
   }
 
   private _isCutoutEnabled(config: { cutout?: boolean; fill?: ColorValue }): boolean {
