@@ -48,10 +48,9 @@ export class EntityTextWidget extends Widget {
     const labelRect = this.createLabelRectangle(leadingRect, height);
     const valueText = this.createValueText(labelRect, height as number);
 
-    this.addDefaultLabelInteraction(labelRect);
+    this.unifyButtonActions(leadingRect, labelRect, valueText);
 
-    // Synchronize hover states between leading and label rectangles
-    this.syncHoverStates(leadingRect, labelRect);
+    this.syncHoverAcrossElements([leadingRect, labelRect, valueText]);
 
     return [bounds, leadingRect, labelRect, valueText];
   }
@@ -138,11 +137,22 @@ export class EntityTextWidget extends Widget {
 
     const textContent = valueConfig.content || this.resolveValueText();
 
+    const baseValueFill = valueConfig.fill;
+    const baseValueTextColor = valueConfig.fill; // preserve tests expecting props.fill while using textColor for hover
+    const defaultTextColor = baseValueTextColor || 'var(--lcars-color-white)';
+    const hoverTextColor = baseValueTextColor
+      ? `lighten(${defaultTextColor}, 20)`
+      : `darken(${defaultTextColor}, 20)`;
     const valueText = new TextElement(
       `${this.id}_value_text`,
       {
         text: textContent,
-        fill: valueConfig.fill || 'var(--lcars-color-white)',
+        // Keep fill as provided (tests assert this), drive hover via textColor
+        fill: baseValueFill !== undefined ? baseValueFill : 'var(--lcars-color-white)',
+        textColor: {
+          default: defaultTextColor,
+          hover: hoverTextColor
+        },
         fontFamily: valueConfig.fontFamily || 'Antonio',
         fontWeight: valueConfig.fontWeight || 'normal',
         textTransform: valueConfig.textTransform || 'uppercase'
@@ -278,28 +288,60 @@ export class EntityTextWidget extends Widget {
     }
   }
 
-  private addDefaultLabelInteraction(labelRect: RectangleElement): void {
+  private addDefaultInteraction(element: LayoutElement): void {
     const entityId = String(Array.isArray(this.props.entity) ? (this.props.entity[0] as any) : (this.props.entity as any));
-    
-    if (!this.hasButtonConfig(labelRect) && entityId && entityId !== 'undefined' && entityId !== '') {
-      labelRect.props.button = {
-        enabled: true,
-        actions: {
-          tap: {
-            action: 'more-info',
-            entity: entityId
-          }
+    if (this.hasButtonConfig(element)) return;
+    if (!entityId || entityId === 'undefined') return;
+
+    (element.props as any).button = {
+      enabled: true,
+      actions: {
+        tap: {
+          action: 'more-info',
+          entity: entityId
         }
-      };
-      
-      labelRect.button = new Button(
-        labelRect.id,
-        labelRect.props,
-        this.hass,
-        this.requestUpdateCallback,
-        this.getShadowElement
-      );
+      }
+    };
+
+    element.button = new Button(
+      element.id,
+      element.props,
+      this.hass,
+      this.requestUpdateCallback,
+      this.getShadowElement
+    );
+  }
+
+  private unifyButtonActions(leadingRect: LayoutElement, labelRect: LayoutElement, valueText: LayoutElement): void {
+    const primary = (this.hasButtonConfig(labelRect) && labelRect) ||
+                    (this.hasButtonConfig(leadingRect) && leadingRect) ||
+                    (this.hasButtonConfig(valueText) && valueText) ||
+                    null;
+
+    if (!primary) {
+      this.addDefaultInteraction(labelRect);
     }
+
+    const entityId = String(Array.isArray(this.props.entity) ? (this.props.entity[0] as any) : (this.props.entity as any));
+    const source = (this.hasButtonConfig(labelRect) && labelRect) ||
+                   (this.hasButtonConfig(leadingRect) && leadingRect) ||
+                   (this.hasButtonConfig(valueText) && valueText) ||
+                   (entityId && entityId !== 'undefined' && entityId !== '' ? labelRect : null);
+
+    const buttonConfig = source ? (source.props as any).button : undefined;
+
+    [leadingRect, labelRect, valueText].forEach((el) => {
+      if (buttonConfig) {
+        (el.props as any).button = buttonConfig;
+        el.button = new Button(
+          el.id,
+          el.props,
+          this.hass,
+          this.requestUpdateCallback,
+          this.getShadowElement
+        );
+      }
+    });
   }
 
   private hasButtonConfig(element: LayoutElement): boolean {
@@ -309,32 +351,33 @@ export class EntityTextWidget extends Widget {
   /**
    * Links hover state between two rectangles so that hovering over one affects both.
    */
-  private syncHoverStates(rect1: RectangleElement, rect2: RectangleElement): void {
+  private syncHoverAcrossElements(elements: LayoutElement[]): void {
     const attachListeners = () => {
-      const el1 = this.getShadowElement?.(rect1.id);
-      const el2 = this.getShadowElement?.(rect2.id);
-
-      if (!el1 || !el2) {
-        // Elements not yet rendered; try again on next animation frame.
+      const domEls = elements.map(e => this.getShadowElement?.(e.id) as Element | null);
+      if (domEls.some(d => !d)) {
         requestAnimationFrame(attachListeners);
         return;
       }
 
+      const isWithinAny = (node: Node | null): boolean => {
+        if (!node) return false;
+        return domEls.some(el => el && el.contains(node));
+      };
+
       const enterHandler = (_ev: Event) => {
-        rect1.elementIsHovering = true;
-        rect2.elementIsHovering = true;
+        elements.forEach(e => { e.elementIsHovering = true; });
       };
 
       const leaveHandler = (ev: Event) => {
         const related = (ev as MouseEvent).relatedTarget as Node | null;
-        if (related && (el1.contains(related) || el2.contains(related))) {
-          return; // Pointer moved within combined area; ignore.
+        if (isWithinAny(related)) {
+          return;
         }
-        rect1.elementIsHovering = false;
-        rect2.elementIsHovering = false;
+        elements.forEach(e => { e.elementIsHovering = false; });
       };
 
-      [el1, el2].forEach((el) => {
+      domEls.forEach((el) => {
+        if (!el) return;
         el.addEventListener('mouseenter', enterHandler);
         el.addEventListener('mouseleave', leaveHandler);
       });

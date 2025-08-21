@@ -142,12 +142,12 @@ export class TextElement extends LayoutElement {
             return ls;
         };
 
-        return svg`
+        const textSvg = svg`
             <text
                 id=${this.id}
                 x=${textX}
                 y=${textY}
-                fill=${colors.fillColor}
+                fill=${this.props.textColor !== undefined ? colors.textColor : colors.fillColor}
                 font-family=${this.props.fontFamily || 'sans-serif'}
                 font-size=${`${this.props.fontSize || 16}px`}
                 font-weight=${this.props.fontWeight || 'normal'}
@@ -159,6 +159,15 @@ export class TextElement extends LayoutElement {
                 ${this.props.text || ''}
             </text>
         `;
+
+        if (this.button && this.props.button?.enabled) {
+            return this.button.createButtonGroup([textSvg], {
+                isButton: true,
+                elementId: this.id
+            });
+        }
+
+        return textSvg;
     }
 
     private calculateTextPosition(x: number, y: number, width: number, height: number, textAnchor: string, dominantBaseline: string): { textX: number, textY: number } {
