@@ -28,6 +28,10 @@ class MockEngineLayoutElement extends LayoutElement {
         }
     }
 
+    public getDependencies(): string[] {
+        return [...this.mockDependencies];
+    }
+
     resetLayout(): void {
         super.resetLayout();
         this.resetLayoutInvoked = true;

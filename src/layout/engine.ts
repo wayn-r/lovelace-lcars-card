@@ -155,6 +155,12 @@ export class LayoutEngine {
     });
   }
 
+  setGroups(groups: Group[]): void {
+    this.elements.clear();
+    this.groups = [];
+    groups.forEach(group => this.addGroup(group));
+  }
+
   clearLayout(): void {
     this.elements.clear();
     this.groups = [];
@@ -202,7 +208,7 @@ export class LayoutEngine {
       
       this.elements.forEach(el => el.resetLayout());
       
-      const success = this.calculateLayoutSinglePass();
+      const success = this.calculateLayoutMultiPass();
       
       if (!success) {
         console.warn('LayoutEngine: Some elements could not be calculated in single pass');
@@ -223,7 +229,7 @@ export class LayoutEngine {
       );
       this.containerRect = updatedRect;
       this.elements.forEach(el => el.resetLayout());
-      this.calculateLayoutSinglePass();
+      this.calculateLayoutMultiPass();
       return this.getLayoutBounds();
     } catch (error) {
       if (error instanceof Error) {
@@ -232,6 +238,10 @@ export class LayoutEngine {
       }
       throw error;
     }
+  }
+
+  recalculate(containerRect: DOMRect, options?: { dynamicHeight?: boolean }): LayoutDimensions {
+    return this.calculateBoundingBoxes(containerRect, options);
   }
 
   private validateElementReferences(): void {
@@ -276,9 +286,7 @@ export class LayoutEngine {
     }
   }
 
-  private calculateLayoutSinglePass(): boolean {
-    let allCalculated = true;
-    
+  private calculateLayoutMultiPass(): boolean {
     this.elements.forEach(el => {
       if (!el.intrinsicSize.calculated) {
         el.calculateIntrinsicSize(this.tempSvgContainer || null as unknown as SVGElement);
@@ -286,43 +294,37 @@ export class LayoutEngine {
     });
     
     const sortedElements = this.sortElementsByDependencies();
+    const maxPasses = Math.max(1, sortedElements.length);
     
-    for (const el of sortedElements) {
-      if (!el.layout.calculated && this.containerRect) {
-        const dependencies: string[] = [];
-        const canCalculate = el.canCalculateLayout(this.elements, dependencies);
-        
-        if (canCalculate) {
-          el.calculateLayout(this.elements, this.containerRect);
+    for (let pass = 0; pass < maxPasses; pass++) {
+      let progressMade = false;
+      
+      for (const el of sortedElements) {
+        if (!el.layout.calculated && this.containerRect) {
+          const dependencies: string[] = [];
+          const canCalculate = el.canCalculateLayout(this.elements, dependencies);
           
-          if (!el.layout.calculated) {
-            console.warn(`LayoutEngine: Element ${el.id} failed to calculate layout despite passing canCalculateLayout`);
-            allCalculated = false;
+          if (canCalculate) {
+            el.calculateLayout(this.elements, this.containerRect);
+            if (el.layout.calculated) {
+              progressMade = true;
+            } else {
+              console.warn(`LayoutEngine: Element ${el.id} failed to calculate layout despite passing canCalculateLayout`);
+            }
           }
-        } else {
-          const missingDeps = dependencies.filter(dep => !this.elements.has(dep));
-          const uncalculatedDeps = dependencies.filter(dep => {
-            const depEl = this.elements.get(dep);
-            return depEl && !depEl.layout.calculated;
-          });
-          
-          if (missingDeps.length > 0) {
-            console.error(`LayoutEngine: Element ${el.id} has missing dependencies: ${missingDeps.join(', ')}`);
-          }
-          if (uncalculatedDeps.length > 0) {
-            console.error(`LayoutEngine: Element ${el.id} has uncalculated dependencies: ${uncalculatedDeps.join(', ')}`);
-            console.error(`This suggests a problem with dependency resolution ordering.`);
-          }
-          
-          allCalculated = false;
         }
+      }
+      
+      if (sortedElements.every(el => el.layout.calculated)) {
+        return true;
+      }
+      if (!progressMade) {
+        break;
       }
     }
     
-    if (!allCalculated) {
-      console.warn('LayoutEngine: Some elements could not be calculated in single pass');
-    }
-    return allCalculated;
+    console.warn('LayoutEngine: Some elements could not be fully calculated after multiple passes');
+    return false;
   }
 
   private sortElementsByDependencies(): LayoutElement[] {
@@ -342,8 +344,7 @@ export class LayoutEngine {
     const dependencyGraph = new Map<string, Set<string>>();
     
     for (const el of elements) {
-      const dependencies: string[] = [];
-      el.canCalculateLayout(this.elements, dependencies);
+      const dependencies: string[] = el.getDependencies();
       
       const validDependencies = dependencies.filter(dep => {
         if (this.elements.has(dep)) {

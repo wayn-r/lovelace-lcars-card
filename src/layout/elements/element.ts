@@ -63,6 +63,32 @@ export abstract class LayoutElement {
         this.intrinsicSize = { width: 0, height: 0, calculated: false };
     }
 
+    public getDependencies(): string[] {
+        const dependencies: string[] = [];
+
+        const anchorTo = this.layoutConfig.anchor?.anchorTo;
+        if (anchorTo && anchorTo !== 'container') {
+            dependencies.push(anchorTo);
+        }
+
+        const stretch = this.layoutConfig.stretch;
+        const maybeAddStretch = (target?: string) => {
+            if (!target) return;
+            if (target === 'container' || target === 'canvas') return;
+            dependencies.push(target);
+        };
+        if (stretch) {
+            maybeAddStretch(stretch.stretchTo1);
+            maybeAddStretch(stretch.stretchTo2);
+        }
+
+        this._collectSpecialDependencies(dependencies);
+        return dependencies;
+    }
+
+    protected _collectSpecialDependencies(_dependencies: string[]): void {
+    }
+
     get elementIsHovering(): boolean {
         return this.isHovering;
     }

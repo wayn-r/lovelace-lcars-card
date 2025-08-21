@@ -375,7 +375,7 @@ export class LcarsCard extends LitElement {
     this._initializeAnimationSystem(groups);
     
     const containerRect = this._calculateFinalContainerRect(rect);
-    const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(containerRect, { dynamicHeight: true });
+    const layoutDimensions = this._layoutEngine.recalculate(containerRect, { dynamicHeight: true });
     this._calculatedHeight = layoutDimensions.height;
 
     const shouldUpdateLayout = this._shouldUpdateLayout(rect);
@@ -390,7 +390,7 @@ export class LcarsCard extends LitElement {
     this._runtime!.colors.buildEntityDependencyIndex(groups);
     
     const containerRect = this._calculateFinalContainerRect(rect);
-    const layoutDimensions = this._layoutEngine.calculateBoundingBoxes(containerRect, { dynamicHeight: true });
+    const layoutDimensions = this._layoutEngine.recalculate(containerRect, { dynamicHeight: true });
     this._calculatedHeight = layoutDimensions.height;
 
     const shouldUpdateLayout = this._shouldUpdateLayout(rect);
@@ -602,7 +602,7 @@ export class LcarsCard extends LitElement {
     if (svgElement) {
       (this._layoutEngine as any).tempSvgContainer = svgElement;
     }
-    this._layoutEngine.clearLayout();
+    this._layoutEngine.setGroups([]);
   }
 
   private _buildElementGraph(): Group[] {
@@ -643,7 +643,7 @@ export class LcarsCard extends LitElement {
 
   private _createLayoutGroups(): Group[] {
     const groups = this._ensureElementGraph();
-    groups.forEach((group: Group) => this._layoutEngine.addGroup(group));
+    this._layoutEngine.setGroups(groups);
     return groups;
   }
 
