@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElement } from './elements/element.js';
 import type { ButtonConfig, ColorValue, ElementStateManagementConfig, AnimationsConfig } from '../types.js';
+import { Diagnostics, ScopedLogger } from '../utils/diagnostics.js';
 
 export interface LayoutElementProps {
   // Appearance
@@ -116,6 +117,7 @@ export class LayoutEngine {
   private groups: Group[];
   private tempSvgContainer?: SVGElement;
   private containerRect?: DOMRect;
+  private readonly logger: ScopedLogger = Diagnostics.create('LayoutEngine');
 
   private static sharedTempSvg?: SVGElement;
   private static instanceCount: number = 0;
@@ -149,7 +151,7 @@ export class LayoutEngine {
     this.groups.push(group);
     group.elements.forEach(el => {
       if (this.elements.has(el.id)) {
-        console.warn(`LayoutEngine: Duplicate element ID "${el.id}". Overwriting.`);
+        this.logger.warn(`Duplicate element ID "${el.id}". Overwriting.`);
       }
       this.elements.set(el.id, el);
     });
@@ -211,7 +213,7 @@ export class LayoutEngine {
       const success = this.calculateLayoutMultiPass();
       
       if (!success) {
-        console.warn('LayoutEngine: Some elements could not be calculated in single pass');
+        this.logger.warn('Some elements could not be calculated in single pass');
         return { width: containerRect.width, height: containerRect.height };
       }
 
@@ -233,7 +235,7 @@ export class LayoutEngine {
       return this.getLayoutBounds();
     } catch (error) {
       if (error instanceof Error) {
-        console.error(`LayoutEngine: ${error.message}`);
+        this.logger.error(error.message);
         return { width: containerRect.width, height: containerRect.height };
       }
       throw error;
@@ -280,9 +282,9 @@ export class LayoutEngine {
     }
     
     if (issues.length > 0) {
-      console.error('LayoutEngine: Element reference validation failed:');
-      issues.forEach(issue => console.error(`  - ${issue}`));
-      console.error('Available elements:', allElementIds.join(', '));
+      this.logger.error('Element reference validation failed:');
+      issues.forEach(issue => this.logger.error(`  - ${issue}`));
+      this.logger.error(`Available elements: ${allElementIds.join(', ')}`);
     }
   }
 
@@ -309,7 +311,7 @@ export class LayoutEngine {
             if (el.layout.calculated) {
               progressMade = true;
             } else {
-              console.warn(`LayoutEngine: Element ${el.id} failed to calculate layout despite passing canCalculateLayout`);
+              this.logger.warn(`Element ${el.id} failed to calculate layout despite passing canCalculateLayout`);
             }
           }
         }
@@ -323,7 +325,7 @@ export class LayoutEngine {
       }
     }
     
-    console.warn('LayoutEngine: Some elements could not be fully calculated after multiple passes');
+    this.logger.warn('Some elements could not be fully calculated after multiple passes');
     return false;
   }
 
@@ -350,7 +352,7 @@ export class LayoutEngine {
         if (this.elements.has(dep)) {
           return true;
         }
-        console.warn(`LayoutEngine: Element '${el.id}' references non-existent element '${dep}'`);
+        this.logger.warn(`Element '${el.id}' references non-existent element '${dep}'`);
         return false;
       });
       

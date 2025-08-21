@@ -9,6 +9,7 @@ import { AnimationSequence as AnimationSequenceDefinition } from '../types.js';
 import { ColorResolver } from './color-resolver.js';
 import type { LayoutElement } from '../layout/elements/element.js';
 import type { ReactiveStore } from '../core/store.js';
+import { Diagnostics } from './diagnostics.js';
 
 export interface AnimationContext {
   elementId: string;
@@ -70,6 +71,7 @@ export class AnimationManager {
   private activeTimelines = new Map<string, ReversibleTimeline[]>();
   private elementsMap?: Map<string, import('../layout/elements/element.js').LayoutElement>;
   private readonly transformPropagator: TransformPropagator;
+  private readonly logger = Diagnostics.create('AnimationManager');
 
   private static isGsapInitialized = false;
 
@@ -220,7 +222,7 @@ export class AnimationManager {
   ): AnimationTimelineResult | null {
     const targetElement = context.getShadowElement?.(elementId);
     if (!targetElement) {
-      console.warn(`[AnimationManager] Animation target element not found: ${elementId}`);
+      this.logger.warn(`Animation target element not found: ${elementId}`);
       return null;
     }
 
@@ -287,7 +289,7 @@ export class AnimationManager {
   reverseAnimation(elementId: string, animationIndex?: number): boolean {
     const timelines = this.activeTimelines.get(elementId);
     if (!timelines || timelines.length === 0) {
-      console.warn(`[AnimationManager] No active animations found for element: ${elementId}`);
+      this.logger.warn(`No active animations found for element: ${elementId}`);
       return false;
     }
 
@@ -300,7 +302,7 @@ export class AnimationManager {
     }
     
     if (!targetTimeline) {
-      console.warn(`[AnimationManager] No timeline found at index ${animationIndex} for element: ${elementId}`);
+      this.logger.warn(`No timeline found at index ${animationIndex} for element: ${elementId}`);
       return false;
     }
 
@@ -320,7 +322,7 @@ export class AnimationManager {
   reverseAllAnimations(elementId: string): void {
     const timelines = this.activeTimelines.get(elementId);
     if (!timelines || timelines.length === 0) {
-      console.warn(`[AnimationManager] No active animations found for element: ${elementId}`);
+      this.logger.warn(`No active animations found for element: ${elementId}`);
       return;
     }
 

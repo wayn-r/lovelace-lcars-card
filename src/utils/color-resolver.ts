@@ -5,6 +5,7 @@ import { HomeAssistant } from 'custom-card-helpers';
 import { EntityValueResolver } from './entity-value-resolver';
 import { Group } from '../layout/engine.js';
 import yaml from 'js-yaml';
+import { Diagnostics } from './diagnostics.js';
 import { EMBEDDED_THEME_YAML } from './embedded-theme.js';
 
 export type ColorChain = string & {
@@ -36,6 +37,7 @@ interface ResolveColorOptions {
 }
 
 export class ColorResolver {
+  private static readonly logger = Diagnostics.create('ColorResolver');
   private stateAccessor?: (name: string) => string | undefined;
   private static _resolvedThemeColors: ResolvedThemeColors | null = null;
   private static _themeLoadPromise: Promise<ResolvedThemeColors> | null = null;
@@ -300,10 +302,10 @@ export class ColorResolver {
         return this._parseThemeYaml(embeddedTheme);
       }
 
-      console.log('Using embedded theme data as fallback');
+      this.logger.info('Using embedded theme data as fallback');
       return this._parseThemeYaml(EMBEDDED_THEME_YAML);
     } catch (error) {
-      console.error('Failed to load theme colors for fallback:', error);
+      this.logger.error('Failed to load theme colors for fallback', error as unknown);
       return {};
     }
   }
@@ -333,13 +335,13 @@ export class ColorResolver {
       const themeKey = 'lcars_theme';
       const themeConfig = themeData[themeKey] as ThemeConfig;
       if (!themeConfig) {
-        console.warn('No lcars_theme found in theme YAML');
+        this.logger.warn('No lcars_theme found in theme YAML');
         return {};
       }
 
       return this._resolveCssVariables(themeConfig);
     } catch (error) {
-      console.error('Failed to parse theme YAML:', error);
+      this.logger.error('Failed to parse theme YAML', error as unknown);
       return {};
     }
   }
@@ -353,7 +355,7 @@ export class ColorResolver {
       if (resolvedColors[key]) return resolvedColors[key];
       
       if (resolutionStack.has(key)) {
-        console.warn(`Circular reference detected for theme variable: ${key}`);
+        ColorResolver.logger.warn(`Circular reference detected for theme variable: ${key}`);
         return resolvedColors[key] = value;
       }
 

@@ -6,6 +6,7 @@ import { ColorStateContext } from "../types.js";
 import { Action } from "../types.js";
 import { ActionProcessor } from "./action-helpers.js";
 import { CardRuntime } from "../core/runtime.js";
+import { Diagnostics, ScopedLogger } from "./diagnostics.js";
 
 export type ButtonProperty = 'fill' | 'stroke' | 'strokeWidth';
 
@@ -16,6 +17,7 @@ export class Button {
     private _id: string;
     private _getShadowElement?: (id: string) => Element | null;
     private _runtime?: CardRuntime;
+    private readonly logger: ScopedLogger = (this as any)._runtime?.diagnostics?.withScope('Button') ?? Diagnostics.create('Button');
 
     constructor(
         id: string, 
@@ -154,13 +156,13 @@ export class Button {
 
     private executeAction(action: Action, element?: Element): void {
         if (!this._hass) {
-            console.error(`[${this._id}] No hass object available for action execution`);
+            this.logger.error(`[${this._id}] No hass object available for action execution`);
             return;
         }
 
         const validationErrors = ActionProcessor.validateAction(action);
         if (validationErrors.length > 0) {
-            console.warn(`[${this._id}] Action validation failed:`, validationErrors);
+            this.logger.warn(`[${this._id}] Action validation failed: ${JSON.stringify(validationErrors)}`);
             return;
         }
 
@@ -183,11 +185,11 @@ export class Button {
                     sm?.executeToggleStateAction(action);
                     break;
                 default:
-                    console.warn(`[${this._id}] Unknown custom action: ${action.action}`);
+                    this.logger.warn(`[${this._id}] Unknown custom action: ${action.action}`);
             }
             this._requestUpdateCallback?.();
         } catch (error) {
-            console.error(`[${this._id}] Custom action execution failed:`, error);
+            this.logger.error(`[${this._id}] Custom action execution failed`, error as unknown);
             this._requestUpdateCallback?.();
         }
     }
@@ -201,7 +203,7 @@ export class Button {
             } else {
                 targetElement = document.createElement('div');
                 targetElement.id = this._id;
-                console.warn(`[${this._id}] Could not find DOM element, using fallback`);
+                this.logger.warn(`[${this._id}] Could not find DOM element, using fallback`);
             }
         }
 
@@ -216,7 +218,7 @@ export class Button {
                 }
             })
             .catch((error: Error) => {
-                console.error(`[${this._id}] ActionProcessor.processHassAction failed:`, error);
+                this.logger.error(`[${this._id}] ActionProcessor.processHassAction failed`, error);
                 this._requestUpdateCallback?.();
             });
     }

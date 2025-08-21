@@ -20,6 +20,7 @@ import { CardRuntime, RuntimeFactory } from './core/runtime.js';
 import { FontManager } from './utils/font-manager.js';
 import { ConfigValidator, logValidationResult } from './utils/config-validator.js';
 import { WidgetRegistry } from './layout/widgets/registry.js';
+import { Diagnostics } from './utils/diagnostics.js';
 
 
 import { editorStyles } from './styles/styles.js';
@@ -55,6 +56,7 @@ export class LcarsCard extends LitElement {
   @state() private _fontsLoaded = false;
   
   private _layoutEngine: LayoutEngine = new LayoutEngine();
+  private readonly logger = Diagnostics.create('LcarsCard');
   private _renderKeys: string[] = [];
   private _resizeObserver?: ResizeObserver;
   private _containerRect?: DOMRect;
@@ -77,7 +79,7 @@ export class LcarsCard extends LitElement {
     });
     
     ColorResolver.preloadThemeColors().catch(error => {
-      console.warn('Failed to preload theme fallback colors:', error);
+      this.logger.warn('Failed to preload theme fallback colors', error as unknown);
     });
   }
 
@@ -172,7 +174,7 @@ export class LcarsCard extends LitElement {
       FontManager.clearMetricsCache();
       this._resolveFontsReady();
     } catch (error) {
-      console.error("Font loading failed", error);
+      this.logger.error('Font loading failed', error as unknown);
       this._fontsLoaded = true;
       this._resolveFontsReady();
     }
@@ -345,14 +347,14 @@ export class LcarsCard extends LitElement {
   private async _performLayoutCalculation(rect: DOMRect): Promise<void> {
     const isValidLayoutRequest = this._config && rect && rect.width > 0 && rect.height > 0;
     if (!isValidLayoutRequest) {
-      console.warn('Skipping layout calculation - invalid config or dimensions');
+      this.logger.warn('Skipping layout calculation - invalid config or dimensions');
       return;
     }
 
     try {
       await this._fontsReady;
     } catch (error) {
-      console.warn('Font loading failed, proceeding with layout calculation:', error);
+      this.logger.warn('Font loading failed, proceeding with layout calculation', error as unknown);
     }
 
     try {
@@ -566,7 +568,7 @@ export class LcarsCard extends LitElement {
             : svg`<g style="visibility: hidden; opacity: 0; pointer-events: none;">${elementTemplate}</g>`;
           entries.push({ key: el.getRenderKey(), template: wrapped });
         } catch (error) {
-          console.error("[LcarsCard] Error rendering element", el.id, error);
+          this.logger.error(`Error rendering element ${el.id}`, error as unknown);
         }
       });
     });
@@ -677,7 +679,7 @@ export class LcarsCard extends LitElement {
         try {
           element.cleanupAnimations();
         } catch (error) {
-          console.error('Error clearing element state', element.id, error);
+          this.logger.error(`Error clearing element state ${element.id}`, error as unknown);
         }
       }
     }
@@ -726,7 +728,7 @@ export class LcarsCard extends LitElement {
   }
 
   private _handleLayoutError(error: any, rect: DOMRect): void {
-    console.error('Layout calculation failed:', error);
+    this.logger.error('Layout calculation failed', error as unknown);
     this._layoutElementTemplates = [];
     this._viewBox = `0 0 ${rect.width} 100`;
     this._calculatedHeight = 100;

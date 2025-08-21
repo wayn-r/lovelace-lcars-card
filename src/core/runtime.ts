@@ -5,6 +5,7 @@ import { AnimationManager } from '../utils/animation.js';
 import { ColorResolver } from '../utils/color-resolver.js';
 import { LoggerService } from '../utils/logger-service.js';
 import { TransformPropagator } from '../utils/transform-propagator.js';
+import { Diagnostics, ScopedLogger } from '../utils/diagnostics.js';
 
 export interface CardRuntime {
   store: ReactiveStore;
@@ -12,6 +13,7 @@ export interface CardRuntime {
   animations: AnimationManager;
   colors: ColorResolver;
   logger: LoggerService;
+  diagnostics: ScopedLogger;
   hass?: HomeAssistant;
   getShadowElement: (id: string) => Element | null;
   requestUpdate: () => void;
@@ -31,6 +33,7 @@ export class RuntimeFactory {
     colors.setStateAccessor((name: string) => state.getState(name));
 
     const logger = new LoggerService();
+    const diagnostics = Diagnostics.create('CardRuntime');
 
     const runtime: CardRuntime = {
       store,
@@ -38,6 +41,7 @@ export class RuntimeFactory {
       animations,
       colors,
       logger,
+      diagnostics,
       hass: params.hass,
       getShadowElement: params.getShadowElement,
       requestUpdate: params.requestUpdate,

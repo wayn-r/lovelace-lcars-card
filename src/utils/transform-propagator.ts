@@ -4,6 +4,7 @@ import { ReactiveStore, StateChangeEvent, StoreProvider } from '../core/store.js
 import gsap from 'gsap';
 import { DistanceParser } from './animation.js';
 import { TransformOriginUtils, AnchorPointUtils } from './transform-origin-utils.js';
+import { Diagnostics } from './diagnostics.js';
 
 export interface TransformEffect {
   initialOffsetX?: number;
@@ -53,6 +54,7 @@ interface PropagationTimeline {
 }
 
 export class TransformPropagator {
+  private readonly logger = Diagnostics.create('TransformPropagator');
   private elementDependencies = new Map<string, ElementDependency[]>();
   private elementsMap?: Map<string, LayoutElement>;
   private getShadowElement?: (id: string) => Element | null;
@@ -137,7 +139,7 @@ export class TransformPropagator {
     syncData: AnimationSyncData
   ): void {
     if (!this.elementsMap || !this.getShadowElement) {
-      console.warn('[TransformPropagator] Not initialized, cannot process animation');
+      this.logger.warn('Not initialized, cannot process animation');
       return;
     }
 
@@ -167,12 +169,12 @@ export class TransformPropagator {
     baseSyncData: AnimationSyncData
   ): void {
     if (!this.elementsMap || !this.getShadowElement) {
-      console.warn('[TransformPropagator] Not initialized, cannot process animation sequence');
+      this.logger.warn('Not initialized, cannot process animation sequence');
       return;
     }
 
     if (!animationSequence.steps || !Array.isArray(animationSequence.steps) || animationSequence.steps.length === 0) {
-      console.warn('[TransformPropagator] Invalid or empty animation sequence: missing or empty steps array');
+      this.logger.warn('Invalid or empty animation sequence: missing or empty steps array');
       return;
     }
 
@@ -270,7 +272,7 @@ export class TransformPropagator {
       }
     }
 
-    console.log(`[TransformPropagator] Processed animation sequence for ${primaryElementId} with ${sortedStepGroups.length} step groups. Initial offset: (${sequenceOverallInitialX}, ${sequenceOverallInitialY}). Final visual endpoint: (${currentVisualX}, ${currentVisualY}). Affected dependents: ${affectedElements.length}`);
+    this.logger.info(`Processed animation sequence for ${primaryElementId} with ${sortedStepGroups.length} step groups. Initial offset: (${sequenceOverallInitialX}, ${sequenceOverallInitialY}). Final visual endpoint: (${currentVisualX}, ${currentVisualY}). Affected dependents: ${affectedElements.length}`);
   }
 
   private applyInitialSequencePositioning(
@@ -765,7 +767,7 @@ export class TransformPropagator {
           y: effect.translateY || 0,
         };
       } else if (effect.type === 'rotate') {
-        console.warn('[TransformPropagator] Rotation effect displacement not fully implemented for anchor propagation.');
+        this.logger.warn('Rotation effect displacement not fully implemented for anchor propagation.');
       }
 
       totalDisplacementX += stepDisplacement.x;
@@ -1009,7 +1011,7 @@ export class TransformPropagator {
     animationConfig: AnimationDefinition
   ): void {
     if (!this.elementsMap || !this.getShadowElement) {
-      console.warn('[TransformPropagator] Not initialized, cannot reverse animation propagation');
+      this.logger.warn('Not initialized, cannot reverse animation propagation');
       return;
     }
 
@@ -1088,7 +1090,7 @@ export class TransformPropagator {
   private reversePropagationTimelines(elementId: string): boolean {
     const timelines = this.activePropagationTimelines.get(elementId);
     if (!timelines || timelines.length === 0) {
-      console.debug(`[TransformPropagator] No active propagation timelines found for element: ${elementId}`);
+      this.logger.debug(`No active propagation timelines found for element: ${elementId}`);
       return false;
     }
 

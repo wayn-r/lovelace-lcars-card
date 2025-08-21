@@ -8,6 +8,7 @@ import { lineGradients } from './graph.js';
 import { ColorValue } from '../../types.js';
 import { EntityControlService } from '../../utils/entity-service-manager.js';
 import { animationManager } from '../../utils/animation.js';
+import { Diagnostics, ScopedLogger } from '../../utils/diagnostics.js';
 
 export interface SliderEntityConfig {
   id: string;
@@ -19,6 +20,7 @@ export interface SliderEntityConfig {
 }
 
 export class VerticalSliderElement extends LayoutElement {
+  private readonly sliderLogger: ScopedLogger = (this as any)._runtime?.diagnostics?.withScope('VerticalSlider') ?? Diagnostics.create('VerticalSlider');
   private entityConfigs: SliderEntityConfig[] = [];
   private lastValues: Record<string, number> = {};
   private dragValues: Record<string, number | undefined> = {};
@@ -429,7 +431,7 @@ export class VerticalSliderElement extends LayoutElement {
     try {
       await EntityControlService.setNumericTarget(this.hass, cfg, rounded);
     } catch (err) {
-      console.error(`[VerticalSlider] Failed to set value for ${entityId}:`, err);
+      this.sliderLogger.error(`Failed to set value for ${entityId}`, err as unknown);
     }
   }
 

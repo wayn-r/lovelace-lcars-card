@@ -9,6 +9,7 @@ import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
 import { CardRuntime } from '../../core/runtime.js';
 import { ColorResolver } from '../../utils/color-resolver.js';
 import { EntityValueResolver } from '../../utils/entity-value-resolver.js';
+import { Diagnostics, ScopedLogger } from '../../utils/diagnostics.js';
 
 interface GraphButtonDimensions {
   width: number;
@@ -160,6 +161,7 @@ class GraphButtonFactory {
 }
 
 export class GraphWidget extends Widget {
+  private readonly logger: ScopedLogger = (this as any).runtime?.diagnostics?.withScope('GraphWidget') ?? Diagnostics.create('GraphWidget');
   private graphElement: GraphElement;
   private static readonly BUTTON_GAP_X: number = 20;
   private entityConfigs: RichEntityConfig[] = [];
@@ -326,7 +328,7 @@ export class GraphWidget extends Widget {
       })
       .catch(error => {
         const ids = this.entityIds.join(', ');
-        console.error(`[GraphWidget] Error fetching history for ${ids}:`, error);
+        this.logger.error(`Error fetching history for ${ids}`, error as unknown);
         this.graphElement.setHistory({});
       });
   }

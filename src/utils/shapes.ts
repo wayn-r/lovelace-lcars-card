@@ -1,4 +1,5 @@
 import FontMetrics from 'fontmetrics';
+import { Diagnostics } from './diagnostics.js';
 
 export const EPSILON = 0.0001;
 export const CAP_HEIGHT_RATIO = 0.66;
@@ -7,9 +8,10 @@ export type Orientation = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-le
 export type Direction = 'left' | 'right';
 
 export class ShapeGenerator {
+    private static readonly logger = Diagnostics.create('ShapeGenerator');
     static buildPath(points: [number, number, number][]): string {
         if (!points || points.length < 3) {
-            console.warn("LCARS Card: buildPath requires at least 3 points.");
+            this.logger.warn("buildPath requires at least 3 points.");
             return "";
         }
         
@@ -81,7 +83,7 @@ export class ShapeGenerator {
 
     private static dimensionsAreValid(width: number, height: number, functionName: string): boolean {
         if (width <= 0 || height <= 0) {
-            console.warn(`LCARS Card: ${functionName} requires positive width and height.`);
+            this.logger.warn(`${functionName} requires positive width and height.`);
             return false;
         }
         return true;
@@ -123,7 +125,7 @@ export class ShapeGenerator {
                 [x + lowerOffset, y + height, bottomCornerRadius]
             ];
         } else {
-            console.warn("LCARS Card: generateChiselEndcap only supports side='left' or 'right'. Falling back to rectangle.");
+            this.logger.warn("generateChiselEndcap only supports side='left' or 'right'. Falling back to rectangle.");
             points = [
                 [x, y, 0],
                 [x + width, y, 0],
@@ -145,7 +147,7 @@ export class ShapeGenerator {
         outerCornerRadius: number = armHeight
     ): string {
         if (armHeight <= 0 || width <= 0 || bodyWidth <= 0 || height <= armHeight) {
-            console.warn("LCARS Card: Invalid dimensions provided to generateElbow.");
+            this.logger.warn("Invalid dimensions provided to generateElbow.");
             return this.buildPath([[x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0], [x, y, 0]]);
         }
 
@@ -188,7 +190,7 @@ export class ShapeGenerator {
                 ];
                 break;
             default:
-                console.error(`LCARS Card: Invalid orientation "${orientation}" provided to generateElbow.`);
+                this.logger.error(`Invalid orientation "${orientation}" provided to generateElbow.`);
                 return this.buildPath(this.createFallbackPoints(x, y));
         }
         return this.buildPath(points);
@@ -281,7 +283,7 @@ export class ShapeGenerator {
         cornerRadius: number = 0
     ): string {
         if (sideLength <= 0) {
-            console.warn("LCARS Card: generateTriangle requires positive sideLength.");
+            this.logger.warn("generateTriangle requires positive sideLength.");
             return this.buildPath([[centerX, centerY, 0], [centerX, centerY, 0], [centerX, centerY, 0]]);
         }
 
@@ -314,6 +316,7 @@ export class ShapeGenerator {
 let canvasContext: CanvasRenderingContext2D | null = null;
 
 export class TextMeasurement {
+    private static readonly logger = Diagnostics.create('TextMeasurement');
 
     private static _getOrCreateCanvasContext(): CanvasRenderingContext2D | null {
         if (canvasContext) return canvasContext;
@@ -398,7 +401,7 @@ export class TextMeasurement {
                 return textWidth;
             }
         } catch (e) {
-            console.warn("LCARS Card: SVG text measurement failed, falling back to canvas:", e);
+            this.logger.warn("SVG text measurement failed, falling back to canvas", e as unknown);
         }
         
         return this.measureCanvasTextWidth(transformedText, font, letterSpacing);
@@ -466,7 +469,7 @@ export class TextMeasurement {
     }
 
     private static getFallbackTextWidth(text: string, font: string): number {
-        console.warn(`LCARS Card: Using fallback text width estimation for font "${font}".`);
+        this.logger.warn(`Using fallback text width estimation for font "${font}".`);
         const fontSizeMatch = font.match(/(\d+(?:\.\d+)?)(?:px|pt|em|rem)/);
         const fontSize = fontSizeMatch ? parseFloat(fontSizeMatch[1]) : 16;
         return text.length * fontSize * 0.6;

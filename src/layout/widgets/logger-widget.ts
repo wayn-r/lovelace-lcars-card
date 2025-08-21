@@ -8,6 +8,7 @@ import { CardRuntime } from '../../core/runtime.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
 import { LoggerService } from '../../utils/logger-service.js';
+import { Diagnostics, ScopedLogger } from '../../utils/diagnostics.js';
 import { DistanceParser } from '../../utils/animation.js';
 import { animationManager, AnimationContext, AnimationConfig } from '../../utils/animation.js';
 import { ColorResolver } from '../../utils/color-resolver.js';
@@ -369,6 +370,7 @@ export class LoggerWidget extends Widget {
   private unsubscribe?: () => void;
   private boundsElement?: RectangleElement;
   private processor?: MessageProcessor;
+  private readonly widgetLogger: ScopedLogger = (this as any).runtime?.diagnostics?.withScope('LoggerWidget') ?? Diagnostics.create('LoggerWidget');
 
   private trimTextToWidth(
     text: string,

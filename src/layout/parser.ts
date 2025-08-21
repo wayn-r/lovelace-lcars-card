@@ -7,8 +7,10 @@ import { WidgetRegistry } from './widgets/registry.js';
 import { parseCardConfig, type ParsedConfig } from '../parsers/schema.js';
 import { ZodError } from 'zod';
 import { CardRuntime } from '../core/runtime.js';
+import { Diagnostics } from '../utils/diagnostics.js';
 
 export class ConfigParser {
+  private static readonly logger = Diagnostics.create('ConfigParser');
   static parseConfig(
     config: unknown, 
     hass?: HomeAssistant, 
@@ -191,7 +193,7 @@ export class ConfigParser {
       return [element];
     }
 
-    console.warn(`LCARS Card Parser: Unknown element type "${type}". Defaulting to Rectangle.`);
+    ConfigParser.logger.warn(`Unknown element type "${type}". Defaulting to Rectangle.`);
     const fallback = ElementRegistry.createElement(
       'rectangle',
       id,

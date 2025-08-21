@@ -4,6 +4,7 @@ import { LayoutElement } from '../layout/elements/element.js';
 import { Group } from '../layout/engine.js';
 import gsap from 'gsap';
 import { ReactiveStore, StoreProvider, StateChangeEvent } from '../core/store.js';
+import { Diagnostics } from './diagnostics.js';
 
 export type StateChangeCallback = (event: StateChangeEvent) => void;
 
@@ -13,6 +14,7 @@ export class StateManager {
   private animationContext?: AnimationContext;
   private animations: AnimationManager;
   private storeUnsubscribe?: () => void;
+  private readonly logger = Diagnostics.create('StateManager');
 
   constructor(requestUpdateCallback?: () => void, store?: ReactiveStore, animations?: AnimationManager) {
     this.store = store ?? StoreProvider.getStore();
@@ -56,13 +58,13 @@ export class StateManager {
 
   setState(elementId: string, newState: string): void {
     if (!this.ensureElementInitialized(elementId)) {
-      console.warn(`[StateManager] Cannot set state for uninitialized element: ${elementId}`);
+      this.logger.warn(`Cannot set state for uninitialized element: ${elementId}`);
       return;
     }
     
     const currentState = this.getState(elementId);
     if (currentState === newState) {
-      console.debug(`[StateManager] State '${newState}' is already current for ${elementId}, skipping animation`);
+      this.logger.debug(`State '${newState}' is already current for ${elementId}, skipping animation`);
       return;
     }
     
@@ -101,7 +103,7 @@ export class StateManager {
       return true;
     }
 
-    console.log(`[StateManager] Auto-initializing ${elementId} for state management`);
+    this.logger.info(`Auto-initializing ${elementId} for state management`);
     
     const element = this.elementsMap?.get(elementId);
     if (element) {
@@ -119,7 +121,7 @@ export class StateManager {
       return true;
     }
     
-    console.warn(`[StateManager] Cannot auto-initialize ${elementId}: element not found in layout`);
+    this.logger.warn(`Cannot auto-initialize ${elementId}: element not found in layout`);
     return false;
   }
 
@@ -128,7 +130,7 @@ export class StateManager {
     const isInitialized = state.elementStates.has(elementId);
     
     if (!isInitialized) {
-      console.log(`[StateManager] Element ${elementId} not initialized for state management`);
+      this.logger.info(`Element ${elementId} not initialized for state management`);
     }
     
     return isInitialized;
@@ -167,11 +169,11 @@ export class StateManager {
         );
         
         if (isReverseTransition && !currentAnimation.isReversed) {
-          console.log(`[StateManager] Reversing existing animation for ${elementId} (${fromState} -> ${newState})`);
+          this.logger.info(`Reversing existing animation for ${elementId} (${fromState} -> ${newState})`);
           this.animations.reverseAnimation(elementId);
           return;
         } else {
-          console.log(`[StateManager] Stopping existing animation and starting new one for ${elementId} (${fromState} -> ${newState})`);
+          this.logger.info(`Stopping existing animation and starting new one for ${elementId} (${fromState} -> ${newState})`);
           
           const targetElement = this.animationContext.getShadowElement?.(elementId);
           if (targetElement) {
@@ -234,13 +236,13 @@ export class StateManager {
 
   executeAnimation(elementId: string, animationDef: AnimationDefinition, initialValues?: { opacity?: number; x?: number; y?: number; }): void {
     if (!this.animationContext || !this.elementsMap) {
-      console.warn(`[StateManager] No animation context available for ${elementId}`);
+      this.logger.warn(`No animation context available for ${elementId}`);
       return;
     }
 
     const element = this.elementsMap.get(elementId);
     if (!element) {
-      console.warn(`[StateManager] Element ${elementId} not found for animation`);
+      this.logger.warn(`Element ${elementId} not found for animation`);
       return;
     }
 
@@ -427,7 +429,7 @@ export class StateManager {
     const state = action.state;
     
     if (!targetElementRef || !state) {
-      console.warn('set_state action missing target_element_ref or state');
+      this.logger.warn('set_state action missing target_element_ref or state');
       return;
     }
     
@@ -439,7 +441,7 @@ export class StateManager {
     const states = action.states;
     
     if (!targetElementRef || !states || !Array.isArray(states)) {
-      console.warn('toggle_state action missing target_element_ref or states array');
+      this.logger.warn('toggle_state action missing target_element_ref or states array');
       return;
     }
     
@@ -448,7 +450,7 @@ export class StateManager {
 
   reverseAnimation(elementId: string): boolean {
     if (!this.animationContext) {
-      console.warn(`[StateManager] No animation context available for reversing animation on ${elementId}`);
+      this.logger.warn(`No animation context available for reversing animation on ${elementId}`);
       return false;
     }
 
@@ -457,7 +459,7 @@ export class StateManager {
 
   reverseAllAnimations(elementId: string): void {
     if (!this.animationContext) {
-      console.warn(`[StateManager] No animation context available for reversing animations on ${elementId}`);
+      this.logger.warn(`No animation context available for reversing animations on ${elementId}`);
       return;
     }
 

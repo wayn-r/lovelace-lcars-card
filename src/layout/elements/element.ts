@@ -9,6 +9,7 @@ import { colorResolver, ColorResolver } from '../../utils/color-resolver.js';
 import { CardRuntime } from '../../core/runtime.js';
 import { ComputedElementColors, ColorResolutionDefaults } from '../../types.js';
 import { OffsetCalculator } from '../../utils/offset-calculator.js';
+import { Diagnostics, ScopedLogger } from '../../utils/diagnostics.js';
 
 export abstract class LayoutElement {
     id: string;
@@ -22,6 +23,7 @@ export abstract class LayoutElement {
     public getShadowElement?: (id: string) => Element | null;
     protected containerRect?: DOMRect;
     protected _runtime?: CardRuntime;
+    protected logger: ScopedLogger;
     
     private isHovering = false;
     private isActive = false;
@@ -44,6 +46,7 @@ export abstract class LayoutElement {
         this.requestUpdateCallback = requestUpdateCallback;
         this.getShadowElement = getShadowElement;
         this._runtime = _runtime;
+        this.logger = (_runtime?.diagnostics?.withScope('LayoutElement')) ?? Diagnostics.create('LayoutElement');
 
         this.boundHandleMouseEnter = this.handleMouseEnter.bind(this);
         this.boundHandleMouseLeave = this.handleMouseLeave.bind(this);
@@ -243,7 +246,7 @@ export abstract class LayoutElement {
 
         const anchorTarget = elementsMap.get(anchorTo);
         if (!anchorTarget) {
-            console.warn(`Element '${this.id}' anchor target '${anchorTo}' not found in elements map`);
+            this.logger.warn(`Element '${this.id}' anchor target '${anchorTo}' not found in elements map`);
             dependencies.push(anchorTo);
             return false;
         }
@@ -267,7 +270,7 @@ export abstract class LayoutElement {
 
         const stretchTarget = elementsMap.get(stretchTo);
         if (!stretchTarget) {
-            console.warn(`Element '${this.id}' ${targetName} '${stretchTo}' not found in elements map`);
+            this.logger.warn(`Element '${this.id}' ${targetName} '${stretchTo}' not found in elements map`);
             dependencies.push(stretchTo);
             return false;
         }
@@ -371,7 +374,7 @@ export abstract class LayoutElement {
             );
 
             if (!result) {
-                console.warn(`Anchor target '${anchorTo}' not found or not calculated yet.`);
+                this.logger.warn(`Anchor target '${anchorTo}' not found or not calculated yet.`);
                 x = 0;
                 y = 0;
             } else {
@@ -573,7 +576,7 @@ export abstract class LayoutElement {
     ): number | null {
         const targetElement = elementsMap.get(stretchTargetId);
         if (!targetElement || !targetElement.layout.calculated) {
-            console.warn(`Stretch target '${stretchTargetId}' not found or not calculated yet.`);
+            this.logger.warn(`Stretch target '${stretchTargetId}' not found or not calculated yet.`);
             return null;
         }
 
