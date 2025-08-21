@@ -122,6 +122,67 @@ export type ButtonConfig = SchemaButtonConfig;
 
 export type Action = SchemaAction;
 
+// Strongly-typed action variants to enable compile-time safety
+export interface CallServiceAction {
+  action: 'call-service';
+  service: string;
+  service_data?: Record<string, any>;
+  target?: Record<string, any>;
+  confirmation?: boolean | ConfirmationConfig;
+}
+
+export interface NavigateAction {
+  action: 'navigate';
+  navigation_path: string;
+  confirmation?: boolean | ConfirmationConfig;
+}
+
+export interface UrlAction {
+  action: 'url';
+  url_path: string;
+  confirmation?: boolean | ConfirmationConfig;
+}
+
+export interface ToggleAction {
+  action: 'toggle';
+  entity: string;
+  confirmation?: boolean | ConfirmationConfig;
+}
+
+export interface MoreInfoAction {
+  action: 'more-info';
+  entity: string;
+  confirmation?: boolean | ConfirmationConfig;
+}
+
+export interface NoneAction {
+  action: 'none';
+  confirmation?: boolean | ConfirmationConfig;
+}
+
+export interface SetStateAction {
+  action: 'set_state';
+  target_element_ref: string;
+  state: string;
+}
+
+export interface ToggleStateAction {
+  action: 'toggle_state';
+  target_element_ref: string;
+  states: string[];
+}
+
+// Grouped unions for convenience
+export type HassAction =
+  | CallServiceAction
+  | NavigateAction
+  | UrlAction
+  | ToggleAction
+  | MoreInfoAction
+  | NoneAction;
+
+export type CustomAction = SetStateAction | ToggleStateAction;
+
 // ============================================================================
 // Button Configuration
 // ============================================================================

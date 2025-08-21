@@ -424,7 +424,7 @@ export class StateManager {
     this.cleanup();
   }
 
-  executeSetStateAction(action: import('../types.js').Action): void {
+  executeSetStateAction(action: import('../types.js').SetStateAction): void {
     const targetElementRef = action.target_element_ref;
     const state = action.state;
     
@@ -436,7 +436,7 @@ export class StateManager {
     this.setState(targetElementRef, state);
   }
 
-  executeToggleStateAction(action: import('../types.js').Action): void {
+  executeToggleStateAction(action: import('../types.js').ToggleStateAction): void {
     const targetElementRef = action.target_element_ref;
     const states = action.states;
     
