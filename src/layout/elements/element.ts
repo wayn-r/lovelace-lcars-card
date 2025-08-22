@@ -831,8 +831,9 @@ export abstract class LayoutElement {
         };
         
         const stateContext = this.getStateContext();
+        const resolver = this._runtime?.colors ?? colorResolver;
         
-        return colorResolver.resolveAllElementColors(this.id, this.props, context, options, stateContext);
+        return resolver.resolveAllElementColors(this.id, this.props, context, options, stateContext);
     }
 
     protected createResolvedPropsForButton(): any {
@@ -844,8 +845,9 @@ export abstract class LayoutElement {
         };
         
         const stateContext = this.getStateContext();
+        const resolver = this._runtime?.colors ?? colorResolver;
         
-        return colorResolver.createButtonPropsWithResolvedColors(this.id, this.props, context, stateContext);
+        return resolver.createButtonPropsWithResolvedColors(this.id, this.props, context, stateContext);
     }
 
 
@@ -874,15 +876,26 @@ export abstract class LayoutElement {
 
         const stateContext = this.getStateContext();
 
+        const resolver = this._runtime?.colors ?? colorResolver;
         const checkProp = (propName: 'fill' | 'stroke' | 'textColor') => {
             const value = (this.props as any)[propName];
             if (value === undefined) return;
-
+            
             if (typeof value === 'object') {
-                const resolved = ColorResolver.resolve(value)
-                    .withAnimation(this.id, propName as any, animationContext)
-                    .withState(stateContext)
-                    .withFallback('transparent');
+                const elementProps: any = { [propName]: value };
+                const computed = resolver.resolveAllElementColors(
+                    this.id,
+                    elementProps,
+                    animationContext as any,
+                    {
+                        fallbackFillColor: 'transparent',
+                        fallbackStrokeColor: 'transparent',
+                        fallbackStrokeWidth: '0',
+                        fallbackTextColor: 'transparent'
+                    },
+                    stateContext
+                );
+                const resolved = propName === 'fill' ? computed.fillColor : propName === 'stroke' ? computed.strokeColor : computed.textColor;
                 if (cache[propName] !== resolved) {
                     cache[propName] = resolved;
                     changed = true;

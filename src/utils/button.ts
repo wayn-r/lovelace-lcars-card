@@ -46,7 +46,8 @@ export class Button {
 
     private resolveElementColors(stateContext: ColorStateContext) {
         const context = this.buildAnimationContext();
-        return colorResolver.resolveAllElementColors(
+        const resolver = this._runtime?.colors ?? colorResolver;
+        return resolver.resolveAllElementColors(
             this._id,
             this._props,
             context,
