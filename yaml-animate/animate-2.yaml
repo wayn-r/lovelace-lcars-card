@@ -1,0 +1,301 @@
+type: custom:lovelace-lcars-card
+title: USS Enterprise NCC-1701-D
+groups:
+  - group_id: top-header
+    elements:
+      - id: top-header
+        type: top_header
+        text:
+          left_content: U.S.S. HERCULES / WILLEMETTE CLASS
+          right_content: NCC-1901
+          fill: "#7addee"
+        appearance:
+          fill: "#04bfd8"
+        layout:
+          width: 100%
+          height: 30
+          offsetX: 0
+          offsetY: 5
+          anchor:
+            to: container
+            element_point: topLeft
+            target_point: topLeft
+  - group_id: sub-header
+    elements:
+      - id: right-endcap
+        type: endcap
+        appearance:
+          fill: "#3ad9e7"
+          direction: right
+        layout:
+          height: 40
+          width: 10%
+          offsetY: 10
+          anchor:
+            to: top-header.top-header
+            element_point: topRight
+            target_point: bottomRight
+      - id: header
+        type: text
+        text:
+          content: evansville • IN
+          fill: "#5ca8ea"
+          text_anchor: end
+          textTransform: uppercase
+          fontFamily: Antonio
+          fontWeight: bold
+        layout:
+          height: 40
+          offsetX: -5
+          anchor:
+            to: sub-header.right-endcap
+            element_point: topRight
+            target_point: topLeft
+      - id: header-bar
+        type: rectangle
+        appearance:
+          fill: "#3ad9e7"
+        layout:
+          offsetX: 5
+          anchor:
+            to: sub-header.elbow
+            element_point: topLeft
+            target_point: topRight
+          stretch:
+            target1:
+              id: sub-header.header
+              edge: left
+              padding: -5
+            target2:
+              id: sub-header.right-endcap
+              edge: bottom
+      - id: elbow
+        type: elbow
+        appearance:
+          orientation: top-left
+          bodyWidth: 130
+          armHeight: 40
+          fill: "#12a4e3"
+        layout:
+          width: 25%
+          height: 60
+          offsetY: 10
+          anchor:
+            to: top-header.top-header
+            element_point: topLeft
+            target_point: bottomLeft
+  - group_id: environmental-header
+    elements:
+      - id: elbow
+        type: elbow
+        appearance:
+          orientation: bottom-left
+          bodyWidth: 130
+          armHeight: 15
+          fill: "#5ca8ea"
+        text:
+          content: environmental
+          fontFamily: Antonio
+          textTransform: uppercase
+          elbow_text_position: body
+          textAnchor: end
+          fontSize: 22
+          offsetX: -5
+          offsetY: -40
+          cutout: true
+        layout:
+          width: 145
+          height: 190
+          offsetY: 5
+          anchor:
+            to: sub-header.elbow
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: bar-1
+        type: rectangle
+        appearance:
+          fill: "#044ea9"
+        layout:
+          width: 5
+          height: 15
+          offsetX: 5
+          anchor:
+            to: environmental-header.elbow
+            element_point: bottomLeft
+            target_point: bottomRight
+          stretch:
+            target1:
+              id: sub-header.elbow
+              edge: right
+      - id: bar-2
+        type: rectangle
+        appearance:
+          fill: "#5ca8ea"
+        layout:
+          width: 10%
+          height: 15
+          offsetX: 5
+          anchor:
+            to: environmental-header.bar-1
+            element_point: bottomLeft
+            target_point: bottomRight
+      - id: bar-3
+        type: rectangle
+        appearance:
+          fill: "#86c8ff"
+        layout:
+          width: 25%
+          height: 15
+          offsetX: 5
+          anchor:
+            to: environmental-header.bar-2
+            element_point: bottomLeft
+            target_point: bottomRight
+      - id: bar-4
+        type: rectangle
+        appearance:
+          fill: "#12a4e3"
+        layout:
+          width: 40
+          height: 15
+          offsetX: 5
+          anchor:
+            to: environmental-header.bar-3
+            element_point: bottomLeft
+            target_point: bottomRight
+          stretch:
+            target1:
+              id: container
+              edge: right
+  - group_id: environmental-buttons
+    elements:
+      - id: main
+        type: elbow
+        text:
+          content: main
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fontSize: 22
+          offsetX: -5
+          offsetY: 18
+          elbow_text_position: body
+          fill: "#000000"
+        appearance:
+          fill:
+            hover: "#00CCFF"
+            default: "#00ffff"
+            active: "#0066AA"
+            orientation: top-left
+          bodyWidth: 130
+          armHeight: 15
+        layout:
+          width: 145
+          height: 80
+          offsetY: 10
+          anchor:
+            to: environmental-header.elbow
+            element_point: topLeft
+            target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/animate-1
+      - id: sickbay
+        type: rectangle
+        text:
+          content: sickbay
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fontSize: 22
+          offsetX: -5
+          fill: "#000000"
+        appearance:
+          fill:
+            hover: "#00CCFF"
+            default: "#7addee"
+            active: "#0066AA"
+        layout:
+          width: 130
+          height: 40
+          offsetY: 5
+          anchor:
+            to: environmental-buttons.main
+            element_point: topLeft
+            target_point: bottomLeft
+      - id: ship_map
+        type: rectangle
+        text:
+          content: ship map
+          fontFamily: Antonio
+          textTransform: uppercase
+          textAnchor: end
+          fontSize: 22
+          offsetX: -5
+          fill: "#000000"
+        appearance:
+          fill:
+            hover: "#00CCFF"
+            default: "#9ec9ce"
+            active: "#0066AA"
+        layout:
+          width: 130
+          height: 40
+          offsetY: 5
+          anchor:
+            to: environmental-buttons.sickbay
+            element_point: topLeft
+            target_point: bottomLeft
+  - group_id: environmental-lower-section
+    elements:
+      - id: bar-1
+        type: rectangle
+        appearance:
+          fill: "#7addee"
+        layout:
+          width: 35%
+          height: 15
+          offsetX: 5
+          anchor:
+            to: environmental-buttons.main
+            element_point: topLeft
+            target_point: topRight
+      - id: bar-2
+        type: rectangle
+        appearance:
+          fill: "#7addee"
+        layout:
+          height: 15
+          offsetX: 5
+          anchor:
+            to: environmental-lower-section.bar-1
+            element_point: topLeft
+            target_point: topRight
+          stretch:
+            target1:
+              id: environmental-lower-section.elbow
+              edge: left
+              padding: -5
+      - id: elbow
+        type: elbow
+        appearance:
+          fill: "#7addee"
+          orientation: top-right
+          bodyWidth: 80
+          armHeight: 15
+        layout:
+          width: 320
+          height: 80
+          offsetX: 5
+          offsetY: 10
+          anchor:
+            to: environmental-header.bar-4
+            element_point: topRight
+            target_point: bottomRight
+          stretch:
+            target1:
+              id: container
+              edge: bottom
