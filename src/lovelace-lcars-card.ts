@@ -21,6 +21,7 @@ import { FontManager } from './utils/font-manager.js';
 import { ConfigValidator, logValidationResult } from './utils/config-validator.js';
 import { WidgetRegistry } from './layout/widgets/registry.js';
 import { Diagnostics } from './utils/diagnostics.js';
+import { MorphEngine } from './utils/morph.js';
 
 
 import { editorStyles } from './styles/styles.js';
@@ -69,6 +70,8 @@ export class LcarsCard extends LitElement {
   private _runtime?: CardRuntime;
   private _storeUnsubscribe?: () => void;
   private _elementGraph?: Group[];
+  private _lastAnimationContext?: AnimationContext;
+  private _suspendRenders: boolean = false;
 
   static styles = [editorStyles];
 
@@ -158,6 +161,15 @@ export class LcarsCard extends LitElement {
     if (this._needsReinitialization && this._config && this._containerRect) {
       this._scheduleReinitialization();
     }
+
+    (window as any).__lcarsNavigateInterceptor = async (path: string, el: Element) => {
+      (window as any).__lcarsMorphInProgress = true;
+      try {
+        await this.morphNavigate(path, { durationMs: 1000 });
+      } finally {
+        (window as any).__lcarsMorphInProgress = false;
+      }
+    };
   }
   
   public async firstUpdated() {
@@ -345,6 +357,9 @@ export class LcarsCard extends LitElement {
   }
 
   private async _performLayoutCalculation(rect: DOMRect): Promise<void> {
+    if (this._suspendRenders) {
+      return;
+    }
     const isValidLayoutRequest = this._config && rect && rect.width > 0 && rect.height > 0;
     if (!isValidLayoutRequest) {
       this.logger.warn('Skipping layout calculation - invalid config or dimensions');
@@ -380,6 +395,8 @@ export class LcarsCard extends LitElement {
     const layoutDimensions = this._layoutEngine.recalculate(containerRect, { dynamicHeight: true });
     this._calculatedHeight = layoutDimensions.height;
 
+    this._clearDomTransformsForElements(groups);
+
     const shouldUpdateLayout = this._shouldUpdateLayout(rect);
     if (shouldUpdateLayout) {
       this._applyLayoutChanges(groups);
@@ -395,6 +412,8 @@ export class LcarsCard extends LitElement {
     const layoutDimensions = this._layoutEngine.recalculate(containerRect, { dynamicHeight: true });
     this._calculatedHeight = layoutDimensions.height;
 
+    this._clearDomTransformsForElements(groups);
+
     const shouldUpdateLayout = this._shouldUpdateLayout(rect);
     if (shouldUpdateLayout) {
       this._applyLayoutRecalculationChanges();
@@ -402,6 +421,9 @@ export class LcarsCard extends LitElement {
   }
 
   private _refreshElementRenders(): void {
+    if (this._suspendRenders) {
+      return;
+    }
     if (!this.isConnected || !this._runtime) {
       return;
     }
@@ -669,6 +691,7 @@ export class LcarsCard extends LitElement {
 
     const sm = this._runtime!.state;
     sm.setAnimationContext(animationContext, elementsMap);
+    this._lastAnimationContext = animationContext;
     this._initializeElementStates(groups);
     this._setupStateChangeHandling(elementsMap);
   }
@@ -781,16 +804,61 @@ export class LcarsCard extends LitElement {
       requestAnimationFrame(() => {
         this._setupAllElementListeners();
         
-        if (animationStates.size > 0) {
+        if (animationStates.size > 0 && this._runtime) {
           const context: AnimationContext = {
             elementId: '',
             getShadowElement: (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null,
             hass: this.hass,
             requestUpdateCallback: this.requestUpdate.bind(this)
           };
-          this._runtime!.animations.restoreAnimationStates(animationStates, context, () => {});
+          this._runtime.animations.restoreAnimationStates(animationStates, context, () => {});
         }
       });
     });
   }
+
+  private _clearDomTransformsForElements(groups: Group[]): void {
+    const anim = this._runtime?.animations;
+    const resetProps = 'transform,transformOrigin,x,y,scale,scaleX,scaleY,rotation,opacity';
+    const getEl = (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) as Element | null;
+    try {
+      for (const group of groups) {
+        for (const element of group.elements) {
+          try { anim?.stopAllAnimationsForElement(element.id); } catch {}
+          const domEl = getEl(element.id);
+          if (domEl) {
+            try { (domEl as any).style.visibility = ''; } catch {}
+            gsap.set(domEl as any, { clearProps: resetProps } as any);
+          }
+        }
+      }
+    } catch {}
+  }
+
+  /** Public: perform a morph transition to a navigation path, then navigate. */
+  public async morphNavigate(navigationPath: string, options: { durationMs?: number } = {}): Promise<void> {
+    if (!this._runtime || !this._containerRect) return;
+    try {
+      this._suspendRenders = true;
+      const hooks = {
+        getShadowElement: (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null,
+        requestUpdate: () => this._refreshElementRenders(),
+        setCalculatedHeight: (h: number) => { this._calculatedHeight = Math.max(this._calculatedHeight, h); },
+        getContainerRect: () => this._containerRect!,
+        getCurrentGroups: () => this._layoutEngine.layoutGroups,
+        getAnimationManager: () => this._runtime!.animations,
+        getAnimationContext: () => this._lastAnimationContext || {
+          elementId: 'card',
+          getShadowElement: (id: string) => this.shadowRoot?.querySelector(`#${CSS.escape(id)}`) || null,
+          hass: this.hass,
+          requestUpdateCallback: () => this.requestUpdate()
+        },
+      };
+      await MorphEngine.morphToNavigationPath(hooks, navigationPath, this.hass, { durationMs: options.durationMs ?? 1000 });
+    } catch (e) {
+    } finally {
+      setTimeout(() => { this._suspendRenders = false; }, 0);
+    }
+  }
+
 }

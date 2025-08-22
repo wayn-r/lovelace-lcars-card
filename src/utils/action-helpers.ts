@@ -2,7 +2,6 @@ import { Action, HassAction, CustomAction } from '../types.js';
 import { HomeAssistant, handleAction } from 'custom-card-helpers';
 
 export class ActionProcessor {
-  // --- Type guards -----------------------------------------------------------
   static actionIsCustom(action: Action): action is CustomAction {
     return action.action === 'set_state' || action.action === 'toggle_state';
   }
@@ -61,6 +60,12 @@ export class ActionProcessor {
     }
 
     const actionConfig = this.buildHassActionConfig(action);
+    if (this.isNavigate(action) && typeof (window as any).__lcarsNavigateInterceptor === 'function') {
+      try {
+        await (window as any).__lcarsNavigateInterceptor(action.navigation_path, element);
+      } catch (e) {
+      }
+    }
     
     if ((this.isToggle(action) || this.isMoreInfo(action)) && action.entity) {
       actionConfig.entity = action.entity;
