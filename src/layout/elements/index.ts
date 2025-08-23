@@ -3,7 +3,6 @@ import { RectangleElement } from './rectangle.js';
 import { TextElement } from './text.js';
 import { EndcapElement } from './endcap.js';
 import { ElbowElement } from './elbow.js';
-import { ChiselEndcapElement } from './chisel_endcap.js';
 import { WeatherIcon } from '../widgets/weather-icon.js';
 import type { HomeAssistant } from 'custom-card-helpers';
 import type { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
@@ -42,7 +41,6 @@ ElementRegistrar.registerAll([
   ['text', TextElement],
   ['endcap', EndcapElement],
   ['elbow', ElbowElement],
-  ['chisel-endcap', ChiselEndcapElement],
   ['weather-icon', WeatherIcon],
 ]);
 

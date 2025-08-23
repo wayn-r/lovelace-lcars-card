@@ -9,7 +9,6 @@ import { rectangleSchema } from './rectangle.js';
 import { textElementSchema } from './text.js';
 import { endcapSchema } from './endcap.js';
 import { elbowSchema } from './elbow.js';
-import { chiselEndcapSchema } from './chisel-endcap.js';
 import { topHeaderSchema } from './top-header.js';
 
 export const builtInElementSchemas: [
@@ -17,7 +16,6 @@ export const builtInElementSchemas: [
   typeof textElementSchema,
   typeof endcapSchema,
   typeof elbowSchema,
-  typeof chiselEndcapSchema,
   typeof topHeaderSchema,
   typeof graphWidgetSchema,
   typeof entityTextWidgetSchema,
@@ -29,7 +27,6 @@ export const builtInElementSchemas: [
   textElementSchema,
   endcapSchema,
   elbowSchema,
-  chiselEndcapSchema,
   topHeaderSchema,
   graphWidgetSchema,
   entityTextWidgetSchema,
@@ -43,7 +40,6 @@ export const discriminatedElementSchema: z.ZodDiscriminatedUnion<'type', any> = 
   typeof textElementSchema,
   typeof endcapSchema,
   typeof elbowSchema,
-  typeof chiselEndcapSchema,
   typeof topHeaderSchema,
   typeof graphWidgetSchema,
   typeof entityTextWidgetSchema,

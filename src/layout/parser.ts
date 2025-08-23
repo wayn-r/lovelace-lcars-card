@@ -70,6 +70,7 @@ export class ConfigParser {
       stroke: appearance.stroke,
       strokeWidth: appearance.strokeWidth,
       rx: appearance.cornerRadius,
+      chisel: appearance.chisel,
       direction: appearance.direction,
       orientation: appearance.orientation,
       bodyWidth: elementConfig.layout?.bodyWidth,

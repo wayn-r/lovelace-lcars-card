@@ -62,7 +62,10 @@ export class EndcapElement extends LayoutElement {
 
         const { x, y, width, height } = this.layout;
         const direction = (this.props.direction || 'left') as 'left' | 'right';
-        const pathData = ShapeGenerator.generateEndcap(width, height, direction, x, y);
+        const isChisel = Boolean(this.props.chisel);
+        const pathData = isChisel
+            ? ShapeGenerator.generateChiselEndcap(width, height, direction, x, y)
+            : ShapeGenerator.generateEndcap(width, height, direction, x, y);
 
         if (!pathData) {
             return null;

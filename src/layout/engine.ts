@@ -12,6 +12,7 @@ export interface LayoutElementProps {
   strokeWidth?: number;
   rx?: number;
   cornerRadius?: number;
+  chisel?: boolean;
   direction?: 'left' | 'right';
   orientation?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   bodyWidth?: number | string;

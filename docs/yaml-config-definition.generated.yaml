@@ -8,7 +8,7 @@ groups:
   - group_id: < string >
     elements:
       - id: < string >
-        type: < rectangle | text | endcap | elbow | chisel-endcap | top_header | graph-widget | entity-text-widget | entity-metric-widget | vertical-slider | weather-icon >
+        type: < rectangle | text | endcap | elbow | top_header | graph-widget | entity-text-widget | entity-metric-widget | vertical-slider | weather-icon >
         button:
             enabled: < boolean >
             actions: < object >
@@ -35,6 +35,7 @@ type: text
 
 type: endcap
   appearance:
+    chisel: < boolean >
     direction: < left | right >
 
 type: elbow
@@ -43,10 +44,6 @@ type: elbow
   layout:
     armHeight: < number | string >
     bodyWidth: < number | string >
-
-type: chisel-endcap
-  appearance:
-    direction: < left | right >
 
 type: top_header
   text:

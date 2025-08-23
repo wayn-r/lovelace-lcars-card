@@ -20,7 +20,7 @@ groups: <array>                  # Required: Defines groups of elements. Element
                                    #   Full ID becomes "group_id.id" (e.g., "navigation.status_light").
         type: <string>             # Required: The type of LCARS element.
                                    #   Options: "rectangle", "text", "endcap", "elbow",
-                                    #            "chisel-endcap", "top_header", "logger-widget", "graph-widget", "vertical-slider", "weather-icon", "entity-metric-widget".
+                                   #            "top_header", "logger-widget", "graph-widget", "vertical-slider", "weather-icon", "entity-metric-widget".
         entity: <string|array>     # Optional: Home Assistant entity ID or array of entity IDs.
                                    #   Required for 'graph-widget', 'entity-text-widget', and 'weather-icon'.
                                    #   For 'entity-text-widget', this can be a single entity ID string or an array of up to two entity ID strings.
@@ -107,7 +107,8 @@ groups: <array>                  # Required: Defines groups of elements. Element
 
           # --- Shape-Specific Appearance Properties ---
           cornerRadius: <number>     # For 'rectangle': Radius for rounded corners. Default: 0.
-          direction: <string>        # For 'endcap', 'chisel-endcap': "left" or "right".
+          chisel: <boolean>          # For 'endcap': Chiseled variant if true. Default: false.
+          direction: <string>        # For 'endcap': "left" or "right".
           orientation: <string>      # For 'elbow': "top-left", "top-right", "bottom-left", "bottom-right".
           # For 'top_header', `fill` applies to its internal endcaps and bar.
           # For 'logger-widget', appearance properties are not applicable as it renders text elements.

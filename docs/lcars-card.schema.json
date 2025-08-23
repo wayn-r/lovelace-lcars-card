@@ -1080,6 +1080,10 @@
                                 },
                                 "orientation": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/orientation"
+                                },
+                                "chisel": {
+                                  "type": "boolean",
+                                  "default": false
                                 }
                               },
                               "additionalProperties": false
@@ -1190,78 +1194,6 @@
                                 }
                               },
                               "additionalProperties": false
-                            },
-                            "button": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
-                            },
-                            "state_management": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/state_management"
-                            },
-                            "visibility_rules": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_rules"
-                            },
-                            "visibility_triggers": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_triggers"
-                            },
-                            "animations": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations"
-                            },
-                            "attribute": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/attribute"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "type"
-                          ],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/id"
-                            },
-                            "type": {
-                              "type": "string",
-                              "const": "chisel-endcap"
-                            },
-                            "appearance": {
-                              "type": "object",
-                              "properties": {
-                                "fill": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
-                                },
-                                "stroke": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/stroke"
-                                },
-                                "strokeWidth": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/strokeWidth"
-                                },
-                                "cornerRadius": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/cornerRadius"
-                                },
-                                "rounded": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/rounded"
-                                },
-                                "direction": {
-                                  "type": "string",
-                                  "enum": [
-                                    "left",
-                                    "right"
-                                  ]
-                                },
-                                "orientation": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/orientation"
-                                }
-                              },
-                              "additionalProperties": false
-                            },
-                            "text": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
-                            },
-                            "layout": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
                             },
                             "button": {
                               "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
@@ -1639,10 +1571,10 @@
                               ]
                             },
                             "label": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/7/properties/label"
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/6/properties/label"
                             },
                             "value": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/7/properties/value"
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/6/properties/value"
                             },
                             "unit": {
                               "type": "object",
