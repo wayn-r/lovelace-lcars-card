@@ -113,9 +113,10 @@ groups:
           - id: sensor.kevv_relative_humidity
             animated: false
             color: "#66CCFF"
-        grid:
-          num_lines: 5
-          fill: "#F00"
+        appearance:
+          grid:
+            num_lines: 5
+            fill: "#F00"
   - group_id: graph_6
     elements:
       - id: graph_6

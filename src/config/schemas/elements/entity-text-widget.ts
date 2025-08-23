@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { baseElementSchema } from './base.js';
-import { entityTextLabelSchema, entityTextValueSchema } from '../text.js';
+import { textOptionsSchema, textSchema } from '../text.js';
 
 const stringPairSchema = z.tuple([z.string(), z.string()]);
 
@@ -14,8 +14,10 @@ export const entityTextEntitySchema = z.union([
 export const entityTextWidgetSchema = baseElementSchema.extend({
   type: z.literal('entity-text-widget'),
   entity: entityTextEntitySchema,
-  label: entityTextLabelSchema.optional(),
-  value: entityTextValueSchema.optional(),
+  text: textSchema.extend({
+    label: textOptionsSchema.optional(),
+    value: textOptionsSchema.optional(),
+  }).optional(),
 });
 
 

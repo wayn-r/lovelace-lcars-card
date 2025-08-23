@@ -188,13 +188,14 @@ groups:
         entity: weather.openweathermap
         appearance:
           fill: "#5ca8ea"
-        label:
-          fontFamily: Antonio
-          content: current conditions
-        value:
-          fontFamily: Antonio
-          fill: "#3ad9e7"
-          textTransform: lowercase
+        text:
+          label:
+            fontFamily: Antonio
+            content: current conditions
+          value:
+            fontFamily: Antonio
+            fill: "#3ad9e7"
+            textTransform: lowercase
         layout:
           height: 25
           offsetY: -160
@@ -209,12 +210,13 @@ groups:
           - sensor.openweathermap_feels_like_temperature
         appearance:
           fill: "#12a4e3"
-        label:
-          fontFamily: Antonio
-          content: Temperature (feel)
-        value:
-          fontFamily: Antonio
-          fill: "#5ca8ea"
+        text:
+          label:
+            fontFamily: Antonio
+            content: Temperature (feel)
+          value:
+            fontFamily: Antonio
+            fill: "#5ca8ea"
         layout:
           height: 25
           offsetY: 5
@@ -227,13 +229,14 @@ groups:
         entity: weather.kevv_daynight
         appearance:
           fill: "#12a4e3"
-        label:
-          fontFamily: Antonio
-          content: precipitation chance
-        value:
-          fontFamily: Antonio
-          content: "-50%"
-          fill: "#5ca8ea"
+        text:
+          label:
+            fontFamily: Antonio
+            content: precipitation chance
+          value:
+            fontFamily: Antonio
+            content: "-50%"
+            fill: "#5ca8ea"
         layout:
           height: 25
           offsetY: 5
@@ -247,12 +250,13 @@ groups:
         attribute: uv_index
         appearance:
           fill: "#225782"
-        label:
-          fontFamily: Antonio
-          content: Uv index
-        value:
-          fontFamily: Antonio
-          fill: "#044ea9"
+        text:
+          label:
+            fontFamily: Antonio
+            content: Uv index
+          value:
+            fontFamily: Antonio
+            fill: "#044ea9"
         layout:
           height: 25
           offsetY: 5
@@ -265,13 +269,14 @@ groups:
         entity: weather.kevv_daynight
         appearance:
           fill: "#225782"
-        label:
-          fontFamily: Antonio
-          content: Air Quality index
-        value:
-          fontFamily: Antonio
-          content: "100"
-          fill: "#044ea9"
+        text:
+          label:
+            fontFamily: Antonio
+            content: Air Quality index
+          value:
+            fontFamily: Antonio
+            content: "100"
+            fill: "#044ea9"
         layout:
           height: 25
           offsetY: 5
@@ -286,12 +291,13 @@ groups:
           - sensor.openweathermap_wind_bearing
         appearance:
           fill: "#04bfd8"
-        label:
-          fontFamily: Antonio
-          content: Wind Speed (direction))
-        value:
-          fontFamily: Antonio
-          fill: "#04bfd8"
+        text:
+          label:
+            fontFamily: Antonio
+            content: Wind Speed (direction))
+          value:
+            fontFamily: Antonio
+            fill: "#04bfd8"
         layout:
           height: 25
           offsetY: 5
@@ -496,11 +502,12 @@ groups:
             label: low
           - id: sensor.living_room_temperature
             label: current
-        grid:
-          num_lines: 15
-        spacing: 14
-        top_padding: 6
-        label_height: 50
+        appearance:
+          grid:
+            num_lines: 15
+          spacing: 14
+          top_padding: 6
+          label_height: 50
         layout:
           offsetY: 25
           width: 220
@@ -522,8 +529,9 @@ groups:
             to: environmental-lower-section.bar-2
             element_point: topRight
             target_point: bottomRight
-        value:
-          fontWeight: bold
+        text:
+          value:
+            fontWeight: bold
       - id: widget2
         type: entity-metric-widget
         entity: sensor.openweathermap_cloud_coverage
@@ -535,6 +543,9 @@ groups:
             to: metric-widgets.widget1
             element_point: topLeft
             target_point: bottomLeft
+        text:
+          value:
+            fontWeight: bold
       - id: widget3
         type: entity-metric-widget
         entity: sensor.openweathermap_dew_point_temperature

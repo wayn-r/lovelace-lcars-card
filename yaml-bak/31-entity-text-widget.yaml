@@ -29,11 +29,12 @@ groups:
       - id: widget_1
         type: entity-text-widget
         entity: light.kitchen_sink_light
-        label:
-          fontFamily: Antonio
-        value:
-          fontFamily: Antonio
-          fill: "#0099FF"
+        text:
+          label:
+            fontFamily: Antonio
+          value:
+            fontFamily: Antonio
+            fill: "#0099FF"
         layout:
           height: 30
           offsetY: 10
@@ -45,20 +46,21 @@ groups:
       - id: widget_2
         type: entity-text-widget
         entity: light.kitchen_sink_light
-        label:
-          content: Sink Light
-          height: 15
-          fontFamily: Antonio
-          fontWeight: Bold
-          fill: "#00CC99"
-          offsetX: 8
-          width: 100
-        value:
-          content: im a light
-          fontFamily: Antonio
-          fontWeight: bold
-          offsetX: 15
-          fill: "#00CC99"
+        text:
+          label:
+            content: Sink Light
+            height: 15
+            fontFamily: Antonio
+            fontWeight: Bold
+            fill: "#00CC99"
+            offsetX: 8
+            width: 100
+          value:
+            content: im a light
+            fontFamily: Antonio
+            fontWeight: bold
+            offsetX: 15
+            fill: "#00CC99"
         appearance:
           fill: "#0099CC"
         layout:

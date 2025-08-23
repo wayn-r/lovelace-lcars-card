@@ -18,12 +18,6 @@ export const sliderEntitySchema = z.union([
 export const verticalSliderSchema = baseElementSchema.extend({
   type: z.literal('vertical-slider'),
   entity: sliderEntitySchema,
-  min: z.number().optional(),
-  max: z.number().optional(),
-  spacing: z.number().optional(),
-  top_padding: z.number().optional(),
-  label_height: z.number().optional(),
-  use_floats: z.boolean().optional(),
 });
 
 

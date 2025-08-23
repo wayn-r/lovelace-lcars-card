@@ -26,7 +26,7 @@ export const textSchema = z.object({
   })).optional(),
 });
 
-export const entityTextLabelSchema = z.object({
+export const textOptionsSchema = z.object({
   content: z.string().optional(),
   width: z.number().optional(),
   height: z.number().optional(),
@@ -38,26 +38,9 @@ export const entityTextLabelSchema = z.object({
   cutout: z.boolean().optional(),
 });
 
-export const entityTextValueSchema = z.object({
-  content: z.string().optional(),
-  fontFamily: z.string().optional(),
-  fontWeight: z.union([z.string(), z.number()]).optional(),
-  fill: colorSchema.optional(),
-  offsetX: z.number().optional(),
-  textTransform: z.string().optional(),
-});
-
-export const entityMetricUnitSchema = z.object({
-  content: z.string().optional(),
-  width: z.number().optional(),
-  height: z.number().optional(),
-  fontFamily: z.string().optional(),
-  fontWeight: z.union([z.string(), z.number()]).optional(),
-  fill: colorSchema.optional(),
-  offsetX: z.number().optional(),
-  textTransform: z.string().optional(),
-  cutout: z.boolean().optional(),
-});
+export const entityTextLabelSchema = textOptionsSchema;
+export const entityTextValueSchema = textOptionsSchema;
+export const entityMetricUnitSchema = textOptionsSchema;
 
 export type TextConfig = z.infer<typeof textSchema>;
 

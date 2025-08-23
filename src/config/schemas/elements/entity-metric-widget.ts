@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { baseElementSchema } from './base.js';
-import { entityTextLabelSchema, entityTextValueSchema, entityMetricUnitSchema } from '../text.js';
+import { textOptionsSchema, textSchema } from '../text.js';
 
 export const entityMetricEntitySchema = z.union([
   z.string(),
@@ -12,9 +12,11 @@ export const entityMetricEntitySchema = z.union([
 export const entityMetricWidgetSchema = baseElementSchema.extend({
   type: z.literal('entity-metric-widget'),
   entity: entityMetricEntitySchema,
-  label: entityTextLabelSchema.optional(),
-  value: entityTextValueSchema.optional(),
-  unit: entityMetricUnitSchema.optional(),
+  text: textSchema.extend({
+    label: textOptionsSchema.optional(),
+    value: textOptionsSchema.optional(),
+    unit: textOptionsSchema.optional(),
+  }).optional(),
 });
 
 

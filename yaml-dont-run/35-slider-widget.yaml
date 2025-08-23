@@ -28,13 +28,13 @@ groups:
         entity: input_number.bedroom_climate
         appearance:
           fill: var(--lcars-color-graph-background)
+          grid:
+            num_lines: 15
+          spacing: 14
+          top_padding: 6
+          label_height: 50
         text:
           fill: var(--lcars-color-white)
-        grid:
-          num_lines: 15
-        spacing: 14
-        top_padding: 6
-        label_height: 50
         layout:
           offsetY: 400
           width: 70
@@ -59,11 +59,12 @@ groups:
             label: NEURO
             min: 0
             max: 110
-        grid:
-          num_lines: 15
-        spacing: 14
-        top_padding: 6
-        label_height: 50
+        appearance:
+          grid:
+            num_lines: 15
+          spacing: 14
+          top_padding: 6
+          label_height: 50
         layout:
           offsetY: 100
           width: 220

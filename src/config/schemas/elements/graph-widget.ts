@@ -22,11 +22,6 @@ export const graphEntitySchema = z.union([
 export const graphWidgetSchema = baseElementSchema.extend({
   type: z.literal('graph-widget'),
   entity: graphEntitySchema,
-  grid: z.object({
-    num_lines: z.number().default(6),
-    fill: colorSchema.optional(),
-    label_fill: colorSchema.optional(),
-  }).optional(),
 });
 
 

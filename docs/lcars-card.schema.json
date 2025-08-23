@@ -139,6 +139,40 @@
                                     "bottom-left",
                                     "bottom-right"
                                   ]
+                                },
+                                "grid": {
+                                  "type": "object",
+                                  "properties": {
+                                    "num_lines": {
+                                      "type": "number",
+                                      "default": 6
+                                    },
+                                    "fill": {
+                                      "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                    },
+                                    "label_fill": {
+                                      "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "min": {
+                                  "type": "number"
+                                },
+                                "max": {
+                                  "type": "number"
+                                },
+                                "spacing": {
+                                  "type": "number"
+                                },
+                                "top_padding": {
+                                  "type": "number"
+                                },
+                                "label_height": {
+                                  "type": "number"
+                                },
+                                "use_floats": {
+                                  "type": "boolean"
                                 }
                               },
                               "additionalProperties": false
@@ -1081,6 +1115,27 @@
                                 "orientation": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/orientation"
                                 },
+                                "grid": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/grid"
+                                },
+                                "min": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/min"
+                                },
+                                "max": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/max"
+                                },
+                                "spacing": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/spacing"
+                                },
+                                "top_padding": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/top_padding"
+                                },
+                                "label_height": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/label_height"
+                                },
+                                "use_floats": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/use_floats"
+                                },
                                 "chisel": {
                                   "type": "boolean",
                                   "default": false
@@ -1158,6 +1213,27 @@
                                     "bottom-left",
                                     "bottom-right"
                                   ]
+                                },
+                                "grid": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/grid"
+                                },
+                                "min": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/min"
+                                },
+                                "max": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/max"
+                                },
+                                "spacing": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/spacing"
+                                },
+                                "top_padding": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/top_padding"
+                                },
+                                "label_height": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/label_height"
+                                },
+                                "use_floats": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/use_floats"
                                 }
                               },
                               "additionalProperties": false
@@ -1374,22 +1450,6 @@
                                   }
                                 }
                               ]
-                            },
-                            "grid": {
-                              "type": "object",
-                              "properties": {
-                                "num_lines": {
-                                  "type": "number",
-                                  "default": 6
-                                },
-                                "fill": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
-                                },
-                                "label_fill": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
-                                }
-                              },
-                              "additionalProperties": false
                             }
                           },
                           "required": [
@@ -1413,7 +1473,106 @@
                               "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance"
                             },
                             "text": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
+                              "type": "object",
+                              "properties": {
+                                "content": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/content"
+                                },
+                                "fill": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fill"
+                                },
+                                "fontFamily": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontFamily"
+                                },
+                                "fontSize": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontSize"
+                                },
+                                "fontWeight": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontWeight"
+                                },
+                                "letterSpacing": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letterSpacing"
+                                },
+                                "textAnchor": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textAnchor"
+                                },
+                                "dominantBaseline": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/dominantBaseline"
+                                },
+                                "textTransform": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textTransform"
+                                },
+                                "cutout": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/cutout"
+                                },
+                                "elbow_text_position": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/elbow_text_position"
+                                },
+                                "left_content": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/left_content"
+                                },
+                                "right_content": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/right_content"
+                                },
+                                "offsetX": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offsetX"
+                                },
+                                "offsetY": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offsetY"
+                                },
+                                "max_lines": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/max_lines"
+                                },
+                                "line_spacing": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/line_spacing"
+                                },
+                                "text_color": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/text_color"
+                                },
+                                "color_cycle": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/color_cycle"
+                                },
+                                "label": {
+                                  "type": "object",
+                                  "properties": {
+                                    "content": {
+                                      "type": "string"
+                                    },
+                                    "width": {
+                                      "type": "number"
+                                    },
+                                    "height": {
+                                      "type": "number"
+                                    },
+                                    "fontFamily": {
+                                      "type": "string"
+                                    },
+                                    "fontWeight": {
+                                      "type": [
+                                        "string",
+                                        "number"
+                                      ]
+                                    },
+                                    "fill": {
+                                      "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                    },
+                                    "offsetX": {
+                                      "type": "number"
+                                    },
+                                    "textTransform": {
+                                      "type": "string"
+                                    },
+                                    "cutout": {
+                                      "type": "boolean"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "value": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/6/properties/text/properties/label"
+                                }
+                              },
+                              "additionalProperties": false
                             },
                             "layout": {
                               "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
@@ -1448,69 +1607,6 @@
                                   }
                                 }
                               ]
-                            },
-                            "label": {
-                              "type": "object",
-                              "properties": {
-                                "content": {
-                                  "type": "string"
-                                },
-                                "width": {
-                                  "type": "number"
-                                },
-                                "height": {
-                                  "type": "number"
-                                },
-                                "fontFamily": {
-                                  "type": "string"
-                                },
-                                "fontWeight": {
-                                  "type": [
-                                    "string",
-                                    "number"
-                                  ]
-                                },
-                                "fill": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
-                                },
-                                "offsetX": {
-                                  "type": "number"
-                                },
-                                "textTransform": {
-                                  "type": "string"
-                                },
-                                "cutout": {
-                                  "type": "boolean"
-                                }
-                              },
-                              "additionalProperties": false
-                            },
-                            "value": {
-                              "type": "object",
-                              "properties": {
-                                "content": {
-                                  "type": "string"
-                                },
-                                "fontFamily": {
-                                  "type": "string"
-                                },
-                                "fontWeight": {
-                                  "type": [
-                                    "string",
-                                    "number"
-                                  ]
-                                },
-                                "fill": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
-                                },
-                                "offsetX": {
-                                  "type": "number"
-                                },
-                                "textTransform": {
-                                  "type": "string"
-                                }
-                              },
-                              "additionalProperties": false
                             }
                           },
                           "required": [
@@ -1534,7 +1630,76 @@
                               "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance"
                             },
                             "text": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
+                              "type": "object",
+                              "properties": {
+                                "content": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/content"
+                                },
+                                "fill": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fill"
+                                },
+                                "fontFamily": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontFamily"
+                                },
+                                "fontSize": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontSize"
+                                },
+                                "fontWeight": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontWeight"
+                                },
+                                "letterSpacing": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letterSpacing"
+                                },
+                                "textAnchor": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textAnchor"
+                                },
+                                "dominantBaseline": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/dominantBaseline"
+                                },
+                                "textTransform": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textTransform"
+                                },
+                                "cutout": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/cutout"
+                                },
+                                "elbow_text_position": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/elbow_text_position"
+                                },
+                                "left_content": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/left_content"
+                                },
+                                "right_content": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/right_content"
+                                },
+                                "offsetX": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offsetX"
+                                },
+                                "offsetY": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offsetY"
+                                },
+                                "max_lines": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/max_lines"
+                                },
+                                "line_spacing": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/line_spacing"
+                                },
+                                "text_color": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/text_color"
+                                },
+                                "color_cycle": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/color_cycle"
+                                },
+                                "label": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/6/properties/text/properties/label"
+                                },
+                                "value": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/6/properties/text/properties/label"
+                                },
+                                "unit": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/6/properties/text/properties/label"
+                                }
+                              },
+                              "additionalProperties": false
                             },
                             "layout": {
                               "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
@@ -1569,48 +1734,6 @@
                                   }
                                 }
                               ]
-                            },
-                            "label": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/6/properties/label"
-                            },
-                            "value": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/6/properties/value"
-                            },
-                            "unit": {
-                              "type": "object",
-                              "properties": {
-                                "content": {
-                                  "type": "string"
-                                },
-                                "width": {
-                                  "type": "number"
-                                },
-                                "height": {
-                                  "type": "number"
-                                },
-                                "fontFamily": {
-                                  "type": "string"
-                                },
-                                "fontWeight": {
-                                  "type": [
-                                    "string",
-                                    "number"
-                                  ]
-                                },
-                                "fill": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
-                                },
-                                "offsetX": {
-                                  "type": "number"
-                                },
-                                "textTransform": {
-                                  "type": "string"
-                                },
-                                "cutout": {
-                                  "type": "boolean"
-                                }
-                              },
-                              "additionalProperties": false
                             }
                           },
                           "required": [
@@ -1698,24 +1821,6 @@
                                   }
                                 }
                               ]
-                            },
-                            "min": {
-                              "type": "number"
-                            },
-                            "max": {
-                              "type": "number"
-                            },
-                            "spacing": {
-                              "type": "number"
-                            },
-                            "top_padding": {
-                              "type": "number"
-                            },
-                            "label_height": {
-                              "type": "number"
-                            },
-                            "use_floats": {
-                              "type": "boolean"
                             }
                           },
                           "required": [

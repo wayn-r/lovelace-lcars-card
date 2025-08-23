@@ -56,69 +56,22 @@ type: top_header
 
 type: graph-widget
   entity: <string | array<string|{ id: <string>, color?: <string|array|object>, toggleable?: <boolean>, animated?: <boolean>, duration?: <number>, label?: <string>, min?: <number>, max?: <number>, attribute?: <string> }>>
-  grid:
-    num_lines: < number > (default: 6)
-    fill: < string | array | object >
-    label_fill: < string | array | object >
 
 type: entity-text-widget
   entity: <string | string[1..2]>
-  label:
-    content: < string >
-    width: < number >
-    height: < number >
-    fontFamily: < string >
-    fontWeight: < string | number >
-    fill: < string | array | object >
-    offsetX: < number >
-    textTransform: < string >
-    cutout: < boolean >
-  value:
-    content: < string >
-    fontFamily: < string >
-    fontWeight: < string | number >
-    fill: < string | array | object >
-    offsetX: < number >
-    textTransform: < string >
+  text:
+    label: < object >
+    value: < object >
 
 type: entity-metric-widget
   entity: <string | string[1..2]>
-  label:
-    content: < string >
-    width: < number >
-    height: < number >
-    fontFamily: < string >
-    fontWeight: < string | number >
-    fill: < string | array | object >
-    offsetX: < number >
-    textTransform: < string >
-    cutout: < boolean >
-  value:
-    content: < string >
-    fontFamily: < string >
-    fontWeight: < string | number >
-    fill: < string | array | object >
-    offsetX: < number >
-    textTransform: < string >
-  unit:
-    content: < string >
-    width: < number >
-    height: < number >
-    fontFamily: < string >
-    fontWeight: < string | number >
-    fill: < string | array | object >
-    offsetX: < number >
-    textTransform: < string >
-    cutout: < boolean >
+  text:
+    label: < object >
+    unit: < object >
+    value: < object >
 
 type: vertical-slider
   entity: <string | array<string|{ id: <string>, color?: <any>, label?: <string>, min?: <number>, max?: <number>, attribute?: <string> }>>
-  min: < number >
-  max: < number >
-  spacing: < number >
-  top_padding: < number >
-  label_height: < number >
-  use_floats: < boolean >
 
 type: weather-icon
   entity: <string>

@@ -99,23 +99,22 @@ export class ConfigParser {
       
       entity: elementConfig.entity,
       attribute: elementConfig.attribute,
-      label: elementConfig.label,
-      value: elementConfig.value,
-      unit: elementConfig.unit,
+      label: (text as any).label ?? elementConfig.label,
+      value: (text as any).value ?? elementConfig.value,
+      unit: (text as any).unit ?? elementConfig.unit,
       appearance: elementConfig.appearance,
       
       // Logger widget specific properties
       maxLines: text.max_lines,
       lineSpacing: text.line_spacing,
       color_cycle: text.color_cycle,
-       grid: elementConfig.grid,
-       // Vertical slider widget specific properties
-       min: elementConfig.min,
-       max: elementConfig.max,
-       spacing: elementConfig.spacing,
-       top_padding: elementConfig.top_padding,
-       label_height: elementConfig.label_height,
-       use_floats: elementConfig.use_floats,
+       grid: appearance.grid ?? elementConfig.grid,
+       min: appearance.min ?? elementConfig.min,
+       max: appearance.max ?? elementConfig.max,
+       spacing: appearance.spacing ?? elementConfig.spacing,
+       top_padding: appearance.top_padding ?? elementConfig.top_padding,
+       label_height: appearance.label_height ?? elementConfig.label_height,
+       use_floats: appearance.use_floats ?? elementConfig.use_floats,
     };
 
     if (text.fill !== undefined) {

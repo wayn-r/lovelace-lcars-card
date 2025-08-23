@@ -34,8 +34,9 @@ groups:
             to: nav_header.main_header
             element_point: topLeft
             target_point: bottomLeft
-        value:
-          fontWeight: bold
+        text:
+          value:
+            fontWeight: bold
       - id: widget2
         type: entity-metric-widget
         entity: sensor.kevv_wind_speed
@@ -46,5 +47,6 @@ groups:
             to: widgets.widget1
             element_point: topLeft
             target_point: topRight
-        value:
-          fontWeight: bold
+        text:
+          value:
+            fontWeight: bold
