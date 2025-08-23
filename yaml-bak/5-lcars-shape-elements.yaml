@@ -141,14 +141,14 @@ groups:
         appearance:
           fill: "#9966CC"
           orientation: top-left
-          bodyWidth: 80
-          armHeight: 25
         text:
           content: ELBOW TL
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: arm
         layout:
+          bodyWidth: 80
+          armHeight: 25
           width: 180
           height: 80
           offsetY: 10
@@ -161,14 +161,14 @@ groups:
         appearance:
           fill: "#66CC99"
           orientation: bottom-left
-          bodyWidth: 80
-          armHeight: 25
         text:
           content: ELBOW BL
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: body
         layout:
+          bodyWidth: 80
+          armHeight: 25
           width: 180
           height: 90
           anchor:
@@ -180,14 +180,14 @@ groups:
         appearance:
           fill: "#9966CC"
           orientation: bottom-right
-          bodyWidth: 80
-          armHeight: 25
         text:
           content: ELBOW BR
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: arm
         layout:
+          bodyWidth: 80
+          armHeight: 25
           width: 180
           height: 90
           anchor:
@@ -199,14 +199,14 @@ groups:
         appearance:
           fill: "#66CC99"
           orientation: top-right
-          bodyWidth: 80
-          armHeight: 25
         text:
           content: ELBOW TR
           fill: "#FFFFFF"
           fontFamily: Antonio
           elbow_text_position: body
         layout:
+          bodyWidth: 80
+          armHeight: 25
           width: 180
           height: 90
           anchor:

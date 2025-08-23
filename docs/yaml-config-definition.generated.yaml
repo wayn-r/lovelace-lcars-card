@@ -39,9 +39,10 @@ type: endcap
 
 type: elbow
   appearance:
+    orientation: < top-left | top-right | bottom-left | bottom-right >
+  layout:
     armHeight: < number | string >
     bodyWidth: < number | string >
-    orientation: < top-left | top-right | bottom-left | bottom-right >
 
 type: chisel-endcap
   appearance:

@@ -109,8 +109,6 @@ groups: <array>                  # Required: Defines groups of elements. Element
           cornerRadius: <number>     # For 'rectangle': Radius for rounded corners. Default: 0.
           direction: <string>        # For 'endcap', 'chisel-endcap': "left" or "right".
           orientation: <string>      # For 'elbow': "top-left", "top-right", "bottom-left", "bottom-right".
-          bodyWidth: <number>        # For 'elbow': Thickness of the main part.
-          armHeight: <number>        # For 'elbow': Thickness of the arm.
           # For 'top_header', `fill` applies to its internal endcaps and bar.
           # For 'logger-widget', appearance properties are not applicable as it renders text elements.
 
@@ -165,6 +163,10 @@ groups: <array>                  # Required: Defines groups of elements. Element
                                                  #   within the specified height, superseding text.fontSize.
           offsetX: <number | string_percentage>  # e.g., 10 or "-5%"
           offsetY: <number | string_percentage>  # e.g., 10 or "-5%"
+
+          # --- Shape-Specific Layout Properties ---
+          bodyWidth: <number>        # For 'elbow': Thickness of the main body segment.
+          armHeight: <number>        # For 'elbow': Thickness of the arm segment.
 
           anchor:                    # Optional: (Not for 'top_header')
             to: <string>               # Full ID of target element ("group.base_id") or "container".

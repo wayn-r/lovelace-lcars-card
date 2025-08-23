@@ -105,14 +105,14 @@ groups:
               "off": "#333333"
             default: "#666666"
           orientation: "top-right"
-          bodyWidth: 20
-          armHeight: 15
         text:
           content: "SHIELDS"
           fill: "#FFFFFF"
           fontFamily: "Antonio"
           elbow_text_position: "arm"
         layout:
+          bodyWidth: 20
+          armHeight: 15
           width: 120
           height: 80
           anchor:

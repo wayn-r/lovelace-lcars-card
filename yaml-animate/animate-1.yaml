@@ -78,9 +78,9 @@ groups:
         type: elbow
         appearance:
           fill: "#FF3300"
-          armHeight: 50
-          bodyWidth: 50
         layout:
+          bodyWidth: 50
+          armHeight: 50
           width: 70
           height: 100
           offsetX: -5

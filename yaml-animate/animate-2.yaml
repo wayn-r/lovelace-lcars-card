@@ -73,10 +73,10 @@ groups:
         type: elbow
         appearance:
           orientation: top-left
-          bodyWidth: 130
-          armHeight: 40
           fill: "#12a4e3"
         layout:
+          bodyWidth: 130
+          armHeight: 40
           width: 25%
           height: 60
           offsetY: 10
@@ -90,8 +90,6 @@ groups:
         type: elbow
         appearance:
           orientation: bottom-left
-          bodyWidth: 130
-          armHeight: 15
           fill: "#5ca8ea"
         text:
           content: environmental
@@ -104,6 +102,8 @@ groups:
           offsetY: -40
           cutout: true
         layout:
+          bodyWidth: 130
+          armHeight: 15
           width: 145
           height: 190
           offsetY: 5
@@ -187,9 +187,9 @@ groups:
             default: "#00ffff"
             active: "#0066AA"
             orientation: top-left
+        layout:
           bodyWidth: 130
           armHeight: 15
-        layout:
           width: 145
           height: 80
           offsetY: 10
@@ -284,9 +284,9 @@ groups:
         appearance:
           fill: "#7addee"
           orientation: top-right
+        layout:
           bodyWidth: 80
           armHeight: 15
-        layout:
           width: 320
           height: 80
           offsetX: 5

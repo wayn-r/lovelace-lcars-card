@@ -72,8 +72,8 @@ export class ConfigParser {
       rx: appearance.cornerRadius,
       direction: appearance.direction,
       orientation: appearance.orientation,
-      bodyWidth: appearance.bodyWidth,
-      armHeight: appearance.armHeight,
+      bodyWidth: elementConfig.layout?.bodyWidth,
+      armHeight: elementConfig.layout?.armHeight,
       
       text: text.content,
       fontFamily: text.fontFamily,

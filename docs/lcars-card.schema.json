@@ -139,15 +139,6 @@
                                     "bottom-left",
                                     "bottom-right"
                                   ]
-                                },
-                                "bodyWidth": {
-                                  "type": [
-                                    "number",
-                                    "string"
-                                  ]
-                                },
-                                "armHeight": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/bodyWidth"
                                 }
                               },
                               "additionalProperties": false
@@ -225,7 +216,10 @@
                                   "type": "number"
                                 },
                                 "line_spacing": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/bodyWidth"
+                                  "type": [
+                                    "number",
+                                    "string"
+                                  ]
                                 },
                                 "text_color": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
@@ -1086,12 +1080,6 @@
                                 },
                                 "orientation": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/orientation"
-                                },
-                                "bodyWidth": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/bodyWidth"
-                                },
-                                "armHeight": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/armHeight"
                                 }
                               },
                               "additionalProperties": false
@@ -1166,18 +1154,6 @@
                                     "bottom-left",
                                     "bottom-right"
                                   ]
-                                },
-                                "bodyWidth": {
-                                  "type": [
-                                    "number",
-                                    "string"
-                                  ]
-                                },
-                                "armHeight": {
-                                  "type": [
-                                    "number",
-                                    "string"
-                                  ]
                                 }
                               },
                               "additionalProperties": false
@@ -1186,7 +1162,34 @@
                               "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
                             },
                             "layout": {
-                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
+                              "type": "object",
+                              "properties": {
+                                "width": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/width"
+                                },
+                                "height": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/height"
+                                },
+                                "offsetX": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/offsetX"
+                                },
+                                "offsetY": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/offsetY"
+                                },
+                                "anchor": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/anchor"
+                                },
+                                "stretch": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/stretch"
+                                },
+                                "bodyWidth": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/line_spacing"
+                                },
+                                "armHeight": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/line_spacing"
+                                }
+                              },
+                              "additionalProperties": false
                             },
                             "button": {
                               "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
@@ -1250,12 +1253,6 @@
                                 },
                                 "orientation": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/orientation"
-                                },
-                                "bodyWidth": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/bodyWidth"
-                                },
-                                "armHeight": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/armHeight"
                                 }
                               },
                               "additionalProperties": false

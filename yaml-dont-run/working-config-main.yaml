@@ -72,10 +72,10 @@ groups:
         type: elbow
         appearance:
           orientation: top-left
-          bodyWidth: 130
-          armHeight: 40
           fill: "#0099CC"
         layout:
+          bodyWidth: 130
+          armHeight: 40
           width: 145
           height: 55
           offsetY: 5

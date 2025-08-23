@@ -9,8 +9,6 @@ export const appearanceSchema = z.object({
   rounded: z.enum(['left', 'right', 'both']).optional(),
   direction: z.enum(['left', 'right']).optional(),
   orientation: z.enum(['top-left', 'top-right', 'bottom-left', 'bottom-right']).optional(),
-  bodyWidth: sizeSchema.optional(),
-  armHeight: sizeSchema.optional(),
 });
 
 export type AppearanceConfig = z.infer<typeof appearanceSchema>;
