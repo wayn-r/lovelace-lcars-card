@@ -1,0 +1,256 @@
+## YAML Configuration Options
+
+type: < string > (default: "lovelace-lcars-card")
+title: < string >
+
+# === Core Card Structure ===
+groups:
+  - group_id: < string >
+    elements:
+      - id: < string >
+        type: < rectangle | text | endcap | elbow | chisel-endcap | top_header | graph-widget | entity-text-widget | entity-metric-widget | vertical-slider | weather-icon >
+        button:
+            enabled: < boolean >
+            actions: < object >
+        state_management:
+            default_state: < string >
+            entity_id: < string >
+            attribute: < string >
+        visibility_rules:
+            operator: < and | or | not | xor >
+            conditions: < array >
+        visibility_triggers: < array >
+        animations:
+            on_load: < object >
+            on_show: < object >
+            on_hide: < object >
+            on_state_change: < array >
+        attribute: < string >
+
+## Element Types
+
+type: rectangle
+
+type: text
+
+type: endcap
+  appearance:
+    direction: < left | right >
+
+type: elbow
+  appearance:
+    armHeight: < number | string >
+    bodyWidth: < number | string >
+    orientation: < top-left | top-right | bottom-left | bottom-right >
+
+type: chisel-endcap
+  appearance:
+    direction: < left | right >
+
+type: top_header
+  text:
+    left_content: < string >
+    right_content: < string >
+    fontFamily: < string >
+    fontWeight: < string | number >
+    letterSpacing: < string | number >
+    textTransform: < string >
+
+type: graph-widget
+  entity: <string | array<string|{ id: <string>, color?: <string|array|object>, toggleable?: <boolean>, animated?: <boolean>, duration?: <number>, label?: <string>, min?: <number>, max?: <number>, attribute?: <string> }>>
+  grid:
+    num_lines: < number > (default: 6)
+    fill: < string | array | object >
+    label_fill: < string | array | object >
+
+type: entity-text-widget
+  entity: <string | string[1..2]>
+  label:
+    content: < string >
+    width: < number >
+    height: < number >
+    fontFamily: < string >
+    fontWeight: < string | number >
+    fill: < string | array | object >
+    offsetX: < number >
+    textTransform: < string >
+    cutout: < boolean >
+  value:
+    content: < string >
+    fontFamily: < string >
+    fontWeight: < string | number >
+    fill: < string | array | object >
+    offsetX: < number >
+    textTransform: < string >
+
+type: entity-metric-widget
+  entity: <string | string[1..2]>
+  label:
+    content: < string >
+    width: < number >
+    height: < number >
+    fontFamily: < string >
+    fontWeight: < string | number >
+    fill: < string | array | object >
+    offsetX: < number >
+    textTransform: < string >
+    cutout: < boolean >
+  value:
+    content: < string >
+    fontFamily: < string >
+    fontWeight: < string | number >
+    fill: < string | array | object >
+    offsetX: < number >
+    textTransform: < string >
+  unit:
+    content: < string >
+    width: < number >
+    height: < number >
+    fontFamily: < string >
+    fontWeight: < string | number >
+    fill: < string | array | object >
+    offsetX: < number >
+    textTransform: < string >
+    cutout: < boolean >
+
+type: vertical-slider
+  entity: <string | array<string|{ id: <string>, color?: <any>, label?: <string>, min?: <number>, max?: <number>, attribute?: <string> }>>
+  min: < number >
+  max: < number >
+  spacing: < number >
+  top_padding: < number >
+  label_height: < number >
+  use_floats: < boolean >
+
+type: weather-icon
+  entity: <string>
+
+## Common Definitions
+color:
+  string: < string >
+  rgb: [< number >, < number >, < number >]
+  dynamic:
+    entity: < string >
+    attribute: < string >
+    mapping: < any >
+    default: < any >
+    interpolate: < boolean >
+  stateful:
+    default: < any >
+    hover: < any >
+    active: < any >
+    toggled_off: < any >
+    toggled_off_hover: < any >
+    state_map: < any >
+    state_name: < string >
+
+text:
+  content: < string >
+  fill: < string | array | object >
+  fontFamily: < string >
+  fontSize: < number >
+  fontWeight: < string | number >
+  letterSpacing: < string | number >
+  textAnchor: < start | middle | end >
+  dominantBaseline: < string >
+  textTransform: < string >
+  cutout: < boolean >
+  elbow_text_position: < arm | body >
+  left_content: < string >
+  right_content: < string >
+  offsetX: < number | string >
+  offsetY: < number | string >
+  max_lines: < number >
+  line_spacing: < number | string >
+  text_color: < string | array | object >
+  color_cycle: < array >
+
+button:
+  enabled: < boolean >
+  actions:
+    tap: < object | array >
+    hold: < object | array >
+    double_tap: < object | array >
+
+action:
+  action: < call-service | navigate | url | toggle | more-info | none | set_state | toggle_state >
+  service: < string >
+  service_data: < any >
+  target: < any >
+  navigation_path: < string >
+  url_path: < string >
+  entity: < string >
+  target_element_ref: < string >
+  state: < string >
+  states: < array >
+  actions: < array >
+  confirmation: < boolean | object >
+hold_action: < object | array >
+
+visibility_rules:
+  operator: < and | or | not | xor >
+  conditions: < array >
+
+visibility_triggers:
+  -
+    action: < show | hide | toggle >
+    trigger_source:
+      element_id_ref: < string >
+      event: < hover | click >
+    targets: < array >
+    hover_options:
+      mode: < show_on_enter_hide_on_leave | toggle_on_enter_hide_on_leave >
+      hide_delay: < number >
+    click_options:
+      revert_on_click_outside: < boolean >
+
+animations:
+  on_load: < object >
+  on_show: < object >
+  on_hide: < object >
+  on_state_change: < array >
+
+Animation:
+  type: < fade | slide | scale | color | custom_gsap >
+  fade_params:
+    opacity_start: < number >
+    opacity_end: < number >
+  slide_params:
+    direction: < up | down | left | right >
+    distance: < string >
+    opacity_start: < number >
+    opacity_end: < number >
+    movement: < in | out >
+  scale_params:
+    scale_start: < number >
+    scale_end: < number >
+    transform_origin: < string >
+  color_params:
+    property: < fill | stroke | color >
+    color_start: < string >
+    color_end: < string >
+  custom_gsap_vars: < any >
+  duration: < number >
+  delay: < number >
+  ease: < string >
+  repeat: < number >
+  yoyo: < boolean >
+  target_self: < boolean >
+  target_elements_ref: < array >
+  target_groups_ref: < array >
+Sequence:
+  target_self: < boolean >
+  target_elements_ref: < array >
+  target_groups_ref: < array >
+  steps: < array >
+
+element_state_management:
+  default_state: < string >
+  entity_id: < string >
+  attribute: < string >
+
+card_state_management:
+  state_groups: < array >
+  state_machine:
+    states: < array >
+    transitions: < array >

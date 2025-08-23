@@ -16,7 +16,8 @@
         "test:ui": "vitest ui",
         "test:e2e": "NODE_NO_WARNINGS=1 node tests/e2e/setup-e2e.js && npm run build --silent && NODE_NO_WARNINGS=1 bash -c 'playwright test --reporter=line \"$@\" 2>&1 | grep -v -E \"(INFO \\\\(|homeassistant\\\\.|Setting up|Setup of domain|Registered new|Loaded |SyncWorker|Create cache|2025-|Pool recreating|Received unknown command|libturbojpeg|Support for the running Python|DeprecationWarning|Requirement already satisfied|Attempting install|turbojpeg library automatically)\" | grep -v \"^$\"' -- ",
         "test:e2e-full": "NODE_NO_WARNINGS=1 node tests/e2e/setup-e2e.js && npm run build --silent && E2E_INCLUDE_YAML_BAK=1 NODE_NO_WARNINGS=1 bash -c 'playwright test --reporter=line \"$@\" 2>&1 | grep -v -E \"(INFO \\\\(|homeassistant\\\\.|Setting up|Setup of domain|Registered new|Loaded |SyncWorker|Create cache|2025-|Pool recreating|Received unknown command|libturbojpeg|Support for the running Python|DeprecationWarning|Requirement already satisfied|Attempting install|turbojpeg library automatically)\" | grep -v \"^$\"' -- ",
-        "coverage": "vitest run --coverage"
+        "coverage": "vitest run --coverage",
+        "generate:schema": "node --loader ts-node/esm scripts/generate-yaml-definition.ts"
     },
     "keywords": [
         "home-assistant",
@@ -47,9 +48,11 @@
         "playwright": "^1.52.0",
         "tplant": "^3.1.3",
         "ts-morph": "^25.0.1",
+        "ts-node": "^10.9.2",
         "typescript": "^5.0.0",
         "vite": "^6.3.5",
-        "vitest": "^3.1.3"
+        "vitest": "^3.1.3",
+        "zod-to-json-schema": "^3.24.6"
     },
     "dependencies": {
         "@fontsource/antonio": "^5.2.6",

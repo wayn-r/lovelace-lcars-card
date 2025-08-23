@@ -339,15 +339,13 @@ export class StateManager {
       }
     }
 
-    if (animations.on_state_change && Array.isArray(animations.on_state_change)) {
-      const currentState = this.getState(element.id) || 'default';
-      
-      const incomingAnimation = animations.on_state_change.find((anim: StateChangeAnimationConfig) => 
-        anim.to_state === currentState
-      );
-      
-      if (incomingAnimation) {
-        this.applyFinalAnimationState(targetElement, incomingAnimation);
+    // If the element has state-based fade animations and a default_state, set final opacity for that state
+    const defaultState = element.props?.state_management?.default_state;
+    const stateAnimations = element.props?.animations?.on_state_change as StateChangeAnimationConfig[] | undefined;
+    if (defaultState && Array.isArray(stateAnimations)) {
+      const toDefault = stateAnimations.find((anim) => anim.type === 'fade' && anim.to_state === defaultState);
+      if (toDefault?.fade_params?.opacity_end !== undefined) {
+        gsap.set(targetElement, { opacity: toDefault.fade_params.opacity_end });
       }
     }
   }

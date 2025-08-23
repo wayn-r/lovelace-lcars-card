@@ -4,7 +4,7 @@ import { LayoutElement } from './elements/element.js';
 import './elements/index.js';
 import { ElementRegistry } from './elements/registry.js';
 import { WidgetRegistry } from './widgets/registry.js';
-import { parseCardConfig, type ParsedConfig } from '../parsers/schema.js';
+import { SchemaParser, type ParsedConfig } from '../parsers/schema.js';
 import { ZodError } from 'zod';
 import { CardRuntime } from '../core/runtime.js';
 import { Diagnostics } from '../utils/diagnostics.js';
@@ -48,7 +48,7 @@ export class ConfigParser {
 
   private static _validateConfig(config: unknown): ParsedConfig {
     try {
-      return parseCardConfig(config);
+      return SchemaParser.parseCardConfig(config);
     } catch (error) {
       if (error instanceof ZodError) {
         const groupsError = error.errors.find(e => e.path.length === 1 && e.path[0] === 'groups');

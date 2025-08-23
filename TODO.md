@@ -1,6 +1,11 @@
 ## BUGS
-### Appearance
-- text sizing is still broken
+### Architectural
+- elbows: armHeight and bodyWidth should all be relocated to the layout group.
+- endcap and chisel-endcap: these should be consolidated into just elbows with an appearance option for 'chisel' defaulted to false
+- graph-widget: grid and its options should be relocated to appearance
+- entity-text-widget: label and value should be relocated into text and each should utilize a text option set instead of the minimally duplicated set of text options
+- entity-metric-widget: label, value, and unit should be relocated into text and each should utilize a text option set instead of the minimally duplicated set of text options
+- vertical-slider: min, max, spacing, top_padding, label_height, and use_floats should all be relocated into appearance
 
 ### Optimization
 - log overflow: logger widget seems to retain data for as long as it's running leading to an enormous amount of useless data

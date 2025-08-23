@@ -1,6 +1,6 @@
 // New file implementing YAML configuration validation for LCARS card
 import { LcarsCardConfig, GroupConfig, ElementConfig, Action } from '../types.js';
-import { parseCardConfig } from '../parsers/schema.js';
+import { SchemaParser } from '../parsers/schema.js';
 import { ActionProcessor } from './action-helpers.js';
 
 export interface ValidationResult {
@@ -16,7 +16,7 @@ export class ConfigValidator {
   // 1. Zod schema validation (structure & primitive types)
   // ---------------------------------------------------------------------------
   try {
-    parseCardConfig(config);
+    SchemaParser.parseCardConfig(config);
   } catch (err: any) {
     const zodErrors = err?.errors as any[] | undefined;
     if (Array.isArray(zodErrors)) {

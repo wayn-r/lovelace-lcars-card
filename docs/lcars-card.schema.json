@@ -1,0 +1,2072 @@
+{
+  "$ref": "#/definitions/LcarsCardConfig",
+  "definitions": {
+    "LcarsCardConfig": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "default": "lovelace-lcars-card"
+        },
+        "title": {
+          "type": "string"
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "group_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "elements": {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "rectangle"
+                            },
+                            "appearance": {
+                              "type": "object",
+                              "properties": {
+                                "fill": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "items": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "number"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "entity": {
+                                          "type": "string"
+                                        },
+                                        "attribute": {
+                                          "type": "string"
+                                        },
+                                        "mapping": {
+                                          "type": "object",
+                                          "additionalProperties": {}
+                                        },
+                                        "default": {},
+                                        "interpolate": {
+                                          "type": "boolean"
+                                        }
+                                      },
+                                      "required": [
+                                        "entity",
+                                        "mapping"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "default": {},
+                                        "hover": {},
+                                        "active": {},
+                                        "toggled_off": {},
+                                        "toggled_off_hover": {},
+                                        "state_map": {
+                                          "type": "object",
+                                          "additionalProperties": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "state_name": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                },
+                                "stroke": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                },
+                                "strokeWidth": {
+                                  "type": "number"
+                                },
+                                "cornerRadius": {
+                                  "type": "number"
+                                },
+                                "rounded": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "right",
+                                    "both"
+                                  ]
+                                },
+                                "direction": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "right"
+                                  ]
+                                },
+                                "orientation": {
+                                  "type": "string",
+                                  "enum": [
+                                    "top-left",
+                                    "top-right",
+                                    "bottom-left",
+                                    "bottom-right"
+                                  ]
+                                },
+                                "bodyWidth": {
+                                  "type": [
+                                    "number",
+                                    "string"
+                                  ]
+                                },
+                                "armHeight": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/bodyWidth"
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "text": {
+                              "type": "object",
+                              "properties": {
+                                "content": {
+                                  "type": "string"
+                                },
+                                "fill": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                },
+                                "fontFamily": {
+                                  "type": "string"
+                                },
+                                "fontSize": {
+                                  "type": "number"
+                                },
+                                "fontWeight": {
+                                  "type": [
+                                    "string",
+                                    "number"
+                                  ]
+                                },
+                                "letterSpacing": {
+                                  "type": [
+                                    "string",
+                                    "number"
+                                  ]
+                                },
+                                "textAnchor": {
+                                  "type": "string",
+                                  "enum": [
+                                    "start",
+                                    "middle",
+                                    "end"
+                                  ]
+                                },
+                                "dominantBaseline": {
+                                  "type": "string"
+                                },
+                                "textTransform": {
+                                  "type": "string"
+                                },
+                                "cutout": {
+                                  "type": "boolean"
+                                },
+                                "elbow_text_position": {
+                                  "type": "string",
+                                  "enum": [
+                                    "arm",
+                                    "body"
+                                  ]
+                                },
+                                "left_content": {
+                                  "type": "string"
+                                },
+                                "right_content": {
+                                  "type": "string"
+                                },
+                                "offsetX": {
+                                  "type": [
+                                    "number",
+                                    "string"
+                                  ]
+                                },
+                                "offsetY": {
+                                  "type": [
+                                    "number",
+                                    "string"
+                                  ]
+                                },
+                                "max_lines": {
+                                  "type": "number"
+                                },
+                                "line_spacing": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/bodyWidth"
+                                },
+                                "text_color": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                },
+                                "color_cycle": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "color": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                      },
+                                      "duration": {
+                                        "type": "number"
+                                      }
+                                    },
+                                    "required": [
+                                      "color",
+                                      "duration"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "layout": {
+                              "type": "object",
+                              "properties": {
+                                "width": {
+                                  "type": [
+                                    "number",
+                                    "string"
+                                  ]
+                                },
+                                "height": {
+                                  "type": [
+                                    "number",
+                                    "string"
+                                  ]
+                                },
+                                "offsetX": {
+                                  "type": [
+                                    "number",
+                                    "string"
+                                  ]
+                                },
+                                "offsetY": {
+                                  "type": [
+                                    "number",
+                                    "string"
+                                  ]
+                                },
+                                "anchor": {
+                                  "type": "object",
+                                  "properties": {
+                                    "to": {
+                                      "type": "string"
+                                    },
+                                    "element_point": {
+                                      "type": "string"
+                                    },
+                                    "target_point": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "to",
+                                    "element_point",
+                                    "target_point"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "stretch": {
+                                  "type": "object",
+                                  "properties": {
+                                    "target1": {
+                                      "type": "object",
+                                      "properties": {
+                                        "id": {
+                                          "type": "string"
+                                        },
+                                        "edge": {
+                                          "type": "string"
+                                        },
+                                        "padding": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "id",
+                                        "edge"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "target2": {
+                                      "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/stretch/properties/target1"
+                                    }
+                                  },
+                                  "required": [
+                                    "target1"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "button": {
+                              "type": "object",
+                              "properties": {
+                                "enabled": {
+                                  "type": "boolean"
+                                },
+                                "actions": {
+                                  "type": "object",
+                                  "properties": {
+                                    "tap": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "action": {
+                                              "type": "string",
+                                              "enum": [
+                                                "call-service",
+                                                "navigate",
+                                                "url",
+                                                "toggle",
+                                                "more-info",
+                                                "none",
+                                                "set_state",
+                                                "toggle_state"
+                                              ]
+                                            },
+                                            "service": {
+                                              "type": "string"
+                                            },
+                                            "service_data": {
+                                              "type": "object",
+                                              "additionalProperties": {}
+                                            },
+                                            "target": {
+                                              "type": "object",
+                                              "additionalProperties": {}
+                                            },
+                                            "navigation_path": {
+                                              "type": "string"
+                                            },
+                                            "url_path": {
+                                              "type": "string"
+                                            },
+                                            "entity": {
+                                              "type": "string"
+                                            },
+                                            "target_element_ref": {
+                                              "type": "string"
+                                            },
+                                            "state": {
+                                              "type": "string"
+                                            },
+                                            "states": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "actions": {
+                                              "type": "array",
+                                              "items": {
+                                                "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button/properties/actions/properties/tap/anyOf/0"
+                                              }
+                                            },
+                                            "confirmation": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "boolean"
+                                                },
+                                                {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "text": {
+                                                      "type": "string"
+                                                    },
+                                                    "exemptions": {
+                                                      "type": "array",
+                                                      "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                          "user": {
+                                                            "type": "string"
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "user"
+                                                        ],
+                                                        "additionalProperties": false
+                                                      }
+                                                    }
+                                                  },
+                                                  "additionalProperties": false
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "action"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button/properties/actions/properties/tap/anyOf/0"
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    "hold": {
+                                      "anyOf": [
+                                        {
+                                          "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button/properties/actions/properties/tap/anyOf/0"
+                                        },
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button/properties/actions/properties/tap/anyOf/0"
+                                          }
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "duration": {
+                                              "type": "number"
+                                            },
+                                            "action": {
+                                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button/properties/actions/properties/tap/anyOf/0"
+                                            },
+                                            "actions": {
+                                              "type": "array",
+                                              "items": {
+                                                "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button/properties/actions/properties/tap/anyOf/0"
+                                              }
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    "double_tap": {
+                                      "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button/properties/actions/properties/tap"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "state_management": {
+                              "type": "object",
+                              "properties": {
+                                "default_state": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "type": "string"
+                                },
+                                "attribute": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "visibility_rules": {
+                              "type": "object",
+                              "properties": {
+                                "operator": {
+                                  "type": "string",
+                                  "enum": [
+                                    "and",
+                                    "or",
+                                    "not",
+                                    "xor"
+                                  ]
+                                },
+                                "conditions": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "state",
+                                          "entity_state",
+                                          "group"
+                                        ]
+                                      },
+                                      "negate": {
+                                        "type": "boolean"
+                                      },
+                                      "target_id": {
+                                        "type": "string"
+                                      },
+                                      "state": {
+                                        "type": "string"
+                                      },
+                                      "entity_id": {
+                                        "type": "string"
+                                      },
+                                      "attribute": {
+                                        "type": "string"
+                                      },
+                                      "value": {},
+                                      "operator": {
+                                        "type": "string",
+                                        "enum": [
+                                          "and",
+                                          "or",
+                                          "not",
+                                          "xor"
+                                        ]
+                                      },
+                                      "conditions": {
+                                        "type": "array",
+                                        "items": {
+                                          "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_rules/properties/conditions/items"
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "type"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                }
+                              },
+                              "required": [
+                                "operator",
+                                "conditions"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "visibility_triggers": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "action": {
+                                    "type": "string",
+                                    "enum": [
+                                      "show",
+                                      "hide",
+                                      "toggle"
+                                    ]
+                                  },
+                                  "trigger_source": {
+                                    "type": "object",
+                                    "properties": {
+                                      "element_id_ref": {
+                                        "type": "string"
+                                      },
+                                      "event": {
+                                        "type": "string",
+                                        "enum": [
+                                          "hover",
+                                          "click"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "element_id_ref",
+                                      "event"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "targets": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "element",
+                                            "group"
+                                          ]
+                                        },
+                                        "id": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "hover_options": {
+                                    "type": "object",
+                                    "properties": {
+                                      "mode": {
+                                        "type": "string",
+                                        "enum": [
+                                          "show_on_enter_hide_on_leave",
+                                          "toggle_on_enter_hide_on_leave"
+                                        ]
+                                      },
+                                      "hide_delay": {
+                                        "type": "number"
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  "click_options": {
+                                    "type": "object",
+                                    "properties": {
+                                      "revert_on_click_outside": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "action",
+                                  "trigger_source"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "animations": {
+                              "type": "object",
+                              "properties": {
+                                "on_load": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "fade",
+                                            "slide",
+                                            "scale",
+                                            "color",
+                                            "custom_gsap"
+                                          ]
+                                        },
+                                        "fade_params": {
+                                          "type": "object",
+                                          "properties": {
+                                            "opacity_start": {
+                                              "type": "number"
+                                            },
+                                            "opacity_end": {
+                                              "type": "number"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        },
+                                        "slide_params": {
+                                          "type": "object",
+                                          "properties": {
+                                            "direction": {
+                                              "type": "string",
+                                              "enum": [
+                                                "up",
+                                                "down",
+                                                "left",
+                                                "right"
+                                              ]
+                                            },
+                                            "distance": {
+                                              "type": "string"
+                                            },
+                                            "opacity_start": {
+                                              "type": "number"
+                                            },
+                                            "opacity_end": {
+                                              "type": "number"
+                                            },
+                                            "movement": {
+                                              "type": "string",
+                                              "enum": [
+                                                "in",
+                                                "out"
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "direction",
+                                            "distance"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        "scale_params": {
+                                          "type": "object",
+                                          "properties": {
+                                            "scale_start": {
+                                              "type": "number"
+                                            },
+                                            "scale_end": {
+                                              "type": "number"
+                                            },
+                                            "transform_origin": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        },
+                                        "color_params": {
+                                          "type": "object",
+                                          "properties": {
+                                            "property": {
+                                              "type": "string",
+                                              "enum": [
+                                                "fill",
+                                                "stroke",
+                                                "color"
+                                              ]
+                                            },
+                                            "color_start": {
+                                              "type": "string"
+                                            },
+                                            "color_end": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        },
+                                        "custom_gsap_vars": {
+                                          "type": "object",
+                                          "additionalProperties": {}
+                                        },
+                                        "duration": {
+                                          "type": "number"
+                                        },
+                                        "delay": {
+                                          "type": "number"
+                                        },
+                                        "ease": {
+                                          "type": "string"
+                                        },
+                                        "repeat": {
+                                          "type": "number"
+                                        },
+                                        "yoyo": {
+                                          "type": "boolean"
+                                        },
+                                        "target_self": {
+                                          "type": "boolean"
+                                        },
+                                        "target_elements_ref": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "target_groups_ref": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        }
+                                      },
+                                      "required": [
+                                        "type",
+                                        "duration"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "target_self": {
+                                          "type": "boolean"
+                                        },
+                                        "target_elements_ref": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "target_groups_ref": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "steps": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "object",
+                                            "properties": {
+                                              "index": {
+                                                "type": "number"
+                                              },
+                                              "animations": {
+                                                "type": "array",
+                                                "items": {
+                                                  "type": "object",
+                                                  "properties": {
+                                                    "target_self": {
+                                                      "type": "boolean"
+                                                    },
+                                                    "target_elements_ref": {
+                                                      "type": "array",
+                                                      "items": {
+                                                        "type": "string"
+                                                      }
+                                                    },
+                                                    "target_groups_ref": {
+                                                      "type": "array",
+                                                      "items": {
+                                                        "type": "string"
+                                                      }
+                                                    },
+                                                    "type": {
+                                                      "type": "string",
+                                                      "enum": [
+                                                        "fade",
+                                                        "slide",
+                                                        "scale",
+                                                        "color",
+                                                        "custom_gsap"
+                                                      ]
+                                                    },
+                                                    "fade_params": {
+                                                      "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/fade_params"
+                                                    },
+                                                    "slide_params": {
+                                                      "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/slide_params"
+                                                    },
+                                                    "scale_params": {
+                                                      "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/scale_params"
+                                                    },
+                                                    "color_params": {
+                                                      "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/color_params"
+                                                    },
+                                                    "custom_gsap_vars": {
+                                                      "type": "object",
+                                                      "additionalProperties": {}
+                                                    },
+                                                    "duration": {
+                                                      "type": "number"
+                                                    },
+                                                    "delay": {
+                                                      "type": "number"
+                                                    },
+                                                    "ease": {
+                                                      "type": "string"
+                                                    },
+                                                    "repeat": {
+                                                      "type": "number"
+                                                    },
+                                                    "yoyo": {
+                                                      "type": "boolean"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "type",
+                                                    "duration"
+                                                  ],
+                                                  "additionalProperties": false
+                                                }
+                                              }
+                                            },
+                                            "required": [
+                                              "index",
+                                              "animations"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        }
+                                      },
+                                      "required": [
+                                        "steps"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                },
+                                "on_show": {
+                                  "anyOf": [
+                                    {
+                                      "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0"
+                                    },
+                                    {
+                                      "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/1"
+                                    }
+                                  ]
+                                },
+                                "on_hide": {
+                                  "anyOf": [
+                                    {
+                                      "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0"
+                                    },
+                                    {
+                                      "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/1"
+                                    }
+                                  ]
+                                },
+                                "on_state_change": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/type"
+                                      },
+                                      "fade_params": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/fade_params"
+                                      },
+                                      "slide_params": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/slide_params"
+                                      },
+                                      "scale_params": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/scale_params"
+                                      },
+                                      "color_params": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/color_params"
+                                      },
+                                      "custom_gsap_vars": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/custom_gsap_vars"
+                                      },
+                                      "duration": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/duration"
+                                      },
+                                      "delay": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/delay"
+                                      },
+                                      "ease": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/ease"
+                                      },
+                                      "repeat": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/repeat"
+                                      },
+                                      "yoyo": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/yoyo"
+                                      },
+                                      "target_self": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/target_self"
+                                      },
+                                      "target_elements_ref": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/target_elements_ref"
+                                      },
+                                      "target_groups_ref": {
+                                        "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations/properties/on_load/anyOf/0/properties/target_groups_ref"
+                                      },
+                                      "from_state": {
+                                        "type": "string"
+                                      },
+                                      "to_state": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "duration",
+                                      "from_state",
+                                      "to_state"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "attribute": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/id"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "text"
+                            },
+                            "appearance": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance"
+                            },
+                            "text": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
+                            },
+                            "layout": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
+                            },
+                            "button": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
+                            },
+                            "state_management": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/state_management"
+                            },
+                            "visibility_rules": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_rules"
+                            },
+                            "visibility_triggers": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_triggers"
+                            },
+                            "animations": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations"
+                            },
+                            "attribute": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/attribute"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/id"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "endcap"
+                            },
+                            "appearance": {
+                              "type": "object",
+                              "properties": {
+                                "fill": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                },
+                                "stroke": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/stroke"
+                                },
+                                "strokeWidth": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/strokeWidth"
+                                },
+                                "cornerRadius": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/cornerRadius"
+                                },
+                                "rounded": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/rounded"
+                                },
+                                "direction": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "right"
+                                  ]
+                                },
+                                "orientation": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/orientation"
+                                },
+                                "bodyWidth": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/bodyWidth"
+                                },
+                                "armHeight": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/armHeight"
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "text": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
+                            },
+                            "layout": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
+                            },
+                            "button": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
+                            },
+                            "state_management": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/state_management"
+                            },
+                            "visibility_rules": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_rules"
+                            },
+                            "visibility_triggers": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_triggers"
+                            },
+                            "animations": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations"
+                            },
+                            "attribute": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/attribute"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/id"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "elbow"
+                            },
+                            "appearance": {
+                              "type": "object",
+                              "properties": {
+                                "fill": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                },
+                                "stroke": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/stroke"
+                                },
+                                "strokeWidth": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/strokeWidth"
+                                },
+                                "cornerRadius": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/cornerRadius"
+                                },
+                                "rounded": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/rounded"
+                                },
+                                "direction": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/direction"
+                                },
+                                "orientation": {
+                                  "type": "string",
+                                  "enum": [
+                                    "top-left",
+                                    "top-right",
+                                    "bottom-left",
+                                    "bottom-right"
+                                  ]
+                                },
+                                "bodyWidth": {
+                                  "type": [
+                                    "number",
+                                    "string"
+                                  ]
+                                },
+                                "armHeight": {
+                                  "type": [
+                                    "number",
+                                    "string"
+                                  ]
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "text": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
+                            },
+                            "layout": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
+                            },
+                            "button": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
+                            },
+                            "state_management": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/state_management"
+                            },
+                            "visibility_rules": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_rules"
+                            },
+                            "visibility_triggers": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_triggers"
+                            },
+                            "animations": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations"
+                            },
+                            "attribute": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/attribute"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/id"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "chisel-endcap"
+                            },
+                            "appearance": {
+                              "type": "object",
+                              "properties": {
+                                "fill": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                },
+                                "stroke": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/stroke"
+                                },
+                                "strokeWidth": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/strokeWidth"
+                                },
+                                "cornerRadius": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/cornerRadius"
+                                },
+                                "rounded": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/rounded"
+                                },
+                                "direction": {
+                                  "type": "string",
+                                  "enum": [
+                                    "left",
+                                    "right"
+                                  ]
+                                },
+                                "orientation": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/orientation"
+                                },
+                                "bodyWidth": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/bodyWidth"
+                                },
+                                "armHeight": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/armHeight"
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "text": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
+                            },
+                            "layout": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
+                            },
+                            "button": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
+                            },
+                            "state_management": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/state_management"
+                            },
+                            "visibility_rules": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_rules"
+                            },
+                            "visibility_triggers": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_triggers"
+                            },
+                            "animations": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations"
+                            },
+                            "attribute": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/attribute"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/id"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "top_header"
+                            },
+                            "appearance": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance"
+                            },
+                            "text": {
+                              "type": "object",
+                              "properties": {
+                                "left_content": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/left_content"
+                                },
+                                "right_content": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/right_content"
+                                },
+                                "fontFamily": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontFamily"
+                                },
+                                "fontWeight": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontWeight"
+                                },
+                                "letterSpacing": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letterSpacing"
+                                },
+                                "textTransform": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textTransform"
+                                }
+                              },
+                              "additionalProperties": true
+                            },
+                            "layout": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
+                            },
+                            "button": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
+                            },
+                            "state_management": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/state_management"
+                            },
+                            "visibility_rules": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_rules"
+                            },
+                            "visibility_triggers": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_triggers"
+                            },
+                            "animations": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations"
+                            },
+                            "attribute": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/attribute"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/id"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "graph-widget"
+                            },
+                            "appearance": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance"
+                            },
+                            "text": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
+                            },
+                            "layout": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
+                            },
+                            "button": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
+                            },
+                            "state_management": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/state_management"
+                            },
+                            "visibility_rules": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_rules"
+                            },
+                            "visibility_triggers": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_triggers"
+                            },
+                            "animations": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations"
+                            },
+                            "attribute": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/attribute"
+                            },
+                            "entity": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string"
+                                          },
+                                          "color": {
+                                            "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                          },
+                                          "toggleable": {
+                                            "type": "boolean"
+                                          },
+                                          "animated": {
+                                            "type": "boolean"
+                                          },
+                                          "duration": {
+                                            "type": "number"
+                                          },
+                                          "label": {
+                                            "type": "string"
+                                          },
+                                          "min": {
+                                            "type": "number"
+                                          },
+                                          "max": {
+                                            "type": "number"
+                                          },
+                                          "attribute": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "id"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            "grid": {
+                              "type": "object",
+                              "properties": {
+                                "num_lines": {
+                                  "type": "number",
+                                  "default": 6
+                                },
+                                "fill": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                },
+                                "label_fill": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type",
+                            "entity"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/id"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "entity-text-widget"
+                            },
+                            "appearance": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance"
+                            },
+                            "text": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
+                            },
+                            "layout": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
+                            },
+                            "button": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
+                            },
+                            "state_management": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/state_management"
+                            },
+                            "visibility_rules": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_rules"
+                            },
+                            "visibility_triggers": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_triggers"
+                            },
+                            "animations": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations"
+                            },
+                            "attribute": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/attribute"
+                            },
+                            "entity": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              ]
+                            },
+                            "label": {
+                              "type": "object",
+                              "properties": {
+                                "content": {
+                                  "type": "string"
+                                },
+                                "width": {
+                                  "type": "number"
+                                },
+                                "height": {
+                                  "type": "number"
+                                },
+                                "fontFamily": {
+                                  "type": "string"
+                                },
+                                "fontWeight": {
+                                  "type": [
+                                    "string",
+                                    "number"
+                                  ]
+                                },
+                                "fill": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                },
+                                "offsetX": {
+                                  "type": "number"
+                                },
+                                "textTransform": {
+                                  "type": "string"
+                                },
+                                "cutout": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "value": {
+                              "type": "object",
+                              "properties": {
+                                "content": {
+                                  "type": "string"
+                                },
+                                "fontFamily": {
+                                  "type": "string"
+                                },
+                                "fontWeight": {
+                                  "type": [
+                                    "string",
+                                    "number"
+                                  ]
+                                },
+                                "fill": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                },
+                                "offsetX": {
+                                  "type": "number"
+                                },
+                                "textTransform": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type",
+                            "entity"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/id"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "entity-metric-widget"
+                            },
+                            "appearance": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance"
+                            },
+                            "text": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
+                            },
+                            "layout": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
+                            },
+                            "button": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
+                            },
+                            "state_management": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/state_management"
+                            },
+                            "visibility_rules": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_rules"
+                            },
+                            "visibility_triggers": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_triggers"
+                            },
+                            "animations": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations"
+                            },
+                            "attribute": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/attribute"
+                            },
+                            "entity": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              ]
+                            },
+                            "label": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/7/properties/label"
+                            },
+                            "value": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/7/properties/value"
+                            },
+                            "unit": {
+                              "type": "object",
+                              "properties": {
+                                "content": {
+                                  "type": "string"
+                                },
+                                "width": {
+                                  "type": "number"
+                                },
+                                "height": {
+                                  "type": "number"
+                                },
+                                "fontFamily": {
+                                  "type": "string"
+                                },
+                                "fontWeight": {
+                                  "type": [
+                                    "string",
+                                    "number"
+                                  ]
+                                },
+                                "fill": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
+                                },
+                                "offsetX": {
+                                  "type": "number"
+                                },
+                                "textTransform": {
+                                  "type": "string"
+                                },
+                                "cutout": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type",
+                            "entity"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/id"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "vertical-slider"
+                            },
+                            "appearance": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance"
+                            },
+                            "text": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
+                            },
+                            "layout": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
+                            },
+                            "button": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
+                            },
+                            "state_management": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/state_management"
+                            },
+                            "visibility_rules": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_rules"
+                            },
+                            "visibility_triggers": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_triggers"
+                            },
+                            "animations": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations"
+                            },
+                            "attribute": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/attribute"
+                            },
+                            "entity": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string"
+                                          },
+                                          "color": {},
+                                          "label": {
+                                            "type": "string"
+                                          },
+                                          "min": {
+                                            "type": "number"
+                                          },
+                                          "max": {
+                                            "type": "number"
+                                          },
+                                          "attribute": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "id"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            "min": {
+                              "type": "number"
+                            },
+                            "max": {
+                              "type": "number"
+                            },
+                            "spacing": {
+                              "type": "number"
+                            },
+                            "top_padding": {
+                              "type": "number"
+                            },
+                            "label_height": {
+                              "type": "number"
+                            },
+                            "use_floats": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type",
+                            "entity"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/id"
+                            },
+                            "type": {
+                              "type": "string",
+                              "const": "weather-icon"
+                            },
+                            "appearance": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance"
+                            },
+                            "text": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
+                            },
+                            "layout": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
+                            },
+                            "button": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
+                            },
+                            "state_management": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/state_management"
+                            },
+                            "visibility_rules": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_rules"
+                            },
+                            "visibility_triggers": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_triggers"
+                            },
+                            "animations": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations"
+                            },
+                            "attribute": {
+                              "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/attribute"
+                            },
+                            "entity": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type",
+                            "entity"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/id"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "appearance": {
+                          "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance"
+                        },
+                        "text": {
+                          "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text"
+                        },
+                        "layout": {
+                          "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout"
+                        },
+                        "button": {
+                          "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/button"
+                        },
+                        "state_management": {
+                          "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/state_management"
+                        },
+                        "visibility_rules": {
+                          "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_rules"
+                        },
+                        "visibility_triggers": {
+                          "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/visibility_triggers"
+                        },
+                        "animations": {
+                          "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/animations"
+                        },
+                        "attribute": {
+                          "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/attribute"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            },
+            "required": [
+              "group_id",
+              "elements"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "state_management": {
+          "type": "object",
+          "properties": {
+            "state_groups": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "group_name": {
+                    "type": "string"
+                  },
+                  "exclusive": {
+                    "type": "boolean"
+                  },
+                  "members": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "group",
+                                "element"
+                              ]
+                            },
+                            "id": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "default_visible": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "group_name",
+                  "exclusive",
+                  "members"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "state_machine": {
+              "type": "object",
+              "properties": {
+                "states": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "visible_elements": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "visible_elements"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "transitions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "from": {
+                        "type": "string"
+                      },
+                      "to": {
+                        "type": "string"
+                      },
+                      "trigger": {
+                        "type": "object",
+                        "properties": {
+                          "element_id_ref": {
+                            "type": "string"
+                          },
+                          "event": {
+                            "type": "string",
+                            "enum": [
+                              "hover",
+                              "click"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "element_id_ref",
+                          "event"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "animation_sequence": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "phase": {
+                              "type": "string",
+                              "enum": [
+                                "hide",
+                                "show"
+                              ]
+                            },
+                            "targets": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "delay": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "phase",
+                            "targets"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "from",
+                      "to",
+                      "trigger"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "states",
+                "transitions"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "groups"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LCARS Card Configuration Schema",
+  "$id": "https://schemas.local/lcars-card.schema.json"
+}
