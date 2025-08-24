@@ -8,6 +8,8 @@ import { Diagnostics } from './diagnostics.js';
 import gsap from 'gsap';
 import Animate1Raw from '../../yaml-animate/animate-1.yaml?raw';
 import Animate2Raw from '../../yaml-animate/animate-2.yaml?raw';
+import { OffsetCalculator } from './offset-calculator.js';
+import { ShapeGenerator } from './shapes.js';
 
 const logger = Diagnostics.create('MorphEngine');
 
@@ -213,13 +215,17 @@ export class MorphEngine {
         const tw = Math.max(1, toEl.layout.width);
         const th = Math.max(1, toEl.layout.height);
 
-        const deltaX = tx - fx;
-        const deltaY = ty - fy;
-        const scaleX = tw / fw;
-        const scaleY = th / fh;
-
-        gsap.set(clone as any, { x: 0, y: 0, scaleX: 1, scaleY: 1, transformOrigin: '0px 0px' } as any);
-        gsap.to(clone as any, { duration: durationSec, ease: 'power2.out', x: deltaX, y: deltaY, scaleX, scaleY, transformOrigin: '0px 0px' } as any);
+        const bothElbows = this._elementIsElbow(fromEl) && this._elementIsElbow(toEl) && this._elbowsHaveCompatibleOrientation(fromEl, toEl);
+        if (bothElbows) {
+          this._animateElbowMorph(clone, fromEl, toEl, durationSec);
+        } else {
+          const deltaX = tx - fx;
+          const deltaY = ty - fy;
+          const scaleX = tw / fw;
+          const scaleY = th / fh;
+          gsap.set(clone as any, { x: 0, y: 0, scaleX: 1, scaleY: 1, transformOrigin: '0px 0px' } as any);
+          gsap.to(clone as any, { duration: durationSec, ease: 'power2.out', x: deltaX, y: deltaY, scaleX, scaleY, transformOrigin: '0px 0px' } as any);
+        }
       }
 
       const matchedFromIds2 = new Set<string>(Array.from(mapping.keys()));
@@ -494,6 +500,82 @@ export class MorphEngine {
       if (svg) return svg;
     }
     return null;
+  }
+
+  // Elbow helpers
+  private static _elementIsElbow(el: LayoutElement): boolean {
+    return this._getElementTypeKey(el) === 'ElbowElement';
+  }
+
+  private static _resolveElbowBodyWidth(el: LayoutElement): number {
+    const raw = (el as any).props?.bodyWidth ?? 30;
+    const base = el.layout?.width ?? 0;
+    return Math.max(1, OffsetCalculator.calculateTextOffset(raw, base));
+  }
+
+  private static _resolveElbowArmHeight(el: LayoutElement): number {
+    const raw = (el as any).props?.armHeight ?? 30;
+    const base = el.layout?.height ?? 0;
+    return Math.max(1, OffsetCalculator.calculateTextOffset(raw, base));
+  }
+
+  private static _animateElbowMorph(clone: Element, fromEl: LayoutElement, toEl: LayoutElement, durationSec: number): void {
+    const pathId = `${fromEl.id}__shape`;
+    const pathEl = (clone.querySelector(`#${pathId}`) as SVGPathElement) || (clone.querySelector('path') as SVGPathElement | null);
+    if (!pathEl) {
+      const fx = fromEl.layout.x;
+      const fy = fromEl.layout.y;
+      const fw = Math.max(1, fromEl.layout.width);
+      const fh = Math.max(1, fromEl.layout.height);
+      const tx = toEl.layout.x;
+      const ty = toEl.layout.y;
+      const tw = Math.max(1, toEl.layout.width);
+      const th = Math.max(1, toEl.layout.height);
+      const deltaX = tx - fx;
+      const deltaY = ty - fy;
+      const scaleX = tw / fw;
+      const scaleY = th / fh;
+      gsap.set(clone as any, { x: 0, y: 0, scaleX: 1, scaleY: 1, transformOrigin: '0px 0px' } as any);
+      gsap.to(clone as any, { duration: durationSec, ease: 'power2.out', x: deltaX, y: deltaY, scaleX, scaleY, transformOrigin: '0px 0px' } as any);
+      return;
+    }
+
+    const orientation = ((fromEl as any).props?.orientation ?? 'top-left') as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+    const start = {
+      x: fromEl.layout.x,
+      y: fromEl.layout.y,
+      width: Math.max(1, fromEl.layout.width),
+      height: Math.max(1, fromEl.layout.height),
+      bodyWidth: this._resolveElbowBodyWidth(fromEl),
+      armHeight: this._resolveElbowArmHeight(fromEl)
+    };
+    const end = {
+      x: toEl.layout.x,
+      y: toEl.layout.y,
+      width: Math.max(1, toEl.layout.width),
+      height: Math.max(1, toEl.layout.height),
+      bodyWidth: this._resolveElbowBodyWidth(toEl),
+      armHeight: this._resolveElbowArmHeight(toEl)
+    };
+
+    const state: any = { ...start };
+    const updatePath = () => {
+      const d = ShapeGenerator.generateElbow(state.x, state.width, state.bodyWidth, state.armHeight, state.height, orientation, state.y, state.armHeight);
+      try { pathEl.setAttribute('d', d); } catch {}
+    };
+
+    updatePath();
+    gsap.to(state, {
+      duration: durationSec,
+      ease: 'power2.out',
+      x: end.x,
+      y: end.y,
+      width: end.width,
+      height: end.height,
+      bodyWidth: end.bodyWidth,
+      armHeight: end.armHeight,
+      onUpdate: updatePath
+    } as any);
   }
 }
 
