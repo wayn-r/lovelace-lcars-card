@@ -853,12 +853,24 @@ export class LcarsCard extends LitElement {
           hass: this.hass,
           requestUpdateCallback: () => this.requestUpdate()
         },
+        expandCanvasTo: (width: number, height: number) => this._expandCanvasTo(width, height)
       };
       await MorphEngine.morphToNavigationPath(hooks, navigationPath, this.hass, { durationMs: options.durationMs ?? 1000 });
     } catch (e) {
     } finally {
       setTimeout(() => { this._suspendRenders = false; }, 0);
     }
+  }
+
+  private _expandCanvasTo(width: number, height: number): void {
+    const current = this._containerRect!;
+    const targetWidth = width || current.width;
+    const targetHeight = Math.max(1, height || this._calculatedHeight || 1);
+    this._calculatedHeight = Math.max(this._calculatedHeight, targetHeight);
+    const topMargin = 8;
+    this._viewBox = `0 ${-topMargin} ${targetWidth} ${this._calculatedHeight + topMargin}`;
+    this._containerRect = new DOMRect(current.x, current.y, targetWidth, this._calculatedHeight);
+    this.requestUpdate();
   }
 
 }

@@ -25,6 +25,7 @@ export interface MorphRuntimeHooks {
   getCurrentGroups: () => Group[];
   getAnimationManager: () => AnimationManager;
   getAnimationContext: () => AnimationContext;
+  expandCanvasTo?: (width: number, height: number) => void;
 }
 
  
@@ -86,23 +87,34 @@ export class MorphEngine {
     const tempEngine = new LayoutEngine();
     tempEngine.setGroups(toGroups);
 
-    const containerRect = host.getContainerRect();
+    let containerRect = host.getContainerRect();
     if (!containerRect) {
       logger.warn('No container rect available; skipping morph.');
       return;
     }
-    const toBounds = tempEngine.recalculate(containerRect, { dynamicHeight: true });
-    const fromBounds = (() => {
+    let toBounds = tempEngine.recalculate(containerRect, { dynamicHeight: true });
+    let fromBounds = (() => {
       const e = new LayoutEngine();
       e.setGroups(fromGroups);
       return e.recalculate(containerRect, { dynamicHeight: true });
     })();
 
     const maxHeight = Math.max(fromBounds.height, toBounds.height);
-    if (host.setCalculatedHeight && maxHeight > containerRect.height) {
+    if (maxHeight > containerRect.height) {
       try {
-        host.setCalculatedHeight(maxHeight);
+        host.expandCanvasTo?.(containerRect.width, maxHeight);
+        host.setCalculatedHeight?.(maxHeight);
         requestUpdateCallback();
+      } catch (e) {}
+      try {
+        const resizedRect = await this._waitForContainerHeightAtLeast(host, maxHeight, 600);
+        if (resizedRect) {
+          containerRect = resizedRect;
+          toBounds = tempEngine.recalculate(containerRect, { dynamicHeight: true });
+          const e = new LayoutEngine();
+          e.setGroups(fromGroups);
+          fromBounds = e.recalculate(containerRect, { dynamicHeight: true });
+        }
       } catch (e) {}
     }
 
@@ -272,6 +284,28 @@ export class MorphEngine {
     }
 
     await new Promise<void>((resolve) => setTimeout(resolve, durationMs + 50));
+  }
+
+  private static async _waitForContainerHeightAtLeast(host: MorphRuntimeHooks, minHeight: number, timeoutMs: number = 500): Promise<DOMRect | undefined> {
+    const start = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    let rect = host.getContainerRect();
+    if (!rect) return rect;
+    if (rect.height >= minHeight) return rect;
+    const deadline = start + timeoutMs;
+    while (true) {
+      await new Promise<void>(resolve => {
+        if (typeof requestAnimationFrame !== 'undefined') {
+          requestAnimationFrame(() => resolve());
+        } else {
+          setTimeout(resolve, 16);
+        }
+      });
+      rect = host.getContainerRect();
+      if (!rect) return rect;
+      if (rect.height >= minHeight) return rect;
+      const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      if (now >= deadline) return rect;
+    }
   }
 
   
