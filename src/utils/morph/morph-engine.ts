@@ -354,7 +354,13 @@ export class MorphEngine {
         const matched = context.matchedTextPairs || new Map<string, string>();
         const matchedTargetIds = new Set<string>(Array.from(matched.values()));
         for (const element of context.targetElements) {
-          if (!matchedTargetIds.has(element.id)) builder.addFadeInAnimation(element.id);
+          if (matchedTargetIds.has(element.id)) continue;
+          if (ElementTypeUtils.elementIsText(element)) {
+            // Reverse of phase 1 squish: bring back unmatched text via reverse squish
+            builder.addReverseSquishAnimation(element.id, 0.15, 0.75);
+          } else {
+            builder.addFadeInAnimation(element.id);
+          }
         }
         return builder.buildPhaseBundle('fadeInTarget');
       }

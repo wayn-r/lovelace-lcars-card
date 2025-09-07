@@ -7,7 +7,7 @@ const logger = Diagnostics.create('AnimationBuilder');
 
 export interface AnimationInstruction {
   targetElementId: string;
-  animationType: 'fade' | 'morph' | 'transform' | 'pathMorph' | 'scale' | 'visibility' | 'squish' | 'textStyle';
+  animationType: 'fade' | 'morph' | 'transform' | 'pathMorph' | 'scale' | 'visibility' | 'squish' | 'reverseSquish' | 'textStyle';
   properties: Record<string, any>;
   duration: number;
   delay?: number;
@@ -91,6 +91,21 @@ export class AnimationBuilder {
       animationType: 'squish',
       properties: {
         scaleY: 0,
+        transformOrigin: '50% 50%'
+      },
+      duration: duration ?? this.defaultDuration,
+      delay: delay ?? 0
+    });
+    return this;
+  }
+
+  addReverseSquishAnimation(elementId: string, duration?: number, delay?: number): this {
+    this.currentAnimations.push({
+      targetElementId: elementId,
+      animationType: 'reverseSquish',
+      properties: {
+        scaleY: 1,
+        opacity: 1,
         transformOrigin: '50% 50%'
       },
       duration: duration ?? this.defaultDuration,
@@ -310,6 +325,16 @@ export class MorphAnimationOrchestrator {
             ...animation.properties
           } as any, animationStartTime);
           break;
+        case 'reverseSquish': {
+          const toProps = { ...animation.properties } as any;
+          const fromProps: any = { scaleY: 0, transformOrigin: toProps.transformOrigin || '50% 50%', opacity: 1 };
+          timeline.fromTo(targetElement as any, fromProps, {
+            duration: animation.duration,
+            ease: 'power4.out',
+            ...toProps
+          } as any, animationStartTime);
+          break;
+        }
       }
     }
 
