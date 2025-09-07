@@ -4,6 +4,7 @@ import { transformPropagator, AnimationSyncData, TransformPropagator } from './t
 import { TransformOriginUtils } from './transform-origin-utils.js';
 import { GSDevTools } from 'gsap/GSDevTools';
 import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
+import { MorphSVGPlugin } from 'gsap/MorphSVGPlugin';
 import { CustomEase } from 'gsap/CustomEase';
 import { AnimationSequence as AnimationSequenceDefinition } from '../types.js';
 import { ColorResolver } from './color-resolver.js';
@@ -81,7 +82,7 @@ export class AnimationManager {
 
   static initializeGsap(): void {
     if (!AnimationManager.isGsapInitialized) {
-      gsap.registerPlugin(GSDevTools, MotionPathPlugin, CustomEase);
+      gsap.registerPlugin(GSDevTools, MotionPathPlugin, CustomEase, MorphSVGPlugin);
       AnimationManager.isGsapInitialized = true;
     }
   }

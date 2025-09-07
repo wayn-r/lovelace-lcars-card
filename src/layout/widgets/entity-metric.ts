@@ -128,7 +128,6 @@ export class EntityMetricWidget extends Widget {
       {
         fill: { default: baseColor, hover: `lighten(${baseColor}, 20)` },
         width: labelConfig.width || EntityMetricWidget.DEFAULT_LABEL_WIDTH,
-        height,
         cornerRadii,
         text: labelText,
         fontFamily: labelConfig.fontFamily || 'Antonio',
@@ -147,6 +146,7 @@ export class EntityMetricWidget extends Widget {
           targetAnchorPoint: 'topLeft',
         },
         offsetX: labelConfig.offsetX || EntityMetricWidget.DEFAULT_LABEL_OFFSET_X,
+        height,
       },
       this.hass,
       this.requestUpdateCallback,
@@ -260,7 +260,6 @@ export class EntityMetricWidget extends Widget {
       {
         fill: { default: baseColor, hover: `lighten(${baseColor}, 20)` },
         width: unitConfig.width || EntityMetricWidget.DEFAULT_UNIT_WIDTH,
-        height: unitHeight,
         cornerRadii,
         text: unitText,
         fontFamily: unitConfig.fontFamily || 'Antonio',
@@ -281,6 +280,7 @@ export class EntityMetricWidget extends Widget {
           targetAnchorPoint: 'topRight',
         },
         offsetX: unitConfig.offsetX || EntityMetricWidget.DEFAULT_UNIT_OFFSET_X,
+        height: unitHeight,
       },
       this.hass,
       this.requestUpdateCallback,

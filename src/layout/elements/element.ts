@@ -955,6 +955,7 @@ export abstract class LayoutElement {
 
         return svg`
           <text
+            id="${this.id}__text"
             x="${x}"
             y="${y}"
             fill="${colors.textColor}"

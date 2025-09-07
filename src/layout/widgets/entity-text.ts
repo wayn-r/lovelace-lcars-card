@@ -77,15 +77,15 @@ export class EntityTextWidget extends Widget {
           default: baseColor,
           hover: `lighten(${baseColor}, 20)`
         },
-        width: EntityTextWidget.LEADING_RECT_WIDTH,
-        height: height
+        width: EntityTextWidget.LEADING_RECT_WIDTH
       },
       {
         anchor: {
           anchorTo: bounds.id,
           anchorPoint: 'topLeft',
           targetAnchorPoint: 'topLeft'
-        }
+        },
+        height
       },
       this.hass,
       this.requestUpdateCallback,
@@ -107,7 +107,6 @@ export class EntityTextWidget extends Widget {
           hover: `lighten(${baseColor}, 20)`
         },
         width: labelConfig.width || EntityTextWidget.DEFAULT_LABEL_WIDTH,
-        height: height,
         text: labelText,
         fontFamily: labelConfig.fontFamily || 'Antonio',
         fontWeight: labelConfig.fontWeight || 'normal',
@@ -124,7 +123,8 @@ export class EntityTextWidget extends Widget {
           anchorPoint: 'topLeft',
           targetAnchorPoint: 'topRight'
         },
-        offsetX: labelConfig.offsetX || EntityTextWidget.DEFAULT_LABEL_OFFSET_X
+        offsetX: labelConfig.offsetX || EntityTextWidget.DEFAULT_LABEL_OFFSET_X,
+        height
       },
       this.hass,
       this.requestUpdateCallback,
@@ -158,7 +158,7 @@ export class EntityTextWidget extends Widget {
         textTransform: valueConfig.textTransform || 'uppercase'
       },
       {
-        height: height,
+        height,
         anchor: {
           anchorTo: labelRect.id,
           anchorPoint: 'topLeft',

@@ -76,6 +76,9 @@ export class LcarsCard extends LitElement {
   static styles = [editorStyles];
 
   constructor() {
+    
+    Diagnostics.setGlobalLevel(4);
+
     super();
     this._fontsReady = new Promise<void>((resolve) => {
       this._resolveFontsReady = resolve;
@@ -855,7 +858,8 @@ export class LcarsCard extends LitElement {
         },
         expandCanvasTo: (width: number, height: number) => this._expandCanvasTo(width, height)
       };
-      await MorphEngine.morphToNavigationPath(hooks, navigationPath, this.hass, { durationMs: options.durationMs ?? 1000 });
+      const debugMorph = (typeof window !== 'undefined' && (window as any).__lcarsDebugMorph === true);
+    await MorphEngine.morphToNavigationPath(hooks, navigationPath, this.hass, { durationMs: options.durationMs ?? 1000, debugMorph });
     } catch (e) {
     } finally {
       setTimeout(() => { this._suspendRenders = false; }, 0);

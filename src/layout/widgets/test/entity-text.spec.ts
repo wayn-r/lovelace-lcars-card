@@ -83,8 +83,8 @@ describe('EntityTextWidget', () => {
       const leadingRect = elements[1] as RectangleElement;
       const labelRect = elements[2] as RectangleElement;
       
-      expect(leadingRect.props.height).toBe(25);
-      expect(labelRect.props.height).toBe(25);
+      expect(leadingRect.layoutConfig.height).toBe(25);
+      expect(labelRect.layoutConfig.height).toBe(25);
     });
 
     it('should use configured height when specified', () => {
@@ -102,8 +102,8 @@ describe('EntityTextWidget', () => {
       const labelRect = elements[2] as RectangleElement;
       const valueText = elements[3] as TextElement;
       
-      expect(leadingRect.props.height).toBe(40);
-      expect(labelRect.props.height).toBe(40);
+      expect(leadingRect.layoutConfig.height).toBe(40);
+      expect(labelRect.layoutConfig.height).toBe(40);
       expect(valueText.layoutConfig.height).toBe(40);
     });
   });

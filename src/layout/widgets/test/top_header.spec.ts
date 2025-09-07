@@ -123,9 +123,9 @@ describe('TopHeaderWidget', () => {
         const rightEndcap = elements[3] as EndcapElement;
         const headerBar = elements[1] as RectangleElement;
         
-        expect(leftEndcap.props.height).toBe(30);
-        expect(rightEndcap.props.height).toBe(30);
-        expect(headerBar.props.height).toBe(30);
+        expect(leftEndcap.layoutConfig.height).toBe(30);
+        expect(rightEndcap.layoutConfig.height).toBe(30);
+        expect(headerBar.layoutConfig.height).toBe(30);
       });
 
       it('should calculate endcap width as 75% of height by default', () => {
@@ -135,8 +135,8 @@ describe('TopHeaderWidget', () => {
         const rightEndcap = elements[3] as EndcapElement;
         
         // Default height is 30, so endcap width should be 30 * 0.75 = 22.5
-        expect(leftEndcap.props.width).toBe(22.5);
-        expect(rightEndcap.props.width).toBe(22.5);
+        expect(leftEndcap.layoutConfig.width).toBe(22.5);
+        expect(rightEndcap.layoutConfig.width).toBe(22.5);
       });
 
       it('should use default text content when not specified', () => {
@@ -186,8 +186,8 @@ describe('TopHeaderWidget', () => {
         const elements = widget.expand();
         const leftEndcap = elements[2] as EndcapElement;
         
-        expect(leftEndcap.props.height).toBe(50);
-        expect(leftEndcap.props.width).toBe(37.5); // 50 * 0.75
+        expect(leftEndcap.layoutConfig.height).toBe(50);
+        expect(leftEndcap.layoutConfig.width).toBe(37.5); // 50 * 0.75
       });
 
       it('should use height from layoutConfig when not in props', () => {
@@ -196,8 +196,8 @@ describe('TopHeaderWidget', () => {
         const elements = widget.expand();
         const leftEndcap = elements[2] as EndcapElement;
         
-        expect(leftEndcap.props.height).toBe(60);
-        expect(leftEndcap.props.width).toBe(45); // 60 * 0.75
+        expect(leftEndcap.layoutConfig.height).toBe(60);
+        expect(leftEndcap.layoutConfig.width).toBe(45); // 60 * 0.75
       });
 
       it('should use custom text content when specified', () => {
@@ -391,10 +391,10 @@ describe('TopHeaderWidget', () => {
         expect(headerBar.props.fill).toBe('#0066CC');
         
         // Verify sizing consistency
-        expect(leftEndcap.props.height).toBe(35);
-        expect(rightEndcap.props.height).toBe(35);
-        expect(headerBar.props.height).toBe(35);
-        expect(leftEndcap.props.width).toBe(26.25); // 35 * 0.75
+        expect(leftEndcap.layoutConfig.height).toBe(35);
+        expect(rightEndcap.layoutConfig.height).toBe(35);
+        expect(headerBar.layoutConfig.height).toBe(35);
+        expect(leftEndcap.layoutConfig.width).toBe(26.25); // 35 * 0.75
         
         // Verify content
         expect(leftText.props.text).toBe('NAVIGATION');

@@ -36,8 +36,12 @@
 
 ### Animation
 - improve morph logic to make transitioning more natural and to have a better feel
-    - elbows currently don't morph into the same dimensions and use total area dimensions
+~~    - elbows currently don't morph into the same dimensions and use total area dimensions~~
     - in the ritos example, some elbows that are aligned with nav buttons break up into those groups during transition
     - text should disappear if it isn't the same; or some other better way of handling this
     - color transitions need handled
     - implement multiple step timeline for different components to add to a better and more natural feel
+        - text in headers should be collapsed by surrounding elements when transitioning out, then bisect and expand to fill the expected area when transitioning in.
+    - similar groupings should be handled more elegantly
+        - header groups
+        - sidebar groups
