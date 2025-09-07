@@ -1,5 +1,4 @@
 import type { LayoutElement } from '../../layout/elements/element.js';
-import { type BandContextsMap } from './morph-layout-calculator.js';
 import gsap from 'gsap';
 import { Diagnostics } from '../diagnostics.js';
 
@@ -26,16 +25,43 @@ export interface MorphAnimationContext {
   cloneElementsById?: Map<string, Element>;
   sourceCloneElementsById?: Map<string, Element>;
   targetCloneElementsById?: Map<string, Element>;
-  targetBandContexts: BandContextsMap;
   overlay?: SVGGElement;
 }
 
-export class AnimationBuilder {
-  private currentAnimations: AnimationInstruction[] = [];
-  private defaultDuration: number = 1.0;
+abstract class BaseAnimationBuilder {
+  protected currentAnimations: AnimationInstruction[] = [];
+  protected defaultDuration: number = 1.0;
 
   constructor(phaseDuration: number = 1.0) {
     this.defaultDuration = phaseDuration;
+  }
+
+  protected addAnimation(
+    elementId: string,
+    animationType: AnimationInstruction['animationType'],
+    properties: Record<string, any>,
+    duration?: number,
+    delay: number = 0
+  ): this {
+    this.currentAnimations.push({
+      targetElementId: elementId,
+      animationType,
+      properties,
+      duration: duration ?? this.defaultDuration,
+      delay
+    });
+    return this;
+  }
+
+  clearAnimations(): this {
+    this.currentAnimations = [];
+    return this;
+  }
+}
+
+export class AnimationBuilder extends BaseAnimationBuilder {
+  constructor(phaseDuration: number = 1.0) {
+    super(phaseDuration);
   }
 
   static createForPhase(_phaseName: string, phaseDuration: number = 1.0): AnimationBuilder {
@@ -44,25 +70,11 @@ export class AnimationBuilder {
   }
 
   addFadeOutAnimation(elementId: string, delay: number = 0): this {
-    this.currentAnimations.push({
-      targetElementId: elementId,
-      animationType: 'fade',
-      properties: { opacity: 0 },
-      duration: this.defaultDuration,
-      delay
-    });
-    return this;
+    return this.addAnimation(elementId, 'fade', { opacity: 0 }, undefined, delay);
   }
 
   addFadeInAnimation(elementId: string, delay: number = 0): this {
-    this.currentAnimations.push({
-      targetElementId: elementId,
-      animationType: 'fade',
-      properties: { opacity: 1 },
-      duration: this.defaultDuration,
-      delay
-    });
-    return this;
+    return this.addAnimation(elementId, 'fade', { opacity: 1 }, undefined, delay);
   }
 
   addTransformAnimation(elementId: string, transformProperties: {
@@ -72,100 +84,51 @@ export class AnimationBuilder {
     scaleY?: number;
     rotation?: number;
   }, delay: number = 0): this {
-    this.currentAnimations.push({
-      targetElementId: elementId,
-      animationType: 'transform',
-      properties: {
-        ...transformProperties,
-        transformOrigin: '0px 0px'
-      },
-      duration: this.defaultDuration,
-      delay
-    });
-    return this;
+    return this.addAnimation(elementId, 'transform', {
+      ...transformProperties,
+      transformOrigin: '0px 0px'
+    }, undefined, delay);
   }
 
   addSquishAnimation(elementId: string, duration?: number, delay?: number): this {
-    this.currentAnimations.push({
-      targetElementId: elementId,
-      animationType: 'squish',
-      properties: {
-        scaleY: 0,
-        transformOrigin: '50% 50%'
-      },
-      duration: duration ?? this.defaultDuration,
-      delay: delay ?? 0
-    });
-    return this;
+    return this.addAnimation(elementId, 'squish', {
+      scaleY: 0,
+      transformOrigin: '50% 50%'
+    }, duration, delay ?? 0);
   }
 
   addReverseSquishAnimation(elementId: string, duration?: number, delay?: number): this {
-    this.currentAnimations.push({
-      targetElementId: elementId,
-      animationType: 'reverseSquish',
-      properties: {
-        scaleY: 1,
-        opacity: 1,
-        transformOrigin: '50% 50%'
-      },
-      duration: duration ?? this.defaultDuration,
-      delay: delay ?? 0
-    });
-    return this;
+    return this.addAnimation(elementId, 'reverseSquish', {
+      scaleY: 1,
+      opacity: 1,
+      transformOrigin: '50% 50%'
+    }, duration, delay ?? 0);
   }
 
   addPathMorphAnimation(elementId: string, targetPath: string, delay: number = 0): this {
-    this.currentAnimations.push({
-      targetElementId: elementId,
-      animationType: 'pathMorph',
-      properties: {
-        morphSVG: { shape: targetPath, shapeIndex: 'auto' }
-      },
-      duration: this.defaultDuration,
-      delay
-    });
-    return this;
+    return this.addAnimation(elementId, 'pathMorph', {
+      morphSVG: { shape: targetPath, shapeIndex: 'auto' }
+    }, undefined, delay);
   }
 
   addTextStyleAnimation(elementId: string, matchedTargetId: string, delay: number = 0): this {
-    this.currentAnimations.push({
-      targetElementId: elementId,
-      animationType: 'textStyle',
-      properties: {
-        matchedTargetId
-      },
-      duration: this.defaultDuration,
-      delay
-    });
-    return this;
+    return this.addAnimation(elementId, 'textStyle', {
+      matchedTargetId
+    }, undefined, delay);
   }
 
   addVisibilityToggle(elementId: string, isVisible: boolean, delay: number = 0): this {
-    this.currentAnimations.push({
-      targetElementId: elementId,
-      animationType: 'visibility',
-      properties: {
-        display: isVisible ? 'inline' : 'none'
-      },
-      duration: 0,
-      delay
-    });
-    return this;
+    return this.addAnimation(elementId, 'visibility', {
+      display: isVisible ? 'inline' : 'none'
+    }, 0, delay);
   }
 
   addScaleAnimation(elementId: string, scaleX: number, scaleY: number, delay: number = 0): this {
-    this.currentAnimations.push({
-      targetElementId: elementId,
-      animationType: 'scale',
-      properties: {
-        scaleX,
-        scaleY,
-        transformOrigin: '0px 0px'
-      },
-      duration: this.defaultDuration,
-      delay
-    });
-    return this;
+    return this.addAnimation(elementId, 'scale', {
+      scaleX,
+      scaleY,
+      transformOrigin: '0px 0px'
+    }, undefined, delay);
   }
 
   buildPhaseBundle(phaseName: string): PhaseAnimationBundle {
@@ -180,11 +143,6 @@ export class AnimationBuilder {
       simultaneousAnimations: animations,
       totalPhaseDuration: maxEndTime
     };
-  }
-
-  clearAnimations(): this {
-    this.currentAnimations = [];
-    return this;
   }
 }
 

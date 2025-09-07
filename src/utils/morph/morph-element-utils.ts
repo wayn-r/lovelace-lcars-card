@@ -150,60 +150,6 @@ export class GeometryUtils {
     return element.layout.width * element.layout.height;
   }
 
-  static calculateGroupBounds(group: Group): { x: number; y: number; width: number; height: number } {
-    let minX = Number.POSITIVE_INFINITY;
-    let minY = Number.POSITIVE_INFINITY;
-    let maxX = 0;
-    let maxY = 0;
-    
-    for (const element of group.elements) {
-      if (!(element as any).layout?.calculated) continue;
-      minX = Math.min(minX, element.layout.x);
-      minY = Math.min(minY, element.layout.y);
-      maxX = Math.max(maxX, element.layout.x + element.layout.width);
-      maxY = Math.max(maxY, element.layout.y + element.layout.height);
-    }
-    
-    if (minX === Number.POSITIVE_INFINITY) {
-      return { x: 0, y: 0, width: 0, height: 0 };
-    }
-    
-    return { 
-      x: minX, 
-      y: minY, 
-      width: Math.max(0, maxX - minX), 
-      height: Math.max(0, maxY - minY) 
-    };
-  }
-
-  static calculateRectUnion(
-    rectangles: { x: number; y: number; width: number; height: number }[], 
-    fallbackRect?: { x: number; y: number; width: number; height: number }
-  ): { x: number; y: number; width: number; height: number } {
-    if (rectangles.length === 0) {
-      return fallbackRect || { x: 0, y: 0, width: 0, height: 0 };
-    }
-    
-    let minX = Number.POSITIVE_INFINITY;
-    let minY = Number.POSITIVE_INFINITY;
-    let maxX = Number.NEGATIVE_INFINITY;
-    let maxY = Number.NEGATIVE_INFINITY;
-    
-    for (const rect of rectangles) {
-      minX = Math.min(minX, rect.x);
-      minY = Math.min(minY, rect.y);
-      maxX = Math.max(maxX, rect.x + rect.width);
-      maxY = Math.max(maxY, rect.y + rect.height);
-    }
-    
-    return { 
-      x: minX, 
-      y: minY, 
-      width: Math.max(0, maxX - minX), 
-      height: Math.max(0, maxY - minY) 
-    };
-  }
-
   static calculateMatchCost(elementA: LayoutElement, elementB: LayoutElement): number {
     const centerA = this.calculateElementCenter(elementA);
     const centerB = this.calculateElementCenter(elementB);
@@ -238,33 +184,6 @@ export class ElementAnalyzer {
     return yClose && heightClose;
   }
 
-  static findBandNeighbors(
-    reference: LayoutElement, 
-    allElements: LayoutElement[], 
-    targetCategories: ReadonlyArray<'text'|'rectangle'|'endcap'|'elbow'>
-  ): { left?: LayoutElement; right?: LayoutElement } {
-    const candidates = allElements.filter(el => 
-      (targetCategories as ReadonlyArray<string>).includes(ElementTypeUtils.getElementCategory(el)) && 
-      this.elementsSameBand(reference, el)
-    );
-    
-    let left: LayoutElement | undefined;
-    let right: LayoutElement | undefined;
-    const refLeft = reference.layout.x;
-    const refRight = reference.layout.x + reference.layout.width;
-    
-    for (const el of candidates) {
-      const elCenter = el.layout.x + el.layout.width / 2;
-      if (elCenter <= refLeft) {
-        if (!left || elCenter > (left.layout.x + left.layout.width / 2)) left = el;
-      } else if (elCenter >= refRight) {
-        if (!right || elCenter < (right.layout.x + right.layout.width / 2)) right = el;
-      }
-    }
-    
-    return { left, right };
-  }
-
   static collectTextsToSuppress(
     sourceElements: LayoutElement[],
     destinationElements: LayoutElement[],
@@ -274,13 +193,6 @@ export class ElementAnalyzer {
     return sourceTextElements.filter(textElement => 
       !ElementTypeUtils.textElementHasEqualMappingTarget(textElement, elementMapping, destinationElements)
     );
-  }
-
-  static textHasTwoRectangleNeighbors(textElement: LayoutElement, allElements: LayoutElement[]): boolean {
-    const neighbors = this.findBandNeighbors(textElement, allElements, ['rectangle','endcap']);
-    const leftIsRectangle = neighbors.left ? ElementTypeUtils.elementIsRectangle(neighbors.left) : false;
-    const rightIsRectangle = neighbors.right ? ElementTypeUtils.elementIsRectangle(neighbors.right) : false;
-    return Boolean(neighbors.left && neighbors.right && leftIsRectangle && rightIsRectangle);
   }
 
   static findMatchingText(

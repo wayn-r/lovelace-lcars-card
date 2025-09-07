@@ -12,7 +12,6 @@ import {
   type PhaseAnimationBundle, 
   type MorphAnimationContext 
 } from './morph-animation-builder';
-import { type BandContextsMap } from './morph-layout-calculator.js';
 import { MorphUtilities, ValidationUtils, TimeUtils } from './morph-utilities.js';
 import gsap from 'gsap';
 
@@ -24,7 +23,6 @@ export interface MorphEngineOptions {
   durationMs?: number;
   transitionName?: string;
   easing?: string;
-  debugMorph?: boolean;
   textMatchMaxDeltaX?: number;
   textMatchMaxDeltaY?: number;
 }
@@ -51,7 +49,6 @@ export interface MorphPhaseContext {
   sourceElements: LayoutElement[];
   targetElements: LayoutElement[];
   elementMapping: Map<string, string>;
-  targetBandContexts: BandContextsMap;
   phaseDuration: number;
   suppressedElementIds?: Set<string>;
   expandedElementData?: Map<string, { expandedScaleX: number; side: 'left' | 'right' }>;
@@ -74,7 +71,7 @@ export class MorphEngine {
     options: MorphEngineOptions = {}
   ): Promise<void> {
     try {
-      const mergedOptions: MorphEngineOptions = { ...options, debugMorph: options.debugMorph };
+      const mergedOptions: MorphEngineOptions = { ...options };
       const destinationResult = await DestinationResolver.resolveConfigurationFromNavigationPath(
         navigationPath, 
         homeAssistant
@@ -121,7 +118,6 @@ export class MorphEngine {
 
     const sourceElements = this._extractValidElements(sourceGroups);
     const targetElements = this._extractValidElements(targetGroups);
-    const targetBandContexts = this._computeTargetBandContexts(targetElements);
     const elementMapping = ElementMatcher.createElementMappings(sourceGroups, targetGroups);    
 
     const utilities = new MorphUtilities();
@@ -136,7 +132,6 @@ export class MorphEngine {
       sourceElements,
       targetElements,
       elementMapping,
-      targetBandContexts,
       options
     );
   }
@@ -213,10 +208,6 @@ export class MorphEngine {
     );
   }
 
-  private static _computeTargetBandContexts(targetElements: LayoutElement[]): BandContextsMap {
-    // For now, return empty map - this can be enhanced later with proper band context computation
-    return new Map();
-  }
 
   private static async _executeMorphPipeline(
     hooks: MorphEngineHooks,
@@ -224,7 +215,6 @@ export class MorphEngine {
     sourceElements: LayoutElement[],
     targetElements: LayoutElement[],
     elementMapping: Map<string, string>,
-    targetBandContexts: BandContextsMap,
     options: MorphEngineOptions = {}
   ): Promise<void> {
     const utilities = new MorphUtilities();
@@ -247,22 +237,6 @@ export class MorphEngine {
       ...sourceCloneElementsById
     ]);
 
-    try {
-      const debugEnabled = Boolean(options?.debugMorph);
-      if (debugEnabled) {
-        const sourceIds = new Set<string>(Array.from(sourceCloneElementsById.keys()));
-        const targetIds = new Set<string>(Array.from(targetCloneElementsById.keys()));
-        const duplicates: string[] = [];
-        for (const id of targetIds) if (sourceIds.has(id)) duplicates.push(id);
-        logger.info('[Morph Debug] clone maps:', {
-          sourceCloneCount: sourceCloneElementsById.size,
-          targetCloneCount: targetCloneElementsById.size,
-          combinedCount: allCloneElementsById.size,
-          duplicateIds: duplicates.slice(0, 20)
-        } as any);
-      }
-    } catch {}
-
     const animationContext: MorphAnimationContext = {
       sourceElements,
       targetElements,
@@ -270,11 +244,8 @@ export class MorphEngine {
       cloneElementsById: allCloneElementsById,
       sourceCloneElementsById,
       targetCloneElementsById,
-      targetBandContexts: targetBandContexts || new Map(),
       overlay
     };
-
-    (animationContext as any).debugMorph = Boolean(options?.debugMorph);
     
     // Phase 0: Match components
     // Determine matched text pairs to preserve during fade-out and transition them
@@ -405,7 +376,6 @@ export class MorphEngine {
         sourceElements: animationContext.sourceElements,
         targetElements: animationContext.targetElements,
         elementMapping: animationContext.elementMapping,
-        targetBandContexts: animationContext.targetBandContexts,
         phaseDuration: this.defaultPhaseDurationSeconds,
         matchedTextPairs: (animationContext as any).__matchedTextPairs as Map<string, string> | undefined
       };
