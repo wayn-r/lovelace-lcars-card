@@ -17,8 +17,6 @@ import gsap from 'gsap';
 
 const logger = Diagnostics.create('MorphEngine');
 
-
-
 export interface MorphEngineOptions {
   durationMs?: number;
   transitionName?: string;
@@ -77,7 +75,6 @@ export class MorphEngine {
         homeAssistant
       );
     
-
       if (destinationResult.isValid) {
         await this._morphToConfiguration(hooks, destinationResult.config, homeAssistant, mergedOptions);
       } else {

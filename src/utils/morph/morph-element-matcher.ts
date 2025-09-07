@@ -39,20 +39,6 @@ export class ElementMatcher {
     return mapping;
   }
 
-  static analyzeGroupAndElementMatching(sourceGroups: Group[], targetGroups: Group[]): MatchingResult {
-    const sourceElements = this._flattenElementsFromGroups(sourceGroups);
-    const targetElements = this._flattenElementsFromGroups(targetGroups);
-
-
-    return {
-      groupMatches: [],
-      elementMatches: [],
-      unmatchedSourceElementIds: sourceElements.map(element => element.id),
-      unmatchedTargetElementIds: targetElements.map(element => element.id)
-    };
-  }
-
-
   private static _flattenElementsFromGroups(groups: Group[]): LayoutElement[] {
     const flattenedElements: LayoutElement[] = [];
     groups.forEach(group => group.elements.forEach(element => flattenedElements.push(element)));
