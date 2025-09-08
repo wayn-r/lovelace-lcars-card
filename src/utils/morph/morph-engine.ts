@@ -5,7 +5,8 @@ import type { LayoutElement } from '../../layout/elements/element.js';
 import { Diagnostics } from '../diagnostics.js';
 import { ElementAnalyzer, ElementTypeUtils } from './morph-element-utils.js';
 import { DestinationResolver, type ContainerResizeRequirement } from './morph-destination-resolver.js';
-import { ElementMatcher } from './morph-element-matcher.js';
+import { ElementMatcher, ElementGrouper, type ElementGroupingResult } from './morph-element-matcher.js';
+import { MorphDebugger } from './morph-debug.js';
 import { 
   AnimationBuilder, 
   MorphAnimationOrchestrator, 
@@ -23,6 +24,7 @@ export interface MorphEngineOptions {
   easing?: string;
   textMatchMaxDeltaX?: number;
   textMatchMaxDeltaY?: number;
+  debugMorph?: boolean;
 }
 
 export interface MorphEngineHooks {
@@ -199,6 +201,10 @@ export class MorphEngine {
     return { containerRect: finalContainerRect, sourceBounds, targetBounds };
   }
 
+  private static _debugModeIsEnabled(options: MorphEngineOptions): boolean {
+    return Boolean(options.debugMorph);
+  }
+
   private static _extractValidElements(groups: Group[]): LayoutElement[] {
     return ElementAnalyzer.collectLayoutElements(groups).filter(element => 
       ValidationUtils.elementLayoutIsCalculated(element)
@@ -243,6 +249,17 @@ export class MorphEngine {
       targetCloneElementsById,
       overlay
     };
+
+    // Group elements by alignment
+    const elementGroupingResult = ElementGrouper.groupElementsByAlignment(sourceElements, 5);
+    (animationContext as any).__elementGroupingResult = elementGroupingResult;
+
+    logger.debug('Element grouping result', elementGroupingResult);
+    
+    // Show debug visualization if enabled
+    if (this._debugModeIsEnabled(options)) {
+      await MorphDebugger.visualizeElementGroups(svgRoot, elementGroupingResult);
+    }
     
     // Phase 0: Match components
     // Determine matched text pairs to preserve during fade-out and transition them
@@ -254,6 +271,7 @@ export class MorphEngine {
     (animationContext as any).__matchedTextPairs = matchedTextPairs;
     const phaseConfigurations = this._createPhaseConfigurations();    
     await this._executeAnimationPhases(phaseConfigurations, animationContext, hooks);    
+    
     utilities.scheduleOverlayCleanup(overlay, hiddenOriginalElements, this.defaultPhaseDurationSeconds * phaseConfigurations.length);
   }
   
@@ -403,5 +421,6 @@ export class MorphEngine {
       logger.info('[Morph Debug] all phases complete', { totalDuration: currentStartTime } as any);
     }
   }
+
 }
 
