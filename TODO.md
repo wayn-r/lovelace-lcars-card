@@ -45,3 +45,12 @@
     - similar groupings should be handled more elegantly
         - header groups
         - sidebar groups
+
+- groups should match similar object relations or compatible connections based on orientation like rectangles below a top-left elbow.
+- avoid overlapping morphs
+- non-matched groups should expand/contract from outer limits:
+    - grouped elements to the right of a top-left elbow that don't match a similar shape should be removed cascading from right to left.
+    - matched groups should fill text voids THEN:
+        - seek matches
+        - split or merge into group matched components
+        
