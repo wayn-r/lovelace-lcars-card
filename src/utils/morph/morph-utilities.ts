@@ -87,9 +87,6 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
     for (const element of sourceElements) {
       const originalDomElement = getShadowElement?.(element.id) as Element | null;
       if (!originalDomElement) {
-        if (debug) {
-          logger.info('[Morph Debug] source clone: original NOT FOUND', { id: element.id });
-        }
         continue;
       }
       
@@ -131,8 +128,6 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
       if (debug) {
         let initialOpacity: string | undefined;
         try { initialOpacity = (clonedElement as HTMLElement).style?.opacity ?? getComputedStyle(clonedElement as any).opacity; } catch {}
-        // eslint-disable-next-line no-console
-        logger.info('[Morph Debug] source clone: CREATED & original hidden', { id: element.id, cloneId: (clonedElement as any).id, initialOpacity });
       }
     }
     
@@ -207,10 +202,6 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
 
       // Fix any internal definition IDs to avoid collisions
       this._rewriteCloneDefinitionReferences(domElement);
-
-      if (debug) {
-        logger.warn('[Morph Debug] target synthetic: CREATED', { id: targetElement.id, elId: (domElement as any).id });
-      }
       
       return domElement;
     } catch (error) {

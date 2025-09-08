@@ -234,7 +234,6 @@ export class MorphEngine {
       hooks.getAnimationContext()
     );
 
-    // Combined map retained for backward compatibility only; keep both separate maps to avoid ID collisions
     const allCloneElementsById = new Map<string, Element>([
       ...targetCloneElementsById,
       ...sourceCloneElementsById
@@ -251,12 +250,9 @@ export class MorphEngine {
     };
 
     // Group elements by alignment
-    const elementGroupingResult = ElementGrouper.groupElementsByAlignment(sourceElements, 5);
+    const elementGroupingResult = ElementGrouper.groupElementsByAlignment(sourceElements, 2);
     (animationContext as any).__elementGroupingResult = elementGroupingResult;
-
-    logger.debug('Element grouping result', elementGroupingResult);
     
-    // Show debug visualization if enabled
     if (this._debugModeIsEnabled(options)) {
       await MorphDebugger.visualizeElementGroups(svgRoot, elementGroupingResult);
     }

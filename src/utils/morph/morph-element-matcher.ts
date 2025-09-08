@@ -74,7 +74,7 @@ export class ElementGrouper {
         id: `horizontal_${meanY.toFixed(1)}`,
         elements: groupElements,
         groupType: 'horizontal',
-        meanCoordinate: meanY,
+        meanCoordinate: this._calculateMeanCoordinateForGroup(groupElements, 'horizontal'),
         coordinateType: 'y'
       });
     });
@@ -85,7 +85,7 @@ export class ElementGrouper {
         id: `vertical_${meanX.toFixed(1)}`,
         elements: groupElements,
         groupType: 'vertical',
-        meanCoordinate: meanX,
+        meanCoordinate: this._calculateMeanCoordinateForGroup(groupElements, 'vertical'),
         coordinateType: 'x'
       });
     });
@@ -130,21 +130,33 @@ export class ElementGrouper {
     const coordinateGroups: Array<{ coordinate: number; elements: LayoutElement[] }> = [];
     
     for (const element of elements) {
+      // Exclude endcaps from vertical groups entirely
+      if (direction === 'vertical' && ElementTypeUtils.getElementCategory(element) === 'endcap') {
+        continue;
+      }
+
       const coordinate = this._calculateGroupingCoordinate(element, direction);
       if (coordinate === null) continue;
 
-      let foundGroup = false;
+      const compatibleGroups: Array<{ coordinate: number; elements: LayoutElement[] }> = [];
+      const compatibleEndcapGroups: Array<{ coordinate: number; elements: LayoutElement[] }> = [];
+
       for (const group of coordinateGroups) {
-        if (this._coordinatesAreWithinTolerance(coordinate, group.coordinate, tolerance)) {
-          if (this._elementIsCompatibleWithGroup(element, group.elements, direction)) {
-            group.elements.push(element);
-            foundGroup = true;
-            break;
-          }
+        if (!this._coordinatesAreWithinTolerance(coordinate, group.coordinate, tolerance)) continue;
+        if (!this._elementIsCompatibleWithGroup(element, group.elements, direction)) continue;
+
+        const groupContainsEndcap = group.elements.some(el => ElementTypeUtils.getElementCategory(el) === 'endcap');
+        if (direction === 'horizontal' && groupContainsEndcap) {
+          compatibleEndcapGroups.push(group);
+        } else {
+          compatibleGroups.push(group);
         }
       }
 
-      if (!foundGroup) {
+      const targetGroup = (compatibleEndcapGroups[0] || compatibleGroups[0]);
+      if (targetGroup) {
+        targetGroup.elements.push(element);
+      } else {
         coordinateGroups.push({ coordinate, elements: [element] });
       }
     }
@@ -169,6 +181,20 @@ export class ElementGrouper {
       resultMap.set(uniqueKey, group.elements);
     });
     return resultMap;
+  }
+
+  private static _calculateMeanCoordinateForGroup(
+    elements: LayoutElement[],
+    direction: 'horizontal' | 'vertical'
+  ): number {
+    const coords: number[] = [];
+    for (const element of elements) {
+      const coord = this._calculateGroupingCoordinate(element, direction);
+      if (coord !== null) coords.push(coord);
+    }
+    if (coords.length === 0) return 0;
+    const sum = coords.reduce((acc, value) => acc + value, 0);
+    return sum / coords.length;
   }
 
   private static _calculateGroupingCoordinate(
@@ -235,6 +261,7 @@ export class ElementGrouper {
     for (const groupElement of group) {
       const groupCategory = ElementTypeUtils.getElementCategory(groupElement);
       
+      // elbows constrain bounds by orientation and group in the direction of their body and/or arm
       if (elementCategory === 'elbow') {
         if (!this._elbowIsCompatibleWithElement(element, groupElement, direction)) {
           return false;
@@ -244,6 +271,20 @@ export class ElementGrouper {
       if (groupCategory === 'elbow') {
         if (!this._elbowIsCompatibleWithElement(groupElement, element, direction)) {
           return false;
+        }
+      }
+
+      // endcaps constrain horizontal bounds by direction and do not group vertically
+      if (direction === 'horizontal') {
+        if (elementCategory === 'endcap') {
+          if (!this._endcapIsCompatibleWithElement(element, groupElement)) {
+            return false;
+          }
+        }
+        if (groupCategory === 'endcap') {
+          if (!this._endcapIsCompatibleWithElement(groupElement, element)) {
+            return false;
+          }
         }
       }
     }
@@ -296,6 +337,32 @@ export class ElementGrouper {
       case 'bottom-right':
       case 'bottom-left':
         return otherRect.y + otherRect.height <= elbowRect.y;
+      default:
+        return true;
+    }
+  }
+
+  private static _endcapIsCompatibleWithElement(
+    endcapElement: LayoutElement,
+    otherElement: LayoutElement
+  ): boolean {
+    const direction = ((endcapElement as any).props?.direction || 'left') as 'left' | 'right';
+    const endcapRect = endcapElement.layout;
+    const otherRect = otherElement.layout;
+
+    return this._endcapHorizontalConstraintIsSatisfied(direction, endcapRect, otherRect);
+  }
+
+  private static _endcapHorizontalConstraintIsSatisfied(
+    direction: 'left' | 'right',
+    endcapRect: { x: number; width: number },
+    otherRect: { x: number; width: number }
+  ): boolean {
+    switch (direction) {
+      case 'right':
+        return otherRect.x + otherRect.width <= endcapRect.x;
+      case 'left':
+        return otherRect.x >= endcapRect.x + endcapRect.width;
       default:
         return true;
     }

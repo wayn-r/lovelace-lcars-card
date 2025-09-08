@@ -41,34 +41,27 @@ describe('ElementGrouper', () => {
 
       const result = ElementGrouper.groupElementsByAlignment(elements, 5);
 
-      // Should have two horizontal groups: one with 4 elements (rectangle, text, endcap, elbow), one with rectangle_2
-      expect(result.horizontalGroups).toHaveLength(2);
-      
-      // Find the group with 4 elements
-      const mainGroup = result.horizontalGroups.find(g => g.elements.length === 4);
-      const singleGroup = result.horizontalGroups.find(g => g.elements.length === 1);
-      
-      expect(mainGroup).toBeDefined();
-      expect(singleGroup).toBeDefined();
-      
-      // The main group should be grouped by their y-center coordinate
-      // rectangle: (0 + 50) / 2 = 25
-      // text: (0 + 50) / 2 = 25
-      // endcap: (0 + 50) / 2 = 25
-      // elbow (top-right): (0 + 50) / 2 = 25 (armHeight = 50)
-      expect(mainGroup!.meanCoordinate).toBe(25);
-      
-      // rectangle_2 should be in its own group
-      // rectangle_2: (0 + 75) / 2 = 37.5, which is > 5 away from 25
-      const mainGroupIds = mainGroup!.elements.map(e => e.id);
-      expect(mainGroupIds).toContain('rectangle');
-      expect(mainGroupIds).toContain('text');
-      expect(mainGroupIds).toContain('endcap');
-      expect(mainGroupIds).toContain('elbow');
-      expect(mainGroupIds).not.toContain('rectangle_2');
+      // With endcap constraints, expect three horizontal groups:
+      // - one with rectangle + text
+      // - one with endcap + elbow (default endcap direction is 'left')
+      // - one with rectangle_2
+      expect(result.horizontalGroups).toHaveLength(3);
 
+      const groupRectText = result.horizontalGroups.find(g => g.elements.length === 2 && g.elements.some(e => e.id === 'rectangle') && g.elements.some(e => e.id === 'text'));
+      const groupEndcapElbow = result.horizontalGroups.find(g => g.elements.length === 2 && g.elements.some(e => e.id === 'endcap') && g.elements.some(e => e.id === 'elbow'));
+      const singleGroup = result.horizontalGroups.find(g => g.elements.length === 1);
+
+      expect(groupRectText).toBeDefined();
+      expect(groupEndcapElbow).toBeDefined();
+      expect(singleGroup).toBeDefined();
+
+      // The two multi-element groups should share the same mean y (25)
+      expect(groupRectText!.meanCoordinate).toBe(25);
+      expect(groupEndcapElbow!.meanCoordinate).toBe(25);
+
+      // rectangle_2 should be in its own group centered at 37.5
       expect(singleGroup!.elements[0].id).toBe('rectangle_2');
-      expect(Math.round(singleGroup!.meanCoordinate * 10) / 10).toBe(37.5); // Handle floating point precision
+      expect(Math.round(singleGroup!.meanCoordinate * 10) / 10).toBe(37.5);
 
       // No elements should be ungrouped (all belong to some group)
       expect(result.ungroupedElements).toHaveLength(0);
