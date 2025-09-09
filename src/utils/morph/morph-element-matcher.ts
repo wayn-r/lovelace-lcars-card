@@ -38,6 +38,19 @@ export interface ElementGroupingResult {
   ungroupedElements: LayoutElement[];
 }
 
+export type ConnectionDirection = 'up' | 'down' | 'left' | 'right';
+
+export interface ElementConnection {
+  elementId: string;
+  direction: ConnectionDirection;
+  constraint: 'none' | 'upper' | 'lower' | 'leftmost' | 'rightmost';
+}
+
+export interface ElementConnections {
+  elementId: string;
+  connections: ElementConnection[];
+}
+
 export class ElementMatcher {
   static createElementMappings(sourceGroups: Group[], targetGroups: Group[]): Map<string, string> {
     const mapping = new Map<string, string>();
@@ -57,6 +70,327 @@ export class ElementMatcher {
     const flattenedElements: LayoutElement[] = [];
     groups.forEach(group => group.elements.forEach(element => flattenedElements.push(element)));
     return flattenedElements;
+  }
+}
+
+interface IElementConnectionHandler {
+  identifyConnections(element: LayoutElement): ElementConnection[];
+  allowsElementInDirection(element: LayoutElement, otherElement: LayoutElement, direction: 'horizontal' | 'vertical'): boolean;
+}
+
+abstract class BaseElementConnectionHandler implements IElementConnectionHandler {
+  abstract identifyConnections(element: LayoutElement): ElementConnection[];
+  
+  allowsElementInDirection(element: LayoutElement, otherElement: LayoutElement, direction: 'horizontal' | 'vertical'): boolean {
+    return true;
+  }
+
+  protected createConnection(elementId: string, direction: ConnectionDirection, constraint: ElementConnection['constraint']): ElementConnection {
+    return { elementId, direction, constraint };
+  }
+}
+
+class EndcapConnectionHandler extends BaseElementConnectionHandler {
+  identifyConnections(element: LayoutElement): ElementConnection[] {
+    const endcapDirection = this.getEndcapDirection(element);
+    const connectionDirection = this.determineConnectionDirection(endcapDirection);
+    const constraint = this.determineConstraint(endcapDirection);
+    
+    return [this.createConnection(element.id, connectionDirection, constraint)];
+  }
+
+  allowsElementInDirection(endcapElement: LayoutElement, otherElement: LayoutElement, direction: 'horizontal' | 'vertical'): boolean {
+    if (direction !== 'horizontal') return true;
+    
+    const endcapDirection = this.getEndcapDirection(endcapElement);
+    const endcapRect = endcapElement.layout;
+    const otherRect = otherElement.layout;
+    
+    return this.elementRespectsSpatialConstraint(endcapDirection, endcapRect, otherRect);
+  }
+
+  private getEndcapDirection(element: LayoutElement): 'left' | 'right' {
+    return ((element as any).props?.direction || 'left') as 'left' | 'right';
+  }
+
+  private determineConnectionDirection(endcapDirection: 'left' | 'right'): ConnectionDirection {
+    return endcapDirection === 'left' ? 'right' : 'left';
+  }
+
+  private determineConstraint(endcapDirection: 'left' | 'right'): ElementConnection['constraint'] {
+    return endcapDirection === 'left' ? 'leftmost' : 'rightmost';
+  }
+
+  private elementRespectsSpatialConstraint(
+    endcapDirection: 'left' | 'right',
+    endcapRect: { x: number; width: number },
+    otherRect: { x: number; width: number }
+  ): boolean {
+    const otherElementRightEdge = otherRect.x + otherRect.width;
+    const otherElementLeftEdge = otherRect.x;
+    const endcapLeftEdge = endcapRect.x;
+    const endcapRightEdge = endcapRect.x + endcapRect.width;
+
+    return endcapDirection === 'right' 
+      ? otherElementRightEdge <= endcapLeftEdge
+      : otherElementLeftEdge >= endcapRightEdge;
+  }
+}
+
+class ElbowConnectionHandler extends BaseElementConnectionHandler {
+  identifyConnections(element: LayoutElement): ElementConnection[] {
+    const orientation = this.getElbowOrientation(element);
+    const connectionDefinition = this.getConnectionDefinition(orientation);
+    
+    if (!connectionDefinition) {
+      logger.warn(`Unknown elbow orientation: ${orientation}`);
+      return [];
+    }
+
+    return connectionDefinition.map(def => 
+      this.createConnection(element.id, def.direction, def.constraint)
+    );
+  }
+
+  allowsElementInDirection(elbowElement: LayoutElement, otherElement: LayoutElement, direction: 'horizontal' | 'vertical'): boolean {
+    const orientation = this.getElbowOrientation(elbowElement);
+    const elbowRect = elbowElement.layout;
+    const otherRect = otherElement.layout;
+
+    return direction === 'horizontal'
+      ? this.horizontalConstraintAllows(orientation, elbowRect, otherRect)
+      : this.verticalConstraintAllows(orientation, elbowRect, otherRect);
+  }
+
+  private getElbowOrientation(element: LayoutElement): string {
+    return (element as any).props?.orientation ?? 'top-left';
+  }
+
+  private getConnectionDefinition(orientation: string): Array<{ direction: ConnectionDirection; constraint: ElementConnection['constraint'] }> | null {
+    const connectionMap: Record<string, Array<{ direction: ConnectionDirection; constraint: ElementConnection['constraint'] }>> = {
+      'top-left': [
+        { direction: 'right' as ConnectionDirection, constraint: 'leftmost' as const },
+        { direction: 'down' as ConnectionDirection, constraint: 'upper' as const }
+      ],
+      'top-right': [
+        { direction: 'left' as ConnectionDirection, constraint: 'rightmost' as const },
+        { direction: 'down' as ConnectionDirection, constraint: 'upper' as const }
+      ],
+      'bottom-left': [
+        { direction: 'right' as ConnectionDirection, constraint: 'leftmost' as const },
+        { direction: 'up' as ConnectionDirection, constraint: 'lower' as const }
+      ],
+      'bottom-right': [
+        { direction: 'left' as ConnectionDirection, constraint: 'rightmost' as const },
+        { direction: 'up' as ConnectionDirection, constraint: 'lower' as const }
+      ]
+    };
+
+    return connectionMap[orientation] || null;
+  }
+
+  private horizontalConstraintAllows(
+    orientation: string,
+    elbowRect: { x: number; width: number },
+    otherRect: { x: number; width: number }
+  ): boolean {
+    const rightOrientations = ['top-right', 'bottom-right'];
+    const leftOrientations = ['top-left', 'bottom-left'];
+    
+    const otherElementRightEdge = otherRect.x + otherRect.width;
+    const otherElementLeftEdge = otherRect.x;
+    const elbowLeftEdge = elbowRect.x;
+    const elbowRightEdge = elbowRect.x + elbowRect.width;
+
+    if (rightOrientations.includes(orientation)) {
+      return otherElementRightEdge <= elbowLeftEdge;
+    } else if (leftOrientations.includes(orientation)) {
+      return otherElementLeftEdge >= elbowRightEdge;
+    }
+    return true;
+  }
+
+  private verticalConstraintAllows(
+    orientation: string,
+    elbowRect: { y: number; height: number },
+    otherRect: { y: number; height: number }
+  ): boolean {
+    const topOrientations = ['top-right', 'top-left'];
+    const bottomOrientations = ['bottom-right', 'bottom-left'];
+    
+    const otherElementBottomEdge = otherRect.y + otherRect.height;
+    const otherElementTopEdge = otherRect.y;
+    const elbowTopEdge = elbowRect.y;
+    const elbowBottomEdge = elbowRect.y + elbowRect.height;
+
+    if (topOrientations.includes(orientation)) {
+      return otherElementTopEdge >= elbowBottomEdge;
+    } else if (bottomOrientations.includes(orientation)) {
+      return otherElementBottomEdge <= elbowTopEdge;
+    }
+    return true;
+  }
+}
+
+class UnconstrainedElementConnectionHandler extends BaseElementConnectionHandler {
+  identifyConnections(element: LayoutElement): ElementConnection[] {
+    const allDirections: ConnectionDirection[] = ['up', 'down', 'left', 'right'];
+    return allDirections.map(direction => 
+      this.createConnection(element.id, direction, 'none')
+    );
+  }
+}
+
+class ConnectionHandlerFactory {
+  static createHandler(element: LayoutElement): IElementConnectionHandler {
+    const category = ElementTypeUtils.getElementCategory(element);
+    
+    switch (category) {
+      case 'endcap':
+        return new EndcapConnectionHandler();
+      case 'elbow':
+        return new ElbowConnectionHandler();
+      case 'rectangle':
+      case 'text':
+        return new UnconstrainedElementConnectionHandler();
+      default:
+        return new UnconstrainedElementConnectionHandler();
+    }
+  }
+}
+
+class ConnectionCompatibilityAnalyzer {
+  static analyzeCompatibility(
+    connectionsA: ElementConnections,
+    connectionsB: ElementConnections,
+    groupDirection: 'horizontal' | 'vertical'
+  ): boolean {
+    const relevantConnectionsA = this.getRelevantConnections(connectionsA.connections, groupDirection);
+    const relevantConnectionsB = this.getRelevantConnections(connectionsB.connections, groupDirection);
+
+    if (!this.elementsHaveRelevantConnections(relevantConnectionsA, relevantConnectionsB)) {
+      return false;
+    }
+
+    return this.constraintsAreCompatible(relevantConnectionsA, relevantConnectionsB, groupDirection);
+  }
+
+  private static getRelevantConnections(connections: ElementConnection[], groupDirection: 'horizontal' | 'vertical'): ElementConnection[] {
+    const relevantDirections = groupDirection === 'horizontal' ? ['left', 'right'] : ['up', 'down'];
+    return connections.filter(conn => relevantDirections.includes(conn.direction));
+  }
+
+  private static elementsHaveRelevantConnections(connectionsA: ElementConnection[], connectionsB: ElementConnection[]): boolean {
+    return connectionsA.length > 0 && connectionsB.length > 0;
+  }
+
+  private static constraintsAreCompatible(
+    connectionsA: ElementConnection[],
+    connectionsB: ElementConnection[],
+    groupDirection: 'horizontal' | 'vertical'
+  ): boolean {
+    const hasUnconstrainedElement = this.hasUnconstrainedElement(connectionsA, connectionsB);
+    
+    if (hasUnconstrainedElement) {
+      return true;
+    }
+
+    return this.constrainedElementsAreCompatible(connectionsA, connectionsB, groupDirection);
+  }
+
+  private static hasUnconstrainedElement(connectionsA: ElementConnection[], connectionsB: ElementConnection[]): boolean {
+    return connectionsA.some(conn => conn.constraint === 'none') ||
+           connectionsB.some(conn => conn.constraint === 'none');
+  }
+
+  private static constrainedElementsAreCompatible(
+    connectionsA: ElementConnection[],
+    connectionsB: ElementConnection[],
+    groupDirection: 'horizontal' | 'vertical'
+  ): boolean {
+    for (const connA of connectionsA) {
+      for (const connB of connectionsB) {
+        if (this.individualConstraintsAreCompatible(connA.constraint, connB.constraint, groupDirection)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static individualConstraintsAreCompatible(
+    constraintA: ElementConnection['constraint'],
+    constraintB: ElementConnection['constraint'],
+    direction: 'horizontal' | 'vertical'
+  ): boolean {
+    if (constraintA === 'none' || constraintB === 'none') {
+      return true;
+    }
+
+    const horizontalCompatibilityPairs = [
+      ['leftmost', 'rightmost'],
+      ['rightmost', 'leftmost']
+    ];
+
+    const verticalCompatibilityPairs = [
+      ['upper', 'lower'],
+      ['lower', 'upper']
+    ];
+
+    const compatibilityPairs = direction === 'horizontal' ? horizontalCompatibilityPairs : verticalCompatibilityPairs;
+    
+    return compatibilityPairs.some(pair => 
+      (constraintA === pair[0] && constraintB === pair[1])
+    );
+  }
+}
+
+export class ConnectionIdentifier {
+  static identifyElementConnections(element: LayoutElement): ElementConnections {
+    const handler = ConnectionHandlerFactory.createHandler(element);
+    const connections = handler.identifyConnections(element);
+
+    return {
+      elementId: element.id,
+      connections
+    };
+  }
+
+  static identifyConnectionsForElements(elements: LayoutElement[]): ElementConnections[] {
+    return elements.map(element => this.identifyElementConnections(element));
+  }
+
+  static elementsAreConnectionCompatible(
+    elementA: LayoutElement,
+    elementB: LayoutElement,
+    direction: 'horizontal' | 'vertical'
+  ): boolean {
+    const connectionsA = this.identifyElementConnections(elementA);
+    const connectionsB = this.identifyElementConnections(elementB);
+
+    const connectionsAreLogicallyCompatible = ConnectionCompatibilityAnalyzer.analyzeCompatibility(
+      connectionsA, 
+      connectionsB, 
+      direction
+    );
+
+    const spatialConstraintsAreRespected = this.elementsSpatiallyCompatible(elementA, elementB, direction);
+
+    return connectionsAreLogicallyCompatible && spatialConstraintsAreRespected;
+  }
+
+  private static elementsSpatiallyCompatible(
+    elementA: LayoutElement,
+    elementB: LayoutElement,
+    direction: 'horizontal' | 'vertical'
+  ): boolean {
+    const handlerA = ConnectionHandlerFactory.createHandler(elementA);
+    const handlerB = ConnectionHandlerFactory.createHandler(elementB);
+
+    const elementAAllowsB = handlerA.allowsElementInDirection(elementA, elementB, direction);
+    const elementBAllowsA = handlerB.allowsElementInDirection(elementB, elementA, direction);
+
+    return elementAAllowsB && elementBAllowsA;
   }
 }
 
@@ -256,115 +590,13 @@ export class ElementGrouper {
     group: LayoutElement[], 
     direction: 'horizontal' | 'vertical'
   ): boolean {
-    const elementCategory = ElementTypeUtils.getElementCategory(element);
-    
     for (const groupElement of group) {
-      const groupCategory = ElementTypeUtils.getElementCategory(groupElement);
-      
-      // elbows constrain bounds by orientation and group in the direction of their body and/or arm
-      if (elementCategory === 'elbow') {
-        if (!this._elbowIsCompatibleWithElement(element, groupElement, direction)) {
-          return false;
-        }
-      }
-      
-      if (groupCategory === 'elbow') {
-        if (!this._elbowIsCompatibleWithElement(groupElement, element, direction)) {
-          return false;
-        }
-      }
-
-      // endcaps constrain horizontal bounds by direction and do not group vertically
-      if (direction === 'horizontal') {
-        if (elementCategory === 'endcap') {
-          if (!this._endcapIsCompatibleWithElement(element, groupElement)) {
-            return false;
-          }
-        }
-        if (groupCategory === 'endcap') {
-          if (!this._endcapIsCompatibleWithElement(groupElement, element)) {
-            return false;
-          }
-        }
+      if (!ConnectionIdentifier.elementsAreConnectionCompatible(element, groupElement, direction)) {
+        return false;
       }
     }
     
     return true;
   }
 
-  private static _elbowIsCompatibleWithElement(
-    elbowElement: LayoutElement,
-    otherElement: LayoutElement,
-    direction: 'horizontal' | 'vertical'
-  ): boolean {
-    const orientation = (elbowElement as any).props?.orientation ?? 'top-left';
-    const elbowRect = elbowElement.layout;
-    const otherRect = otherElement.layout;
-
-    if (direction === 'horizontal') {
-      return this._elbowHorizontalConstraintIsSatisfied(orientation, elbowRect, otherRect);
-    } else {
-      return this._elbowVerticalConstraintIsSatisfied(orientation, elbowRect, otherRect);
-    }
-  }
-
-  private static _elbowHorizontalConstraintIsSatisfied(
-    orientation: string,
-    elbowRect: { x: number; width: number },
-    otherRect: { x: number; width: number }
-  ): boolean {
-    switch (orientation) {
-      case 'top-right':
-      case 'bottom-right':
-        return otherRect.x + otherRect.width <= elbowRect.x;
-      case 'top-left':
-      case 'bottom-left':
-        return otherRect.x >= elbowRect.x + elbowRect.width;
-      default:
-        return true;
-    }
-  }
-
-  private static _elbowVerticalConstraintIsSatisfied(
-    orientation: string,
-    elbowRect: { y: number; height: number },
-    otherRect: { y: number; height: number }
-  ): boolean {
-    switch (orientation) {
-      case 'top-right':
-      case 'top-left':
-        return otherRect.y >= elbowRect.y + elbowRect.height;
-      case 'bottom-right':
-      case 'bottom-left':
-        return otherRect.y + otherRect.height <= elbowRect.y;
-      default:
-        return true;
-    }
-  }
-
-  private static _endcapIsCompatibleWithElement(
-    endcapElement: LayoutElement,
-    otherElement: LayoutElement
-  ): boolean {
-    const direction = ((endcapElement as any).props?.direction || 'left') as 'left' | 'right';
-    const endcapRect = endcapElement.layout;
-    const otherRect = otherElement.layout;
-
-    return this._endcapHorizontalConstraintIsSatisfied(direction, endcapRect, otherRect);
-  }
-
-  private static _endcapHorizontalConstraintIsSatisfied(
-    direction: 'left' | 'right',
-    endcapRect: { x: number; width: number },
-    otherRect: { x: number; width: number }
-  ): boolean {
-    switch (direction) {
-      case 'right':
-        return otherRect.x + otherRect.width <= endcapRect.x;
-      case 'left':
-        return otherRect.x >= endcapRect.x + endcapRect.width;
-      default:
-        return true;
-    }
-  }
 }

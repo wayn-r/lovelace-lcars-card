@@ -53,4 +53,5 @@
     - matched groups should fill text voids THEN:
         - seek matches
         - split or merge into group matched components
-        
+~~- elements should identify valid connections for potential groups~~
+    - this should influence element/group matching
