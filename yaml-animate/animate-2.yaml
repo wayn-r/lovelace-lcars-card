@@ -56,17 +56,14 @@ groups:
         appearance:
           fill: "#3ad9e7"
         layout:
-          offsetX: 5
+          offsetX: -5
+          width: 25%
           anchor:
-            to: a2-mh.left-elbow
-            element_point: topLeft
-            target_point: topRight
+            to: a2-mh.text
+            element_point: topRight
+            target_point: topLeft
           stretch:
             target1:
-              id: a2-mh.text
-              edge: left
-              padding: -5
-            target2:
               id: a2-mh.endcap
               edge: bottom
       - id: left-elbow
@@ -79,11 +76,11 @@ groups:
           armHeight: 40
           width: 25%
           height: 60
-          offsetY: 10
+          offsetX: -5
           anchor:
-            to: a2-th.top-header
-            element_point: topLeft
-            target_point: bottomLeft
+            to: a2-mh.rectangle
+            element_point: topRight
+            target_point: topLeft
   - group_id: a2-env
     elements:
       - id: left-elbow
@@ -169,7 +166,7 @@ groups:
               edge: right
   - group_id: a2-eb
     elements:
-      - id: button-1
+      - id: left-elbow
         type: elbow
         text:
           content: main
@@ -203,7 +200,7 @@ groups:
             tap:
               action: navigate
               navigation_path: /lcars-new/animate-1
-      - id: button-2
+      - id: button-1
         type: rectangle
         text:
           content: sickbay
@@ -223,10 +220,10 @@ groups:
           height: 40
           offsetY: 5
           anchor:
-            to: a2-eb.button-1
+            to: a2-eb.left-elbow
             element_point: topLeft
             target_point: bottomLeft
-      - id: button-3
+      - id: button-2
         type: rectangle
         text:
           content: ship map
@@ -246,7 +243,7 @@ groups:
           height: 40
           offsetY: 5
           anchor:
-            to: a2-eb.button-2
+            to: a2-eb.button-1
             element_point: topLeft
             target_point: bottomLeft
   - group_id: a2-eb-ext
@@ -260,7 +257,7 @@ groups:
           height: 15
           offsetX: 5
           anchor:
-            to: a2-eb.button-1
+            to: a2-eb.left-elbow
             element_point: topLeft
             target_point: topRight
       - id: rectangle-2
