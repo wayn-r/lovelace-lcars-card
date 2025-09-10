@@ -1,13 +1,13 @@
 type: custom:lovelace-lcars-card
-title: USS Enterprise NCC-1701-D
+title: animate-2
 groups:
-  - group_id: top-header
+  - group_id: a2-th
     elements:
       - id: top-header
         type: top_header
         text:
-          left_content: U.S.S. HERCULES / WILLEMETTE CLASS
-          right_content: NCC-1901
+          left_content: left
+          right_content: right
           fill: "#7addee"
         appearance:
           fill: "#04bfd8"
@@ -20,9 +20,9 @@ groups:
             to: container
             element_point: topLeft
             target_point: topLeft
-  - group_id: sub-header
+  - group_id: a2-mh
     elements:
-      - id: right-endcap
+      - id: endcap
         type: endcap
         appearance:
           fill: "#3ad9e7"
@@ -32,13 +32,13 @@ groups:
           width: 10%
           offsetY: 10
           anchor:
-            to: top-header.top-header
+            to: a2-th.top-header
             element_point: topRight
             target_point: bottomRight
-      - id: header
+      - id: text
         type: text
         text:
-          content: evansville • IN
+          content: animate-2
           fill: "#5ca8ea"
           text_anchor: end
           textTransform: uppercase
@@ -48,28 +48,28 @@ groups:
           height: 40
           offsetX: -5
           anchor:
-            to: sub-header.right-endcap
+            to: a2-mh.endcap
             element_point: topRight
             target_point: topLeft
-      - id: header-bar
+      - id: rectangle
         type: rectangle
         appearance:
           fill: "#3ad9e7"
         layout:
           offsetX: 5
           anchor:
-            to: sub-header.elbow
+            to: a2-mh.left-elbow
             element_point: topLeft
             target_point: topRight
           stretch:
             target1:
-              id: sub-header.header
+              id: a2-mh.text
               edge: left
               padding: -5
             target2:
-              id: sub-header.right-endcap
+              id: a2-mh.endcap
               edge: bottom
-      - id: elbow
+      - id: left-elbow
         type: elbow
         appearance:
           orientation: top-left
@@ -81,12 +81,12 @@ groups:
           height: 60
           offsetY: 10
           anchor:
-            to: top-header.top-header
+            to: a2-th.top-header
             element_point: topLeft
             target_point: bottomLeft
-  - group_id: environmental-header
+  - group_id: a2-env
     elements:
-      - id: elbow
+      - id: left-elbow
         type: elbow
         appearance:
           orientation: bottom-left
@@ -108,10 +108,10 @@ groups:
           height: 190
           offsetY: 5
           anchor:
-            to: sub-header.elbow
+            to: a2-mh.left-elbow
             element_point: topLeft
             target_point: bottomLeft
-      - id: bar-1
+      - id: rectangle-1
         type: rectangle
         appearance:
           fill: "#044ea9"
@@ -120,14 +120,14 @@ groups:
           height: 15
           offsetX: 5
           anchor:
-            to: environmental-header.elbow
+            to: a2-env.left-elbow
             element_point: bottomLeft
             target_point: bottomRight
           stretch:
             target1:
-              id: sub-header.elbow
+              id: a2-mh.left-elbow
               edge: right
-      - id: bar-2
+      - id: rectangle-2
         type: rectangle
         appearance:
           fill: "#5ca8ea"
@@ -136,10 +136,10 @@ groups:
           height: 15
           offsetX: 5
           anchor:
-            to: environmental-header.bar-1
+            to: a2-env.rectangle-1
             element_point: bottomLeft
             target_point: bottomRight
-      - id: bar-3
+      - id: rectangle-3
         type: rectangle
         appearance:
           fill: "#86c8ff"
@@ -148,10 +148,10 @@ groups:
           height: 15
           offsetX: 5
           anchor:
-            to: environmental-header.bar-2
+            to: a2-env.rectangle-2
             element_point: bottomLeft
             target_point: bottomRight
-      - id: bar-4
+      - id: rectangle-4
         type: rectangle
         appearance:
           fill: "#12a4e3"
@@ -160,16 +160,16 @@ groups:
           height: 15
           offsetX: 5
           anchor:
-            to: environmental-header.bar-3
+            to: a2-env.rectangle-3
             element_point: bottomLeft
             target_point: bottomRight
           stretch:
             target1:
               id: container
               edge: right
-  - group_id: environmental-buttons
+  - group_id: a2-eb
     elements:
-      - id: main
+      - id: button-1
         type: elbow
         text:
           content: main
@@ -194,7 +194,7 @@ groups:
           height: 80
           offsetY: 10
           anchor:
-            to: environmental-header.elbow
+            to: a2-env.left-elbow
             element_point: topLeft
             target_point: bottomLeft
         button:
@@ -203,7 +203,7 @@ groups:
             tap:
               action: navigate
               navigation_path: /lcars-new/animate-1
-      - id: sickbay
+      - id: button-2
         type: rectangle
         text:
           content: sickbay
@@ -223,10 +223,10 @@ groups:
           height: 40
           offsetY: 5
           anchor:
-            to: environmental-buttons.main
+            to: a2-eb.button-1
             element_point: topLeft
             target_point: bottomLeft
-      - id: ship_map
+      - id: button-3
         type: rectangle
         text:
           content: ship map
@@ -246,12 +246,12 @@ groups:
           height: 40
           offsetY: 5
           anchor:
-            to: environmental-buttons.sickbay
+            to: a2-eb.button-2
             element_point: topLeft
             target_point: bottomLeft
-  - group_id: environmental-lower-section
+  - group_id: a2-eb-ext
     elements:
-      - id: bar-1
+      - id: rectangle-1
         type: rectangle
         appearance:
           fill: "#7addee"
@@ -260,10 +260,10 @@ groups:
           height: 15
           offsetX: 5
           anchor:
-            to: environmental-buttons.main
+            to: a2-eb.button-1
             element_point: topLeft
             target_point: topRight
-      - id: bar-2
+      - id: rectangle-2
         type: rectangle
         appearance:
           fill: "#7addee"
@@ -271,15 +271,15 @@ groups:
           height: 15
           offsetX: 5
           anchor:
-            to: environmental-lower-section.bar-1
+            to: a2-eb-ext.rectangle-1
             element_point: topLeft
             target_point: topRight
           stretch:
             target1:
-              id: environmental-lower-section.elbow
+              id: a2-eb-ext.right-elbow
               edge: left
               padding: -5
-      - id: elbow
+      - id: right-elbow
         type: elbow
         appearance:
           fill: "#7addee"
@@ -292,7 +292,7 @@ groups:
           offsetX: 5
           offsetY: 10
           anchor:
-            to: environmental-header.bar-4
+            to: a2-env.rectangle-4
             element_point: topRight
             target_point: bottomRight
           stretch:

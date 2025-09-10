@@ -1,9 +1,9 @@
 type: custom:lovelace-lcars-card
-title: big-animate
+title: animate-1
 groups:
-  - group_id: main_display
+  - group_id: a1-th
     elements:
-      - id: nav_header
+      - id: top-header
         type: top_header
         text:
           left_content: Left
@@ -20,7 +20,7 @@ groups:
             to: container
             element_point: topLeft
             target_point: topLeft
-  - group_id: main_header
+  - group_id: a1-mh
     elements:
       - id: endcap
         type: endcap
@@ -32,10 +32,10 @@ groups:
           height: 50
           offsetY: 5
           anchor:
-            to: main_display.nav_header
+            to: a1-th.top-header
             element_point: topRight
             target_point: bottomRight
-      - id: header1
+      - id: rectangle-right
         type: rectangle
         appearance:
           fill: "#FF3300"
@@ -44,7 +44,7 @@ groups:
           height: 50
           offsetX: -5
           anchor:
-            to: main_header.endcap
+            to: a1-mh.endcap
             element_point: topRight
             target_point: topLeft
       - id: text
@@ -52,17 +52,17 @@ groups:
         appearance:
           fill: "#fff"
         text:
-          content: header
+          content: animate-1
           fontFamily: antonio
           textTransform: uppercase
         layout:
           height: 50
           offsetX: -5
           anchor:
-            to: main_header.header1
+            to: a1-mh.rectangle-right
             element_point: topRight
             target_point: topLeft
-      - id: header2
+      - id: rectangle-left
         type: rectangle
         appearance:
           fill: "#FF3300"
@@ -71,10 +71,10 @@ groups:
           height: 50
           offsetX: -5
           anchor:
-            to: main_header.text
+            to: a1-mh.text
             element_point: topRight
             target_point: topLeft
-      - id: elbow
+      - id: left-elbow
         type: elbow
         appearance:
           fill: "#FF3300"
@@ -85,16 +85,16 @@ groups:
           height: 100
           offsetX: -5
           anchor:
-            to: main_header.header2
+            to: a1-mh.rectangle-left
             element_point: topRight
             target_point: topLeft
           stretch:
             target1:
               id: container
               edge: left
-  - group_id: buttons
+  - group_id: a1-buttons
     elements:
-      - id: button1
+      - id: button-1
         type: rectangle
         appearance:
           fill: "#7addee"
@@ -103,7 +103,7 @@ groups:
           height: 50
           offsetY: 5
           anchor:
-            to: main_header.elbow
+            to: a1-mh.left-elbow
             element_point: topLeft
             target_point: bottomLeft
         button:
@@ -111,4 +111,4 @@ groups:
           actions:
             tap:
               action: navigate
-              navigation_path: /lcars-new/animate-1
+              navigation_path: /lcars-new/animate-2
