@@ -5,7 +5,7 @@ import type { LayoutElement } from '../../layout/elements/element.js';
 import { Diagnostics } from '../diagnostics.js';
 import { ElementAnalyzer, ElementTypeUtils } from './morph-element-utils.js';
 import { DestinationResolver, type ContainerResizeRequirement } from './morph-destination-resolver.js';
-import { ElementMatcher, ElementGrouper, type ElementGroupingResult } from './morph-element-matcher.js';
+import { ElementMatcher, ElementGrouper, type ElementGroupingResult, type GroupMatchingOptions, type GroupMatch } from './morph-element-matcher.js';
 import { MorphDebugger } from './morph-debug.js';
 import { 
   AnimationBuilder, 
@@ -25,6 +25,8 @@ export interface MorphEngineOptions {
   textMatchMaxDeltaX?: number;
   textMatchMaxDeltaY?: number;
   debugMorph?: boolean;
+  groupMatchPositionTolerance?: number;
+  groupMatchSizeToleranceRatio?: number;
 }
 
 export interface MorphEngineHooks {
@@ -53,7 +55,9 @@ export interface MorphPhaseContext {
   suppressedElementIds?: Set<string>;
   expandedElementData?: Map<string, { expandedScaleX: number; side: 'left' | 'right' }>;
   matchedTextPairs?: Map<string, string>;
-  
+  sourceGrouping?: ElementGroupingResult;
+  targetGrouping?: ElementGroupingResult;
+  groupMatches?: GroupMatch[];
 }
 
 export class MorphEngine {
@@ -205,6 +209,96 @@ export class MorphEngine {
     return Boolean(options.debugMorph);
   }
 
+  private static _createGroupMatchingOptions(options: MorphEngineOptions): GroupMatchingOptions {
+    return {
+      positionTolerance: options.groupMatchPositionTolerance ?? 50,
+      sizeToleranceRatio: options.groupMatchSizeToleranceRatio ?? 0.8
+    };
+  }
+
+  private static _logGroupMatches(
+    groupMatches: GroupMatch[],
+    sourceGrouping: ElementGroupingResult,
+    targetGrouping: ElementGroupingResult
+  ): void {
+    const totalSourceGroups = [...sourceGrouping.horizontalGroups, ...sourceGrouping.verticalGroups]
+      .filter(g => g.elements.length >= 2).length;
+    const totalTargetGroups = [...targetGrouping.horizontalGroups, ...targetGrouping.verticalGroups]
+      .filter(g => g.elements.length >= 2).length;
+    
+    logger.info(`[Group Matching] Groups: ${totalSourceGroups} source → ${totalTargetGroups} target, ${groupMatches.length} matches found`);
+    
+    if (groupMatches.length === 0) {
+      logger.info('[Group Matching] No group matches found');
+      this._logUnmatchedGroups(sourceGrouping, targetGrouping, []);
+      return;
+    }
+
+    const sourceGroupsById = new Map(
+      [...sourceGrouping.horizontalGroups, ...sourceGrouping.verticalGroups].map(group => [group.id, group])
+    );
+    const targetGroupsById = new Map(
+      [...targetGrouping.horizontalGroups, ...targetGrouping.verticalGroups].map(group => [group.id, group])
+    );
+    
+    const matchedGroupDetails = groupMatches.map(match => {
+      const sourceGroup = sourceGroupsById.get(match.sourceGroupId);
+      const targetGroup = targetGroupsById.get(match.targetGroupId);
+
+      return {
+        source: match.sourceGroupId,
+        target: match.targetGroupId,
+        confidence: match.matchConfidence.toFixed(3),
+        positionDelta: match.positionDelta.toFixed(1),
+        sizeDelta: match.sizeDelta.toFixed(1),
+        sourceElements: sourceGroup?.elements.map(el => `${el.id}(${ElementTypeUtils.getElementCategory(el)})`) || [],
+        targetElements: targetGroup?.elements.map(el => `${el.id}(${ElementTypeUtils.getElementCategory(el)})`) || []
+      };
+    });
+    logger.info(`[Group Matching] Matched Groups Details:`, matchedGroupDetails);
+
+    this._logUnmatchedGroups(sourceGrouping, targetGrouping, groupMatches);
+  }
+
+  private static _logUnmatchedGroups(
+    sourceGrouping: ElementGroupingResult,
+    targetGrouping: ElementGroupingResult,
+    groupMatches: GroupMatch[]
+  ): void {
+    const matchedSourceIds = new Set(groupMatches.map(m => m.sourceGroupId));
+    const matchedTargetIds = new Set(groupMatches.map(m => m.targetGroupId));
+    
+    const unmatchedSourceGroups = [
+      ...sourceGrouping.horizontalGroups.filter(g => !matchedSourceIds.has(g.id)),
+      ...sourceGrouping.verticalGroups.filter(g => !matchedSourceIds.has(g.id))
+    ].filter(g => g.elements.length >= 2);
+    
+    const unmatchedTargetGroups = [
+      ...targetGrouping.horizontalGroups.filter(g => !matchedTargetIds.has(g.id)),
+      ...targetGrouping.verticalGroups.filter(g => !matchedTargetIds.has(g.id))
+    ].filter(g => g.elements.length >= 2);
+    
+    if (unmatchedSourceGroups.length > 0) {
+      const unmatchedSourceGroupDetails = unmatchedSourceGroups.map(group => ({
+        id: group.id,
+        type: group.groupType,
+        coordinate: group.meanCoordinate.toFixed(1),
+        elements: group.elements.map(el => `${el.id}(${ElementTypeUtils.getElementCategory(el)})`)
+      }));
+      logger.info(`[Group Matching] Unmatched Source Groups Details:`, unmatchedSourceGroupDetails);
+    }
+    
+    if (unmatchedTargetGroups.length > 0) {
+      const unmatchedTargetGroupDetails = unmatchedTargetGroups.map(group => ({
+        id: group.id,
+        type: group.groupType,
+        coordinate: group.meanCoordinate.toFixed(1),
+        elements: group.elements.map(el => `${el.id}(${ElementTypeUtils.getElementCategory(el)})`)
+      }));
+      logger.info(`[Group Matching] Unmatched Target Groups Details:`, unmatchedTargetGroupDetails);
+    }
+  }
+
   private static _extractValidElements(groups: Group[]): LayoutElement[] {
     return ElementAnalyzer.collectLayoutElements(groups).filter(element => 
       ValidationUtils.elementLayoutIsCalculated(element)
@@ -250,11 +344,20 @@ export class MorphEngine {
     };
 
     // Group elements by alignment
-    const elementGroupingResult = ElementGrouper.groupElementsByAlignment(sourceElements, 2);
-    (animationContext as any).__elementGroupingResult = elementGroupingResult;
+    const sourceGrouping = ElementGrouper.groupElementsByAlignment(sourceElements, 2);
+    const targetGrouping = ElementGrouper.groupElementsByAlignment(targetElements, 2);
+    
+    // Match groups between source and target layouts
+    const groupMatchingOptions = this._createGroupMatchingOptions(options);
+    const groupMatches = ElementMatcher.matchElementGroups(sourceGrouping, targetGrouping, groupMatchingOptions);
+    
+    (animationContext as any).__sourceGrouping = sourceGrouping;
+    (animationContext as any).__targetGrouping = targetGrouping;
+    (animationContext as any).__groupMatches = groupMatches;
     
     if (this._debugModeIsEnabled(options)) {
-      await MorphDebugger.visualizeElementGroups(svgRoot, elementGroupingResult);
+      await MorphDebugger.visualizeElementGroups(svgRoot, sourceGrouping);
+      this._logGroupMatches(groupMatches, sourceGrouping, targetGrouping);
     }
     
     // Phase 0: Match components
@@ -388,7 +491,10 @@ export class MorphEngine {
         targetElements: animationContext.targetElements,
         elementMapping: animationContext.elementMapping,
         phaseDuration: this.defaultPhaseDurationSeconds,
-        matchedTextPairs: (animationContext as any).__matchedTextPairs as Map<string, string> | undefined
+        matchedTextPairs: (animationContext as any).__matchedTextPairs as Map<string, string> | undefined,
+        sourceGrouping: (animationContext as any).__sourceGrouping as ElementGroupingResult | undefined,
+        targetGrouping: (animationContext as any).__targetGrouping as ElementGroupingResult | undefined,
+        groupMatches: (animationContext as any).__groupMatches as GroupMatch[] | undefined
       };
 
       const phaseBundle: PhaseAnimationBundle = phaseConfig.animationBuilder(phaseContext);

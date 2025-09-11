@@ -15,6 +15,9 @@ export interface GroupMatch {
   sourceGroupId: string;
   targetGroupId: string;
   matchConfidence: number;
+  positionDelta: number;
+  sizeDelta: number;
+  groupType: 'horizontal' | 'vertical';
 }
 
 export interface MatchingResult {
@@ -51,6 +54,11 @@ export interface ElementConnections {
   connections: ElementConnection[];
 }
 
+export interface GroupMatchingOptions {
+  positionTolerance: number;
+  sizeToleranceRatio: number;
+}
+
 export class ElementMatcher {
   static createElementMappings(sourceGroups: Group[], targetGroups: Group[]): Map<string, string> {
     const mapping = new Map<string, string>();
@@ -64,6 +72,225 @@ export class ElementMatcher {
     // other type matching will be added
 
     return mapping;
+  }
+
+  static matchElementGroups(
+    sourceGrouping: ElementGroupingResult,
+    targetGrouping: ElementGroupingResult,
+    options: GroupMatchingOptions
+  ): GroupMatch[] {
+    const filteredSourceHorizontal = this._filterGroupsWithAtLeastTwoElements(sourceGrouping.horizontalGroups);
+    const filteredTargetHorizontal = this._filterGroupsWithAtLeastTwoElements(targetGrouping.horizontalGroups);
+    const filteredSourceVertical = this._filterGroupsWithAtLeastTwoElements(sourceGrouping.verticalGroups);
+    const filteredTargetVertical = this._filterGroupsWithAtLeastTwoElements(targetGrouping.verticalGroups);
+
+    const candidateMatches: GroupMatch[] = [];
+    candidateMatches.push(
+      ...this._generateCandidateMatchesForType(
+        filteredSourceHorizontal,
+        filteredTargetHorizontal,
+        'horizontal',
+        options
+      ),
+      ...this._generateCandidateMatchesForType(
+        filteredSourceVertical,
+        filteredTargetVertical,
+        'vertical',
+        options
+      )
+    );
+
+    candidateMatches.sort((a, b) => b.matchConfidence - a.matchConfidence);
+
+    const sourceGroupsById = new Map<string, ElementGroup>(
+      [...sourceGrouping.horizontalGroups, ...sourceGrouping.verticalGroups].map(g => [g.id, g])
+    );
+    const targetGroupsById = new Map<string, ElementGroup>(
+      [...targetGrouping.horizontalGroups, ...targetGrouping.verticalGroups].map(g => [g.id, g])
+    );
+
+    const selectedMatches: GroupMatch[] = [];
+    const usedSourceNonElbow = new Set<string>();
+    const usedTargetNonElbow = new Set<string>();
+    const usedSourceElbowsByDirection = new Map<string, Set<'horizontal' | 'vertical'>>();
+    const usedTargetElbowsByDirection = new Map<string, Set<'horizontal' | 'vertical'>>();
+
+    for (const candidate of candidateMatches) {
+      const sourceGroup = sourceGroupsById.get(candidate.sourceGroupId);
+      const targetGroup = targetGroupsById.get(candidate.targetGroupId);
+      if (!sourceGroup || !targetGroup) continue;
+
+      const sourceAllowed = this._groupUsageIsAllowed(
+        sourceGroup,
+        candidate.groupType,
+        usedSourceNonElbow,
+        usedSourceElbowsByDirection
+      );
+      if (!sourceAllowed) continue;
+
+      const targetAllowed = this._groupUsageIsAllowed(
+        targetGroup,
+        candidate.groupType,
+        usedTargetNonElbow,
+        usedTargetElbowsByDirection
+      );
+      if (!targetAllowed) continue;
+
+      selectedMatches.push(candidate);
+      this._markGroupElementsUsed(
+        sourceGroup,
+        candidate.groupType,
+        usedSourceNonElbow,
+        usedSourceElbowsByDirection
+      );
+      this._markGroupElementsUsed(
+        targetGroup,
+        candidate.groupType,
+        usedTargetNonElbow,
+        usedTargetElbowsByDirection
+      );
+    }
+
+    return selectedMatches;
+  }
+
+  private static _calculateGroupMatch(
+    sourceGroup: ElementGroup,
+    targetGroup: ElementGroup,
+    groupType: 'horizontal' | 'vertical',
+    options: GroupMatchingOptions
+  ): GroupMatch | null {
+    const positionDelta = Math.abs(sourceGroup.meanCoordinate - targetGroup.meanCoordinate);
+    
+    if (positionDelta > options.positionTolerance) {
+      return null;
+    }
+    
+    const sourceSize = this._calculateGroupSize(sourceGroup, groupType);
+    const targetSize = this._calculateGroupSize(targetGroup, groupType);
+    
+    if (sourceSize === 0 || targetSize === 0) {
+      return null;
+    }
+    
+    const sizeDelta = Math.abs(sourceSize - targetSize);
+    const maxSize = Math.max(sourceSize, targetSize);
+    const sizeRatio = sizeDelta / maxSize;
+    
+    if (sizeRatio > options.sizeToleranceRatio) {
+      return null;
+    }
+    
+    const positionScore = 1 - (positionDelta / options.positionTolerance);
+    const sizeScore = 1 - (sizeRatio / options.sizeToleranceRatio);
+    const matchConfidence = (positionScore * 0.6 + sizeScore * 0.4);
+    
+    return {
+      sourceGroupId: sourceGroup.id,
+      targetGroupId: targetGroup.id,
+      matchConfidence,
+      positionDelta,
+      sizeDelta,
+      groupType
+    };
+  }
+
+  private static _filterGroupsWithAtLeastTwoElements(groups: ElementGroup[]): ElementGroup[] {
+    return groups.filter(group => group.elements.length >= 2);
+  }
+
+  private static _generateCandidateMatchesForType(
+    sourceGroups: ElementGroup[],
+    targetGroups: ElementGroup[],
+    groupType: 'horizontal' | 'vertical',
+    options: GroupMatchingOptions
+  ): GroupMatch[] {
+    const candidates: GroupMatch[] = [];
+    for (const sourceGroup of sourceGroups) {
+      for (const targetGroup of targetGroups) {
+        const match = this._calculateGroupMatch(sourceGroup, targetGroup, groupType, options);
+        if (match) candidates.push(match);
+      }
+    }
+    return candidates;
+  }
+
+  private static _groupUsageIsAllowed(
+    group: ElementGroup,
+    direction: 'horizontal' | 'vertical',
+    usedNonElbow: Set<string>,
+    usedElbowsByDirection: Map<string, Set<'horizontal' | 'vertical'>>
+  ): boolean {
+    for (const element of group.elements) {
+      const elementId = element.id;
+      const category = ElementTypeUtils.getElementCategory(element);
+      const elementIsElbow = category === 'elbow';
+
+      if (elementIsElbow) {
+        const usedDirections = usedElbowsByDirection.get(elementId);
+        if (usedDirections && usedDirections.has(direction)) {
+          return false;
+        }
+      } else {
+        if (usedNonElbow.has(elementId)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private static _markGroupElementsUsed(
+    group: ElementGroup,
+    direction: 'horizontal' | 'vertical',
+    usedNonElbow: Set<string>,
+    usedElbowsByDirection: Map<string, Set<'horizontal' | 'vertical'>>
+  ): void {
+    for (const element of group.elements) {
+      const elementId = element.id;
+      const category = ElementTypeUtils.getElementCategory(element);
+      const elementIsElbow = category === 'elbow';
+
+      if (elementIsElbow) {
+        let usedDirections = usedElbowsByDirection.get(elementId);
+        if (!usedDirections) {
+          usedDirections = new Set<'horizontal' | 'vertical'>();
+          usedElbowsByDirection.set(elementId, usedDirections);
+        }
+        usedDirections.add(direction);
+      } else {
+        usedNonElbow.add(elementId);
+      }
+    }
+  }
+
+  private static _calculateGroupSize(group: ElementGroup, groupType: 'horizontal' | 'vertical'): number {
+    if (group.elements.length === 0) return 0;
+    
+    let totalSize = 0;
+    let validElements = 0;
+    
+    for (const element of group.elements) {
+      const category = ElementTypeUtils.getElementCategory(element);
+      let elementSize: number;
+      
+      if (category === 'elbow') {
+        elementSize = groupType === 'horizontal' 
+          ? ElementTypeUtils.resolveElbowArmHeight(element)
+          : ElementTypeUtils.resolveElbowBodyWidth(element);
+      } else {
+        elementSize = groupType === 'horizontal' 
+          ? element.layout.height 
+          : element.layout.width;
+      }
+      
+      if (elementSize > 0) {
+        totalSize += elementSize;
+        validElements++;
+      }
+    }
+    
+    return validElements > 0 ? totalSize / validElements : 0;
   }
 
   private static _flattenElementsFromGroups(groups: Group[]): LayoutElement[] {
