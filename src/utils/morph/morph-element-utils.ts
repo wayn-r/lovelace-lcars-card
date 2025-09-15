@@ -239,4 +239,60 @@ export class ElementAnalyzer {
 
     return matchedPairs;
   }
+
+  static findTopHeaderShapeMappings(
+    sourceElements: LayoutElement[],
+    destinationElements: LayoutElement[],
+    matchedTextPairs: Map<string, string>
+  ): Map<string, string> {
+    const mappings = new Map<string, string>();
+
+    if (!matchedTextPairs || matchedTextPairs.size === 0) return mappings;
+
+    const srcIds = new Set(sourceElements.map(e => e.id));
+    const dstIds = new Set(destinationElements.map(e => e.id));
+
+    const srcBaseToDstBase = new Map<string, string>();
+
+    matchedTextPairs.forEach((dstId, srcId) => {
+      const srcBase = this._extractTopHeaderBaseFromTextId(srcId);
+      const dstBase = this._extractTopHeaderBaseFromTextId(dstId);
+      if (srcBase && dstBase) {
+        if (this._topHeaderFamilyExists(srcBase, srcIds) && this._topHeaderFamilyExists(dstBase, dstIds)) {
+          srcBaseToDstBase.set(srcBase, dstBase);
+        }
+      }
+    });
+
+    if (srcBaseToDstBase.size === 0) return mappings;
+
+    const shapeSuffixes = ['_left_endcap', '_right_endcap', '_header_bar'];
+
+    for (const [srcBase, dstBase] of srcBaseToDstBase.entries()) {
+      for (const suffix of shapeSuffixes) {
+        const srcShapeId = `${srcBase}${suffix}`;
+        const dstShapeId = `${dstBase}${suffix}`;
+        if (srcIds.has(srcShapeId) && dstIds.has(dstShapeId)) {
+          mappings.set(srcShapeId, dstShapeId);
+        }
+      }
+    }
+
+    return mappings;
+  }
+
+  private static _extractTopHeaderBaseFromTextId(elementId: string): string | null {
+    const match = elementId.match(/^(.*)_(left|right)_text$/);
+    return match ? match[1] : null;
+  }
+
+  private static _topHeaderFamilyExists(baseId: string, idSet: Set<string>): boolean {
+    const requiredAny = [
+      `${baseId}_left_text`,
+      `${baseId}_right_text`
+    ];
+    const hasAnyText = requiredAny.some(id => idSet.has(id));
+    if (!hasAnyText) return false;
+    return idSet.has(`${baseId}_left_endcap`) || idSet.has(`${baseId}_right_endcap`) || idSet.has(`${baseId}_header_bar`);
+  }
 }

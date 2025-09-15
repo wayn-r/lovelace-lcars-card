@@ -1,4 +1,4 @@
-import { ElementTypeUtils } from '../morph-element-utils.js';
+import { ElementTypeUtils, ElementAnalyzer } from '../morph-element-utils.js';
 import { BaseMorphPhase, type MorphPhaseContext } from './types.js';
 import { ElementOrderingUtils } from './utils.js';
 import type { LayoutElement } from '../../../layout/elements/element.js';
@@ -15,6 +15,13 @@ export class FadeInTargetPhase extends BaseMorphPhase {
     const cascadePlans = context.elbowCascadePlans || new Map<string, any>();
 
     const matchedTargetIds = new Set<string>(Array.from(matchedTextPairs.values()));
+
+    const topHeaderShapeMappings = ElementAnalyzer.findTopHeaderShapeMappings(
+      context.sourceElements,
+      context.targetElements,
+      matchedTextPairs
+    );
+    topHeaderShapeMappings.forEach((dstId) => matchedTargetIds.add(dstId));
     cascadePlans.forEach(plan => { if (plan.targetElbowId) matchedTargetIds.add(plan.targetElbowId); });
 
     const cascadeTargetElementIds = new Set<string>();

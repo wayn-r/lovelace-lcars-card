@@ -1,4 +1,4 @@
-import { ElementTypeUtils } from '../morph-element-utils.js';
+import { ElementTypeUtils, ElementAnalyzer } from '../morph-element-utils.js';
 import { BaseMorphPhase, type MorphPhaseContext } from './types.js';
 
 export class TransitionMatchedTextPhase extends BaseMorphPhase {
@@ -24,6 +24,27 @@ export class TransitionMatchedTextPhase extends BaseMorphPhase {
       } catch {}
 
       builder.addTextStyleAnimation(sourceId, targetId);
+    });
+
+    const topHeaderShapeMappings = ElementAnalyzer.findTopHeaderShapeMappings(
+      context.sourceElements,
+      context.targetElements,
+      matchedTextPairs
+    );
+
+    topHeaderShapeMappings.forEach((dstId, srcId) => {
+      const srcEl = sourceElementsById.get(srcId);
+      const dstEl = targetElementsById.get(dstId);
+      if (!srcEl || !dstEl) return;
+
+      try {
+        const targetPath = ElementTypeUtils.generatePathForElement(dstEl);
+        if (targetPath) builder.addPathMorphAnimation(srcId, targetPath);
+      } catch {}
+
+      try {
+        builder.addShapeStyleAnimation(srcId, dstId);
+      } catch {}
     });
 
     const cascadePlans = context.elbowCascadePlans || new Map<string, any>();
