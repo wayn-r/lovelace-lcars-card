@@ -5,7 +5,7 @@ import type { LayoutElement } from '../../layout/elements/element.js';
 import { Diagnostics } from '../diagnostics.js';
 import { ElementAnalyzer, ElementTypeUtils } from './morph-element-utils.js';
 import { DestinationResolver, type ContainerResizeRequirement } from './morph-destination-resolver.js';
-import { ElementMatcher, ElementGrouper, type ElementGroupingResult, type GroupMatchingOptions, type GroupMatch } from './morph-element-matcher.js';
+import { ElementMatcher, ElementGrouper, ConnectionIdentifier, type ElementGroupingResult, type GroupMatchingOptions, type GroupMatch, type ElementGroup as MatcherElementGroup } from './morph-element-matcher.js';
 import { MorphDebugger } from './morph-debug.js';
 import { 
   AnimationBuilder, 
@@ -14,6 +14,9 @@ import {
   type MorphAnimationContext 
 } from './morph-animation-builder';
 import { MorphUtilities, ValidationUtils, TimeUtils } from './morph-utilities.js';
+import { MorphPhaseFactory } from './phases/phase-factory.js';
+import type { IMorphPhase, MorphPhaseContext, ElbowCascadePlan } from './phases/types.js';
+import { ElbowCascadePlanBuilder } from './phases/utils.js';
 import gsap from 'gsap';
 
 const logger = Diagnostics.create('MorphEngine');
@@ -40,28 +43,9 @@ export interface MorphEngineHooks {
   expandCanvasTo?: (width: number, height: number) => void;
 }
 
-export interface MorphPhaseConfiguration {
-  phaseName: string;
-  phaseIndex: number;
-  isEnabled: boolean;
-  animationBuilder: (context: MorphPhaseContext) => PhaseAnimationBundle;
-}
-
-export interface MorphPhaseContext {
-  sourceElements: LayoutElement[];
-  targetElements: LayoutElement[];
-  elementMapping: Map<string, string>;
-  phaseDuration: number;
-  suppressedElementIds?: Set<string>;
-  expandedElementData?: Map<string, { expandedScaleX: number; side: 'left' | 'right' }>;
-  matchedTextPairs?: Map<string, string>;
-  sourceGrouping?: ElementGroupingResult;
-  targetGrouping?: ElementGroupingResult;
-  groupMatches?: GroupMatch[];
-}
 
 export class MorphEngine {
-  private static readonly defaultPhaseDurationSeconds: number = 1.0;
+  private static readonly defaultPhaseDurationSeconds: number = 0.5;
   
 
   static getPhaseDurationSeconds(): number { 
@@ -216,88 +200,6 @@ export class MorphEngine {
     };
   }
 
-  private static _logGroupMatches(
-    groupMatches: GroupMatch[],
-    sourceGrouping: ElementGroupingResult,
-    targetGrouping: ElementGroupingResult
-  ): void {
-    const totalSourceGroups = [...sourceGrouping.horizontalGroups, ...sourceGrouping.verticalGroups]
-      .filter(g => g.elements.length >= 2).length;
-    const totalTargetGroups = [...targetGrouping.horizontalGroups, ...targetGrouping.verticalGroups]
-      .filter(g => g.elements.length >= 2).length;
-    
-    logger.info(`[Group Matching] Groups: ${totalSourceGroups} source → ${totalTargetGroups} target, ${groupMatches.length} matches found`);
-    
-    if (groupMatches.length === 0) {
-      logger.info('[Group Matching] No group matches found');
-      this._logUnmatchedGroups(sourceGrouping, targetGrouping, []);
-      return;
-    }
-
-    const sourceGroupsById = new Map(
-      [...sourceGrouping.horizontalGroups, ...sourceGrouping.verticalGroups].map(group => [group.id, group])
-    );
-    const targetGroupsById = new Map(
-      [...targetGrouping.horizontalGroups, ...targetGrouping.verticalGroups].map(group => [group.id, group])
-    );
-    
-    const matchedGroupDetails = groupMatches.map(match => {
-      const sourceGroup = sourceGroupsById.get(match.sourceGroupId);
-      const targetGroup = targetGroupsById.get(match.targetGroupId);
-
-      return {
-        source: match.sourceGroupId,
-        target: match.targetGroupId,
-        confidence: match.matchConfidence.toFixed(3),
-        positionDelta: match.positionDelta.toFixed(1),
-        sizeDelta: match.sizeDelta.toFixed(1),
-        sourceElements: sourceGroup?.elements.map(el => `${el.id}(${ElementTypeUtils.getElementCategory(el)})`) || [],
-        targetElements: targetGroup?.elements.map(el => `${el.id}(${ElementTypeUtils.getElementCategory(el)})`) || []
-      };
-    });
-    logger.info(`[Group Matching] Matched Groups Details:`, matchedGroupDetails);
-
-    this._logUnmatchedGroups(sourceGrouping, targetGrouping, groupMatches);
-  }
-
-  private static _logUnmatchedGroups(
-    sourceGrouping: ElementGroupingResult,
-    targetGrouping: ElementGroupingResult,
-    groupMatches: GroupMatch[]
-  ): void {
-    const matchedSourceIds = new Set(groupMatches.map(m => m.sourceGroupId));
-    const matchedTargetIds = new Set(groupMatches.map(m => m.targetGroupId));
-    
-    const unmatchedSourceGroups = [
-      ...sourceGrouping.horizontalGroups.filter(g => !matchedSourceIds.has(g.id)),
-      ...sourceGrouping.verticalGroups.filter(g => !matchedSourceIds.has(g.id))
-    ].filter(g => g.elements.length >= 2);
-    
-    const unmatchedTargetGroups = [
-      ...targetGrouping.horizontalGroups.filter(g => !matchedTargetIds.has(g.id)),
-      ...targetGrouping.verticalGroups.filter(g => !matchedTargetIds.has(g.id))
-    ].filter(g => g.elements.length >= 2);
-    
-    if (unmatchedSourceGroups.length > 0) {
-      const unmatchedSourceGroupDetails = unmatchedSourceGroups.map(group => ({
-        id: group.id,
-        type: group.groupType,
-        coordinate: group.meanCoordinate.toFixed(1),
-        elements: group.elements.map(el => `${el.id}(${ElementTypeUtils.getElementCategory(el)})`)
-      }));
-      logger.info(`[Group Matching] Unmatched Source Groups Details:`, unmatchedSourceGroupDetails);
-    }
-    
-    if (unmatchedTargetGroups.length > 0) {
-      const unmatchedTargetGroupDetails = unmatchedTargetGroups.map(group => ({
-        id: group.id,
-        type: group.groupType,
-        coordinate: group.meanCoordinate.toFixed(1),
-        elements: group.elements.map(el => `${el.id}(${ElementTypeUtils.getElementCategory(el)})`)
-      }));
-      logger.info(`[Group Matching] Unmatched Target Groups Details:`, unmatchedTargetGroupDetails);
-    }
-  }
 
   private static _extractValidElements(groups: Group[]): LayoutElement[] {
     return ElementAnalyzer.collectLayoutElements(groups).filter(element => 
@@ -354,10 +256,21 @@ export class MorphEngine {
     (animationContext as any).__sourceGrouping = sourceGrouping;
     (animationContext as any).__targetGrouping = targetGrouping;
     (animationContext as any).__groupMatches = groupMatches;
+    const elbowPlans = ElbowCascadePlanBuilder.buildElbowCascadePlans(
+      sourceGrouping,
+      targetGrouping,
+      groupMatches
+    );
+    (animationContext as any).__elbowCascadePlans = elbowPlans;
+    (animationContext as any).debugMorph = this._debugModeIsEnabled(options);
+
+    if (this._debugModeIsEnabled(options)) {
+      MorphDebugger.logElbowCascadePlans(elbowPlans, sourceGrouping, targetGrouping);
+    }
     
     if (this._debugModeIsEnabled(options)) {
       await MorphDebugger.visualizeElementGroups(svgRoot, sourceGrouping);
-      this._logGroupMatches(groupMatches, sourceGrouping, targetGrouping);
+      MorphDebugger.logGroupMatches(groupMatches, sourceGrouping, targetGrouping);
     }
     
     // Phase 0: Match components
@@ -368,90 +281,16 @@ export class MorphEngine {
     );
 
     (animationContext as any).__matchedTextPairs = matchedTextPairs;
-    const phaseConfigurations = this._createPhaseConfigurations();    
-    await this._executeAnimationPhases(phaseConfigurations, animationContext, hooks);    
+    const morphPhases = this._createMorphPhases();    
+    await this._executeAnimationPhases(morphPhases, animationContext, hooks);    
     
-    utilities.scheduleOverlayCleanup(overlay, hiddenOriginalElements, this.defaultPhaseDurationSeconds * phaseConfigurations.length);
+    utilities.scheduleOverlayCleanup(overlay, hiddenOriginalElements, this.defaultPhaseDurationSeconds * morphPhases.length);
   }
   
-  private static _createPhaseConfigurations(): MorphPhaseConfiguration[] {
-    const configs: MorphPhaseConfiguration[] = [];
 
-    
-    // Phase 1: Fade out all source elements (skip matched texts)
-    configs.push({
-      phaseName: 'fadeOutSource',
-      phaseIndex: 1,
-      isEnabled: true,
-      animationBuilder: (context) => {
-        const builder = AnimationBuilder.createForPhase('fadeOutSource', context.phaseDuration);
-        // match text pairs
-        const matchedText = context.matchedTextPairs || new Map<string, string>();
-        for (const element of context.sourceElements) {
-          const isMatchedText = matchedText.has(element.id);
-          if (!isMatchedText && ElementTypeUtils.elementIsText(element)) builder.addSquishAnimation(element.id, 0.15, 0.25);
-          if (!ElementTypeUtils.elementIsText(element)) builder.addFadeOutAnimation(element.id);
-        }
-        return builder.buildPhaseBundle('fadeOutSource');
-      }
-    });
-    
-    // Phase 2: Transition matched texts to destination positions
-    configs.push({
-      phaseName: 'transitionMatchedText',
-      phaseIndex: 2,
-      isEnabled: true,
-      animationBuilder: (context) => {
-        const builder = AnimationBuilder.createForPhase('transitionMatchedText', context.phaseDuration);
-        const matched = context.matchedTextPairs || new Map<string, string>();
-        if (matched.size === 0) return builder.buildPhaseBundle('transitionMatchedText');
-        
-        const sourceById = new Map(context.sourceElements.map(e => [e.id, e] as const));
-        const targetById = new Map(context.targetElements.map(e => [e.id, e] as const));
-        
-        matched.forEach((destId, sourceId) => {
-          const src = sourceById.get(sourceId);
-          const dst = targetById.get(destId);
-          if (!src || !dst) return;
 
-          // Do NOT apply transform for matched text; x/y will be aligned via attribute tween
-          // Attempt minor shape morph to accommodate subtle size/radius differences
-          try {
-            const targetPath = ElementTypeUtils.generatePathForElement(dst);
-            if (targetPath) builder.addPathMorphAnimation(sourceId, targetPath);
-          } catch {}
-
-          // Animate text style/attributes (font, size, spacing, anchor, baseline, color, position)
-          builder.addTextStyleAnimation(sourceId, destId);
-        });
-        
-        return builder.buildPhaseBundle('transitionMatchedText');
-      }
-    });
-    
-    // Phase 3: Fade in all target elements (skip matched texts to avoid double-visibility)
-    configs.push({
-      phaseName: 'fadeInTarget',
-      phaseIndex: 3,
-      isEnabled: true,
-      animationBuilder: (context) => {
-        const builder = AnimationBuilder.createForPhase('fadeInTarget', context.phaseDuration);
-        const matched = context.matchedTextPairs || new Map<string, string>();
-        const matchedTargetIds = new Set<string>(Array.from(matched.values()));
-        for (const element of context.targetElements) {
-          if (matchedTargetIds.has(element.id)) continue;
-          if (ElementTypeUtils.elementIsText(element)) {
-            // Reverse of phase 1 squish: bring back unmatched text via reverse squish
-            builder.addReverseSquishAnimation(element.id, 0.15, 0.75);
-          } else {
-            builder.addFadeInAnimation(element.id);
-          }
-        }
-        return builder.buildPhaseBundle('fadeInTarget');
-      }
-    });
-    
-    return configs.filter(config => config.isEnabled).sort((a, b) => a.phaseIndex - b.phaseIndex);
+  private static _createMorphPhases(): IMorphPhase[] {
+    return MorphPhaseFactory.createAllStandardPhases();
   }
   
     private static _createTargetElementClones(
@@ -477,7 +316,7 @@ export class MorphEngine {
     }
   
   private static async _executeAnimationPhases(
-    phaseConfigurations: MorphPhaseConfiguration[],
+    morphPhases: IMorphPhase[],
     animationContext: MorphAnimationContext,
     hooks: MorphEngineHooks
   ): Promise<void> {
@@ -485,7 +324,7 @@ export class MorphEngine {
     let currentStartTime = 0;
     const debug = Boolean((animationContext as any).debugMorph);
     
-    for (const phaseConfig of phaseConfigurations) {
+    for (const morphPhase of morphPhases) {
       const phaseContext: MorphPhaseContext = {
         sourceElements: animationContext.sourceElements,
         targetElements: animationContext.targetElements,
@@ -494,14 +333,16 @@ export class MorphEngine {
         matchedTextPairs: (animationContext as any).__matchedTextPairs as Map<string, string> | undefined,
         sourceGrouping: (animationContext as any).__sourceGrouping as ElementGroupingResult | undefined,
         targetGrouping: (animationContext as any).__targetGrouping as ElementGroupingResult | undefined,
-        groupMatches: (animationContext as any).__groupMatches as GroupMatch[] | undefined
+        groupMatches: (animationContext as any).__groupMatches as GroupMatch[] | undefined,
+        elbowCascadePlans: (animationContext as any).__elbowCascadePlans as Map<string, ElbowCascadePlan> | undefined,
+        debugMorph: Boolean((animationContext as any).debugMorph)
       };
 
-      const phaseBundle: PhaseAnimationBundle = phaseConfig.animationBuilder(phaseContext);
+      const phaseBundle: PhaseAnimationBundle = morphPhase.buildAnimations(phaseContext);
       if (debug) {
-        const ids = phaseBundle.simultaneousAnimations.map(a => a.targetElementId);
+        const ids = phaseBundle.simultaneousAnimations.map(animation => animation.targetElementId);
         logger.info('[Morph Debug] schedule phase', {
-          phase: phaseConfig.phaseName,
+          phase: morphPhase.phaseName,
           startAt: currentStartTime.toFixed(2),
           duration: phaseBundle.totalPhaseDuration,
           count: ids.length,

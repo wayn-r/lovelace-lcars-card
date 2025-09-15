@@ -1,5 +1,7 @@
 import type { LayoutElement } from '../../layout/elements/element.js';
-import type { ElementGroupingResult, ElementGroup } from './morph-element-matcher.js';
+import type { ElementGroupingResult, ElementGroup, GroupMatch } from './morph-element-matcher.js';
+import type { ElbowCascadePlan } from './phases/types.js';
+import { ElementTypeUtils } from './morph-element-utils.js';
 import { Diagnostics } from '../diagnostics.js';
 
 const logger = Diagnostics.create('MorphDebug');
@@ -227,5 +229,110 @@ export class MorphDebugger {
   ): void {
     document.removeEventListener('click', clickHandler);
     document.removeEventListener('keydown', keyHandler);
+  }
+
+  static logGroupMatches(
+    groupMatches: GroupMatch[],
+    sourceGrouping: ElementGroupingResult,
+    targetGrouping: ElementGroupingResult
+  ): void {
+    const totalSourceGroups = [...sourceGrouping.horizontalGroups, ...sourceGrouping.verticalGroups]
+      .filter(group => group.elements.length >= 2).length;
+    const totalTargetGroups = [...targetGrouping.horizontalGroups, ...targetGrouping.verticalGroups]
+      .filter(group => group.elements.length >= 2).length;
+    
+    logger.info(`[Group Matching] Groups: ${totalSourceGroups} source → ${totalTargetGroups} target, ${groupMatches.length} matches found`);
+    
+    if (groupMatches.length === 0) {
+      logger.info('[Group Matching] No group matches found');
+      this._logUnmatchedGroups(sourceGrouping, targetGrouping, []);
+      return;
+    }
+
+    const sourceGroupsById = new Map(
+      [...sourceGrouping.horizontalGroups, ...sourceGrouping.verticalGroups].map(group => [group.id, group])
+    );
+    const targetGroupsById = new Map(
+      [...targetGrouping.horizontalGroups, ...targetGrouping.verticalGroups].map(group => [group.id, group])
+    );
+    
+    const matchedGroupDetails = groupMatches.map(match => {
+      const sourceGroup = sourceGroupsById.get(match.sourceGroupId);
+      const targetGroup = targetGroupsById.get(match.targetGroupId);
+
+      return {
+        source: match.sourceGroupId,
+        target: match.targetGroupId,
+        confidence: match.matchConfidence.toFixed(3),
+        positionDelta: match.positionDelta.toFixed(1),
+        sizeDelta: match.sizeDelta.toFixed(1),
+        sourceElements: sourceGroup?.elements.map(element => `${element.id}(${ElementTypeUtils.getElementCategory(element)})`) || [],
+        targetElements: targetGroup?.elements.map(element => `${element.id}(${ElementTypeUtils.getElementCategory(element)})`) || []
+      };
+    });
+    logger.info(`[Group Matching] Matched Groups Details:`, matchedGroupDetails);
+
+    this._logUnmatchedGroups(sourceGrouping, targetGrouping, groupMatches);
+  }
+
+  static logElbowCascadePlans(
+    plans: Map<string, ElbowCascadePlan>,
+    sourceGrouping: ElementGroupingResult,
+    targetGrouping: ElementGroupingResult
+  ): void {
+    if (plans.size === 0) {
+      logger.info('[Elbow Cascade] No cascade plans built');
+      return;
+    }
+    const summary = Array.from(plans.values()).map(plan => ({
+      sourceElbowId: plan.sourceElbowId,
+      targetElbowId: plan.targetElbowId,
+      directions: plan.directions.map(direction => ({ 
+        dir: direction.direction, 
+        type: direction.groupType, 
+        count: direction.orderedElementIds.length, 
+        ids: direction.orderedElementIds 
+      }))
+    }));
+    logger.info(`[Elbow Cascade] Plans: ${plans.size}`, summary as any);
+  }
+
+  private static _logUnmatchedGroups(
+    sourceGrouping: ElementGroupingResult,
+    targetGrouping: ElementGroupingResult,
+    groupMatches: GroupMatch[]
+  ): void {
+    const matchedSourceIds = new Set(groupMatches.map(match => match.sourceGroupId));
+    const matchedTargetIds = new Set(groupMatches.map(match => match.targetGroupId));
+    
+    const unmatchedSourceGroups = [
+      ...sourceGrouping.horizontalGroups.filter(group => !matchedSourceIds.has(group.id)),
+      ...sourceGrouping.verticalGroups.filter(group => !matchedSourceIds.has(group.id))
+    ].filter(group => group.elements.length >= 2);
+    
+    const unmatchedTargetGroups = [
+      ...targetGrouping.horizontalGroups.filter(group => !matchedTargetIds.has(group.id)),
+      ...targetGrouping.verticalGroups.filter(group => !matchedTargetIds.has(group.id))
+    ].filter(group => group.elements.length >= 2);
+    
+    if (unmatchedSourceGroups.length > 0) {
+      const unmatchedSourceGroupDetails = unmatchedSourceGroups.map(group => ({
+        id: group.id,
+        type: group.groupType,
+        coordinate: group.meanCoordinate.toFixed(1),
+        elements: group.elements.map(element => `${element.id}(${ElementTypeUtils.getElementCategory(element)})`)
+      }));
+      logger.info(`[Group Matching] Unmatched Source Groups Details:`, unmatchedSourceGroupDetails);
+    }
+    
+    if (unmatchedTargetGroups.length > 0) {
+      const unmatchedTargetGroupDetails = unmatchedTargetGroups.map(group => ({
+        id: group.id,
+        type: group.groupType,
+        coordinate: group.meanCoordinate.toFixed(1),
+        elements: group.elements.map(element => `${element.id}(${ElementTypeUtils.getElementCategory(element)})`)
+      }));
+      logger.info(`[Group Matching] Unmatched Target Groups Details:`, unmatchedTargetGroupDetails);
+    }
   }
 }

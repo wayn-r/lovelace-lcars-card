@@ -6,7 +6,7 @@ const logger = Diagnostics.create('AnimationBuilder');
 
 export interface AnimationInstruction {
   targetElementId: string;
-  animationType: 'fade' | 'morph' | 'transform' | 'pathMorph' | 'scale' | 'visibility' | 'squish' | 'reverseSquish' | 'textStyle';
+  animationType: 'fade' | 'morph' | 'transform' | 'pathMorph' | 'scale' | 'visibility' | 'squish' | 'reverseSquish' | 'textStyle' | 'shapeStyle';
   properties: Record<string, any>;
   duration: number;
   delay?: number;
@@ -69,8 +69,8 @@ export class AnimationBuilder extends BaseAnimationBuilder {
     return builder;
   }
 
-  addFadeOutAnimation(elementId: string, delay: number = 0): this {
-    return this.addAnimation(elementId, 'fade', { opacity: 0 }, undefined, delay);
+  addFadeOutAnimation(elementId: string, duration?: number, delay: number = 0): this {
+    return this.addAnimation(elementId, 'fade', { opacity: 0 }, duration, delay);
   }
 
   addFadeInAnimation(elementId: string, delay: number = 0): this {
@@ -113,6 +113,12 @@ export class AnimationBuilder extends BaseAnimationBuilder {
 
   addTextStyleAnimation(elementId: string, matchedTargetId: string, delay: number = 0): this {
     return this.addAnimation(elementId, 'textStyle', {
+      matchedTargetId
+    }, undefined, delay);
+  }
+
+  addShapeStyleAnimation(elementId: string, matchedTargetId: string, delay: number = 0): this {
+    return this.addAnimation(elementId, 'shapeStyle', {
       matchedTargetId
     }, undefined, delay);
   }
@@ -269,6 +275,37 @@ export class MorphAnimationOrchestrator {
               duration: animation.duration,
               ease: 'power2.out',
               ...animation.properties
+            } as any, animationStartTime);
+          }
+          break;
+        }
+        case 'shapeStyle': {
+          const srcPath = this._findPathElementInClone(targetElement, animation.targetElementId);
+          const matchedTargetId: string | undefined = (animation.properties || {}).matchedTargetId;
+          const dstClone = matchedTargetId ? context.targetCloneElementsById?.get(matchedTargetId) : undefined;
+          const dstPath = matchedTargetId && dstClone ? this._findPathElementInClone(dstClone, matchedTargetId) : null;
+
+          const attrTargets: Record<string, any> = {};
+          if (dstPath) {
+            const fill = dstPath.getAttribute('fill');
+            const stroke = dstPath.getAttribute('stroke');
+            if (fill !== null) attrTargets['fill'] = fill;
+            if (stroke !== null) attrTargets['stroke'] = stroke;
+          } else if (matchedTargetId) {
+            try {
+              const dst = (context.targetElements || []).find(e => e.id === matchedTargetId) as any;
+              if (dst && dst.props) {
+                if (dst.props.fill) attrTargets['fill'] = String(dst.props.fill);
+                if (dst.props.stroke) attrTargets['stroke'] = String(dst.props.stroke);
+              }
+            } catch {}
+          }
+
+          if (srcPath && Object.keys(attrTargets).length > 0) {
+            timeline.to(srcPath as any, {
+              duration: animation.duration,
+              ease: 'power2.out',
+              attr: attrTargets
             } as any, animationStartTime);
           }
           break;
