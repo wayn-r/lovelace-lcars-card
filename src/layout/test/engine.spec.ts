@@ -313,7 +313,7 @@ describe('LayoutEngine', () => {
             expect(bounds.height).toBe(130);
         });
 
-         it('should use containerRect dimensions if elements are smaller', () => {
+        it('should allow height to shrink below containerRect when elements are smaller', () => {
             (engine as any).containerRect = new DOMRect(0, 0, 500, 400);
             const el1 = new MockEngineLayoutElement('el1');
             el1.layout = { x: 0, y: 0, width: 50, height: 50, calculated: true };
@@ -321,7 +321,8 @@ describe('LayoutEngine', () => {
 
             const bounds = engine.getLayoutBounds();
             expect(bounds.width).toBe(500);
-            expect(bounds.height).toBe(400);
+            // Height now reflects content (max bottom), not clamped to container height
+            expect(bounds.height).toBe(50);
         });
     });
 
@@ -401,9 +402,10 @@ describe('LayoutEngine', () => {
 
             // Check final layout bounds
             const bounds = engine.getLayoutBounds();
-            // el1: 0,0,50,30. el2: 50,0,60,40. Max right: 50+60=110. Max bottom: 40.
-            expect(bounds.width).toBe(1000); // container width since elements are smaller
-            expect(bounds.height).toBe(800); // container height
+            // el1: 0,0,50,30. el2: 50,0,60,40. Max right: 110. Max bottom: 40.
+            // With shrink-enabled bounds, width stays at least container width, height reflects content maxBottom.
+            expect(bounds.width).toBe(1000);
+            expect(bounds.height).toBe(40);
         });
 
         it('should handle dynamicHeight option correctly', async () => {

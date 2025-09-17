@@ -171,17 +171,20 @@ export class LayoutEngine {
 
   public getLayoutBounds(): LayoutDimensions {
     let requiredWidth = this.containerRect?.width || 100;
-    let requiredHeight = this.containerRect?.height || 50;
+    const containerHeight = this.containerRect?.height || 50;
+    let requiredHeight = 0;
     
     if (!this.layoutGroups || this.layoutGroups.length === 0) {
-      return { width: requiredWidth, height: requiredHeight };
+      return { width: requiredWidth, height: containerHeight };
     }
     
     let maxRight = 0;
     let maxBottom = 0;
+    let hasAnyCalculatedElement = false;
     
     this.elements.forEach(el => {
       if (el.layout.calculated) {
+        hasAnyCalculatedElement = true;
         const right = el.layout.x + el.layout.width;
         const bottom = el.layout.y + el.layout.height;
         
@@ -190,12 +193,19 @@ export class LayoutEngine {
       }
     });
     
+    if (!hasAnyCalculatedElement) {
+      return {
+        width: Math.ceil(requiredWidth),
+        height: Math.max(1, Math.ceil(containerHeight))
+      };
+    }
+
     requiredWidth = Math.max(maxRight, requiredWidth);
-    requiredHeight = Math.max(maxBottom, requiredHeight);
+    requiredHeight = Math.max(maxBottom, 0);
     
     return {
       width: Math.ceil(requiredWidth),
-      height: Math.ceil(requiredHeight)
+      height: Math.max(1, Math.ceil(requiredHeight))
     };
   }
 
