@@ -2,7 +2,6 @@ import FontMetrics from 'fontmetrics';
 import { Diagnostics } from './diagnostics.js';
 
 export const EPSILON = 0.0001;
-export const CAP_HEIGHT_RATIO = 0.66;
 
 export type Orientation = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 export type Direction = 'left' | 'right';
@@ -454,7 +453,7 @@ export class TextMeasurement {
         if (measuredTextHeight <= 0) {
             return 0;
         }
-        return measuredTextHeight * CAP_HEIGHT_RATIO;
+        return measuredTextHeight;
     }
 
     private static applyTextTransform(text: string, textTransform?: string): string {

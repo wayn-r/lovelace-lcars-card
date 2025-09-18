@@ -46,7 +46,7 @@ describe('TextElement - Height/Width Override Behavior', () => {
       expect(FontManager.getFontMetrics).toHaveBeenCalledWith('Arial', 'normal');
     });
 
-    it('should use fallback calculation when getFontMetrics returns null', () => {
+    it('should not derive fontSize from height when getFontMetrics returns null', () => {
       (FontManager.getFontMetrics as any).mockReturnValue(null);
       
       const textElement = new TextElement(
@@ -57,8 +57,8 @@ describe('TextElement - Height/Width Override Behavior', () => {
 
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
-      // Expected fontSize = height * 0.8 = 40 * 0.8 = 32
-      expect(textElement.props.fontSize).toBe(32);
+      // No metrics: do not compute font size from height; default remains 16
+      expect(textElement.props.fontSize).toBe(16);
     });
 
     it('should preserve explicit fontSize when layout.height is percentage string', () => {
@@ -94,7 +94,7 @@ describe('TextElement - Height/Width Override Behavior', () => {
 
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
-      // Should still use props.height for fontSize calculation
+      // Should still use props.height for fontSize calculation via font metrics
       expect(textElement.props.fontSize).toBe(30 / 0.7);
       expect(FontManager.getFontMetrics).toHaveBeenCalledWith('Antonio', 'normal');
     });

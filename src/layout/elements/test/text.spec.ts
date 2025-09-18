@@ -185,24 +185,20 @@ describe('TextElement', () => {
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 
-    it('should use fallback calculation if getFontMetrics fails', () => {
+    it('should not derive fontSize from height when metrics are unavailable', () => {
       const props = {
         text: 'Test',
-        fontSize: 20,
         fontFamily: 'Arial'
       };
-      textElement = new TextElement('txt-fallback', props);
+      textElement = new TextElement('txt-no-metrics', props, { height: 20 });
 
       (FontManager.getFontMetrics as any).mockReturnValue(null);
 
       textElement.calculateIntrinsicSize(mockSvgContainer);
 
-      expect(FontManager.measureTextWidth).toHaveBeenCalledWith('Test', expect.objectContaining({
-        fontFamily: 'Arial',
-        fontSize: 20,
-        fontWeight: 'normal'
-      }));
-      expect(textElement.intrinsicSize.height).toBe(24); // fontSize * 1.2
+      // Should fall back to default fontSize resolution path (16 when none provided)
+      expect(textElement.props.fontSize).toBe(16);
+      expect(textElement.intrinsicSize.height).toBe(20); // intrinsic uses layout height when provided
       expect(textElement.intrinsicSize.calculated).toBe(true);
     });
 

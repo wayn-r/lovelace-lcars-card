@@ -8,7 +8,6 @@ import { EntityValueResolver } from '../../utils/entity-value-resolver.js';
 import { ColorValue } from '../../types.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { FontManager } from '../../utils/font-manager.js';
-import { CAP_HEIGHT_RATIO } from '../../utils/shapes.js';
 
 export interface EntityMetricLabelConfig {
   content?: string;
@@ -77,8 +76,8 @@ export class EntityMetricWidget extends Widget {
     const valueTextTransform = valueConfig.textTransform || 'uppercase';
 
     const metrics = FontManager.getFontMetrics(valueFontFamily, valueFontWeight);
-    const capHeightRatio = Math.abs(metrics?.capHeight ?? 0) || CAP_HEIGHT_RATIO;
-    const valueFontSize = height / capHeightRatio;
+    const capHeightRatio = Math.abs(metrics?.capHeight ?? 0);
+    const valueFontSize = capHeightRatio > 0 ? (height / capHeightRatio) : (height);
     const measuredValueWidth = FontManager.measureTextWidth(valueTextContent || '', {
       fontFamily: valueFontFamily,
       fontSize: valueFontSize,

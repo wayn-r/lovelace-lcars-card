@@ -3,7 +3,7 @@ import { LayoutElementProps, LayoutConfigOptions } from "../engine.js";
 import { HomeAssistant } from "custom-card-helpers";
 import type { CardRuntime } from '../../core/runtime.js';
 import { svg, SVGTemplateResult } from "lit";
-import { TextMeasurement, CAP_HEIGHT_RATIO } from "../../utils/shapes.js";
+import { TextMeasurement } from "../../utils/shapes.js";
 import { FontManager } from "../../utils/font-manager.js";
 
 const MIN_LETTER_SPACING = -4;
@@ -57,17 +57,24 @@ export class TextElement extends LayoutElement {
         
         if (layoutHeight) {
             const fontSize = this.calculateFontSizeFromHeight(layoutHeight, fontFamily, fontWeight);
-            this.props.fontSize = fontSize;
-            return fontSize;
+            if (fontSize !== null) {
+                this.props.fontSize = fontSize;
+                return fontSize;
+            }
         }
         
         if (this.props.height && !this.props.fontSize) {
             const fontSize = this.calculateFontSizeFromHeight(this.props.height as number, fontFamily, fontWeight);
-            this.props.fontSize = fontSize;
-            return fontSize;
+            if (fontSize !== null) {
+                this.props.fontSize = fontSize;
+                return fontSize;
+            }
         }
         
-        const resolvedFontSize = this.props.fontSize || 16;
+        const resolvedFontSize = this.props.fontSize !== undefined ? (this.props.fontSize as number) : 16;
+        if (this.props.fontSize === undefined) {
+            this.props.fontSize = resolvedFontSize;
+        }
         return resolvedFontSize;
     }
 
@@ -92,16 +99,14 @@ export class TextElement extends LayoutElement {
         return typeof this.layoutConfig.width === 'number' ? this.layoutConfig.width : null;
     }
 
-    private calculateFontSizeFromHeight(heightPx: number, fontFamily: string, fontWeight: string): number {
+    private calculateFontSizeFromHeight(heightPx: number, fontFamily: string, fontWeight: string): number | null {
         const metrics = FontManager.getFontMetrics(fontFamily, fontWeight as any);
-        if (metrics) {
-            const capHeightRatio = Math.abs(metrics.capHeight) || CAP_HEIGHT_RATIO;
+        if (metrics && Math.abs(metrics.capHeight) > 0) {
+            const capHeightRatio = Math.abs(metrics.capHeight);
             const calculatedFontSize = heightPx / capHeightRatio;
             return calculatedFontSize;
-        } else {
-            const fallbackFontSize = heightPx * 0.8;
-            return fallbackFontSize;
         }
+        return null;
     }
 
     private calculateLetterSpacingForWidth(widthPx: number, fontSize: number, text: string, fontFamily: string, fontWeight: string): number {

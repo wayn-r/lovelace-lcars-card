@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as shapes from '../shapes';
-import { EPSILON, CAP_HEIGHT_RATIO, Orientation, Direction } from '../shapes';
+import { EPSILON, Orientation, Direction } from '../shapes';
 
 // Mock the 'fontmetrics' module
 vi.mock('fontmetrics', () => {
@@ -406,8 +406,8 @@ describe('shapes.ts utility functions', () => {
   });
 
   describe('TextMeasurement.calculateBarHeight', () => {
-    it('should calculate bar height based on CAP_HEIGHT_RATIO', () => {
-      expect(shapes.TextMeasurement.calculateBarHeight(100)).toBeCloseTo(100 * CAP_HEIGHT_RATIO);
+    it('should return the measured text height unchanged when positive', () => {
+      expect(shapes.TextMeasurement.calculateBarHeight(100)).toBe(100);
     });
     it('should return 0 for non-positive text height', () => {
       expect(shapes.TextMeasurement.calculateBarHeight(0)).toBe(0);
