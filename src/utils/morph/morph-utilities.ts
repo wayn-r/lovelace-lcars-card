@@ -13,7 +13,8 @@ export interface OverlayManager {
   createOverlayWithClones(
     svgRoot: SVGSVGElement,
     sourceElements: LayoutElement[],
-    getShadowElement: (id: string) => Element | null
+    getShadowElement: (id: string) => Element | null,
+    animationContext?: AnimationContext
   ): {
     overlay: SVGGElement;
     cloneElementsById: Map<string, Element>;
@@ -25,8 +26,14 @@ export interface OverlayManager {
 export interface SyntheticElementCreator {
   createSyntheticElement(
     targetElement: LayoutElement,
-    animationContext: AnimationContext
+    animationContext: AnimationContext | undefined,
+    options?: CloneRenderOptions
   ): Element | null;
+}
+
+interface CloneRenderOptions {
+  initialOpacity?: number;
+  idSuffix?: string;
 }
 
 export class MorphUtilities implements SvgRootLocator, OverlayManager, SyntheticElementCreator {
@@ -60,7 +67,8 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
   createOverlayWithClones(
     svgRoot: SVGSVGElement,
     sourceElements: LayoutElement[],
-    getShadowElement: (id: string) => Element | null
+    getShadowElement: (id: string) => Element | null,
+    animationContext?: AnimationContext
   ): {
     overlay: SVGGElement;
     cloneElementsById: Map<string, Element>;
@@ -90,27 +98,19 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
         continue;
       }
       
-      const clonedElement = originalDomElement.cloneNode(true) as Element;
-      
-      try { 
-        (clonedElement as any).style.visibility = ''; 
-      } catch {
+      const renderedClone = this.createSyntheticElement(element, animationContext, {
+        initialOpacity: 1,
+        idSuffix: '__morph_clone'
+      });
+      if (!renderedClone) {
+        if (debug) {
+          logger.warn('[Morph Debug] source synthetic: FAILED (render)', { id: element.id });
+        }
+        continue;
       }
 
-      try { 
-        clonedElement.removeAttribute('visibility'); 
-      } catch {
-      }
-
-      try { 
-        (clonedElement as any).id = `${element.id}__morph_clone`; 
-      } catch {
-      }
-      
-      // Ensure internal defs/masks in the clone have unique IDs and references
-      this._rewriteCloneDefinitionReferences(clonedElement);
-      overlay.appendChild(clonedElement);
-      cloneElementsById.set(element.id, clonedElement);
+      overlay.appendChild(renderedClone);
+      cloneElementsById.set(element.id, renderedClone);
       
       try {
         (originalDomElement as any).setAttribute('data-lcars-morph-hidden', '1');
@@ -122,12 +122,10 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
           element.id
         )
       }
-      
-      this._initializeCloneTransform(clonedElement);
 
       if (debug) {
         let initialOpacity: string | undefined;
-        try { initialOpacity = (clonedElement as HTMLElement).style?.opacity ?? getComputedStyle(clonedElement as any).opacity; } catch {}
+        try { initialOpacity = (renderedClone as HTMLElement).style?.opacity ?? getComputedStyle(renderedClone as any).opacity; } catch {}
       }
     }
     
@@ -174,9 +172,11 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
 
   createSyntheticElement(
     targetElement: LayoutElement,
-    animationContext: AnimationContext
+    animationContext: AnimationContext | undefined,
+    options: CloneRenderOptions = {}
   ): Element | null {
     const debug = typeof window !== 'undefined' && (window as any).__lcarsDebugMorph === true;
+    const { initialOpacity = 0, idSuffix } = options;
     
     try {
       const renderedTemplate = targetElement.render();
@@ -197,8 +197,18 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
 
       try {
         (domElement as any).style.pointerEvents = 'none';
-        (domElement as any).style.opacity = '0';
+        if (initialOpacity !== undefined) {
+          (domElement as any).style.opacity = String(initialOpacity);
+        }
       } catch {}
+
+      if (idSuffix) {
+        try {
+          const existingId = domElement.getAttribute('id');
+          const newId = existingId ? `${existingId}${idSuffix}` : `${targetElement.id}${idSuffix}`;
+          domElement.setAttribute('id', newId);
+        } catch {}
+      }
 
       // Fix any internal definition IDs to avoid collisions
       this._rewriteCloneDefinitionReferences(domElement);
@@ -323,4 +333,3 @@ export class ValidationUtils {
     return Boolean(rect && rect.width > 0 && rect.height > 0);
   }
 }
-

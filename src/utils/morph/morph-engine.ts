@@ -221,7 +221,8 @@ export class MorphEngine {
     const { overlay, cloneElementsById: sourceCloneElementsById, hiddenOriginalElements } = utilities.createOverlayWithClones(
       svgRoot,
       sourceElements,
-      hooks.getShadowElement
+      hooks.getShadowElement,
+      hooks.getAnimationContext()
     );
 
     const targetCloneElementsById = this._createTargetElementClones(
@@ -305,8 +306,6 @@ export class MorphEngine {
         // Create synthetic elements for target elements since they don't exist in the DOM yet
         const syntheticElement = utilities.createSyntheticElement(element, animationContext);
         if (syntheticElement) {
-          // Start target elements as invisible for fade-in effect
-          (syntheticElement as any).style.opacity = '0';
           overlay.appendChild(syntheticElement);
           targetCloneElementsById.set(element.id, syntheticElement);
         }
@@ -366,4 +365,3 @@ export class MorphEngine {
   }
 
 }
-
