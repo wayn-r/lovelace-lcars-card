@@ -397,6 +397,12 @@ export class LcarsCard extends LitElement {
     const containerRect = this._calculateFinalContainerRect(rect);
     const layoutDimensions = this._layoutEngine.recalculate(containerRect, { dynamicHeight: true });
     this._calculatedHeight = layoutDimensions.height;
+    this._containerRect = new DOMRect(
+      containerRect.x,
+      containerRect.y,
+      containerRect.width,
+      this._calculatedHeight
+    );
 
     this._clearDomTransformsForElements(groups);
 
@@ -414,6 +420,12 @@ export class LcarsCard extends LitElement {
     const containerRect = this._calculateFinalContainerRect(rect);
     const layoutDimensions = this._layoutEngine.recalculate(containerRect, { dynamicHeight: true });
     this._calculatedHeight = layoutDimensions.height;
+    this._containerRect = new DOMRect(
+      containerRect.x,
+      containerRect.y,
+      containerRect.width,
+      this._calculatedHeight
+    );
 
     this._clearDomTransformsForElements(groups);
 
@@ -452,9 +464,11 @@ export class LcarsCard extends LitElement {
     const newRect = entry.contentRect;
     const newWidth = newRect.width;
     const newHeight = newRect.height;
+    const logicalHeight = this._calculateLogicalHeightFromRenderHeight(newHeight);
     
-    if (newWidth > 0 && (newWidth !== this._containerRect?.width || newHeight !== this._containerRect?.height)) {
-      this._containerRect = new DOMRect(newRect.x, newRect.y, newWidth, newHeight);
+    if (newWidth > 0 && (newWidth !== this._containerRect?.width || logicalHeight !== this._containerRect?.height)) {
+      const logicalRect = new DOMRect(newRect.x, newRect.y, newWidth, logicalHeight);
+      this._containerRect = logicalRect;
       if (this._runtime) {
         WidgetRegistry.getAllInstances(this._runtime).forEach(w => {
           try { w.onResize(this._containerRect!); } catch (e) { /* noop */ }
@@ -463,6 +477,10 @@ export class LcarsCard extends LitElement {
       
       this._performLayoutCalculation(this._containerRect);
     }
+  }
+
+  private _calculateLogicalHeightFromRenderHeight(renderHeight: number): number {
+    return Math.max(renderHeight, 1);
   }
 
   public static async getConfigElement(): Promise<LovelaceCardEditor> {
@@ -506,14 +524,12 @@ export class LcarsCard extends LitElement {
     }
 
     const viewBoxParts = this._viewBox.split(' ');
-    const viewBoxWidth = parseFloat(viewBoxParts[2]) || 100;
     const viewBoxHeight = parseFloat(viewBoxParts[3]) || 100;
-    
-    const width = this._containerRect ? this._containerRect.width : viewBoxWidth;
-    const height = this._calculatedHeight || viewBoxHeight;
-    
-    const svgStyle = `width: 100%; height: ${height}px; min-height: 50px;`;
-    const containerStyle = `width: 100%; height: ${height}px; min-height: 50px; overflow: visible;`;
+    const logicalHeight = this._calculatedHeight || viewBoxHeight;
+    const renderHeight = Math.max(logicalHeight, 1);
+
+    const svgStyle = `width: 100%; height: ${renderHeight}px; min-height: 50px;`;
+    const containerStyle = `width: 100%; height: ${renderHeight}px; min-height: 50px; overflow: visible;`;
 
     return html`
       <ha-card>
@@ -720,8 +736,7 @@ export class LcarsCard extends LitElement {
     const entries = this._renderElementsWithKeys();
     const newTemplates = entries.map(e => e.template);
     const newKeys = entries.map(e => e.key);
-    const topMargin = 8;
-    const newViewBox = `0 ${-topMargin} ${rect.width} ${this._calculatedHeight + topMargin}`;
+    const newViewBox = `0 0 ${rect.width} ${this._calculatedHeight}`;
 
     const prevKeys = this._renderKeys;
     const templatesChanged = newKeys.length !== prevKeys.length || newKeys.some((k, i) => k !== prevKeys[i]);
@@ -868,11 +883,12 @@ export class LcarsCard extends LitElement {
 
   private _expandCanvasTo(width: number, height: number): void {
     const current = this._containerRect!;
-    const targetWidth = width || current.width;
-    const targetHeight = Math.max(1, height || this._calculatedHeight || 1);
+    const desiredWidth = Number.isFinite(width) && width > 0 ? width : current.width;
+    const targetWidth = Math.max(current.width, desiredWidth);
+    const desiredHeight = Number.isFinite(height) && height > 0 ? height : this._calculatedHeight || 1;
+    const targetHeight = Math.max(this._calculatedHeight, desiredHeight, 1);
     this._calculatedHeight = Math.max(this._calculatedHeight, targetHeight);
-    const topMargin = 8;
-    this._viewBox = `0 ${-topMargin} ${targetWidth} ${this._calculatedHeight + topMargin}`;
+    this._viewBox = `0 0 ${targetWidth} ${this._calculatedHeight}`;
     this._containerRect = new DOMRect(current.x, current.y, targetWidth, this._calculatedHeight);
     this.requestUpdate();
   }

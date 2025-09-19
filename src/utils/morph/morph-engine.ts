@@ -1,6 +1,6 @@
 import type { LcarsCardConfig } from '../../types.js';
 import { ConfigParser } from '../../layout/parser.js';
-import { Group, LayoutEngine } from '../../layout/engine.js';
+import { Group, LayoutEngine, type LayoutState, type LayoutDimensions } from '../../layout/engine.js';
 import type { LayoutElement } from '../../layout/elements/element.js';
 import { Diagnostics } from '../diagnostics.js';
 import { ElementAnalyzer, ElementTypeUtils } from './morph-element-utils.js';
@@ -149,7 +149,8 @@ export class MorphEngine {
     
     const sourceEngine = new LayoutEngine();
     sourceEngine.setGroups(sourceGroups);
-    let sourceBounds = sourceEngine.recalculate(currentContainerRect, { dynamicHeight: true });
+    const sourceLayoutSnapshot = this._snapshotGroupLayouts(sourceGroups);
+    let sourceBounds = this._recalculateWithSnapshot(sourceEngine, sourceGroups, currentContainerRect, sourceLayoutSnapshot);
 
     const resizeRequirement = DestinationResolver.determineContainerResizeRequirement(
       currentContainerRect,
@@ -179,14 +180,51 @@ export class MorphEngine {
         // CRITICAL: Recalculate layouts with the new container dimensions
         if (expandedRect) {
           targetBounds = tempEngine.recalculate(expandedRect, { dynamicHeight: true });
-          sourceBounds = sourceEngine.recalculate(expandedRect, { dynamicHeight: true });
+          sourceBounds = this._recalculateWithSnapshot(sourceEngine, sourceGroups, expandedRect, sourceLayoutSnapshot);
         }
       } catch (error) {
         logger.warn('Failed to wait for container expansion', error);
       }
     }
 
+    this._restoreGroupLayouts(sourceGroups, sourceLayoutSnapshot);
     return { containerRect: finalContainerRect, sourceBounds, targetBounds };
+  }
+
+  private static _snapshotGroupLayouts(groups: Group[]): Map<string, LayoutState> {
+    const snapshot = new Map<string, LayoutState>();
+    for (const group of groups) {
+      for (const element of group.elements) {
+        snapshot.set(element.id, { ...element.layout });
+      }
+    }
+    return snapshot;
+  }
+
+  private static _restoreGroupLayouts(groups: Group[], snapshot: Map<string, LayoutState>): void {
+    for (const group of groups) {
+      for (const element of group.elements) {
+        const original = snapshot.get(element.id);
+        if (!original) continue;
+        element.layout.x = original.x;
+        element.layout.y = original.y;
+        element.layout.width = original.width;
+        element.layout.height = original.height;
+        element.layout.calculated = original.calculated;
+      }
+    }
+  }
+
+  private static _recalculateWithSnapshot(
+    engine: LayoutEngine,
+    groups: Group[],
+    rect: DOMRect,
+    snapshot: Map<string, LayoutState>
+  ): LayoutDimensions {
+    this._restoreGroupLayouts(groups, snapshot);
+    const bounds = engine.recalculate(rect, { dynamicHeight: true });
+    this._restoreGroupLayouts(groups, snapshot);
+    return bounds;
   }
 
   private static _debugModeIsEnabled(options: MorphEngineOptions): boolean {

@@ -383,10 +383,18 @@ export abstract class LayoutElement {
             }
         }
 
-        x += this.parseLayoutOffset(this.layoutConfig.offsetX, containerWidth);
+        x += this.calculateAnchorAwareOffsetX(this.layoutConfig.offsetX, anchorPoint, containerWidth);
         y += this.parseLayoutOffset(this.layoutConfig.offsetY, containerHeight);
 
         return { x, y };
+    }
+
+    private calculateAnchorAwareOffsetX(
+        rawOffset: number | string | undefined,
+        anchorPoint: string,
+        containerWidth: number
+    ): number {
+        return this.parseLayoutOffset(rawOffset, containerWidth);
     }
 
     private anchorToContainer(
