@@ -37,7 +37,7 @@ export type ElbowCascadePlan = {
 };
 
 export abstract class BaseMorphPhase implements IMorphPhase {
-  public static readonly cascadeStepDelaySeconds: number = 0.2;
+  public static readonly cascadeStepDelaySeconds: number = 0.12;
   public static readonly cascadeAnimationDurationSeconds: number = 0.12;
 
   constructor(
