@@ -223,11 +223,15 @@ describe('Element Interactive States', () => {
       
       const removeEventListenerSpy = vi.spyOn(mockElement, 'removeEventListener');
       
+      element.elementIsHovering = true;
+      element.elementIsActive = true;
       element.setupInteractiveListeners();
       element.cleanup();
       
       expect(removeEventListenerSpy).toHaveBeenCalledWith('mouseenter', expect.any(Function));
       expect(removeEventListenerSpy).toHaveBeenCalledWith('mouseleave', expect.any(Function));
+      expect(element.elementIsHovering).toBe(false);
+      expect(element.elementIsActive).toBe(false);
     });
   });
 }); 

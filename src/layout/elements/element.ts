@@ -930,6 +930,8 @@ export abstract class LayoutElement {
     }
 
     cleanup(): void {
+        this.elementIsHovering = false;
+        this.elementIsActive = false;
         this.cleanupInteractiveListeners();
         
         if (this.hoverTimeout) {

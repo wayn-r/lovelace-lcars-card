@@ -72,6 +72,8 @@ export class LcarsCard extends LitElement {
   private _elementGraph?: Group[];
   private _lastAnimationContext?: AnimationContext;
   private _suspendRenders: boolean = false;
+  private _pendingRenderRefresh: boolean = false;
+  private _pendingLayoutRect?: DOMRect;
 
   static styles = [editorStyles];
 
@@ -361,6 +363,7 @@ export class LcarsCard extends LitElement {
 
   private async _performLayoutCalculation(rect: DOMRect): Promise<void> {
     if (this._suspendRenders) {
+      this._pendingLayoutRect = new DOMRect(rect.x, rect.y, rect.width, rect.height);
       return;
     }
     const isValidLayoutRequest = this._config && rect && rect.width > 0 && rect.height > 0;
@@ -437,8 +440,10 @@ export class LcarsCard extends LitElement {
 
   private _refreshElementRenders(): void {
     if (this._suspendRenders) {
+      this._pendingRenderRefresh = true;
       return;
     }
+    this._pendingRenderRefresh = false;
     if (!this.isConnected || !this._runtime) {
       return;
     }
@@ -877,7 +882,18 @@ export class LcarsCard extends LitElement {
     await MorphEngine.morphToNavigationPath(hooks, navigationPath, this.hass, { durationMs: options.durationMs ?? 1000, debugMorph });
     } catch (e) {
     } finally {
-      setTimeout(() => { this._suspendRenders = false; }, 0);
+      setTimeout(() => {
+        this._suspendRenders = false;
+        if (this._pendingLayoutRect) {
+          const pendingRect = this._pendingLayoutRect;
+          this._pendingLayoutRect = undefined;
+          void this._performLayoutCalculation(pendingRect);
+        }
+        if (this._pendingRenderRefresh) {
+          this._pendingRenderRefresh = false;
+          this._refreshElementRenders();
+        }
+      }, 0);
     }
   }
 

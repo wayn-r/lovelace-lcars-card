@@ -93,8 +93,16 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
 
     const debug = typeof window !== 'undefined' && (window as any).__lcarsDebugMorph === true;
     for (const element of sourceElements) {
+      const wasHovering = element.elementIsHovering;
+      const wasActive = element.elementIsActive;
       const originalDomElement = getShadowElement?.(element.id) as Element | null;
       if (!originalDomElement) {
+        if (wasHovering) {
+          try { element.elementIsHovering = false; } catch {}
+        }
+        if (wasActive) {
+          try { element.elementIsActive = false; } catch {}
+        }
         continue;
       }
       
@@ -121,6 +129,13 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
         logger.warn('failed to hide original element ',
           element.id
         )
+      }
+
+      if (wasHovering) {
+        try { element.elementIsHovering = false; } catch {}
+      }
+      if (wasActive) {
+        try { element.elementIsActive = false; } catch {}
       }
 
       if (debug) {
