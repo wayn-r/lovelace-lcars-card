@@ -435,6 +435,51 @@ describe('LayoutEngine', () => {
             expect(el1.layout.height).toBe(200);
         });
 
+        it('should allow dynamic height shrink when elements stretch to container bottom', () => {
+            const containerRect = new DOMRect(0, 0, 400, 600);
+
+            const content = new MockEngineLayoutElement('content');
+            content.intrinsicSize = { width: 100, height: 200, calculated: false };
+            content.canCalculateLayout = vi.fn().mockReturnValue(true);
+            content.calculateLayout = vi.fn().mockImplementation(() => {
+                content.layout.x = 0;
+                content.layout.y = 0;
+                content.layout.width = 100;
+                content.layout.height = 200;
+                content.layout.calculated = true;
+            });
+            content.calculateIntrinsicSize = vi.fn().mockImplementation(() => {
+                content.intrinsicSize.width = 100;
+                content.intrinsicSize.height = 200;
+                content.intrinsicSize.calculated = true;
+            });
+
+            const filler = new MockEngineLayoutElement('filler', {}, {
+                stretch: { stretchTo1: 'container', targetStretchAnchorPoint1: 'bottom' }
+            });
+            filler.intrinsicSize = { width: 100, height: 80, calculated: false };
+            filler.canCalculateLayout = vi.fn().mockReturnValue(true);
+            filler.calculateLayout = vi.fn().mockImplementation((_map, rect: DOMRect) => {
+                filler.layout.x = 0;
+                filler.layout.y = 0;
+                filler.layout.width = 100;
+                filler.layout.height = rect.height;
+                filler.layout.calculated = true;
+            });
+            filler.calculateIntrinsicSize = vi.fn().mockImplementation(() => {
+                filler.intrinsicSize.width = 100;
+                filler.intrinsicSize.height = 80;
+                filler.intrinsicSize.calculated = true;
+            });
+
+            engine.addGroup(new Group('g1', [content, filler]));
+
+            const bounds = engine.calculateBoundingBoxes(containerRect, { dynamicHeight: true });
+
+            expect(bounds.height).toBe(200);
+            expect(filler.layout.height).toBe(200);
+        });
+
         it('should warn when layout calculation fails', () => {
             const el1 = new MockEngineLayoutElement('el1');
             el1.intrinsicSize = { width: 100, height: 50, calculated: true };

@@ -180,19 +180,26 @@ export class LayoutEngine {
     
     let maxRight = 0;
     let maxBottom = 0;
+    let maxBottomExcludingContainerStretch = 0;
+    let hasBottomContributor = false;
     let hasAnyCalculatedElement = false;
-    
+
     this.elements.forEach(el => {
       if (el.layout.calculated) {
         hasAnyCalculatedElement = true;
         const right = el.layout.x + el.layout.width;
         const bottom = el.layout.y + el.layout.height;
-        
+
         maxRight = Math.max(maxRight, right);
         maxBottom = Math.max(maxBottom, bottom);
+
+        if (!this.elementUsesContainerBottomStretch(el)) {
+          maxBottomExcludingContainerStretch = Math.max(maxBottomExcludingContainerStretch, bottom);
+          hasBottomContributor = true;
+        }
       }
     });
-    
+
     if (!hasAnyCalculatedElement) {
       return {
         width: Math.ceil(requiredWidth),
@@ -201,12 +208,42 @@ export class LayoutEngine {
     }
 
     requiredWidth = Math.max(maxRight, requiredWidth);
-    requiredHeight = Math.max(maxBottom, 0);
-    
+    const effectiveBottom = hasBottomContributor ? maxBottomExcludingContainerStretch : maxBottom;
+    requiredHeight = Math.max(effectiveBottom, 0);
+
     return {
       width: Math.ceil(requiredWidth),
       height: Math.max(1, Math.ceil(requiredHeight))
     };
+  }
+
+  private elementUsesContainerBottomStretch(element: LayoutElement): boolean {
+    const stretchConfig = element.layoutConfig.stretch;
+    if (!stretchConfig) {
+      return false;
+    }
+
+    const targets: Array<{ target?: string; anchor?: string }> = [
+      { target: stretchConfig.stretchTo1, anchor: stretchConfig.targetStretchAnchorPoint1 },
+      { target: stretchConfig.stretchTo2, anchor: stretchConfig.targetStretchAnchorPoint2 }
+    ];
+
+    return targets.some(({ target, anchor }) =>
+      this.isContainerLikeStretchTarget(target) && this.anchorIndicatesBottom(anchor)
+    );
+  }
+
+  private isContainerLikeStretchTarget(target?: string): boolean {
+    return target === 'container' || target === 'canvas';
+  }
+
+  private anchorIndicatesBottom(anchor?: string): boolean {
+    if (!anchor) {
+      return false;
+    }
+
+    const normalized = anchor.toLowerCase();
+    return normalized.includes('bottom');
   }
 
   calculateBoundingBoxes(containerRect: DOMRect, options?: { dynamicHeight?: boolean }): LayoutDimensions {
