@@ -21,7 +21,7 @@ export class FadeOutSourcePhase extends BaseMorphPhase {
 
     const preserveOpacityElementIds = new Set<string>(
       context.sourceElements
-        .filter(element => Boolean((element as any).props?.cutout))
+        .filter(element => Boolean((element as any).props?.cutout) && !ElementTypeUtils.elementShouldForceCutoutFade(element))
         .map(element => element.id)
     );
 

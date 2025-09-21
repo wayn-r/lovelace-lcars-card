@@ -54,6 +54,24 @@ export class ElementTypeUtils {
     return Boolean((element as any).props?.cutout);
   }
 
+  static elementShouldForceCutoutFade(element: LayoutElement): boolean {
+    if (!this.elementUsesCutoutMask(element)) return false;
+
+    const id = String(element.id ?? '').toLowerCase();
+    if (!id) return false;
+
+    const forcedSuffixes = ['_label_rect', '_label_pill', '_unit_pill', '_unit_rect'];
+    if (forcedSuffixes.some(suffix => id.endsWith(suffix))) {
+      return true;
+    }
+
+    if (/_button_\d+$/.test(id)) {
+      return true;
+    }
+
+    return false;
+  }
+
   static getTextContent(element: LayoutElement): string {
     const props: any = (element as any).props || {};
 

@@ -343,11 +343,12 @@ export class MorphEngine {
     for (const element of targetElements) {
       // Create synthetic elements for target elements since they don't exist in the DOM yet
       const usesCutout = ElementTypeUtils.elementUsesCutoutMask(element);
+      const forceCutoutFade = ElementTypeUtils.elementShouldForceCutoutFade(element);
       const syntheticElement = utilities.createSyntheticElement(element, animationContext, {
         idSuffix: '__morph_target',
-        initialOpacity: usesCutout ? 1 : undefined,
-        initialVisibility: usesCutout ? 'hidden' : undefined,
-        initialDisplay: usesCutout ? 'none' : undefined
+        initialOpacity: forceCutoutFade ? 0 : (usesCutout ? 1 : undefined),
+        initialVisibility: usesCutout && !forceCutoutFade ? 'hidden' : undefined,
+        initialDisplay: usesCutout && !forceCutoutFade ? 'none' : undefined
       });
       if (syntheticElement) {
         overlay.appendChild(syntheticElement);
