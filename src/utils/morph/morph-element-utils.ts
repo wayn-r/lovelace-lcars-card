@@ -283,22 +283,45 @@ export class ElementAnalyzer {
   ): Map<string, string> {
     const mappings = new Map<string, string>();
 
-    if (!matchedTextPairs || matchedTextPairs.size === 0) return mappings;
-
     const srcIds = new Set(sourceElements.map(e => e.id));
     const dstIds = new Set(destinationElements.map(e => e.id));
 
     const srcBaseToDstBase = new Map<string, string>();
+    const usedDstBases = new Set<string>();
 
-    matchedTextPairs.forEach((dstId, srcId) => {
-      const srcBase = this._extractTopHeaderBaseFromTextId(srcId);
-      const dstBase = this._extractTopHeaderBaseFromTextId(dstId);
-      if (srcBase && dstBase) {
-        if (this._topHeaderFamilyExists(srcBase, srcIds) && this._topHeaderFamilyExists(dstBase, dstIds)) {
-          srcBaseToDstBase.set(srcBase, dstBase);
+    if (matchedTextPairs && matchedTextPairs.size > 0) {
+      matchedTextPairs.forEach((dstId, srcId) => {
+        const srcBase = this._extractTopHeaderBaseFromElementId(srcId);
+        const dstBase = this._extractTopHeaderBaseFromElementId(dstId);
+        if (srcBase && dstBase) {
+          if (this._topHeaderFamilyExists(srcBase, srcIds) && this._topHeaderFamilyExists(dstBase, dstIds)) {
+            srcBaseToDstBase.set(srcBase, dstBase);
+            usedDstBases.add(dstBase);
+          }
         }
-      }
+      });
+    }
+
+    const srcBases = this._collectTopHeaderBases(srcIds);
+    const dstBases = this._collectTopHeaderBases(dstIds);
+
+    // Prefer direct base name matches so existing widget instances keep morphing even when text changes.
+    srcBases.forEach(base => {
+      if (srcBaseToDstBase.has(base)) return;
+      if (!dstBases.has(base)) return;
+      if (usedDstBases.has(base)) return;
+      if (!this._topHeaderFamilyExists(base, srcIds) || !this._topHeaderFamilyExists(base, dstIds)) return;
+      srcBaseToDstBase.set(base, base);
+      usedDstBases.add(base);
     });
+
+    // As a fallback, pair any remaining unmatched families when there is an unambiguous single choice.
+    const remainingSrcBases = Array.from(srcBases).filter(base => !srcBaseToDstBase.has(base) && this._topHeaderFamilyExists(base, srcIds));
+    const remainingDstBases = Array.from(dstBases).filter(base => !usedDstBases.has(base) && this._topHeaderFamilyExists(base, dstIds));
+    if (remainingSrcBases.length === 1 && remainingDstBases.length === 1) {
+      srcBaseToDstBase.set(remainingSrcBases[0], remainingDstBases[0]);
+      usedDstBases.add(remainingDstBases[0]);
+    }
 
     if (srcBaseToDstBase.size === 0) return mappings;
 
@@ -317,9 +340,27 @@ export class ElementAnalyzer {
     return mappings;
   }
 
-  private static _extractTopHeaderBaseFromTextId(elementId: string): string | null {
-    const match = elementId.match(/^(.*)_(left|right)_text$/);
-    return match ? match[1] : null;
+  private static _extractTopHeaderBaseFromElementId(elementId: string): string | null {
+    if (!elementId) return null;
+    if (/(.*)_(left|right)_text$/.test(elementId)) {
+      return elementId.replace(/_(left|right)_text$/, '');
+    }
+    if (/(.*)_(left|right)_endcap$/.test(elementId)) {
+      return elementId.replace(/_(left|right)_endcap$/, '');
+    }
+    if (/_header_bar$/.test(elementId)) {
+      return elementId.replace(/_header_bar$/, '');
+    }
+    return null;
+  }
+
+  private static _collectTopHeaderBases(idSet: Set<string>): Set<string> {
+    const bases = new Set<string>();
+    idSet.forEach(id => {
+      const base = this._extractTopHeaderBaseFromElementId(id);
+      if (base) bases.add(base);
+    });
+    return bases;
   }
 
   private static _topHeaderFamilyExists(baseId: string, idSet: Set<string>): boolean {

@@ -273,4 +273,52 @@ describe('ElementAnalyzer', () => {
       expect(pairs.get('sourceButton')).toBe('targetButton');
     });
   });
+
+  describe('findTopHeaderShapeMappings', () => {
+    const createTopHeaderElements = (baseId: string): LayoutElement[] => {
+      return [
+        createMockElement(`${baseId}_left_text`, 'Text', 10, 0, 60, 20, { text: 'LEFT' }),
+        createMockElement(`${baseId}_right_text`, 'Text', 100, 0, 60, 20, { text: 'RIGHT' }),
+        createMockElement(`${baseId}_left_endcap`, 'Endcap', 0, 0, 20, 20, { direction: 'left' }),
+        createMockElement(`${baseId}_right_endcap`, 'Endcap', 160, 0, 20, 20, { direction: 'right' }),
+        createMockElement(`${baseId}_header_bar`, 'Rectangle', 20, 0, 140, 20, {})
+      ];
+    };
+
+    it('maps top header shapes when text content changes', () => {
+      const sourceElements = createTopHeaderElements('nav_header');
+      const destinationElements = createTopHeaderElements('nav_header').map(element => ({
+        ...element,
+        props: {
+          ...element.props,
+          text: element.id.includes('_left_text') ? 'UPDATED' : element.props?.text
+        }
+      }));
+
+      const mappings = ElementAnalyzer.findTopHeaderShapeMappings(
+        sourceElements,
+        destinationElements as LayoutElement[],
+        new Map()
+      );
+
+      expect(mappings.get('nav_header_left_endcap')).toBe('nav_header_left_endcap');
+      expect(mappings.get('nav_header_right_endcap')).toBe('nav_header_right_endcap');
+      expect(mappings.get('nav_header_header_bar')).toBe('nav_header_header_bar');
+    });
+
+    it('falls back to single unmatched family pairing when bases differ', () => {
+      const sourceElements = createTopHeaderElements('nav_header');
+      const destinationElements = createTopHeaderElements('nav_secondary');
+
+      const mappings = ElementAnalyzer.findTopHeaderShapeMappings(
+        sourceElements,
+        destinationElements,
+        new Map()
+      );
+
+      expect(mappings.get('nav_header_left_endcap')).toBe('nav_secondary_left_endcap');
+      expect(mappings.get('nav_header_right_endcap')).toBe('nav_secondary_right_endcap');
+      expect(mappings.get('nav_header_header_bar')).toBe('nav_secondary_header_bar');
+    });
+  });
 });
