@@ -19,11 +19,18 @@ export class FadeOutSourcePhase extends BaseMorphPhase {
     );
     const topHeaderShapeSourceIds = new Set<string>(Array.from(topHeaderShapeMappings.keys()));
 
+    const preserveOpacityElementIds = new Set<string>(
+      context.sourceElements
+        .filter(element => Boolean((element as any).props?.cutout))
+        .map(element => element.id)
+    );
+
     const { cascadeElementIds, cascadeElbowIds } = CascadeAnimationUtils.extractCascadeElementIds(cascadePlans);
     const scheduledElementDelays = CascadeAnimationUtils.buildElementDelaySchedule(cascadePlans, matchedTextPairs);
     const planMaxEndTimes = CascadeAnimationUtils.calculateMaxCascadeEndTime(cascadePlans, matchedTextPairs);
 
     scheduledElementDelays.forEach((delay, elementId) => {
+      if (preserveOpacityElementIds.has(elementId)) return;
       builder.addFadeOutAnimation(elementId, BaseMorphPhase.cascadeAnimationDurationSeconds, delay);
     });
 
@@ -33,8 +40,10 @@ export class FadeOutSourcePhase extends BaseMorphPhase {
       const isInCascade = cascadeElementIds.has(element.id) || cascadeElbowIds.has(element.id);
       const isTopHeaderShape = topHeaderShapeSourceIds.has(element.id);
       if (isInCascade) continue;
+      if (isMatchedText) continue;
+      if (preserveOpacityElementIds.has(element.id)) continue;
 
-      if (!isMatchedText && ElementTypeUtils.elementIsText(element)) {
+      if (ElementTypeUtils.elementIsText(element)) {
         builder.addSquishAnimation(element.id, 0.15, 0.25);
         continue;
       }
@@ -47,5 +56,3 @@ export class FadeOutSourcePhase extends BaseMorphPhase {
     return builder.buildPhaseBundle(this.phaseName);
   }
 }
-
-

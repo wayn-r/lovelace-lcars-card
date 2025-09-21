@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ElementGrouper } from '../morph-element-matcher.js';
+import { ElementAnalyzer } from '../morph-element-utils.js';
 import type { LayoutElement } from '../../../layout/elements/element.js';
 
 // Mock LayoutElement for testing
@@ -212,6 +213,64 @@ describe('ElementGrouper', () => {
       const ungroupedIds = result.ungroupedElements.map(e => e.id);
       expect(ungroupedIds).toContain('unknown');
       expect(ungroupedIds).toContain('custom');
+    });
+  });
+});
+
+describe('ElementAnalyzer', () => {
+  describe('findMatchingText', () => {
+    it('matches non-text elements that render text even across large moves', () => {
+      const sourceElbow = createMockElement('sourceElbow', 'Elbow', 0, 0, 150, 80, {
+        text: 'Main',
+        textTransform: 'uppercase'
+      });
+      const targetElbow = createMockElement('targetElbow', 'Elbow', 420, 260, 150, 80, {
+        text: 'MAIN',
+        textTransform: undefined
+      });
+
+      const pairs = ElementAnalyzer.findMatchingText([sourceElbow], [targetElbow]);
+      expect(pairs.get('sourceElbow')).toBe('targetElbow');
+    });
+
+    it('matches elements that render text via cutout masks', () => {
+      const source = createMockElement('sourceElbow', 'Elbow', 0, 0, 150, 80, {
+        text: 'ENVIRONMENTAL',
+        cutout: true
+      });
+      const target = createMockElement('targetElbow', 'Elbow', 0, 0, 150, 80, {
+        text: 'ENVIRONMENTAL',
+        cutout: true
+      });
+
+      const pairs = ElementAnalyzer.findMatchingText([source], [target]);
+      expect(pairs.get('sourceElbow')).toBe('targetElbow');
+    });
+
+    it('respects tolerance constraints for pure text elements', () => {
+      const source = createMockElement('sourceText', 'Text', 0, 0, 100, 40, {
+        text: 'Label'
+      });
+      const target = createMockElement('targetText', 'Text', 500, 0, 100, 40, {
+        text: 'Label'
+      });
+
+      const pairs = ElementAnalyzer.findMatchingText([source], [target]);
+      expect(pairs.size).toBe(0);
+    });
+
+    it('matches rectangle elements with inline text content', () => {
+      const source = createMockElement('sourceButton', 'Rectangle', 0, 0, 130, 40, {
+        text: 'SICKBAY',
+        textTransform: 'uppercase'
+      });
+      const target = createMockElement('targetButton', 'Rectangle', 400, 200, 130, 40, {
+        text: 'sickbay',
+        textTransform: 'uppercase'
+      });
+
+      const pairs = ElementAnalyzer.findMatchingText([source], [target]);
+      expect(pairs.get('sourceButton')).toBe('targetButton');
     });
   });
 });

@@ -1,5 +1,6 @@
 import type { LayoutElement } from '../../layout/elements/element.js';
 import type { AnimationContext } from '../animation.js';
+import { ElementTypeUtils } from './morph-element-utils.js';
 import { render, svg } from 'lit';
 import { Diagnostics } from '../diagnostics.js';
 
@@ -33,6 +34,8 @@ export interface SyntheticElementCreator {
 
 interface CloneRenderOptions {
   initialOpacity?: number;
+  initialVisibility?: 'visible' | 'hidden';
+  initialDisplay?: string;
   idSuffix?: string;
 }
 
@@ -108,7 +111,7 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
       
       const renderedClone = this.createSyntheticElement(element, animationContext, {
         initialOpacity: 1,
-        idSuffix: '__morph_clone'
+        idSuffix: '__morph_source'
       });
       if (!renderedClone) {
         if (debug) {
@@ -191,7 +194,7 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
     options: CloneRenderOptions = {}
   ): Element | null {
     const debug = typeof window !== 'undefined' && (window as any).__lcarsDebugMorph === true;
-    const { initialOpacity = 0, idSuffix } = options;
+    const { initialOpacity = 0, initialVisibility, initialDisplay, idSuffix } = options;
     
     try {
       const renderedTemplate = targetElement.render();
@@ -215,6 +218,12 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
         if (initialOpacity !== undefined) {
           (domElement as any).style.opacity = String(initialOpacity);
         }
+        if (initialVisibility) {
+          (domElement as any).style.visibility = initialVisibility;
+        }
+        if (initialDisplay !== undefined) {
+          (domElement as any).style.display = initialDisplay;
+        }
       } catch {}
 
       if (idSuffix) {
@@ -226,7 +235,8 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
       }
 
       // Fix any internal definition IDs to avoid collisions
-      this._rewriteCloneDefinitionReferences(domElement);
+      const definitionSuffix = idSuffix ?? '__morph_clone';
+      this._rewriteCloneDefinitionReferences(domElement, definitionSuffix);
       
       return domElement;
     } catch (error) {
@@ -264,7 +274,7 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
     });
   }
 
-  private _rewriteCloneDefinitionReferences(cloneRoot: Element): void {
+  private _rewriteCloneDefinitionReferences(cloneRoot: Element, definitionSuffix: string): void {
     try {
       const isDefElement = (el: Element): boolean => {
         const tag = (el.tagName || '').toLowerCase();
@@ -278,7 +288,7 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
       defElements.forEach(el => {
         const oldId = el.getAttribute('id');
         if (!oldId) return;
-        const newId = `${oldId}__morph_clone`;
+        const newId = `${oldId}${definitionSuffix}`;
         el.setAttribute('id', newId);
         idMap.set(oldId, newId);
       });

@@ -73,8 +73,8 @@ export class AnimationBuilder extends BaseAnimationBuilder {
     return this.addAnimation(elementId, 'fade', { opacity: 0 }, duration, delay);
   }
 
-  addFadeInAnimation(elementId: string, delay: number = 0): this {
-    return this.addAnimation(elementId, 'fade', { opacity: 1 }, undefined, delay);
+  addFadeInAnimation(elementId: string, delay: number = 0, duration?: number): this {
+    return this.addAnimation(elementId, 'fade', { opacity: 1 }, duration, delay);
   }
 
   addTransformAnimation(elementId: string, transformProperties: {
@@ -111,9 +111,15 @@ export class AnimationBuilder extends BaseAnimationBuilder {
     }, undefined, delay);
   }
 
-  addTextStyleAnimation(elementId: string, matchedTargetId: string, delay: number = 0): this {
+  addTextStyleAnimation(
+    elementId: string,
+    matchedTargetId: string,
+    options: { delay?: number; preserveMaskFill?: boolean } = {}
+  ): this {
+    const { delay = 0, preserveMaskFill = false } = options;
     return this.addAnimation(elementId, 'textStyle', {
-      matchedTargetId
+      matchedTargetId,
+      preserveMaskFill
     }, undefined, delay);
   }
 
@@ -218,21 +224,21 @@ export class MorphAnimationOrchestrator {
         case 'textStyle': {
           const srcText = this._findTextElementInClone(targetElement, animation.targetElementId);
           const matchedTargetId: string | undefined = (animation.properties || {}).matchedTargetId;
+          const preserveMaskFill = Boolean((animation.properties || {}).preserveMaskFill);
           const dstClone = matchedTargetId ? context.targetCloneElementsById?.get(matchedTargetId) : undefined;
           const dstText = matchedTargetId && dstClone ? this._findTextElementInClone(dstClone, matchedTargetId) : null;
 
           const attrTargets: Record<string, any> = {};
           if (dstText) {
-            const attrs = ['font-size','font-family','font-weight','letter-spacing','text-anchor','dominant-baseline','fill'];
+            const attrs = preserveMaskFill
+              ? ['font-size','font-family','font-weight','letter-spacing','text-anchor','dominant-baseline','x','y']
+              : ['font-size','font-family','font-weight','letter-spacing','text-anchor','dominant-baseline','fill','x','y'];
             for (const name of attrs) {
               const value = dstText.getAttribute(name);
-              if (value !== null) attrTargets[name] = value;
+              if (value === null) continue;
+              if (name === 'fill' && preserveMaskFill) continue;
+              attrTargets[name] = this._maybeRoundNumericAttribute(name, value);
             }
-            // Align position exactly by animating x/y to match the destination text
-            const xVal = dstText.getAttribute('x');
-            const yVal = dstText.getAttribute('y');
-            if (xVal !== null) attrTargets['x'] = xVal;
-            if (yVal !== null) attrTargets['y'] = yVal;
           } else if (matchedTargetId) {
             try {
               const dst = (context.targetElements || []).find(e => e.id === matchedTargetId) as any;
@@ -247,13 +253,15 @@ export class MorphAnimationOrchestrator {
                 }
                 if (dst.props.textAnchor) attrTargets['text-anchor'] = String(dst.props.textAnchor);
                 if (dst.props.dominantBaseline) attrTargets['dominant-baseline'] = String(dst.props.dominantBaseline);
-                if (dst.props.textColor) attrTargets['fill'] = String(dst.props.textColor);
+                if (!preserveMaskFill && dst.props.textColor) {
+                  attrTargets['fill'] = String(dst.props.textColor);
+                }
                 // Fallback position approximation using layout box and anchor
                 try {
                   const x = (dst.layout?.x ?? 0) + (dst.props.textAnchor === 'end' ? (dst.layout?.width ?? 0) : (dst.props.textAnchor === 'middle' ? (dst.layout?.width ?? 0) / 2 : 0));
                   const y = (dst.layout?.y ?? 0) + ((dst.layout?.height ?? 0) / 2);
-                  attrTargets['x'] = String(x);
-                  attrTargets['y'] = String(y);
+                  attrTargets['x'] = this._maybeRoundNumericAttribute('x', String(x));
+                  attrTargets['y'] = this._maybeRoundNumericAttribute('y', String(y));
                 } catch {}
               }
             } catch {}
@@ -331,9 +339,18 @@ export class MorphAnimationOrchestrator {
           break;
         }
       }
+
     }
 
     return phaseBundle.totalPhaseDuration;
+  }
+
+  private static _maybeRoundNumericAttribute(name: string, value: string): string {
+    if (!['x', 'y'].includes(name)) return value;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return value;
+    const rounded = Math.round(numeric * 100) / 100;
+    return String(rounded);
   }
 
   private static _findPathElementInClone(cloneElement: Element, originalElementId: string): SVGPathElement | null {
@@ -366,5 +383,3 @@ export class MorphAnimationOrchestrator {
     return textEl;
   }
 }
-
-

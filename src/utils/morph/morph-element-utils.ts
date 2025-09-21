@@ -50,10 +50,26 @@ export class ElementTypeUtils {
     return this.getElementCategory(element) === 'elbow';
   }
 
+  static elementUsesCutoutMask(element: LayoutElement): boolean {
+    return Boolean((element as any).props?.cutout);
+  }
+
   static getTextContent(element: LayoutElement): string {
-    if (!this.elementIsText(element)) return '';
-    const textValue = (element as any).props?.text;
-    return typeof textValue === 'string' ? textValue.trim() : '';
+    const props: any = (element as any).props || {};
+
+    if (this.elementIsText(element)) {
+      const textValue = props?.text;
+      return typeof textValue === 'string' ? textValue.trim() : '';
+    }
+
+    const shapeText = typeof props?.text === 'string' ? props.text.trim() : '';
+    return shapeText;
+  }
+
+  static elementHasRenderableText(element: LayoutElement): boolean {
+    const props: any = (element as any).props || {};
+    const text = this.getTextContent(element);
+    return text.length > 0;
   }
 
   static textsHaveEqualContent(elementA: LayoutElement, elementB: LayoutElement): boolean {
@@ -200,24 +216,24 @@ export class ElementAnalyzer {
     destinationElements: LayoutElement[]
   ): Map<string, string> {
     const matchedPairs = new Map<string, string>();
-    const srcTexts = sourceElements.filter(el => ElementTypeUtils.elementIsText(el));
-    const dstTexts = destinationElements.filter(el => ElementTypeUtils.elementIsText(el));
+    const srcTexts = sourceElements.filter(el => ElementTypeUtils.elementHasRenderableText(el));
+    const dstTexts = destinationElements.filter(el => ElementTypeUtils.elementHasRenderableText(el));
     const tolerance = 100;
 
     if (srcTexts.length === 0 || dstTexts.length === 0) return matchedPairs;
 
-    const dstByContent = new Map<string, LayoutElement[]>(
-      Array.from(new Set(dstTexts.map(el => {
-        const transform = ElementTypeUtils.getTextTransform(el);
-        return ElementTypeUtils.applyTextTransform(ElementTypeUtils.getTextContent(el), transform);
-      }))).map(text => [
-        text,
-        dstTexts.filter(el => {
-          const transform = ElementTypeUtils.getTextTransform(el);
-          return ElementTypeUtils.applyTextTransform(ElementTypeUtils.getTextContent(el), transform) === text;
-        })
-      ])
-    );
+    const dstByContent = new Map<string, LayoutElement[]>();
+    for (const dst of dstTexts) {
+      const transform = ElementTypeUtils.getTextTransform(dst);
+      const content = ElementTypeUtils.applyTextTransform(ElementTypeUtils.getTextContent(dst), transform);
+      if (!content) continue;
+      const existing = dstByContent.get(content);
+      if (existing) {
+        existing.push(dst);
+      } else {
+        dstByContent.set(content, [dst]);
+      }
+    }
 
     for (const src of srcTexts) {
       const srcTransform = ElementTypeUtils.getTextTransform(src);
@@ -230,7 +246,9 @@ export class ElementAnalyzer {
       for (const dst of candidates) {
         const dx = Math.abs((dst.layout?.x ?? 0) - (src.layout?.x ?? 0));
         const dy = Math.abs((dst.layout?.y ?? 0) - (src.layout?.y ?? 0));
-        if (dx > tolerance || dy > tolerance) continue;
+
+        const enforceTolerance = ElementTypeUtils.elementIsText(src) && ElementTypeUtils.elementIsText(dst);
+        if (enforceTolerance && (dx > tolerance || dy > tolerance)) continue;
         const cost = GeometryUtils.calculateMatchCost(src, dst);
         if (!best || cost < best.cost) best = { id: dst.id, cost, dx, dy };
       }

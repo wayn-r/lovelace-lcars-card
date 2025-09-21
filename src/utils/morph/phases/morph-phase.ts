@@ -23,7 +23,9 @@ export class TransitionMatchedTextPhase extends BaseMorphPhase {
         if (targetPath) builder.addPathMorphAnimation(sourceId, targetPath);
       } catch {}
 
-      builder.addTextStyleAnimation(sourceId, targetId);
+      const preserveMaskFill = Boolean((sourceElement as any).props?.cutout || (targetElement as any).props?.cutout);
+      builder.addTextStyleAnimation(sourceId, targetId, { preserveMaskFill });
+
     });
 
     const topHeaderShapeMappings = ElementAnalyzer.findTopHeaderShapeMappings(
@@ -67,5 +69,3 @@ export class TransitionMatchedTextPhase extends BaseMorphPhase {
     return builder.buildPhaseBundle(this.phaseName);
   }
 }
-
-

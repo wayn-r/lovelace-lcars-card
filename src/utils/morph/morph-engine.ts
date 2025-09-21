@@ -332,25 +332,31 @@ export class MorphEngine {
     return MorphPhaseFactory.createAllStandardPhases();
   }
   
-    private static _createTargetElementClones(
-      overlay: SVGGElement,
-      targetElements: LayoutElement[],
-      animationContext: import('../animation.js').AnimationContext
-    ): Map<string, Element> {
-      const utilities = new MorphUtilities();
-      const targetCloneElementsById = new Map<string, Element>();
-  
-      for (const element of targetElements) {
-        // Create synthetic elements for target elements since they don't exist in the DOM yet
-        const syntheticElement = utilities.createSyntheticElement(element, animationContext);
-        if (syntheticElement) {
-          overlay.appendChild(syntheticElement);
-          targetCloneElementsById.set(element.id, syntheticElement);
-        }
+  private static _createTargetElementClones(
+    overlay: SVGGElement,
+    targetElements: LayoutElement[],
+    animationContext: import('../animation.js').AnimationContext
+  ): Map<string, Element> {
+    const utilities = new MorphUtilities();
+    const targetCloneElementsById = new Map<string, Element>();
+
+    for (const element of targetElements) {
+      // Create synthetic elements for target elements since they don't exist in the DOM yet
+      const usesCutout = ElementTypeUtils.elementUsesCutoutMask(element);
+      const syntheticElement = utilities.createSyntheticElement(element, animationContext, {
+        idSuffix: '__morph_target',
+        initialOpacity: usesCutout ? 1 : undefined,
+        initialVisibility: usesCutout ? 'hidden' : undefined,
+        initialDisplay: usesCutout ? 'none' : undefined
+      });
+      if (syntheticElement) {
+        overlay.appendChild(syntheticElement);
+        targetCloneElementsById.set(element.id, syntheticElement);
       }
-  
-      return targetCloneElementsById;
     }
+
+    return targetCloneElementsById;
+  }
   
   private static async _executeAnimationPhases(
     morphPhases: IMorphPhase[],
