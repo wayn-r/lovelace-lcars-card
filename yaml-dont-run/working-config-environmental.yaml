@@ -335,6 +335,12 @@ groups:
             to: environmental-header.elbow
             element_point: topLeft
             target_point: bottomLeft
+        button:
+          enabled: true
+          actions:
+            tap:
+              action: navigate
+              navigation_path: /lcars-new/animate-2
       - id: sickbay
         type: rectangle
         text:
@@ -450,7 +456,6 @@ groups:
           armHeight: 15
           width: 320
           height: 80
-          offsetX: 5
           offsetY: 10
           anchor:
             to: environmental-header.bar-4

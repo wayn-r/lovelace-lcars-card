@@ -199,7 +199,7 @@ groups:
           actions:
             tap:
               action: navigate
-              navigation_path: /lcars-new/animate-1
+              navigation_path: /lcars-new/0
       - id: button-1
         type: rectangle
         text:
@@ -286,7 +286,6 @@ groups:
           armHeight: 15
           width: 320
           height: 80
-          offsetX: 5
           offsetY: 10
           anchor:
             to: a2-env.rectangle-4
