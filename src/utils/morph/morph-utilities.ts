@@ -31,15 +31,55 @@ export interface SyntheticElementCreator {
   ): Element | null;
 }
 
-interface CloneRenderOptions {
+type CloneRenderOptions = {
   initialOpacity?: number;
   initialVisibility?: 'visible' | 'hidden';
   initialDisplay?: string;
   idSuffix?: string;
+};
+
+type CloneContext = {
+  overlay: SVGGElement;
+  getShadowElement: (id: string) => Element | null;
+  animationContext?: AnimationContext;
+  debug: boolean;
+};
+
+interface CloneResult {
+  clone: Element;
+  hiddenOriginalElement: Element | null;
 }
 
 export class MorphUtilities implements SvgRootLocator, OverlayManager, SyntheticElementCreator {
   private static readonly OVERLAY_ID = 'lcars-morph-overlay';
+  private static readonly DEFINITION_REFERENCE_ATTRIBUTES: readonly string[] = [
+    'mask',
+    'clip-path',
+    'filter',
+    'fill',
+    'stroke',
+    'marker-start',
+    'marker-mid',
+    'marker-end'
+  ];
+  private static readonly DEFINITION_ELEMENT_SELECTOR = [
+    'mask[id]',
+    'clipPath[id]',
+    'filter[id]',
+    'pattern[id]',
+    'linearGradient[id]',
+    'radialGradient[id]',
+    'marker[id]'
+  ].join(',');
+  private static readonly DEFINITION_REFERENCE_TAGS: ReadonlySet<string> = new Set([
+    'mask',
+    'clippath',
+    'filter',
+    'pattern',
+    'lineargradient',
+    'radialgradient',
+    'marker'
+  ]);
 
   locateSvgRoot(elements: LayoutElement[], getShadowElement: (id: string) => Element | null): SVGSVGElement | null {
     return elements
@@ -57,23 +97,25 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
     cloneElementsById: Map<string, Element>;
     hiddenOriginalElements: Element[];
   } {
+
     const overlay = this._prepareOverlay(svgRoot);
     const debug = this._debugEnabled();
-    const { clonesById, hiddenElements } = sourceElements.reduce(
-      (accumulator, element) => this._cloneElementForOverlay(
-        {
-          element,
-          overlay,
-          getShadowElement,
-          animationContext,
-          debug
-        },
-        accumulator
-      ),
-      { clonesById: new Map<string, Element>(), hiddenElements: [] as Element[] }
+
+    const clonedElements = this._cloneElements(
+      sourceElements,
+      {
+        overlay,
+        getShadowElement,
+        animationContext,
+        debug
+      }
     );
 
-    return { overlay, cloneElementsById: clonesById, hiddenOriginalElements: hiddenElements };
+    return {
+      overlay,
+      cloneElementsById: clonedElements.clonesById,
+      hiddenOriginalElements: clonedElements.hiddenElements
+    };
   }
 
   scheduleOverlayCleanup(overlay: SVGGElement, hiddenElements: Element[], delaySeconds: number): void {
@@ -149,49 +191,99 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
 
   private _rewriteCloneDefinitionReferences(cloneRoot: Element, definitionSuffix: string): void {
     try {
-      const isDefElement = (el: Element): boolean => {
-        const tag = (el.tagName || '').toLowerCase();
-        return tag === 'mask' || tag === 'clippath' || tag === 'filter' || tag === 'pattern' || tag === 'lineargradient' || tag === 'radialgradient' || tag === 'marker';
-      };
+      const definitionElements = this._collectElementsWithId(
+        cloneRoot,
+        MorphUtilities.DEFINITION_ELEMENT_SELECTOR,
+        element => MorphUtilities.DEFINITION_REFERENCE_TAGS.has(element.tagName?.toLowerCase() ?? '')
+      );
 
-      const defElements = Array.from(cloneRoot.querySelectorAll('*[id]')).filter(isDefElement) as Element[];
-      if (defElements.length === 0) return;
-
-      const idMap = new Map<string, string>();
-      defElements.forEach(el => {
-        const oldId = el.getAttribute('id');
-        if (!oldId) return;
-        const newId = `${oldId}${definitionSuffix}`;
-        el.setAttribute('id', newId);
-        idMap.set(oldId, newId);
-      });
-
+      const idMap = this._renameDefinitionIds(definitionElements, definitionSuffix);
       if (idMap.size === 0) return;
 
-      const attributesToFix = ['mask', 'clip-path', 'filter', 'fill', 'stroke', 'marker-start', 'marker-mid', 'marker-end'];
-      const allElements = Array.from(cloneRoot.querySelectorAll('*')) as Element[];
-      allElements.forEach(el => {
-        attributesToFix.forEach(attr => {
-          const value = el.getAttribute(attr);
-          if (!value) return;
-          idMap.forEach((newId, oldId) => {
-            const token = `url(#${oldId})`;
-            if (value.includes(token)) {
-              el.setAttribute(attr, value.split(token).join(`url(#${newId})`));
-            }
-          });
-        });
-        const hrefAttr = (el.getAttribute('href') || el.getAttribute('xlink:href'));
-        if (hrefAttr && hrefAttr.startsWith('#')) {
-          const oldId = hrefAttr.slice(1);
-          const newId = idMap.get(oldId);
-          if (newId) {
-            if (el.hasAttribute('href')) el.setAttribute('href', `#${newId}`);
-            if (el.hasAttribute('xlink:href')) el.setAttribute('xlink:href', `#${newId}`);
-          }
-        }
-      });
+      this._updateDefinitionReferences(cloneRoot, idMap);
     } catch {
+    }
+  }
+
+  private _collectElementsWithId(
+    root: Element,
+    selector: string,
+    predicate: (element: Element) => boolean
+  ): Element[] {
+    const elements = Array.from(root.querySelectorAll(selector)) as Element[];
+    if (predicate(root) && root.getAttribute('id')) {
+      return [root, ...elements];
+    }
+
+    return elements;
+  }
+
+  private _renameDefinitionIds(defElements: Element[], suffix: string): Map<string, string> {
+    const idMap = new Map<string, string>();
+
+    defElements.forEach(definition => {
+      const id = definition.getAttribute('id');
+      if (!id) return;
+
+      const newId = `${id}${suffix}`;
+      definition.setAttribute('id', newId);
+      idMap.set(id, newId);
+    });
+
+    return idMap;
+  }
+
+  private _updateDefinitionReferences(root: Element, idMap: Map<string, string>): void {
+    const allElements = [...Array.from(root.querySelectorAll('*')), root] as Element[];
+
+    allElements.forEach(element => {
+      MorphUtilities.DEFINITION_REFERENCE_ATTRIBUTES.forEach(attribute => {
+        const value = element.getAttribute(attribute);
+        if (!value) return;
+
+        idMap.forEach((newId, oldId) => {
+          this._replaceIdReference(element, attribute, value, oldId, newId);
+        });
+      });
+
+      this._rewriteHrefReference(element, idMap);
+    });
+  }
+
+  private _replaceIdReference(
+    element: Element,
+    attribute: string,
+    originalValue: string,
+    oldId: string,
+    newId: string
+  ): void {
+    const token = `url(#${oldId})`;
+    if (!originalValue.includes(token)) {
+      return;
+    }
+
+    element.setAttribute(attribute, originalValue.split(token).join(`url(#${newId})`));
+  }
+
+  private _rewriteHrefReference(element: Element, idMap: Map<string, string>): void {
+    const href = element.getAttribute('href') || element.getAttribute('xlink:href');
+    if (!href || !href.startsWith('#')) {
+      return;
+    }
+
+    const id = href.slice(1);
+    const newId = idMap.get(id);
+
+    if (!newId) {
+      return;
+    }
+
+    if (element.hasAttribute('href')) {
+      element.setAttribute('href', `#${newId}`);
+    }
+
+    if (element.hasAttribute('xlink:href')) {
+      element.setAttribute('xlink:href', `#${newId}`);
     }
   }
 
@@ -239,47 +331,63 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
     return overlay;
   }
 
-  private _cloneElementForOverlay(
-    params: {
-      element: LayoutElement;
-      overlay: SVGGElement;
-      getShadowElement: (id: string) => Element | null;
-      animationContext?: AnimationContext;
-      debug: boolean;
-    },
-    accumulator: { clonesById: Map<string, Element>; hiddenElements: Element[] }
+  private _cloneElements(
+    elements: LayoutElement[],
+    context: CloneContext
   ): { clonesById: Map<string, Element>; hiddenElements: Element[] } {
-    const { element, overlay, getShadowElement, animationContext, debug } = params;
-    const originalDomElement = getShadowElement?.(element.id) as Element | null;
+    const clonesById = new Map<string, Element>();
+    const hiddenElements: Element[] = [];
+
+    elements.forEach(element => {
+      const result = this._cloneElementToOverlay(element, context);
+      if (!result) return;
+
+      clonesById.set(element.id, result.clone);
+
+      if (result.hiddenOriginalElement) {
+        hiddenElements.push(result.hiddenOriginalElement);
+      }
+    });
+
+    return { clonesById, hiddenElements };
+  }
+
+  private _cloneElementToOverlay(
+    element: LayoutElement,
+    context: CloneContext
+  ): CloneResult | null {
+    const originalDomElement = context.getShadowElement?.(element.id) as Element | null;
     if (!originalDomElement) {
       this._suppressInteractionState(element);
-      return accumulator;
+      return null;
     }
 
-    const renderedClone = this.createSyntheticElement(element, animationContext, {
+    const renderedClone = this.createSyntheticElement(element, context.animationContext, {
       initialOpacity: 1,
       idSuffix: '__morph_source'
     });
 
     if (!renderedClone) {
-      if (debug) {
+      if (context.debug) {
         logger.warn('[Morph Debug] source synthetic: FAILED (render)', { id: element.id });
       }
       this._suppressInteractionState(element);
-      return accumulator;
+      return null;
     }
 
-    overlay.appendChild(renderedClone);
-    accumulator.clonesById.set(element.id, renderedClone);
+    context.overlay.appendChild(renderedClone);
 
-    if (this._applyHiddenState(originalDomElement, true)) {
-      accumulator.hiddenElements.push(originalDomElement);
-    } else {
+    const hiddenOriginalElement = this._applyHiddenState(originalDomElement, true) ? originalDomElement : null;
+    if (!hiddenOriginalElement) {
       logger.warn('failed to hide original element ', element.id);
     }
 
     this._suppressInteractionState(element);
-    return accumulator;
+
+    return {
+      clone: renderedClone,
+      hiddenOriginalElement
+    };
   }
 
   private _suppressInteractionState(element: LayoutElement): void {
