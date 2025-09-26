@@ -59,6 +59,190 @@ export interface GroupMatchingOptions {
   sizeToleranceRatio: number;
 }
 
+type ElementCategoryType = ReturnType<typeof ElementTypeUtils.getElementCategory>;
+type GroupableCategory = Extract<ElementCategoryType, 'text' | 'rectangle' | 'endcap' | 'elbow'>;
+type HorizontalConstraint = 'requiresLeftOf' | 'requiresRightOf';
+type VerticalConstraint = 'requiresAbove' | 'requiresBelow';
+
+interface ConnectionRule {
+  connections: Array<{ direction: ConnectionDirection; constraint: ElementConnection['constraint'] }>;
+  horizontalConstraint?: HorizontalConstraint;
+  verticalConstraint?: VerticalConstraint;
+}
+
+const END_CAP_RULES: Record<'left' | 'right', ConnectionRule> = {
+  left: {
+    connections: [{ direction: 'right', constraint: 'leftmost' }],
+    horizontalConstraint: 'requiresRightOf'
+  },
+  right: {
+    connections: [{ direction: 'left', constraint: 'rightmost' }],
+    horizontalConstraint: 'requiresLeftOf'
+  }
+};
+
+const ELBOW_RULES: Record<string, ConnectionRule> = {
+  'top-left': {
+    connections: [{ direction: 'right', constraint: 'leftmost' }, { direction: 'down', constraint: 'upper' }],
+    horizontalConstraint: 'requiresRightOf',
+    verticalConstraint: 'requiresBelow'
+  },
+  'top-right': {
+    connections: [{ direction: 'left', constraint: 'rightmost' }, { direction: 'down', constraint: 'upper' }],
+    horizontalConstraint: 'requiresLeftOf',
+    verticalConstraint: 'requiresBelow'
+  },
+  'bottom-left': {
+    connections: [{ direction: 'right', constraint: 'leftmost' }, { direction: 'up', constraint: 'lower' }],
+    horizontalConstraint: 'requiresRightOf',
+    verticalConstraint: 'requiresAbove'
+  },
+  'bottom-right': {
+    connections: [{ direction: 'left', constraint: 'rightmost' }, { direction: 'up', constraint: 'lower' }],
+    horizontalConstraint: 'requiresLeftOf',
+    verticalConstraint: 'requiresAbove'
+  }
+};
+
+const RELEVANT_DIRECTIONS: Record<'horizontal' | 'vertical', ReadonlySet<ConnectionDirection>> = {
+  horizontal: new Set<ConnectionDirection>(['left', 'right']),
+  vertical: new Set<ConnectionDirection>(['up', 'down'])
+};
+
+const CONSTRAINT_COMPATIBILITY: Record<'horizontal' | 'vertical', ReadonlySet<string>> = {
+  horizontal: new Set(['leftmost:rightmost', 'rightmost:leftmost']),
+  vertical: new Set(['upper:lower', 'lower:upper'])
+};
+
+const GROUPABLE_CATEGORIES: ReadonlySet<GroupableCategory> = new Set(['text', 'rectangle', 'endcap', 'elbow']);
+const ALL_DIRECTIONS: ConnectionDirection[] = ['up', 'down', 'left', 'right'];
+
+const UNCONSTRAINED_RULE: ConnectionRule = {
+  connections: ALL_DIRECTIONS.map(direction => ({ direction, constraint: 'none' as const }))
+};
+
+class ElementSpatialConstraintEvaluator {
+  static allows(
+    direction: 'horizontal' | 'vertical',
+    rule: ConnectionRule,
+    elementRect: LayoutElement['layout'],
+    otherRect: LayoutElement['layout']
+  ): boolean {
+    return direction === 'horizontal'
+      ? this._horizontalConstraintAllows(rule.horizontalConstraint, elementRect, otherRect)
+      : this._verticalConstraintAllows(rule.verticalConstraint, elementRect, otherRect);
+  }
+
+  private static _horizontalConstraintAllows(
+    constraint: HorizontalConstraint | undefined,
+    elementRect: LayoutElement['layout'],
+    otherRect: LayoutElement['layout']
+  ): boolean {
+    if (!constraint) return true;
+
+    const elementLeftEdge = elementRect.x;
+    const elementRightEdge = elementRect.x + elementRect.width;
+    const otherLeftEdge = otherRect.x;
+    const otherRightEdge = otherRect.x + otherRect.width;
+
+    if (constraint === 'requiresLeftOf') {
+      return otherRightEdge <= elementLeftEdge;
+    }
+
+    return otherLeftEdge >= elementRightEdge;
+  }
+
+  private static _verticalConstraintAllows(
+    constraint: VerticalConstraint | undefined,
+    elementRect: LayoutElement['layout'],
+    otherRect: LayoutElement['layout']
+  ): boolean {
+    if (!constraint) return true;
+
+    const elementTopEdge = elementRect.y;
+    const elementBottomEdge = elementRect.y + elementRect.height;
+    const otherTopEdge = otherRect.y;
+    const otherBottomEdge = otherRect.y + otherRect.height;
+
+    if (constraint === 'requiresAbove') {
+      return otherBottomEdge <= elementTopEdge;
+    }
+
+    return otherTopEdge >= elementBottomEdge;
+  }
+}
+
+class ElementGroupingCoordinateCalculator {
+  static calculate(element: LayoutElement, direction: 'horizontal' | 'vertical'): number | null {
+    const { x, y, width, height } = element.layout;
+    const category = ElementTypeUtils.getElementCategory(element);
+
+    if (category === 'elbow') {
+      return this._calculateForElbow(element, direction);
+    }
+
+    return direction === 'horizontal' ? y + height / 2 : x + width / 2;
+  }
+
+  private static _calculateForElbow(element: LayoutElement, direction: 'horizontal' | 'vertical'): number | null {
+    const { x, y, width, height } = element.layout;
+    const orientation = (element as any).props?.orientation ?? 'top-left';
+    const bodyWidth = ElementTypeUtils.resolveElbowBodyWidth(element);
+    const armHeight = ElementTypeUtils.resolveElbowArmHeight(element);
+
+    switch (orientation) {
+      case 'top-right':
+        return direction === 'horizontal' ? y + armHeight / 2 : x + width - bodyWidth / 2;
+      case 'top-left':
+        return direction === 'horizontal' ? y + armHeight / 2 : x + bodyWidth / 2;
+      case 'bottom-right':
+        return direction === 'horizontal' ? y + height - armHeight / 2 : x + width - bodyWidth / 2;
+      case 'bottom-left':
+        return direction === 'horizontal' ? y + height - armHeight / 2 : x + bodyWidth / 2;
+      default:
+        logger.warn(`Unknown elbow orientation: ${orientation}`);
+        return null;
+    }
+  }
+}
+
+class ElementUsageRegistry {
+  private readonly usedNonElbow = new Set<string>();
+  private readonly usedElbowDirections = new Map<string, Set<'horizontal' | 'vertical'>>();
+
+  groupIsAvailable(group: ElementGroup, direction: 'horizontal' | 'vertical'): boolean {
+    return group.elements.every(element => this._elementUsageIsAllowed(element, direction));
+  }
+
+  markGroupUsed(group: ElementGroup, direction: 'horizontal' | 'vertical'): void {
+    group.elements.forEach(element => this._markElementUsed(element, direction));
+  }
+
+  private _elementUsageIsAllowed(element: LayoutElement, direction: 'horizontal' | 'vertical'): boolean {
+    const category = ElementTypeUtils.getElementCategory(element);
+    if (category === 'elbow') {
+      return !this._elementDirectionIsUsed(element.id, direction);
+    }
+    return !this.usedNonElbow.has(element.id);
+  }
+
+  private _elementDirectionIsUsed(elementId: string, direction: 'horizontal' | 'vertical'): boolean {
+    const usedDirections = this.usedElbowDirections.get(elementId);
+    return Boolean(usedDirections && usedDirections.has(direction));
+  }
+
+  private _markElementUsed(element: LayoutElement, direction: 'horizontal' | 'vertical'): void {
+    const category = ElementTypeUtils.getElementCategory(element);
+    if (category === 'elbow') {
+      const usedDirections = this.usedElbowDirections.get(element.id) ?? new Set<'horizontal' | 'vertical'>();
+      usedDirections.add(direction);
+      this.usedElbowDirections.set(element.id, usedDirections);
+      return;
+    }
+    this.usedNonElbow.add(element.id);
+  }
+}
+
 export class ElementMatcher {
   static createElementMappings(sourceGroups: Group[], targetGroups: Group[]): Map<string, string> {
     const mapping = new Map<string, string>();
@@ -84,74 +268,38 @@ export class ElementMatcher {
     const filteredSourceVertical = this._filterGroupsWithAtLeastTwoElements(sourceGrouping.verticalGroups);
     const filteredTargetVertical = this._filterGroupsWithAtLeastTwoElements(targetGrouping.verticalGroups);
 
-    const candidateMatches: GroupMatch[] = [];
-    candidateMatches.push(
-      ...this._generateCandidateMatchesForType(
-        filteredSourceHorizontal,
-        filteredTargetHorizontal,
-        'horizontal',
-        options
-      ),
-      ...this._generateCandidateMatchesForType(
-        filteredSourceVertical,
-        filteredTargetVertical,
-        'vertical',
-        options
-      )
+    const candidateMatches = this._generateCandidateMatches(
+      filteredSourceHorizontal,
+      filteredTargetHorizontal,
+      filteredSourceVertical,
+      filteredTargetVertical,
+      options
     );
 
-    candidateMatches.sort((a, b) => b.matchConfidence - a.matchConfidence);
+    const sourceGroupsById = this._buildGroupLookup([...sourceGrouping.horizontalGroups, ...sourceGrouping.verticalGroups]);
+    const targetGroupsById = this._buildGroupLookup([...targetGrouping.horizontalGroups, ...targetGrouping.verticalGroups]);
+    const sourceUsage = new ElementUsageRegistry();
+    const targetUsage = new ElementUsageRegistry();
 
-    const sourceGroupsById = new Map<string, ElementGroup>(
-      [...sourceGrouping.horizontalGroups, ...sourceGrouping.verticalGroups].map(g => [g.id, g])
-    );
-    const targetGroupsById = new Map<string, ElementGroup>(
-      [...targetGrouping.horizontalGroups, ...targetGrouping.verticalGroups].map(g => [g.id, g])
-    );
-
-    const selectedMatches: GroupMatch[] = [];
-    const usedSourceNonElbow = new Set<string>();
-    const usedTargetNonElbow = new Set<string>();
-    const usedSourceElbowsByDirection = new Map<string, Set<'horizontal' | 'vertical'>>();
-    const usedTargetElbowsByDirection = new Map<string, Set<'horizontal' | 'vertical'>>();
-
-    for (const candidate of candidateMatches) {
+    return candidateMatches.reduce<GroupMatch[]>((matches, candidate) => {
       const sourceGroup = sourceGroupsById.get(candidate.sourceGroupId);
       const targetGroup = targetGroupsById.get(candidate.targetGroupId);
-      if (!sourceGroup || !targetGroup) continue;
+      if (!sourceGroup || !targetGroup) {
+        return matches;
+      }
 
-      const sourceAllowed = this._groupUsageIsAllowed(
-        sourceGroup,
-        candidate.groupType,
-        usedSourceNonElbow,
-        usedSourceElbowsByDirection
-      );
-      if (!sourceAllowed) continue;
+      if (!sourceUsage.groupIsAvailable(sourceGroup, candidate.groupType)) {
+        return matches;
+      }
+      if (!targetUsage.groupIsAvailable(targetGroup, candidate.groupType)) {
+        return matches;
+      }
 
-      const targetAllowed = this._groupUsageIsAllowed(
-        targetGroup,
-        candidate.groupType,
-        usedTargetNonElbow,
-        usedTargetElbowsByDirection
-      );
-      if (!targetAllowed) continue;
-
-      selectedMatches.push(candidate);
-      this._markGroupElementsUsed(
-        sourceGroup,
-        candidate.groupType,
-        usedSourceNonElbow,
-        usedSourceElbowsByDirection
-      );
-      this._markGroupElementsUsed(
-        targetGroup,
-        candidate.groupType,
-        usedTargetNonElbow,
-        usedTargetElbowsByDirection
-      );
-    }
-
-    return selectedMatches;
+      sourceUsage.markGroupUsed(sourceGroup, candidate.groupType);
+      targetUsage.markGroupUsed(targetGroup, candidate.groupType);
+      matches.push(candidate);
+      return matches;
+    }, []);
   }
 
   private static _calculateGroupMatch(
@@ -199,69 +347,33 @@ export class ElementMatcher {
     return groups.filter(group => group.elements.length >= 2);
   }
 
-  private static _generateCandidateMatchesForType(
+  private static _generateCandidateMatches(
+    sourceHorizontal: ElementGroup[],
+    targetHorizontal: ElementGroup[],
+    sourceVertical: ElementGroup[],
+    targetVertical: ElementGroup[],
+    options: GroupMatchingOptions
+  ): GroupMatch[] {
+    const horizontalMatches = this._generateMatchesForPair(sourceHorizontal, targetHorizontal, 'horizontal', options);
+    const verticalMatches = this._generateMatchesForPair(sourceVertical, targetVertical, 'vertical', options);
+    return [...horizontalMatches, ...verticalMatches].sort((a, b) => b.matchConfidence - a.matchConfidence);
+  }
+
+  private static _generateMatchesForPair(
     sourceGroups: ElementGroup[],
     targetGroups: ElementGroup[],
     groupType: 'horizontal' | 'vertical',
     options: GroupMatchingOptions
   ): GroupMatch[] {
-    const candidates: GroupMatch[] = [];
-    for (const sourceGroup of sourceGroups) {
-      for (const targetGroup of targetGroups) {
-        const match = this._calculateGroupMatch(sourceGroup, targetGroup, groupType, options);
-        if (match) candidates.push(match);
-      }
-    }
-    return candidates;
+    return sourceGroups.flatMap(sourceGroup => (
+      targetGroups
+        .map(targetGroup => this._calculateGroupMatch(sourceGroup, targetGroup, groupType, options))
+        .filter((match): match is GroupMatch => Boolean(match))
+    ));
   }
 
-  private static _groupUsageIsAllowed(
-    group: ElementGroup,
-    direction: 'horizontal' | 'vertical',
-    usedNonElbow: Set<string>,
-    usedElbowsByDirection: Map<string, Set<'horizontal' | 'vertical'>>
-  ): boolean {
-    for (const element of group.elements) {
-      const elementId = element.id;
-      const category = ElementTypeUtils.getElementCategory(element);
-      const elementIsElbow = category === 'elbow';
-
-      if (elementIsElbow) {
-        const usedDirections = usedElbowsByDirection.get(elementId);
-        if (usedDirections && usedDirections.has(direction)) {
-          return false;
-        }
-      } else {
-        if (usedNonElbow.has(elementId)) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  private static _markGroupElementsUsed(
-    group: ElementGroup,
-    direction: 'horizontal' | 'vertical',
-    usedNonElbow: Set<string>,
-    usedElbowsByDirection: Map<string, Set<'horizontal' | 'vertical'>>
-  ): void {
-    for (const element of group.elements) {
-      const elementId = element.id;
-      const category = ElementTypeUtils.getElementCategory(element);
-      const elementIsElbow = category === 'elbow';
-
-      if (elementIsElbow) {
-        let usedDirections = usedElbowsByDirection.get(elementId);
-        if (!usedDirections) {
-          usedDirections = new Set<'horizontal' | 'vertical'>();
-          usedElbowsByDirection.set(elementId, usedDirections);
-        }
-        usedDirections.add(direction);
-      } else {
-        usedNonElbow.add(elementId);
-      }
-    }
+  private static _buildGroupLookup(groups: ElementGroup[]): Map<string, ElementGroup> {
+    return new Map(groups.map(group => [group.id, group]));
   }
 
   private static _calculateGroupSize(group: ElementGroup, groupType: 'horizontal' | 'vertical'): number {
@@ -319,152 +431,72 @@ abstract class BaseElementConnectionHandler implements IElementConnectionHandler
 
 class EndcapConnectionHandler extends BaseElementConnectionHandler {
   identifyConnections(element: LayoutElement): ElementConnection[] {
-    const endcapDirection = this.getEndcapDirection(element);
-    const connectionDirection = this.determineConnectionDirection(endcapDirection);
-    const constraint = this.determineConstraint(endcapDirection);
-    
-    return [this.createConnection(element.id, connectionDirection, constraint)];
+    const rule = this.getEndcapRule(element);
+    if (!rule) {
+      return [];
+    }
+
+    return rule.connections.map(def => this.createConnection(element.id, def.direction, def.constraint));
   }
 
   allowsElementInDirection(endcapElement: LayoutElement, otherElement: LayoutElement, direction: 'horizontal' | 'vertical'): boolean {
     if (direction !== 'horizontal') return true;
-    
-    const endcapDirection = this.getEndcapDirection(endcapElement);
-    const endcapRect = endcapElement.layout;
-    const otherRect = otherElement.layout;
-    
-    return this.elementRespectsSpatialConstraint(endcapDirection, endcapRect, otherRect);
+
+    const rule = this.getEndcapRule(endcapElement);
+    if (!rule) {
+      return true;
+    }
+
+    return ElementSpatialConstraintEvaluator.allows(direction, rule, endcapElement.layout, otherElement.layout);
   }
 
   private getEndcapDirection(element: LayoutElement): 'left' | 'right' {
     return ((element as any).props?.direction || 'left') as 'left' | 'right';
   }
 
-  private determineConnectionDirection(endcapDirection: 'left' | 'right'): ConnectionDirection {
-    return endcapDirection === 'left' ? 'right' : 'left';
-  }
-
-  private determineConstraint(endcapDirection: 'left' | 'right'): ElementConnection['constraint'] {
-    return endcapDirection === 'left' ? 'leftmost' : 'rightmost';
-  }
-
-  private elementRespectsSpatialConstraint(
-    endcapDirection: 'left' | 'right',
-    endcapRect: { x: number; width: number },
-    otherRect: { x: number; width: number }
-  ): boolean {
-    const otherElementRightEdge = otherRect.x + otherRect.width;
-    const otherElementLeftEdge = otherRect.x;
-    const endcapLeftEdge = endcapRect.x;
-    const endcapRightEdge = endcapRect.x + endcapRect.width;
-
-    return endcapDirection === 'right' 
-      ? otherElementRightEdge <= endcapLeftEdge
-      : otherElementLeftEdge >= endcapRightEdge;
+  private getEndcapRule(element: LayoutElement): ConnectionRule | null {
+    const direction = this.getEndcapDirection(element);
+    return END_CAP_RULES[direction] ?? null;
   }
 }
 
 class ElbowConnectionHandler extends BaseElementConnectionHandler {
   identifyConnections(element: LayoutElement): ElementConnection[] {
-    const orientation = this.getElbowOrientation(element);
-    const connectionDefinition = this.getConnectionDefinition(orientation);
-    
-    if (!connectionDefinition) {
-      logger.warn(`Unknown elbow orientation: ${orientation}`);
+    const rule = this.getElbowRule(element);
+    if (!rule) {
       return [];
     }
 
-    return connectionDefinition.map(def => 
-      this.createConnection(element.id, def.direction, def.constraint)
-    );
+    return rule.connections.map(def => this.createConnection(element.id, def.direction, def.constraint));
   }
 
   allowsElementInDirection(elbowElement: LayoutElement, otherElement: LayoutElement, direction: 'horizontal' | 'vertical'): boolean {
-    const orientation = this.getElbowOrientation(elbowElement);
-    const elbowRect = elbowElement.layout;
-    const otherRect = otherElement.layout;
+    const rule = this.getElbowRule(elbowElement);
+    if (!rule) {
+      return true;
+    }
 
-    return direction === 'horizontal'
-      ? this.horizontalConstraintAllows(orientation, elbowRect, otherRect)
-      : this.verticalConstraintAllows(orientation, elbowRect, otherRect);
+    return ElementSpatialConstraintEvaluator.allows(direction, rule, elbowElement.layout, otherElement.layout);
   }
 
   private getElbowOrientation(element: LayoutElement): string {
     return (element as any).props?.orientation ?? 'top-left';
   }
 
-  private getConnectionDefinition(orientation: string): Array<{ direction: ConnectionDirection; constraint: ElementConnection['constraint'] }> | null {
-    const connectionMap: Record<string, Array<{ direction: ConnectionDirection; constraint: ElementConnection['constraint'] }>> = {
-      'top-left': [
-        { direction: 'right' as ConnectionDirection, constraint: 'leftmost' as const },
-        { direction: 'down' as ConnectionDirection, constraint: 'upper' as const }
-      ],
-      'top-right': [
-        { direction: 'left' as ConnectionDirection, constraint: 'rightmost' as const },
-        { direction: 'down' as ConnectionDirection, constraint: 'upper' as const }
-      ],
-      'bottom-left': [
-        { direction: 'right' as ConnectionDirection, constraint: 'leftmost' as const },
-        { direction: 'up' as ConnectionDirection, constraint: 'lower' as const }
-      ],
-      'bottom-right': [
-        { direction: 'left' as ConnectionDirection, constraint: 'rightmost' as const },
-        { direction: 'up' as ConnectionDirection, constraint: 'lower' as const }
-      ]
-    };
-
-    return connectionMap[orientation] || null;
-  }
-
-  private horizontalConstraintAllows(
-    orientation: string,
-    elbowRect: { x: number; width: number },
-    otherRect: { x: number; width: number }
-  ): boolean {
-    const rightOrientations = ['top-right', 'bottom-right'];
-    const leftOrientations = ['top-left', 'bottom-left'];
-    
-    const otherElementRightEdge = otherRect.x + otherRect.width;
-    const otherElementLeftEdge = otherRect.x;
-    const elbowLeftEdge = elbowRect.x;
-    const elbowRightEdge = elbowRect.x + elbowRect.width;
-
-    if (rightOrientations.includes(orientation)) {
-      return otherElementRightEdge <= elbowLeftEdge;
-    } else if (leftOrientations.includes(orientation)) {
-      return otherElementLeftEdge >= elbowRightEdge;
+  private getElbowRule(element: LayoutElement): ConnectionRule | null {
+    const orientation = this.getElbowOrientation(element);
+    const rule = ELBOW_RULES[orientation];
+    if (!rule) {
+      logger.warn(`Unknown elbow orientation: ${orientation}`);
+      return null;
     }
-    return true;
-  }
-
-  private verticalConstraintAllows(
-    orientation: string,
-    elbowRect: { y: number; height: number },
-    otherRect: { y: number; height: number }
-  ): boolean {
-    const topOrientations = ['top-right', 'top-left'];
-    const bottomOrientations = ['bottom-right', 'bottom-left'];
-    
-    const otherElementBottomEdge = otherRect.y + otherRect.height;
-    const otherElementTopEdge = otherRect.y;
-    const elbowTopEdge = elbowRect.y;
-    const elbowBottomEdge = elbowRect.y + elbowRect.height;
-
-    if (topOrientations.includes(orientation)) {
-      return otherElementTopEdge >= elbowBottomEdge;
-    } else if (bottomOrientations.includes(orientation)) {
-      return otherElementBottomEdge <= elbowTopEdge;
-    }
-    return true;
+    return rule;
   }
 }
 
 class UnconstrainedElementConnectionHandler extends BaseElementConnectionHandler {
   identifyConnections(element: LayoutElement): ElementConnection[] {
-    const allDirections: ConnectionDirection[] = ['up', 'down', 'left', 'right'];
-    return allDirections.map(direction => 
-      this.createConnection(element.id, direction, 'none')
-    );
+    return UNCONSTRAINED_RULE.connections.map(def => this.createConnection(element.id, def.direction, def.constraint));
   }
 }
 
@@ -492,60 +524,53 @@ class ConnectionCompatibilityAnalyzer {
     connectionsB: ElementConnections,
     groupDirection: 'horizontal' | 'vertical'
   ): boolean {
-    const relevantConnectionsA = this.getRelevantConnections(connectionsA.connections, groupDirection);
-    const relevantConnectionsB = this.getRelevantConnections(connectionsB.connections, groupDirection);
+    const relevantConnectionsA = this._getRelevantConnections(connectionsA.connections, groupDirection);
+    const relevantConnectionsB = this._getRelevantConnections(connectionsB.connections, groupDirection);
 
-    if (!this.elementsHaveRelevantConnections(relevantConnectionsA, relevantConnectionsB)) {
+    if (!this._hasRelevantConnections(relevantConnectionsA, relevantConnectionsB)) {
       return false;
     }
 
-    return this.constraintsAreCompatible(relevantConnectionsA, relevantConnectionsB, groupDirection);
+    return this._constraintsAreCompatible(relevantConnectionsA, relevantConnectionsB, groupDirection);
   }
 
-  private static getRelevantConnections(connections: ElementConnection[], groupDirection: 'horizontal' | 'vertical'): ElementConnection[] {
-    const relevantDirections = groupDirection === 'horizontal' ? ['left', 'right'] : ['up', 'down'];
-    return connections.filter(conn => relevantDirections.includes(conn.direction));
+  private static _getRelevantConnections(
+    connections: ElementConnection[],
+    groupDirection: 'horizontal' | 'vertical'
+  ): ElementConnection[] {
+    const relevantDirections = RELEVANT_DIRECTIONS[groupDirection];
+    return connections.filter(conn => relevantDirections.has(conn.direction));
   }
 
-  private static elementsHaveRelevantConnections(connectionsA: ElementConnection[], connectionsB: ElementConnection[]): boolean {
+  private static _hasRelevantConnections(
+    connectionsA: ElementConnection[],
+    connectionsB: ElementConnection[]
+  ): boolean {
     return connectionsA.length > 0 && connectionsB.length > 0;
   }
 
-  private static constraintsAreCompatible(
+  private static _constraintsAreCompatible(
     connectionsA: ElementConnection[],
     connectionsB: ElementConnection[],
     groupDirection: 'horizontal' | 'vertical'
   ): boolean {
-    const hasUnconstrainedElement = this.hasUnconstrainedElement(connectionsA, connectionsB);
-    
-    if (hasUnconstrainedElement) {
+    if (this._hasUnconstrainedElement(connectionsA, connectionsB)) {
       return true;
     }
 
-    return this.constrainedElementsAreCompatible(connectionsA, connectionsB, groupDirection);
+    return connectionsA.some(connA => (
+      connectionsB.some(connB => this._constraintsArePairCompatible(connA.constraint, connB.constraint, groupDirection))
+    ));
   }
 
-  private static hasUnconstrainedElement(connectionsA: ElementConnection[], connectionsB: ElementConnection[]): boolean {
-    return connectionsA.some(conn => conn.constraint === 'none') ||
-           connectionsB.some(conn => conn.constraint === 'none');
-  }
-
-  private static constrainedElementsAreCompatible(
+  private static _hasUnconstrainedElement(
     connectionsA: ElementConnection[],
-    connectionsB: ElementConnection[],
-    groupDirection: 'horizontal' | 'vertical'
+    connectionsB: ElementConnection[]
   ): boolean {
-    for (const connA of connectionsA) {
-      for (const connB of connectionsB) {
-        if (this.individualConstraintsAreCompatible(connA.constraint, connB.constraint, groupDirection)) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return connectionsA.some(conn => conn.constraint === 'none') || connectionsB.some(conn => conn.constraint === 'none');
   }
 
-  private static individualConstraintsAreCompatible(
+  private static _constraintsArePairCompatible(
     constraintA: ElementConnection['constraint'],
     constraintB: ElementConnection['constraint'],
     direction: 'horizontal' | 'vertical'
@@ -554,21 +579,8 @@ class ConnectionCompatibilityAnalyzer {
       return true;
     }
 
-    const horizontalCompatibilityPairs = [
-      ['leftmost', 'rightmost'],
-      ['rightmost', 'leftmost']
-    ];
-
-    const verticalCompatibilityPairs = [
-      ['upper', 'lower'],
-      ['lower', 'upper']
-    ];
-
-    const compatibilityPairs = direction === 'horizontal' ? horizontalCompatibilityPairs : verticalCompatibilityPairs;
-    
-    return compatibilityPairs.some(pair => 
-      (constraintA === pair[0] && constraintB === pair[1])
-    );
+    const pairKey = `${constraintA}:${constraintB}`;
+    return CONSTRAINT_COMPATIBILITY[direction].has(pairKey);
   }
 }
 
@@ -623,40 +635,17 @@ export class ConnectionIdentifier {
 
 export class ElementGrouper {
   static groupElementsByAlignment(elements: LayoutElement[], tolerance: number = 5): ElementGroupingResult {
-    const horizontalGroups: ElementGroup[] = [];
-    const verticalGroups: ElementGroup[] = [];
-    const ungroupedElements: LayoutElement[] = [];
-    
     const groupableElements = this._filterGroupableElements(elements);
 
-    const horizontalGroupMap = this._groupElementsByCoordinate(groupableElements, 'horizontal', tolerance);
-    horizontalGroupMap.forEach((groupElements, meanY) => {
-      horizontalGroups.push({
-        id: `horizontal_${meanY.toFixed(1)}`,
-        elements: groupElements,
-        groupType: 'horizontal',
-        meanCoordinate: this._calculateMeanCoordinateForGroup(groupElements, 'horizontal'),
-        coordinateType: 'y'
-      });
-    });
+    const horizontalGroups = this._buildGroupsForDirection(groupableElements, 'horizontal', tolerance, 'y');
+    const verticalGroups = this._buildGroupsForDirection(groupableElements, 'vertical', tolerance, 'x');
 
-    const verticalGroupMap = this._groupElementsByCoordinate(groupableElements, 'vertical', tolerance);
-    verticalGroupMap.forEach((groupElements, meanX) => {
-      verticalGroups.push({
-        id: `vertical_${meanX.toFixed(1)}`,
-        elements: groupElements,
-        groupType: 'vertical',
-        meanCoordinate: this._calculateMeanCoordinateForGroup(groupElements, 'vertical'),
-        coordinateType: 'x'
-      });
-    });
+    const groupedElementIds = new Set<string>([
+      ...horizontalGroups.flatMap(group => group.elements.map(element => element.id)),
+      ...verticalGroups.flatMap(group => group.elements.map(element => element.id))
+    ]);
 
-    const groupedElementIds = this._collectGroupedElementIds(horizontalGroups, verticalGroups);
-    elements.forEach(element => {
-      if (!groupedElementIds.has(element.id)) {
-        ungroupedElements.push(element);
-      }
-    });
+    const ungroupedElements = elements.filter(element => !groupedElementIds.has(element.id));
 
     return {
       horizontalGroups,
@@ -666,21 +655,23 @@ export class ElementGrouper {
   }
 
   private static _filterGroupableElements(elements: LayoutElement[]): LayoutElement[] {
-    return elements.filter(element => {
-      const category = ElementTypeUtils.getElementCategory(element);
-      return category === 'text' || category === 'rectangle' || category === 'endcap' || category === 'elbow';
-    });
+    return elements.filter(element => GROUPABLE_CATEGORIES.has(ElementTypeUtils.getElementCategory(element) as GroupableCategory));
   }
 
-  private static _collectGroupedElementIds(
-    horizontalGroups: ElementGroup[], 
-    verticalGroups: ElementGroup[]
-  ): Set<string> {
-    const groupedElementIds = new Set<string>();
-    [...horizontalGroups, ...verticalGroups].forEach(group => {
-      group.elements.forEach(element => groupedElementIds.add(element.id));
-    });
-    return groupedElementIds;
+  private static _buildGroupsForDirection(
+    elements: LayoutElement[],
+    direction: 'horizontal' | 'vertical',
+    tolerance: number,
+    coordinateType: 'x' | 'y'
+  ): ElementGroup[] {
+    const groupMap = this._groupElementsByCoordinate(elements, direction, tolerance);
+    return Array.from(groupMap.entries()).map(([meanCoordinate, groupElements]) => ({
+      id: `${direction}_${meanCoordinate.toFixed(1)}`,
+      elements: groupElements,
+      groupType: direction,
+      meanCoordinate: this._calculateMeanCoordinateForGroup(groupElements, direction),
+      coordinateType
+    }));
   }
 
   private static _groupElementsByCoordinate(
@@ -696,7 +687,7 @@ export class ElementGrouper {
         continue;
       }
 
-      const coordinate = this._calculateGroupingCoordinate(element, direction);
+      const coordinate = ElementGroupingCoordinateCalculator.calculate(element, direction);
       if (coordinate === null) continue;
 
       const compatibleGroups: Array<{ coordinate: number; elements: LayoutElement[] }> = [];
@@ -750,66 +741,12 @@ export class ElementGrouper {
   ): number {
     const coords: number[] = [];
     for (const element of elements) {
-      const coord = this._calculateGroupingCoordinate(element, direction);
+      const coord = ElementGroupingCoordinateCalculator.calculate(element, direction);
       if (coord !== null) coords.push(coord);
     }
     if (coords.length === 0) return 0;
     const sum = coords.reduce((acc, value) => acc + value, 0);
     return sum / coords.length;
-  }
-
-  private static _calculateGroupingCoordinate(
-    element: LayoutElement, 
-    direction: 'horizontal' | 'vertical'
-  ): number | null {
-    const { x, y, width, height } = element.layout;
-    const category = ElementTypeUtils.getElementCategory(element);
-
-    if (category === 'elbow') {
-      return this._calculateElbowGroupingCoordinate(element, direction);
-    }
-
-    if (direction === 'horizontal') {
-      return y + height / 2;
-    } else {
-      return x + width / 2;
-    }
-  }
-
-  private static _calculateElbowGroupingCoordinate(
-    element: LayoutElement, 
-    direction: 'horizontal' | 'vertical'
-  ): number | null {
-    const { x, y, width, height } = element.layout;
-    const orientation = (element as any).props?.orientation ?? 'top-left';
-    const bodyWidth = ElementTypeUtils.resolveElbowBodyWidth(element);
-    const armHeight = ElementTypeUtils.resolveElbowArmHeight(element);
-
-    switch (orientation) {
-      case 'top-right':
-        return direction === 'horizontal' 
-          ? y + armHeight / 2 
-          : x + width - bodyWidth / 2;
-
-      case 'top-left':
-        return direction === 'horizontal' 
-          ? y + armHeight / 2 
-          : x + bodyWidth / 2;
-
-      case 'bottom-right':
-        return direction === 'horizontal' 
-          ? y + height - armHeight / 2 
-          : x + width - bodyWidth / 2;
-
-      case 'bottom-left':
-        return direction === 'horizontal' 
-          ? y + height - armHeight / 2 
-          : x + bodyWidth / 2;
-
-      default:
-        logger.warn(`Unknown elbow orientation: ${orientation}`);
-        return null;
-    }
   }
 
   private static _elementIsCompatibleWithGroup(
