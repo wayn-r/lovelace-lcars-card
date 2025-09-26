@@ -1,15 +1,14 @@
 import type { LayoutElement } from '../../layout/elements/element.js';
-import type { Group } from '../../layout/engine.js';
+import type { Group, LayoutElementProps } from '../../layout/engine.js';
 import { DistanceParser } from '../animation.js';
-import { ShapeGenerator } from '../shapes.js';
-import { Diagnostics } from '../diagnostics.js';
-
-const logger = Diagnostics.create('ElementTypeUtils');
+import { ShapeGenerator, type Orientation } from '../shapes.js';
 
 export class ElementTypeUtils {
 
   static getTextTransform(element: LayoutElement): string {
-    return (element as any).props?.textTransform ?? 'none';
+    const props = this._getElementProps(element);
+    const transform = props['textTransform'];
+    return typeof transform === 'string' ? transform : 'none';
   }
 
   static applyTextTransform(text: string, transform: string): string {
@@ -26,7 +25,7 @@ export class ElementTypeUtils {
   }
 
   static getElementTypeName(element: LayoutElement): string {
-    return (element as any).constructor?.name || 'Unknown';
+    return element.constructor?.name || 'Unknown';
   }
 
   static getElementCategory(element: LayoutElement): 'text' | 'rectangle' | 'endcap' | 'elbow' | 'unknown' {
@@ -51,7 +50,8 @@ export class ElementTypeUtils {
   }
 
   static elementUsesCutoutMask(element: LayoutElement): boolean {
-    return Boolean((element as any).props?.cutout);
+    const props = this._getElementProps(element);
+    return Boolean(props['cutout']);
   }
 
   static elementShouldForceCutoutFade(element: LayoutElement): boolean {
@@ -73,26 +73,17 @@ export class ElementTypeUtils {
   }
 
   static getTextContent(element: LayoutElement): string {
-    const props: any = (element as any).props || {};
-
-    if (this.elementIsText(element)) {
-      const textValue = props?.text;
-      return typeof textValue === 'string' ? textValue.trim() : '';
-    }
-
-    const shapeText = typeof props?.text === 'string' ? props.text.trim() : '';
-    return shapeText;
+    const props = this._getElementProps(element);
+    return this._extractTrimmedString(props['text']);
   }
 
   static elementHasRenderableText(element: LayoutElement): boolean {
-    const props: any = (element as any).props || {};
-    const text = this.getTextContent(element);
-    return text.length > 0;
+    return this.getNormalizedTextContent(element).length > 0;
   }
 
   static textsHaveEqualContent(elementA: LayoutElement, elementB: LayoutElement): boolean {
     if (!this.elementIsText(elementA) || !this.elementIsText(elementB)) return false;
-    return this.getTextContent(elementA) === this.getTextContent(elementB);
+    return this.getNormalizedTextContent(elementA) === this.getNormalizedTextContent(elementB);
   }
 
   static textElementHasEqualMappingTarget(
@@ -108,68 +99,118 @@ export class ElementTypeUtils {
     const destinationElement = destinationElements.find(element => element.id === mappedElementId);
     if (!destinationElement) return false;
     
-    return this.elementIsText(destinationElement) && 
-           this.textsHaveEqualContent(sourceTextElement, destinationElement);
+    if (!this.elementIsText(destinationElement)) return false;
+
+    return this.getNormalizedTextContent(sourceTextElement) === this.getNormalizedTextContent(destinationElement);
   }
 
   static elbowsHaveCompatibleOrientation(elbowA: LayoutElement, elbowB: LayoutElement): boolean {
     if (!this.elementIsElbow(elbowA) || !this.elementIsElbow(elbowB)) return true;
     
-    const orientationA = (elbowA as any).props?.orientation ?? 'top-left';
-    const orientationB = (elbowB as any).props?.orientation ?? 'top-left';
+    const orientationA = this._getElbowOrientation(elbowA);
+    const orientationB = this._getElbowOrientation(elbowB);
     return orientationA === orientationB;
   }
 
   static resolveElbowBodyWidth(elbowElement: LayoutElement): number {
-    if (!this.elementIsElbow(elbowElement)) return 0;
-    
-    const rawBodyWidth = (elbowElement as any).props?.bodyWidth ?? 30;
-    const layoutWidth = elbowElement.layout?.width ?? 0;
-    return Math.max(1, DistanceParser.parse(String(rawBodyWidth), { layout: { width: layoutWidth, height: 0 } }));
+    return this._resolveElbowDimension(elbowElement, 'bodyWidth', 30, 'width');
   }
 
   static resolveElbowArmHeight(elbowElement: LayoutElement): number {
-    if (!this.elementIsElbow(elbowElement)) return 0;
-    
-    const rawArmHeight = (elbowElement as any).props?.armHeight ?? 30;
-    const layoutHeight = elbowElement.layout?.height ?? 0;
-    return Math.max(1, DistanceParser.parse(String(rawArmHeight), { layout: { width: 0, height: layoutHeight } }));
+    return this._resolveElbowDimension(elbowElement, 'armHeight', 30, 'height');
   }
 
   static generatePathForElement(element: LayoutElement): string {
-    const { x, y, width, height } = element.layout;
-    const w = Math.max(1, width);
-    const h = Math.max(1, height);
-    const props: any = (element as any).props || {};
+    const { x, y, width, height } = this._getSanitizedLayout(element);
+    const props = this._getElementProps(element);
     const category = this.getElementCategory(element);
 
 
     switch (category) {
       case 'rectangle':
-        return props.cornerRadii
-          ? ShapeGenerator.generateRectangleCorners(x, y, w, h, props.cornerRadii)
-          : ShapeGenerator.generateRectangle(x, y, w, h, (props.rx ?? props.cornerRadius ?? 0));
+        return props['cornerRadii']
+          ? ShapeGenerator.generateRectangleCorners(
+              x,
+              y,
+              width,
+              height,
+              props['cornerRadii'] as { topLeft?: number; topRight?: number; bottomRight?: number; bottomLeft?: number }
+            )
+          : ShapeGenerator.generateRectangle(x, y, width, height, (props['rx'] ?? props['cornerRadius'] ?? 0) as number);
       
       case 'endcap':
-        const direction = (props.direction || 'left') as 'left' | 'right';
-        return props.chisel
-          ? ShapeGenerator.generateChiselEndcap(w, h, direction, x, y)
-          : ShapeGenerator.generateEndcap(w, h, direction, x, y);
+        const direction = ((props['direction'] as 'left' | 'right') || 'left');
+        return props['chisel']
+          ? ShapeGenerator.generateChiselEndcap(width, height, direction, x, y)
+          : ShapeGenerator.generateEndcap(width, height, direction, x, y);
       
       case 'elbow':
-        const orientation = props.orientation || 'top-left';
+        const orientation = this._getElbowOrientation(element);
         const bodyWidth = this.resolveElbowBodyWidth(element);
         const armHeight = this.resolveElbowArmHeight(element);
-        return ShapeGenerator.generateElbow(x, w, bodyWidth, armHeight, h, orientation, y, armHeight);
+        return ShapeGenerator.generateElbow(x, width, bodyWidth, armHeight, height, orientation, y, armHeight);
       
       case 'text':
         // Text approximated as rectangle for morph continuity
-        return ShapeGenerator.generateRectangle(x, y, w, h, 0);
+        return ShapeGenerator.generateRectangle(x, y, width, height, 0);
       
       default:
         // Fallback: generic rectangle
-        return ShapeGenerator.generateRectangle(x, y, w, h, 0);
+        return ShapeGenerator.generateRectangle(x, y, width, height, 0);
     }
+  }
+
+  static getNormalizedTextContent(element: LayoutElement): string {
+    const content = this.getTextContent(element);
+    if (!content) return '';
+    return this.applyTextTransform(content, this.getTextTransform(element));
+  }
+
+  private static _getElementProps(element: LayoutElement): LayoutElementProps {
+    return element.props ?? {} as LayoutElementProps;
+  }
+
+  private static _extractTrimmedString(value: unknown): string {
+    return typeof value === 'string' ? value.trim() : '';
+  }
+
+  private static _resolveElbowDimension(
+    elbowElement: LayoutElement,
+    propKey: 'bodyWidth' | 'armHeight',
+    defaultValue: number,
+    layoutDimension: 'width' | 'height'
+  ): number {
+    if (!this.elementIsElbow(elbowElement)) return 0;
+
+    const props = this._getElementProps(elbowElement);
+    const rawValue = props[propKey];
+    const fallback = typeof rawValue === 'number' || typeof rawValue === 'string' ? rawValue : defaultValue;
+    const layoutWidth = layoutDimension === 'width' ? elbowElement.layout?.width ?? 0 : 0;
+    const layoutHeight = layoutDimension === 'height' ? elbowElement.layout?.height ?? 0 : 0;
+
+    return Math.max(
+      1,
+      DistanceParser.parse(String(fallback), { layout: { width: layoutWidth, height: layoutHeight } })
+    );
+  }
+
+  private static _getSanitizedLayout(element: LayoutElement): { x: number; y: number; width: number; height: number } {
+    const { x, y, width, height } = element.layout;
+    return {
+      x,
+      y,
+      width: Math.max(1, width),
+      height: Math.max(1, height)
+    };
+  }
+
+  private static _getElbowOrientation(element: LayoutElement): Orientation {
+    const props = this._getElementProps(element);
+    const orientation = props['orientation'];
+    if (orientation === 'top-left' || orientation === 'top-right' || orientation === 'bottom-left' || orientation === 'bottom-right') {
+      return orientation;
+    }
+    return 'top-left';
   }
 }
 
@@ -204,9 +245,7 @@ export class ElementAnalyzer {
   private static readonly bandHeightToleranceRatio: number = 0.30;
 
   static collectLayoutElements(groups: Group[]): LayoutElement[] {
-    const list: LayoutElement[] = [];
-    groups.forEach(g => g.elements.forEach(e => list.push(e)));
-    return list;
+    return groups.flatMap(group => group.elements);
   }
 
   static elementsSameBand(a: LayoutElement, b: LayoutElement): boolean {
@@ -234,16 +273,15 @@ export class ElementAnalyzer {
     destinationElements: LayoutElement[]
   ): Map<string, string> {
     const matchedPairs = new Map<string, string>();
-    const srcTexts = sourceElements.filter(el => ElementTypeUtils.elementHasRenderableText(el));
-    const dstTexts = destinationElements.filter(el => ElementTypeUtils.elementHasRenderableText(el));
+    const srcTexts = sourceElements.filter(element => ElementTypeUtils.elementHasRenderableText(element));
+    const dstTexts = destinationElements.filter(element => ElementTypeUtils.elementHasRenderableText(element));
     const tolerance = 100;
 
     if (srcTexts.length === 0 || dstTexts.length === 0) return matchedPairs;
 
     const dstByContent = new Map<string, LayoutElement[]>();
     for (const dst of dstTexts) {
-      const transform = ElementTypeUtils.getTextTransform(dst);
-      const content = ElementTypeUtils.applyTextTransform(ElementTypeUtils.getTextContent(dst), transform);
+      const content = ElementTypeUtils.getNormalizedTextContent(dst);
       if (!content) continue;
       const existing = dstByContent.get(content);
       if (existing) {
@@ -254,8 +292,7 @@ export class ElementAnalyzer {
     }
 
     for (const src of srcTexts) {
-      const srcTransform = ElementTypeUtils.getTextTransform(src);
-      const content = ElementTypeUtils.applyTextTransform(ElementTypeUtils.getTextContent(src), srcTransform);
+      const content = ElementTypeUtils.getNormalizedTextContent(src);
       if (!content) continue;
       const candidates = dstByContent.get(content) || [];
       if (candidates.length === 0) continue;
