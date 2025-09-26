@@ -1,6 +1,5 @@
 import type { LayoutElement } from '../../layout/elements/element.js';
 import type { AnimationContext } from '../animation.js';
-import { ElementTypeUtils } from './morph-element-utils.js';
 import { render, svg } from 'lit';
 import { Diagnostics } from '../diagnostics.js';
 
@@ -40,31 +39,12 @@ interface CloneRenderOptions {
 }
 
 export class MorphUtilities implements SvgRootLocator, OverlayManager, SyntheticElementCreator {
+  private static readonly OVERLAY_ID = 'lcars-morph-overlay';
+
   locateSvgRoot(elements: LayoutElement[], getShadowElement: (id: string) => Element | null): SVGSVGElement | null {
-    for (const element of elements) {
-      const domElement = getShadowElement?.(element.id) as (Element & { 
-        ownerSVGElement?: SVGSVGElement; 
-        closest?: (selector: string) => Element | null;
-        tagName?: string;
-      }) | null;
-      
-      if (!domElement) continue;
-      
-      let svgElement = (domElement as any).ownerSVGElement as SVGSVGElement | null;
-      
-      if (!svgElement) {
-        if (domElement.tagName && String(domElement.tagName).toLowerCase() === 'svg') {
-          svgElement = domElement as unknown as SVGSVGElement;
-        } else if (typeof domElement.closest === 'function') {
-          const foundSvg = domElement.closest('svg') as SVGSVGElement | null;
-          if (foundSvg) svgElement = foundSvg;
-        }
-      }
-      
-      if (svgElement) return svgElement;
-    }
-    
-    return null;
+    return elements
+      .map(element => this._getShadowSvgRoot(getShadowElement, element.id))
+      .find((svgElement): svgElement is SVGSVGElement => Boolean(svgElement)) ?? null;
   }
 
   createOverlayWithClones(
@@ -77,113 +57,37 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
     cloneElementsById: Map<string, Element>;
     hiddenOriginalElements: Element[];
   } {
-    const overlayId = 'lcars-morph-overlay';
-    let overlay = svgRoot.querySelector(`#${overlayId}`) as SVGGElement | null;
-    
-    if (overlay) {
-      try { 
-        overlay.remove(); 
-      } catch {}
-    }
-    
-    overlay = document.createElementNS('http://www.w3.org/2000/svg', 'g') as SVGGElement;
-    overlay.setAttribute('id', overlayId);
-    overlay.setAttribute('style', 'pointer-events: none;');
-    svgRoot.appendChild(overlay);
+    const overlay = this._prepareOverlay(svgRoot);
+    const debug = this._debugEnabled();
+    const { clonesById, hiddenElements } = sourceElements.reduce(
+      (accumulator, element) => this._cloneElementForOverlay(
+        {
+          element,
+          overlay,
+          getShadowElement,
+          animationContext,
+          debug
+        },
+        accumulator
+      ),
+      { clonesById: new Map<string, Element>(), hiddenElements: [] as Element[] }
+    );
 
-    const hiddenOriginalElements: Element[] = [];
-    const cloneElementsById = new Map<string, Element>();
-
-    const debug = typeof window !== 'undefined' && (window as any).__lcarsDebugMorph === true;
-    for (const element of sourceElements) {
-      const wasHovering = element.elementIsHovering;
-      const wasActive = element.elementIsActive;
-      const originalDomElement = getShadowElement?.(element.id) as Element | null;
-      if (!originalDomElement) {
-        if (wasHovering) {
-          try { element.elementIsHovering = false; } catch {}
-        }
-        if (wasActive) {
-          try { element.elementIsActive = false; } catch {}
-        }
-        continue;
-      }
-      
-      const renderedClone = this.createSyntheticElement(element, animationContext, {
-        initialOpacity: 1,
-        idSuffix: '__morph_source'
-      });
-      if (!renderedClone) {
-        if (debug) {
-          logger.warn('[Morph Debug] source synthetic: FAILED (render)', { id: element.id });
-        }
-        continue;
-      }
-
-      overlay.appendChild(renderedClone);
-      cloneElementsById.set(element.id, renderedClone);
-      
-      try {
-        (originalDomElement as any).setAttribute('data-lcars-morph-hidden', '1');
-        (originalDomElement as any).style.visibility = 'hidden';
-        hiddenOriginalElements.push(originalDomElement);
-
-      } catch {
-        logger.warn('failed to hide original element ',
-          element.id
-        )
-      }
-
-      if (wasHovering) {
-        try { element.elementIsHovering = false; } catch {}
-      }
-      if (wasActive) {
-        try { element.elementIsActive = false; } catch {}
-      }
-
-      if (debug) {
-        let initialOpacity: string | undefined;
-        try { initialOpacity = (renderedClone as HTMLElement).style?.opacity ?? getComputedStyle(renderedClone as any).opacity; } catch {}
-      }
-    }
-    
-    return { overlay, cloneElementsById, hiddenOriginalElements };
+    return { overlay, cloneElementsById: clonesById, hiddenOriginalElements: hiddenElements };
   }
 
   scheduleOverlayCleanup(overlay: SVGGElement, hiddenElements: Element[], delaySeconds: number): void {
+    let hasCleaned = false;
+    let detachListeners: () => void = () => {};
     const cleanupOverlay = () => {
-      try { 
-        document.removeEventListener('visibilitychange', onVisibilityChange); 
-      } catch {}
-      try { 
-        window.removeEventListener('pagehide', onPageHide as any); 
-      } catch {}
-      
-      for (const hiddenElement of hiddenElements) {
-        try { 
-          (hiddenElement as any).style.visibility = '';
-          (hiddenElement as any).removeAttribute('data-lcars-morph-hidden'); 
-        } catch {}
-      }
-      
-      if (overlay && overlay.parentNode) {
-        try { 
-          overlay.parentNode.removeChild(overlay); 
-        } catch {}
-      }
+      if (hasCleaned) return;
+      hasCleaned = true;
+      detachListeners();
+      this._restoreHiddenElements(hiddenElements);
+      this._removeElement(overlay);
     };
-    
-    const onVisibilityChange = () => { 
-      if (typeof document !== 'undefined' && (document as any).hidden) cleanupOverlay(); 
-    };
-    const onPageHide = () => cleanupOverlay();
-    
-    try { 
-      document.addEventListener('visibilitychange', onVisibilityChange as any, { once: true } as any); 
-    } catch {}
-    try { 
-      window.addEventListener('pagehide', onPageHide as any, { once: true } as any); 
-    } catch {}
+
+    detachListeners = this._attachCleanupListeners(cleanupOverlay);
 
     setTimeout(() => cleanupOverlay(), delaySeconds * 1000 + 550);
   }
@@ -193,7 +97,7 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
     animationContext: AnimationContext | undefined,
     options: CloneRenderOptions = {}
   ): Element | null {
-    const debug = typeof window !== 'undefined' && (window as any).__lcarsDebugMorph === true;
+    const debug = this._debugEnabled();
     const { initialOpacity = 0, initialVisibility, initialDisplay, idSuffix } = options;
     
     try {
@@ -213,26 +117,8 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
         return null;
       }
 
-      try {
-        (domElement as any).style.pointerEvents = 'none';
-        if (initialOpacity !== undefined) {
-          (domElement as any).style.opacity = String(initialOpacity);
-        }
-        if (initialVisibility) {
-          (domElement as any).style.visibility = initialVisibility;
-        }
-        if (initialDisplay !== undefined) {
-          (domElement as any).style.display = initialDisplay;
-        }
-      } catch {}
-
-      if (idSuffix) {
-        try {
-          const existingId = domElement.getAttribute('id');
-          const newId = existingId ? `${existingId}${idSuffix}` : `${targetElement.id}${idSuffix}`;
-          domElement.setAttribute('id', newId);
-        } catch {}
-      }
+      this._applyInitialCloneStyles(domElement, { initialOpacity, initialVisibility, initialDisplay });
+      this._applyCloneIdSuffix(domElement, targetElement, idSuffix);
 
       // Fix any internal definition IDs to avoid collisions
       const definitionSuffix = idSuffix ?? '__morph_clone';
@@ -259,19 +145,6 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
     } catch {
       return null;
     }
-  }
-
-  private _initializeCloneTransform(clonedElement: Element): void {
-    import('gsap').then(gsap => {
-      gsap.default.set(clonedElement as any, { 
-        x: 0, 
-        y: 0, 
-        scaleX: 1, 
-        scaleY: 1, 
-        opacity: 1, 
-        transformOrigin: '0px 0px' 
-      } as any);
-    });
   }
 
   private _rewriteCloneDefinitionReferences(cloneRoot: Element, definitionSuffix: string): void {
@@ -320,6 +193,203 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
       });
     } catch {
     }
+  }
+
+  private _debugEnabled(): boolean {
+    return typeof window !== 'undefined' && (window as any).__lcarsDebugMorph === true;
+  }
+
+  private _getShadowSvgRoot(
+    getShadowElement: (id: string) => Element | null,
+    elementId: string
+  ): SVGSVGElement | null {
+    const domElement = getShadowElement?.(elementId) as (Element & {
+      ownerSVGElement?: SVGSVGElement;
+      closest?: (selector: string) => Element | null;
+      tagName?: string;
+    }) | null;
+
+    if (!domElement) return null;
+
+    const ownerSvg = (domElement as any).ownerSVGElement as SVGSVGElement | null | undefined;
+    if (ownerSvg) return ownerSvg;
+
+    const tagName = domElement.tagName ? String(domElement.tagName).toLowerCase() : '';
+    if (tagName === 'svg') {
+      return domElement as unknown as SVGSVGElement;
+    }
+
+    if (typeof domElement.closest === 'function') {
+      const closestSvg = domElement.closest('svg');
+      if (closestSvg) {
+        return closestSvg as SVGSVGElement;
+      }
+    }
+
+    return null;
+  }
+
+  private _prepareOverlay(svgRoot: SVGSVGElement): SVGGElement {
+    this._removeElement(svgRoot.querySelector(`#${MorphUtilities.OVERLAY_ID}`));
+
+    const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'g') as SVGGElement;
+    overlay.setAttribute('id', MorphUtilities.OVERLAY_ID);
+    overlay.setAttribute('style', 'pointer-events: none;');
+    svgRoot.appendChild(overlay);
+    return overlay;
+  }
+
+  private _cloneElementForOverlay(
+    params: {
+      element: LayoutElement;
+      overlay: SVGGElement;
+      getShadowElement: (id: string) => Element | null;
+      animationContext?: AnimationContext;
+      debug: boolean;
+    },
+    accumulator: { clonesById: Map<string, Element>; hiddenElements: Element[] }
+  ): { clonesById: Map<string, Element>; hiddenElements: Element[] } {
+    const { element, overlay, getShadowElement, animationContext, debug } = params;
+    const originalDomElement = getShadowElement?.(element.id) as Element | null;
+    if (!originalDomElement) {
+      this._suppressInteractionState(element);
+      return accumulator;
+    }
+
+    const renderedClone = this.createSyntheticElement(element, animationContext, {
+      initialOpacity: 1,
+      idSuffix: '__morph_source'
+    });
+
+    if (!renderedClone) {
+      if (debug) {
+        logger.warn('[Morph Debug] source synthetic: FAILED (render)', { id: element.id });
+      }
+      this._suppressInteractionState(element);
+      return accumulator;
+    }
+
+    overlay.appendChild(renderedClone);
+    accumulator.clonesById.set(element.id, renderedClone);
+
+    if (this._applyHiddenState(originalDomElement, true)) {
+      accumulator.hiddenElements.push(originalDomElement);
+    } else {
+      logger.warn('failed to hide original element ', element.id);
+    }
+
+    this._suppressInteractionState(element);
+    return accumulator;
+  }
+
+  private _suppressInteractionState(element: LayoutElement): void {
+    try {
+      (element as any).elementIsHovering = false;
+    } catch {}
+    try {
+      (element as any).elementIsActive = false;
+    } catch {}
+  }
+
+  private _applyHiddenState(target: Element | null, hidden: boolean): boolean {
+    if (!target) return false;
+    try {
+      if (hidden) {
+        target.setAttribute('data-lcars-morph-hidden', '1');
+      } else {
+        target.removeAttribute('data-lcars-morph-hidden');
+      }
+
+      const targetWithStyle = target as Element & { style?: CSSStyleDeclaration };
+      if (targetWithStyle.style) {
+        targetWithStyle.style.visibility = hidden ? 'hidden' : '';
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private _restoreHiddenElements(hiddenElements: Element[]): void {
+    hiddenElements.forEach(element => this._applyHiddenState(element, false));
+  }
+
+  private _removeElement(element: Element | null): void {
+    if (!element) return;
+    try {
+      const parent = element.parentNode;
+      if (parent) {
+        parent.removeChild(element);
+      }
+    } catch {}
+  }
+
+  private _attachCleanupListeners(cleanupOverlay: () => void): () => void {
+    const onVisibilityChange = () => {
+      if (typeof document !== 'undefined' && (document as any).hidden) {
+        cleanupOverlay();
+      }
+    };
+
+    const onPageHide = () => cleanupOverlay();
+
+    if (typeof document !== 'undefined') {
+      try {
+        document.addEventListener('visibilitychange', onVisibilityChange as any, { once: true } as any);
+      } catch {}
+    }
+
+    if (typeof window !== 'undefined') {
+      try {
+        window.addEventListener('pagehide', onPageHide as any, { once: true } as any);
+      } catch {}
+    }
+
+    return () => {
+      if (typeof document !== 'undefined') {
+        try {
+          document.removeEventListener('visibilitychange', onVisibilityChange as any);
+        } catch {}
+      }
+
+      if (typeof window !== 'undefined') {
+        try {
+          window.removeEventListener('pagehide', onPageHide as any);
+        } catch {}
+      }
+    };
+  }
+
+  private _applyInitialCloneStyles(
+    domElement: Element,
+    styles: { initialOpacity?: number; initialVisibility?: 'visible' | 'hidden'; initialDisplay?: string }
+  ): void {
+    const { initialOpacity, initialVisibility, initialDisplay } = styles;
+    try {
+      const elementWithStyle = domElement as Element & { style?: CSSStyleDeclaration };
+      if (!elementWithStyle.style) return;
+
+      elementWithStyle.style.pointerEvents = 'none';
+      if (initialOpacity !== undefined) {
+        elementWithStyle.style.opacity = String(initialOpacity);
+      }
+      if (initialVisibility) {
+        elementWithStyle.style.visibility = initialVisibility;
+      }
+      if (initialDisplay !== undefined) {
+        elementWithStyle.style.display = initialDisplay;
+      }
+    } catch {}
+  }
+
+  private _applyCloneIdSuffix(domElement: Element, targetElement: LayoutElement, idSuffix?: string): void {
+    if (!idSuffix) return;
+    try {
+      const existingId = domElement.getAttribute('id');
+      const newId = existingId ? `${existingId}${idSuffix}` : `${targetElement.id}${idSuffix}`;
+      domElement.setAttribute('id', newId);
+    } catch {}
   }
 
 }
