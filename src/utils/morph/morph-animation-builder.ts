@@ -167,191 +167,428 @@ export class MorphAnimationOrchestrator {
   ): number {
     const debug = Boolean((context as any).debugMorph);
     for (const animation of phaseBundle.simultaneousAnimations) {
-      const preferTarget = phaseBundle.phaseName === 'fadeInTarget';
-      const sourceMap = context.sourceCloneElementsById;
-      const targetMap = context.targetCloneElementsById;
+      const resolution = this._resolveAnimationElement(phaseBundle.phaseName, animation, context);
 
-      let sourceChosen = false;
-      let targetElement: Element | undefined;
-      if (preferTarget) {
-        targetElement = targetMap?.get(animation.targetElementId) || context.cloneElementsById?.get(animation.targetElementId);
-        sourceChosen = false;
-      } else {
-        targetElement = sourceMap?.get(animation.targetElementId) || context.cloneElementsById?.get(animation.targetElementId);
-        sourceChosen = true;
-      }
-
-      if (!targetElement) {
-        if (debug) {
-          // eslint-disable-next-line no-console
-          console.info('[Morph Debug] element not found for phase', phaseBundle.phaseName, {
-            id: animation.targetElementId,
-            preferTarget,
-            hasSourceMap: Boolean(sourceMap),
-            hasTargetMap: Boolean(targetMap)
-          });
-        }
+      if (!resolution) {
+        this._logMissingElement(debug, phaseBundle, animation, context);
         continue;
       }
 
       if (debug) {
-        let initialOpacity: string | undefined;
-        try { initialOpacity = (targetElement as HTMLElement).style?.opacity ?? getComputedStyle(targetElement as Element as HTMLElement).opacity; } catch {}
-        // eslint-disable-next-line no-console
-        console.info('[Morph Debug] enqueue', {
-          phase: phaseBundle.phaseName,
-          type: animation.animationType,
-          id: animation.targetElementId,
-          map: sourceChosen ? 'source' : (preferTarget ? 'target' : 'combined'),
-          duration: animation.duration,
-          delay: animation.delay || 0,
-          initialOpacity
-        });
+        this._logEnqueuedAnimation(phaseBundle, animation, resolution);
       }
 
-      const animationStartTime = phaseStartTime + (animation.delay || 0);
-
-      switch (animation.animationType) {
-        case 'fade':
-        case 'transform':
-        case 'scale':
-          timeline.to(targetElement as any, {
-            duration: animation.duration,
-            ease: 'power2.out',
-            ...animation.properties
-          } as any, animationStartTime);
-          break;
-        case 'textStyle': {
-          const srcText = this._findTextElementInClone(targetElement, animation.targetElementId);
-          const matchedTargetId: string | undefined = (animation.properties || {}).matchedTargetId;
-          const preserveMaskFill = Boolean((animation.properties || {}).preserveMaskFill);
-          const dstClone = matchedTargetId ? context.targetCloneElementsById?.get(matchedTargetId) : undefined;
-          const dstText = matchedTargetId && dstClone ? this._findTextElementInClone(dstClone, matchedTargetId) : null;
-
-          const attrTargets: Record<string, any> = {};
-          if (dstText) {
-            const attrs = preserveMaskFill
-              ? ['font-size','font-family','font-weight','letter-spacing','text-anchor','dominant-baseline','x','y']
-              : ['font-size','font-family','font-weight','letter-spacing','text-anchor','dominant-baseline','fill','x','y'];
-            for (const name of attrs) {
-              const value = dstText.getAttribute(name);
-              if (value === null) continue;
-              if (name === 'fill' && preserveMaskFill) continue;
-              attrTargets[name] = this._maybeRoundNumericAttribute(name, value);
-            }
-          } else if (matchedTargetId) {
-            try {
-              const dst = (context.targetElements || []).find(e => e.id === matchedTargetId) as any;
-              if (dst && dst.props) {
-                logger.debug('dst attributes', dst.props);
-                if (dst.props.fontSize !== undefined) attrTargets['font-size'] = String(dst.props.fontSize) + 'px';
-                if (dst.props.fontFamily) attrTargets['font-family'] = String(dst.props.fontFamily);
-                if (dst.props.fontWeight !== undefined) attrTargets['font-weight'] = String(dst.props.fontWeight);
-                if (dst.props.letterSpacing !== undefined) {
-                  const ls = dst.props.letterSpacing;
-                  attrTargets['letter-spacing'] = typeof ls === 'number' ? `${ls}px` : String(ls);
-                }
-                if (dst.props.textAnchor) attrTargets['text-anchor'] = String(dst.props.textAnchor);
-                if (dst.props.dominantBaseline) attrTargets['dominant-baseline'] = String(dst.props.dominantBaseline);
-                if (!preserveMaskFill && dst.props.textColor) {
-                  attrTargets['fill'] = String(dst.props.textColor);
-                }
-                // Fallback position approximation using layout box and anchor
-                try {
-                  const x = (dst.layout?.x ?? 0) + (dst.props.textAnchor === 'end' ? (dst.layout?.width ?? 0) : (dst.props.textAnchor === 'middle' ? (dst.layout?.width ?? 0) / 2 : 0));
-                  const y = (dst.layout?.y ?? 0) + ((dst.layout?.height ?? 0) / 2);
-                  attrTargets['x'] = this._maybeRoundNumericAttribute('x', String(x));
-                  attrTargets['y'] = this._maybeRoundNumericAttribute('y', String(y));
-                } catch {}
-              }
-            } catch {}
-          }
-
-          if (srcText && Object.keys(attrTargets).length > 0) {
-            timeline.to(srcText as any, {
-              duration: animation.duration,
-              ease: 'power2.out',
-              attr: attrTargets
-            } as any, animationStartTime);
-          }
-          break;
-        }
-        case 'pathMorph': {
-          const pathElement = this._findPathElementInClone(targetElement, animation.targetElementId);
-          if (pathElement) {
-            timeline.to(pathElement as any, {
-              duration: animation.duration,
-              ease: 'power2.out',
-              ...animation.properties
-            } as any, animationStartTime);
-          }
-          break;
-        }
-        case 'shapeStyle': {
-          const srcPath = this._findPathElementInClone(targetElement, animation.targetElementId);
-          const matchedTargetId: string | undefined = (animation.properties || {}).matchedTargetId;
-          const dstClone = matchedTargetId ? context.targetCloneElementsById?.get(matchedTargetId) : undefined;
-          const dstPath = matchedTargetId && dstClone ? this._findPathElementInClone(dstClone, matchedTargetId) : null;
-
-          const attrTargets: Record<string, any> = {};
-          if (dstPath) {
-            const fill = dstPath.getAttribute('fill');
-            const stroke = dstPath.getAttribute('stroke');
-            if (fill !== null) attrTargets['fill'] = fill;
-            if (stroke !== null) attrTargets['stroke'] = stroke;
-          } else if (matchedTargetId) {
-            try {
-              const dst = (context.targetElements || []).find(e => e.id === matchedTargetId) as any;
-              if (dst && dst.props) {
-                if (dst.props.fill) attrTargets['fill'] = String(dst.props.fill);
-                if (dst.props.stroke) attrTargets['stroke'] = String(dst.props.stroke);
-              }
-            } catch {}
-          }
-
-          if (srcPath && Object.keys(attrTargets).length > 0) {
-            timeline.to(srcPath as any, {
-              duration: animation.duration,
-              ease: 'power2.out',
-              attr: attrTargets
-            } as any, animationStartTime);
-          }
-          break;
-        }
-        case 'visibility':
-          timeline.set(targetElement as any, animation.properties as any, animationStartTime);
-          break;
-        case 'squish':
-          timeline.to(targetElement as any, {
-            duration: animation.duration,
-            ease: 'power4.out',
-            ...animation.properties
-          } as any, animationStartTime);
-          break;
-        case 'reverseSquish': {
-          const toProps = { ...animation.properties } as any;
-          const fromProps: any = { scaleY: 0, transformOrigin: toProps.transformOrigin || '50% 50%', opacity: 1 };
-          timeline.fromTo(targetElement as any, fromProps, {
-            duration: animation.duration,
-            ease: 'power4.out',
-            ...toProps
-          } as any, animationStartTime);
-          break;
-        }
-      }
-
+      const animationStartTime = this._calculateAnimationStartTime(phaseStartTime, animation);
+      this._executeAnimation(timeline, animation, animationStartTime, context, resolution.element);
     }
 
     return phaseBundle.totalPhaseDuration;
   }
 
-  private static _maybeRoundNumericAttribute(name: string, value: string): string {
-    if (!['x', 'y'].includes(name)) return value;
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return value;
-    const rounded = Math.round(numeric * 100) / 100;
-    return String(rounded);
+  private static _resolveAnimationElement(
+    phaseName: string,
+    animation: AnimationInstruction,
+    context: MorphAnimationContext
+  ): { element: Element; origin: 'source' | 'target' | 'combined' } | null {
+    const preferTarget = phaseName === 'fadeInTarget';
+    const sourceMap = context.sourceCloneElementsById;
+    const targetMap = context.targetCloneElementsById;
+    const combinedMap = context.cloneElementsById;
+
+    if (preferTarget) {
+      const targetElement = targetMap?.get(animation.targetElementId);
+      if (targetElement) {
+        return { element: targetElement, origin: 'target' };
+      }
+
+      const combinedElement = combinedMap?.get(animation.targetElementId);
+      if (combinedElement) {
+        return { element: combinedElement, origin: 'combined' };
+      }
+      return null;
+    }
+
+    const sourceElement = sourceMap?.get(animation.targetElementId);
+    if (sourceElement) {
+      return { element: sourceElement, origin: 'source' };
+    }
+
+    const combinedElement = combinedMap?.get(animation.targetElementId);
+    if (combinedElement) {
+      return { element: combinedElement, origin: 'combined' };
+    }
+
+    return null;
   }
+
+  private static _logMissingElement(
+    debug: boolean,
+    phaseBundle: PhaseAnimationBundle,
+    animation: AnimationInstruction,
+    context: MorphAnimationContext
+  ): void {
+    if (!debug) {
+      return;
+    }
+
+    // eslint-disable-next-line no-console
+    console.info('[Morph Debug] element not found for phase', phaseBundle.phaseName, {
+      id: animation.targetElementId,
+      preferTarget: phaseBundle.phaseName === 'fadeInTarget',
+      hasSourceMap: Boolean(context.sourceCloneElementsById),
+      hasTargetMap: Boolean(context.targetCloneElementsById)
+    });
+  }
+
+  private static _logEnqueuedAnimation(
+    phaseBundle: PhaseAnimationBundle,
+    animation: AnimationInstruction,
+    resolution: { element: Element; origin: 'source' | 'target' | 'combined' }
+  ): void {
+    let initialOpacity: string | undefined;
+    try {
+      const castElement = resolution.element as HTMLElement;
+      initialOpacity = castElement.style?.opacity ?? getComputedStyle(castElement).opacity;
+    } catch {}
+
+    // eslint-disable-next-line no-console
+    console.info('[Morph Debug] enqueue', {
+      phase: phaseBundle.phaseName,
+      type: animation.animationType,
+      id: animation.targetElementId,
+      map: resolution.origin,
+      duration: animation.duration,
+      delay: animation.delay || 0,
+      initialOpacity
+    });
+  }
+
+  private static _calculateAnimationStartTime(phaseStartTime: number, animation: AnimationInstruction): number {
+    return phaseStartTime + (animation.delay || 0);
+  }
+
+  private static _executeAnimation(
+    timeline: gsap.core.Timeline,
+    animation: AnimationInstruction,
+    animationStartTime: number,
+    context: MorphAnimationContext,
+    targetElement: Element
+  ): void {
+    switch (animation.animationType) {
+      case 'fade':
+      case 'transform':
+      case 'scale':
+        this._applySimpleTween(timeline, animation, animationStartTime, targetElement);
+        break;
+      case 'textStyle':
+        this._applyTextStyle(timeline, animation, animationStartTime, context, targetElement);
+        break;
+      case 'pathMorph':
+        this._applyPathMorph(timeline, animation, animationStartTime, targetElement);
+        break;
+      case 'shapeStyle':
+        this._applyShapeStyle(timeline, animation, animationStartTime, context, targetElement);
+        break;
+      case 'visibility':
+        this._applyVisibility(timeline, animation, animationStartTime, targetElement);
+        break;
+      case 'squish':
+        this._applySquish(timeline, animation, animationStartTime, targetElement);
+        break;
+      case 'reverseSquish':
+        this._applyReverseSquish(timeline, animation, animationStartTime, targetElement);
+        break;
+    }
+  }
+
+  private static _applySimpleTween(
+    timeline: gsap.core.Timeline,
+    animation: AnimationInstruction,
+    animationStartTime: number,
+    targetElement: Element
+  ): void {
+    this._queueTween(timeline, targetElement, animation.duration, animation.properties ?? {}, animationStartTime, 'power2.out');
+  }
+
+  private static _applyTextStyle(
+    timeline: gsap.core.Timeline,
+    animation: AnimationInstruction,
+    animationStartTime: number,
+    context: MorphAnimationContext,
+    cloneElement: Element
+  ): void {
+    const srcText = this._findTextElementInClone(cloneElement, animation.targetElementId);
+    if (!srcText) {
+      return;
+    }
+
+    const properties = animation.properties ?? {};
+    const matchedTargetId: string | undefined = properties.matchedTargetId;
+    const preserveMaskFill = Boolean(properties.preserveMaskFill);
+    const attrTargets = this._buildTextAttributeTargets(context, matchedTargetId, preserveMaskFill);
+
+    if (Object.keys(attrTargets).length === 0) {
+      return;
+    }
+
+    this._queueTween(
+      timeline,
+      srcText,
+      animation.duration,
+      { attr: attrTargets },
+      animationStartTime,
+      'power2.out'
+    );
+  }
+
+  private static _applyPathMorph(
+    timeline: gsap.core.Timeline,
+    animation: AnimationInstruction,
+    animationStartTime: number,
+    cloneElement: Element
+  ): void {
+    const pathElement = this._findPathElementInClone(cloneElement, animation.targetElementId);
+    if (!pathElement) {
+      return;
+    }
+
+    this._queueTween(timeline, pathElement, animation.duration, animation.properties ?? {}, animationStartTime, 'power2.out');
+  }
+
+  private static _applyShapeStyle(
+    timeline: gsap.core.Timeline,
+    animation: AnimationInstruction,
+    animationStartTime: number,
+    context: MorphAnimationContext,
+    cloneElement: Element
+  ): void {
+    const srcPath = this._findPathElementInClone(cloneElement, animation.targetElementId);
+    if (!srcPath) {
+      return;
+    }
+
+    const properties = animation.properties ?? {};
+    const matchedTargetId: string | undefined = properties.matchedTargetId;
+    const attrTargets = this._buildShapeAttributeTargets(context, matchedTargetId);
+
+    if (Object.keys(attrTargets).length === 0) {
+      return;
+    }
+
+    this._queueTween(
+      timeline,
+      srcPath,
+      animation.duration,
+      { attr: attrTargets },
+      animationStartTime,
+      'power2.out'
+    );
+  }
+
+  private static _applyVisibility(
+    timeline: gsap.core.Timeline,
+    animation: AnimationInstruction,
+    animationStartTime: number,
+    targetElement: Element
+  ): void {
+    timeline.set(targetElement as unknown as gsap.TweenTarget, (animation.properties ?? {}) as gsap.TweenVars, animationStartTime);
+  }
+
+  private static _applySquish(
+    timeline: gsap.core.Timeline,
+    animation: AnimationInstruction,
+    animationStartTime: number,
+    targetElement: Element
+  ): void {
+    this._queueTween(timeline, targetElement, animation.duration, animation.properties ?? {}, animationStartTime, 'power4.out');
+  }
+
+  private static _applyReverseSquish(
+    timeline: gsap.core.Timeline,
+    animation: AnimationInstruction,
+    animationStartTime: number,
+    targetElement: Element
+  ): void {
+    const toProps = { ...(animation.properties ?? {}) };
+    const fromProps = {
+      scaleY: 0,
+      transformOrigin: (toProps as { transformOrigin?: string }).transformOrigin || '50% 50%',
+      opacity: 1
+    };
+
+    this._queueFromToTween(
+      timeline,
+      targetElement,
+      fromProps,
+      {
+        duration: animation.duration,
+        ease: 'power4.out',
+        ...toProps
+      },
+      animationStartTime
+    );
+  }
+
+  private static _queueTween(
+    timeline: gsap.core.Timeline,
+    element: Element,
+    duration: number,
+    properties: Record<string, unknown>,
+    animationStartTime: number,
+    ease: string
+  ): void {
+    timeline.to(
+      element as unknown as gsap.TweenTarget,
+      {
+        duration,
+        ease,
+        ...properties
+      } as gsap.TweenVars,
+      animationStartTime
+    );
+  }
+
+  private static _queueFromToTween(
+    timeline: gsap.core.Timeline,
+    element: Element,
+    fromProps: Record<string, unknown>,
+    toProps: gsap.TweenVars,
+    animationStartTime: number
+  ): void {
+    timeline.fromTo(
+      element as unknown as gsap.TweenTarget,
+      fromProps as gsap.TweenVars,
+      toProps,
+      animationStartTime
+    );
+  }
+
+  private static _buildTextAttributeTargets(
+    context: MorphAnimationContext,
+    matchedTargetId: string | undefined,
+    preserveMaskFill: boolean
+  ): Record<string, string> {
+    if (!matchedTargetId) {
+      return {};
+    }
+
+    const attrTargets: Record<string, string> = {};
+    const dstClone = context.targetCloneElementsById?.get(matchedTargetId);
+    const dstText = dstClone ? this._findTextElementInClone(dstClone, matchedTargetId) : null;
+
+    if (dstText) {
+      const attributes = preserveMaskFill
+        ? ['font-size', 'font-family', 'font-weight', 'letter-spacing', 'text-anchor', 'dominant-baseline', 'x', 'y']
+        : ['font-size', 'font-family', 'font-weight', 'letter-spacing', 'text-anchor', 'dominant-baseline', 'fill', 'x', 'y'];
+
+      for (const name of attributes) {
+        const value = dstText.getAttribute(name);
+        if (value === null) {
+          continue;
+        }
+
+        if (name === 'fill' && preserveMaskFill) {
+          continue;
+        }
+
+        attrTargets[name] = value;
+      }
+
+      return attrTargets;
+    }
+
+    const matchedTarget = (context.targetElements || []).find(element => element.id === matchedTargetId) as any;
+    if (!matchedTarget || !matchedTarget.props) {
+      return attrTargets;
+    }
+
+    logger.debug('dst attributes', matchedTarget.props);
+
+    if (matchedTarget.props.fontSize !== undefined) {
+      attrTargets['font-size'] = `${String(matchedTarget.props.fontSize)}px`;
+    }
+
+    if (matchedTarget.props.fontFamily) {
+      attrTargets['font-family'] = String(matchedTarget.props.fontFamily);
+    }
+
+    if (matchedTarget.props.fontWeight !== undefined) {
+      attrTargets['font-weight'] = String(matchedTarget.props.fontWeight);
+    }
+
+    if (matchedTarget.props.letterSpacing !== undefined) {
+      const letterSpacing = matchedTarget.props.letterSpacing;
+      attrTargets['letter-spacing'] = typeof letterSpacing === 'number' ? `${letterSpacing}px` : String(letterSpacing);
+    }
+
+    if (matchedTarget.props.textAnchor) {
+      attrTargets['text-anchor'] = String(matchedTarget.props.textAnchor);
+    }
+
+    if (matchedTarget.props.dominantBaseline) {
+      attrTargets['dominant-baseline'] = String(matchedTarget.props.dominantBaseline);
+    }
+
+    if (!preserveMaskFill && matchedTarget.props.textColor) {
+      attrTargets['fill'] = String(matchedTarget.props.textColor);
+    }
+
+    const layout = matchedTarget.layout ?? {};
+    const layoutWidth = layout.width ?? 0;
+
+    const anchor = matchedTarget.props.textAnchor;
+    const approximateX = (layout.x ?? 0) + (anchor === 'end' ? layoutWidth : anchor === 'middle' ? layoutWidth / 2 : 0);
+    const approximateY = (layout.y ?? 0) + ((layout.height ?? 0) / 2);
+
+    attrTargets['x'] = String(approximateX);
+    attrTargets['y'] = String(approximateY);
+
+    return attrTargets;
+  }
+
+  private static _buildShapeAttributeTargets(
+    context: MorphAnimationContext,
+    matchedTargetId: string | undefined
+  ): Record<string, string> {
+    if (!matchedTargetId) {
+      return {};
+    }
+
+    const attrTargets: Record<string, string> = {};
+    const dstClone = context.targetCloneElementsById?.get(matchedTargetId);
+    const dstPath = dstClone ? this._findPathElementInClone(dstClone, matchedTargetId) : null;
+
+    if (dstPath) {
+      const fill = dstPath.getAttribute('fill');
+      const stroke = dstPath.getAttribute('stroke');
+
+      if (fill !== null) {
+        attrTargets['fill'] = fill;
+      }
+
+      if (stroke !== null) {
+        attrTargets['stroke'] = stroke;
+      }
+
+      return attrTargets;
+    }
+
+    const matchedTarget = (context.targetElements || []).find(element => element.id === matchedTargetId) as any;
+    if (!matchedTarget || !matchedTarget.props) {
+      return attrTargets;
+    }
+
+    if (matchedTarget.props.fill) {
+      attrTargets['fill'] = String(matchedTarget.props.fill);
+    }
+
+    if (matchedTarget.props.stroke) {
+      attrTargets['stroke'] = String(matchedTarget.props.stroke);
+    }
+
+    return attrTargets;
+  }
+
 
   private static _findPathElementInClone(cloneElement: Element, originalElementId: string): SVGPathElement | null {
     // If the clone itself is a <path>, return it directly
