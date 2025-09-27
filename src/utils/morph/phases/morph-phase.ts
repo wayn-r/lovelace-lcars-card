@@ -23,7 +23,7 @@ export class TransitionMatchedTextPhase extends BaseMorphPhase {
         if (targetPath) builder.addPathMorphAnimation(sourceId, targetPath);
       } catch {}
 
-      const preserveMaskFill = Boolean((sourceElement as any).props?.cutout || (targetElement as any).props?.cutout);
+      const preserveMaskFill = ElementTypeUtils.elementUsesCutoutMask(sourceElement) || ElementTypeUtils.elementUsesCutoutMask(targetElement);
       builder.addTextStyleAnimation(sourceId, targetId, { preserveMaskFill });
 
     });

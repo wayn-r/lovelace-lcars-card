@@ -341,19 +341,17 @@ export class MorphEngine {
     const targetCloneElementsById = new Map<string, Element>();
 
     for (const element of targetElements) {
-      // Create synthetic elements for target elements since they don't exist in the DOM yet
-      const usesCutout = ElementTypeUtils.elementUsesCutoutMask(element);
-      const forceCutoutFade = ElementTypeUtils.elementShouldForceCutoutFade(element);
-      const syntheticElement = utilities.createSyntheticElement(element, animationContext, {
+      const usesCutout = ElementTypeUtils.elementIsElbow(element) || ElementTypeUtils.elementIsRectangle(element);
+      const cloned = utilities.createSyntheticElement(element, animationContext, {
         idSuffix: '__morph_target',
-        initialOpacity: forceCutoutFade ? 0 : (usesCutout ? 1 : undefined),
-        initialVisibility: usesCutout && !forceCutoutFade ? 'hidden' : undefined,
-        initialDisplay: usesCutout && !forceCutoutFade ? 'none' : undefined
+        initialOpacity: usesCutout ? 1 : 0,
+        preserveStyleAttributes: true
       });
-      if (syntheticElement) {
-        overlay.appendChild(syntheticElement);
-        targetCloneElementsById.set(element.id, syntheticElement);
+      if (!cloned) {
+        continue;
       }
+      overlay.appendChild(cloned);
+      targetCloneElementsById.set(element.id, cloned);
     }
 
     return targetCloneElementsById;

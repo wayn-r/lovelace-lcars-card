@@ -491,7 +491,7 @@ export class MorphAnimationOrchestrator {
           continue;
         }
 
-        attrTargets[name] = value;
+        attrTargets[name] = this._maybeRoundTextAttribute(name, value);
       }
 
       return attrTargets;
@@ -540,8 +540,8 @@ export class MorphAnimationOrchestrator {
     const approximateX = (layout.x ?? 0) + (anchor === 'end' ? layoutWidth : anchor === 'middle' ? layoutWidth / 2 : 0);
     const approximateY = (layout.y ?? 0) + ((layout.height ?? 0) / 2);
 
-    attrTargets['x'] = String(approximateX);
-    attrTargets['y'] = String(approximateY);
+    attrTargets['x'] = this._maybeRoundTextAttribute('x', String(approximateX));
+    attrTargets['y'] = this._maybeRoundTextAttribute('y', String(approximateY));
 
     return attrTargets;
   }
@@ -618,5 +618,12 @@ export class MorphAnimationOrchestrator {
       textEl = cloneElement.querySelector('text') as SVGTextElement;
     }
     return textEl;
+  }
+
+  private static _maybeRoundTextAttribute(name: string, value: string): string {
+    if (!['x', 'y'].includes(name)) return value;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return value;
+    return numeric.toFixed(3);
   }
 }

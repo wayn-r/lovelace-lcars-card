@@ -106,12 +106,8 @@ export class FadeInTargetPhase extends BaseMorphPhase {
       if (matchedTargetIds.has(element.id)) continue;
       if (cascadeTargetElementIds.has(element.id)) continue;
       const delay = maxCascadeEndTime;
-      const usesCutout = ElementTypeUtils.elementUsesCutoutMask(element);
-      const forceCutoutFade = ElementTypeUtils.elementShouldForceCutoutFade(element);
       if (ElementTypeUtils.elementIsText(element)) {
         builder.addReverseSquishAnimation(element.id, 0.15, delay);
-      } else if (usesCutout && !forceCutoutFade) {
-        builder.addVisibilityToggle(element.id, true, delay);
       } else {
         builder.addFadeInAnimation(element.id, delay);
       }
@@ -164,14 +160,6 @@ export class FadeInTargetPhase extends BaseMorphPhase {
       const tgt = context.targetElements.find(e => e.id === id);
       if (tgt && ElementTypeUtils.elementIsText(tgt)) {
         builder.addReverseSquishAnimation(id, 0.15, delay);
-      } else if (tgt) {
-        const usesCutout = ElementTypeUtils.elementUsesCutoutMask(tgt);
-        const forceCutoutFade = ElementTypeUtils.elementShouldForceCutoutFade(tgt);
-        if (usesCutout && !forceCutoutFade) {
-          builder.addVisibilityToggle(id, true, delay);
-        } else {
-          builder.addFadeInAnimation(id, delay);
-        }
       } else {
         builder.addFadeInAnimation(id, delay);
       }
@@ -210,13 +198,7 @@ export class FadeInTargetPhase extends BaseMorphPhase {
       if (existingElbowDelay === undefined || elbowDelay < existingElbowDelay) {
         scheduledTargetDelays.set(elbowId, elbowDelay);
         cascadeTargetElementIds.add(elbowId);
-        const usesCutout = ElementTypeUtils.elementUsesCutoutMask(elbowEl);
-        const forceCutoutFade = ElementTypeUtils.elementShouldForceCutoutFade(elbowEl);
-        if (usesCutout && !forceCutoutFade) {
-          builder.addVisibilityToggle(elbowId, true, elbowDelay);
-        } else {
-          builder.addFadeInAnimation(elbowId, elbowDelay);
-        }
+        builder.addFadeInAnimation(elbowId, elbowDelay);
       }
 
       // Schedule along this same group beyond this elbow (continue the line)

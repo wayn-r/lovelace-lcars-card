@@ -36,6 +36,7 @@ type CloneRenderOptions = {
   initialVisibility?: 'visible' | 'hidden';
   initialDisplay?: string;
   idSuffix?: string;
+  preserveStyleAttributes?: boolean;
 };
 
 type CloneContext = {
@@ -140,7 +141,7 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
     options: CloneRenderOptions = {}
   ): Element | null {
     const debug = this._debugEnabled();
-    const { initialOpacity = 0, initialVisibility, initialDisplay, idSuffix } = options;
+    const { initialOpacity = 0, initialVisibility, initialDisplay, idSuffix, preserveStyleAttributes } = options;
     
     try {
       const renderedTemplate = targetElement.render();
@@ -160,6 +161,9 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
       }
 
       this._applyInitialCloneStyles(domElement, { initialOpacity, initialVisibility, initialDisplay });
+      if (!preserveStyleAttributes) {
+        this._stripInlineStyles(domElement, ['transform', 'opacity', 'visibility', 'display']);
+      }
       this._applyCloneIdSuffix(domElement, targetElement, idSuffix);
 
       // Fix any internal definition IDs to avoid collisions
@@ -487,6 +491,24 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
       }
       if (initialDisplay !== undefined) {
         elementWithStyle.style.display = initialDisplay;
+      }
+    } catch {}
+  }
+
+  private _stripInlineStyles(domElement: Element, keys: string[]): void {
+    try {
+      const queue: Element[] = [domElement];
+      while (queue.length) {
+        const current = queue.shift()!;
+        const styled = current as Element & { style?: CSSStyleDeclaration };
+        if (styled.style) {
+          keys.forEach(key => {
+            if (styled.style && key in styled.style) {
+              styled.style.removeProperty(key);
+            }
+          });
+        }
+        queue.push(...Array.from(current.children));
       }
     } catch {}
   }
