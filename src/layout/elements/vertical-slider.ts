@@ -222,14 +222,23 @@ export class VerticalSliderElement extends LayoutElement {
         }
       }
 
+      const fillY = baseY + (trackHeight - fillHeight);
+      const hasValidFill = Number.isFinite(fillHeight) && Number.isFinite(fillY);
+      // TODO: replace this guard with a proper fallback once entity value defaults are implemented.
+      const sliderFill = hasValidFill
+        ? svg`
+          <rect id="${this.id}__slider_${i}__fill" x="${baseX}" y="${fillY}" width="${trackWidth}" height="${fillHeight}"
+                rx="0" ry="0"
+                fill="${fillColor}" stroke="none" />
+        `
+        : svg``;
+
       const sliderGroup = svg`
         <g id="${this.id}__slider_${i}">
           <rect id="${this.id}__slider_${i}__track" x="${baseX}" y="${baseY}" width="${trackWidth}" height="${trackHeight}"
                 rx="0" ry="0"
                 fill="${trackBackground}" stroke="none" />
-          <rect id="${this.id}__slider_${i}__fill" x="${baseX}" y="${baseY + (trackHeight - fillHeight)}" width="${trackWidth}" height="${fillHeight}"
-                rx="0" ry="0"
-                fill="${fillColor}" stroke="none" />
+          ${sliderFill}
           ${segmentLines}
         </g>
       `;
@@ -535,5 +544,3 @@ export class VerticalSliderElement extends LayoutElement {
   }
 
 }
-
-
