@@ -28,11 +28,21 @@ export class GraphElement extends LayoutElement {
   private entityConfigs: RichEntityConfig[] = [];
   private animations: Map<string, gsap.core.Tween> = new Map();
   private unsubscribeFromStateChanges?: () => void;
+  private insufficientData = false;
+  private dataTimeout?: number;
 
   constructor(id: string, props: LayoutElementProps, layoutConfig: LayoutConfigOptions, hass?: HomeAssistant, requestUpdateCallback?: () => void, getShadowElement?: (id: string) => Element | null, runtime?: any) {
     super(id, props, layoutConfig, hass, requestUpdateCallback, getShadowElement, runtime);
     this.updateGradientIds();
     this.subscribeToStateChanges();
+
+    this.dataTimeout = window.setTimeout(() => {
+        const allEntityIds = this.entityConfigs.map(config => config.id);
+        if (!this.hasSufficientData(allEntityIds)) {
+            this.insufficientData = true;
+            this.requestUpdateCallback?.();
+        }
+    }, 3000);
   }
 
   private subscribeToStateChanges(): void {
@@ -49,6 +59,16 @@ export class GraphElement extends LayoutElement {
 
   setHistory(historyMap: HistoryMap): void {
     this.historyMap = historyMap;
+
+    const allEntityIds = this.entityConfigs.map(config => config.id);
+    if (this.hasSufficientData(allEntityIds)) {
+        this.insufficientData = false;
+        if (this.dataTimeout) {
+            window.clearTimeout(this.dataTimeout);
+            this.dataTimeout = undefined;
+        }
+    }
+
     this.requestUpdateCallback?.();
     this.setupAnimation();
   }
@@ -65,6 +85,10 @@ export class GraphElement extends LayoutElement {
     this.animations.clear();
     if (this.unsubscribeFromStateChanges) {
         this.unsubscribeFromStateChanges();
+    }
+    if (this.dataTimeout) {
+        window.clearTimeout(this.dataTimeout);
+        this.dataTimeout = undefined;
     }
   }
 
@@ -154,21 +178,16 @@ export class GraphElement extends LayoutElement {
     }
     
     const allEntityIds = this.entityConfigs.map(config => config.id);
+    const hasData = this.hasSufficientData(allEntityIds);
     
-    if (!this.hasSufficientData(allEntityIds)) {
-      const textX = this.layout.x + 10;
-      const textY = this.layout.y + 20;
-      return svg`<text x="${textX}" y="${textY}" fill="orange">Insufficient data</text>`;
-    }
-
-    const sm2 = (this as any)._runtime?.state;
+    const sm = (this as any)._runtime?.state;
     const visibleEntityConfigs = this.entityConfigs.filter(config => {
         const stateName = `${this.getStateIdBase()}_${config.id}_visible`;
-        return sm2?.getState?.(stateName) !== 'hidden';
+        return sm?.getState?.(stateName) !== 'hidden';
     });
     const allPoints = this.calculateAllPoints();
 
-    const paths = visibleEntityConfigs.map((config) => {
+    const paths = hasData ? visibleEntityConfigs.map((config) => {
       const points = allPoints[config.id];
       if (!points || points.length < 2) return null;
 
@@ -184,7 +203,7 @@ export class GraphElement extends LayoutElement {
        }
       
       return svg`<path d="${path}" fill="none" stroke="url(#${gradientId})" stroke-width="4" />`;
-    }).filter(p => p !== null);
+    }).filter(p => p !== null) : [];
 
 
     const colors = this.resolveElementColors({
@@ -197,8 +216,15 @@ export class GraphElement extends LayoutElement {
         <rect x="${this.layout.x}" y="${this.layout.y}" width="${this.layout.width}" height="${this.layout.height}" fill="transparent" stroke="${colors.strokeColor}" stroke-width="1" />
         ${this.renderGridLines()}
         ${paths}
+        ${this.insufficientData && !hasData ? this.renderInsufficientDataOverlay() : ''}
       </g>
     `;
+  }
+
+  private renderInsufficientDataOverlay(): SVGTemplateResult {
+    const textX = this.layout.x + 10;
+    const textY = this.layout.y + 20;
+    return svg`<text x="${textX}" y="${textY}" fill="orange">Insufficient data</text>`;
   }
 
   private hasSufficientData(entityIds: string[]): boolean {
@@ -210,9 +236,9 @@ export class GraphElement extends LayoutElement {
       return null;
     }
 
-    const minMax = this.getMinMaxValues();
+    let minMax = this.getMinMaxValues();
     if (!minMax) {
-      return null;
+      minMax = { minVal: 0, maxVal: 100 };
     }
 
     const gridConfig = this.getGridConfiguration(minMax);
