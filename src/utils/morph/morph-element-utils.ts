@@ -1,6 +1,7 @@
 import type { LayoutElement } from '../../layout/elements/element.js';
 import type { Group, LayoutElementProps } from '../../layout/engine.js';
 import { DistanceParser } from '../animation.js';
+import { OffsetCalculator } from '../offset-calculator.js';
 import { ShapeGenerator, type Orientation } from '../shapes.js';
 
 export class ElementTypeUtils {
@@ -185,13 +186,26 @@ export class ElementTypeUtils {
     const props = this._getElementProps(elbowElement);
     const rawValue = props[propKey];
     const fallback = typeof rawValue === 'number' || typeof rawValue === 'string' ? rawValue : defaultValue;
-    const layoutWidth = layoutDimension === 'width' ? elbowElement.layout?.width ?? 0 : 0;
-    const layoutHeight = layoutDimension === 'height' ? elbowElement.layout?.height ?? 0 : 0;
 
-    return Math.max(
-      1,
-      DistanceParser.parse(String(fallback), { layout: { width: layoutWidth, height: layoutHeight } })
+    const containerRect = (elbowElement as any)?.containerRect as DOMRect | undefined;
+    const baseDimension = layoutDimension === 'width'
+      ? containerRect?.width ?? elbowElement.layout?.width ?? 0
+      : containerRect?.height ?? elbowElement.layout?.height ?? 0;
+
+    const resolved = OffsetCalculator.calculateTextOffset(
+      fallback as number | string,
+      baseDimension
     );
+
+    if (resolved > 0) {
+      return Math.max(1, resolved);
+    }
+
+    const numericFallback = typeof fallback === 'number'
+      ? fallback
+      : DistanceParser.parse(String(fallback), { layout: { width: baseDimension, height: baseDimension } });
+
+    return Math.max(1, numericFallback || defaultValue);
   }
 
   private static _getSanitizedLayout(element: LayoutElement): { x: number; y: number; width: number; height: number } {

@@ -21,6 +21,9 @@ export interface MorphPhaseContext {
   groupMatches?: GroupMatch[];
   elbowCascadePlans?: Map<string, ElbowCascadePlan>;
   debugMorph?: boolean;
+  cloneElementsById?: Map<string, Element>;
+  sourceCloneElementsById?: Map<string, Element>;
+  targetCloneElementsById?: Map<string, Element>;
 }
 
 export type ElbowCascadeDirectionPlan = {
@@ -51,5 +54,4 @@ export abstract class BaseMorphPhase implements IMorphPhase {
     return AnimationBuilder.createForPhase(this.phaseName, context.phaseDuration);
   }
 }
-
 

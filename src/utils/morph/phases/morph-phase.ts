@@ -18,10 +18,10 @@ export class TransitionMatchedTextPhase extends BaseMorphPhase {
       const targetElement = targetElementsById.get(targetId);
       if (!sourceElement || !targetElement) return;
 
-      try {
-        const targetPath = ElementTypeUtils.generatePathForElement(targetElement);
-        if (targetPath) builder.addPathMorphAnimation(sourceId, targetPath);
-      } catch {}
+      if (!ElementTypeUtils.elementIsText(targetElement)) {
+        const targetPath = this._resolveTargetPath(context, targetId);
+        builder.addPathMorphAnimation(sourceId, targetPath);
+      }
 
       const preserveMaskFill = ElementTypeUtils.elementUsesCutoutMask(sourceElement) || ElementTypeUtils.elementUsesCutoutMask(targetElement);
       builder.addTextStyleAnimation(sourceId, targetId, { preserveMaskFill });
@@ -39,10 +39,8 @@ export class TransitionMatchedTextPhase extends BaseMorphPhase {
       const dstEl = targetElementsById.get(dstId);
       if (!srcEl || !dstEl) return;
 
-      try {
-        const targetPath = ElementTypeUtils.generatePathForElement(dstEl);
-        if (targetPath) builder.addPathMorphAnimation(srcId, targetPath);
-      } catch {}
+      const targetPath = this._resolveTargetPath(context, dstId);
+      builder.addPathMorphAnimation(srcId, targetPath);
 
       try {
         builder.addShapeStyleAnimation(srcId, dstId);
@@ -53,10 +51,8 @@ export class TransitionMatchedTextPhase extends BaseMorphPhase {
     cascadePlans.forEach((plan) => {
       const targetElbow = context.targetElements.find(element => element.id === plan.targetElbowId);
       if (!targetElbow) return;
-      try {
-        const targetPath = ElementTypeUtils.generatePathForElement(targetElbow);
-        builder.addPathMorphAnimation(plan.sourceElbowId, targetPath);
-      } catch {}
+      const targetPath = this._resolveTargetPath(context, plan.targetElbowId);
+      builder.addPathMorphAnimation(plan.sourceElbowId, targetPath);
 
       // Transition elbow color to match target elbow
       try {
@@ -67,5 +63,39 @@ export class TransitionMatchedTextPhase extends BaseMorphPhase {
     });
 
     return builder.buildPhaseBundle(this.phaseName);
+}
+
+  private _resolveTargetPath(
+    context: MorphPhaseContext,
+    targetElementId: string
+  ): string {
+    const clone = context.targetCloneElementsById?.get(targetElementId);
+    const clonePath = clone ? this._extractPathDataFromClone(clone, targetElementId) : null;
+    if (clonePath) {
+      return clonePath;
+    }
+
+    throw new Error(`Morph target path missing for ${targetElementId}`);
+  }
+
+  private _extractPathDataFromClone(cloneElement: Element, originalElementId: string): string | null {
+    try {
+      const tag = (cloneElement as any).tagName ? String((cloneElement as any).tagName).toLowerCase() : '';
+      if (tag === 'path') {
+        const directPath = (cloneElement as SVGPathElement).getAttribute('d');
+        return directPath ?? null;
+      }
+
+      const selector = `[id="${originalElementId}__shape"]`;
+      const path = cloneElement.querySelector(selector) as SVGPathElement | null;
+      if (path) {
+        return path.getAttribute('d');
+      }
+
+      const anyPath = cloneElement.querySelector('path') as SVGPathElement | null;
+      return anyPath?.getAttribute('d') ?? null;
+    } catch {
+      return null;
+    }
   }
 }

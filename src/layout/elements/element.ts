@@ -782,6 +782,7 @@ export abstract class LayoutElement {
             const maskId = `${this.id}__cutout-mask`;
 
             const textForMask = svg`<text
+                id="${this.id}__mask_text"
                 x="${textPosition.x}"
                 y="${textPosition.y}"
                 fill="black"

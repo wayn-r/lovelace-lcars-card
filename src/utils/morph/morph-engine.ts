@@ -341,10 +341,9 @@ export class MorphEngine {
     const targetCloneElementsById = new Map<string, Element>();
 
     for (const element of targetElements) {
-      const usesCutout = ElementTypeUtils.elementIsElbow(element) || ElementTypeUtils.elementIsRectangle(element);
       const cloned = utilities.createSyntheticElement(element, animationContext, {
         idSuffix: '__morph_target',
-        initialOpacity: usesCutout ? 1 : 0,
+        initialOpacity: 0,
         preserveStyleAttributes: true
       });
       if (!cloned) {
@@ -377,7 +376,10 @@ export class MorphEngine {
         targetGrouping: (animationContext as any).__targetGrouping as ElementGroupingResult | undefined,
         groupMatches: (animationContext as any).__groupMatches as GroupMatch[] | undefined,
         elbowCascadePlans: (animationContext as any).__elbowCascadePlans as Map<string, ElbowCascadePlan> | undefined,
-        debugMorph: Boolean((animationContext as any).debugMorph)
+        debugMorph: Boolean((animationContext as any).debugMorph),
+        cloneElementsById: animationContext.cloneElementsById,
+        sourceCloneElementsById: animationContext.sourceCloneElementsById,
+        targetCloneElementsById: animationContext.targetCloneElementsById
       };
 
       const phaseBundle: PhaseAnimationBundle = morphPhase.buildAnimations(phaseContext);

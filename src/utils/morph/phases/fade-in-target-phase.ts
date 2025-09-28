@@ -16,6 +16,12 @@ export class FadeInTargetPhase extends BaseMorphPhase {
 
     const matchedTargetIds = new Set<string>(Array.from(matchedTextPairs.values()));
 
+    context.elementMapping.forEach(targetId => {
+      if (targetId) {
+        matchedTargetIds.add(targetId);
+      }
+    });
+
     const topHeaderShapeMappings = ElementAnalyzer.findTopHeaderShapeMappings(
       context.sourceElements,
       context.targetElements,
@@ -150,8 +156,12 @@ export class FadeInTargetPhase extends BaseMorphPhase {
     if (orderedFarToNear.length === 0) return;
 
     const orderedNearToFar = [...orderedFarToNear].reverse();
-    orderedNearToFar.forEach((id, index) => {
-      if (matchedTargetIds.has(id)) return;
+    for (let index = 0; index < orderedNearToFar.length; index++) {
+      const id = orderedNearToFar[index];
+      if (matchedTargetIds.has(id)) {
+        break;
+      }
+
       const delay = baseDelaySeconds + index * (stepDelaySeconds ?? BaseMorphPhase.cascadeStepDelaySeconds);
       const existing = scheduledTargetDelays.get(id);
       if (existing !== undefined && existing <= delay) return;
@@ -163,7 +173,7 @@ export class FadeInTargetPhase extends BaseMorphPhase {
       } else {
         builder.addFadeInAnimation(id, delay);
       }
-    });
+    }
   }
 
   private _traverseElbowsAndCascade(
@@ -187,6 +197,10 @@ export class FadeInTargetPhase extends BaseMorphPhase {
     const elbowsNearToFar = [...elbowIdsFarToNear].reverse();
     for (let i = 0; i < elbowsNearToFar.length; i++) {
       const elbowId = elbowsNearToFar[i];
+      if (matchedTargetIds.has(elbowId)) {
+        break;
+      }
+
       if (visitedElbowIds.has(elbowId)) continue;
       visitedElbowIds.add(elbowId);
       const elbowEl = context.targetElements.find(e => e.id === elbowId);

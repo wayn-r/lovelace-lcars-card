@@ -476,72 +476,26 @@ export class MorphAnimationOrchestrator {
     const dstClone = context.targetCloneElementsById?.get(matchedTargetId);
     const dstText = dstClone ? this._findTextElementInClone(dstClone, matchedTargetId) : null;
 
-    if (dstText) {
-      const attributes = preserveMaskFill
-        ? ['font-size', 'font-family', 'font-weight', 'letter-spacing', 'text-anchor', 'dominant-baseline', 'x', 'y']
-        : ['font-size', 'font-family', 'font-weight', 'letter-spacing', 'text-anchor', 'dominant-baseline', 'fill', 'x', 'y'];
+    if (!dstText) {
+      throw new Error(`Morph target text missing for ${matchedTargetId}`);
+    }
 
-      for (const name of attributes) {
-        const value = dstText.getAttribute(name);
-        if (value === null) {
-          continue;
-        }
+    const attributes = preserveMaskFill
+      ? ['font-size', 'font-family', 'font-weight', 'letter-spacing', 'text-anchor', 'dominant-baseline', 'x', 'y']
+      : ['font-size', 'font-family', 'font-weight', 'letter-spacing', 'text-anchor', 'dominant-baseline', 'fill', 'x', 'y'];
 
-        if (name === 'fill' && preserveMaskFill) {
-          continue;
-        }
-
-        attrTargets[name] = this._maybeRoundTextAttribute(name, value);
+    for (const name of attributes) {
+      const value = dstText.getAttribute(name);
+      if (value === null) {
+        continue;
       }
 
-      return attrTargets;
+      if (name === 'fill' && preserveMaskFill) {
+        continue;
+      }
+
+      attrTargets[name] = this._maybeRoundTextAttribute(name, value);
     }
-
-    const matchedTarget = (context.targetElements || []).find(element => element.id === matchedTargetId) as any;
-    if (!matchedTarget || !matchedTarget.props) {
-      return attrTargets;
-    }
-
-    logger.debug('dst attributes', matchedTarget.props);
-
-    if (matchedTarget.props.fontSize !== undefined) {
-      attrTargets['font-size'] = `${String(matchedTarget.props.fontSize)}px`;
-    }
-
-    if (matchedTarget.props.fontFamily) {
-      attrTargets['font-family'] = String(matchedTarget.props.fontFamily);
-    }
-
-    if (matchedTarget.props.fontWeight !== undefined) {
-      attrTargets['font-weight'] = String(matchedTarget.props.fontWeight);
-    }
-
-    if (matchedTarget.props.letterSpacing !== undefined) {
-      const letterSpacing = matchedTarget.props.letterSpacing;
-      attrTargets['letter-spacing'] = typeof letterSpacing === 'number' ? `${letterSpacing}px` : String(letterSpacing);
-    }
-
-    if (matchedTarget.props.textAnchor) {
-      attrTargets['text-anchor'] = String(matchedTarget.props.textAnchor);
-    }
-
-    if (matchedTarget.props.dominantBaseline) {
-      attrTargets['dominant-baseline'] = String(matchedTarget.props.dominantBaseline);
-    }
-
-    if (!preserveMaskFill && matchedTarget.props.textColor) {
-      attrTargets['fill'] = String(matchedTarget.props.textColor);
-    }
-
-    const layout = matchedTarget.layout ?? {};
-    const layoutWidth = layout.width ?? 0;
-
-    const anchor = matchedTarget.props.textAnchor;
-    const approximateX = (layout.x ?? 0) + (anchor === 'end' ? layoutWidth : anchor === 'middle' ? layoutWidth / 2 : 0);
-    const approximateY = (layout.y ?? 0) + ((layout.height ?? 0) / 2);
-
-    attrTargets['x'] = this._maybeRoundTextAttribute('x', String(approximateX));
-    attrTargets['y'] = this._maybeRoundTextAttribute('y', String(approximateY));
 
     return attrTargets;
   }
@@ -612,12 +566,17 @@ export class MorphAnimationOrchestrator {
       if (tag === 'text') return cloneElement as unknown as SVGTextElement;
     } catch {}
 
-    const textId = `${originalElementId}__text`;
-    let textEl = cloneElement.querySelector(`#${textId}`) as SVGTextElement;
-    if (!textEl) {
-      textEl = cloneElement.querySelector('text') as SVGTextElement;
+    const maskText = cloneElement.querySelector(`[id="${originalElementId}__mask_text"]`) as SVGTextElement | null;
+    if (maskText) {
+      return maskText;
     }
-    return textEl;
+
+    const namedText = cloneElement.querySelector(`[id="${originalElementId}__text"]`) as SVGTextElement | null;
+    if (namedText) {
+      return namedText;
+    }
+
+    return cloneElement.querySelector('text') as SVGTextElement | null;
   }
 
   private static _maybeRoundTextAttribute(name: string, value: string): string {
