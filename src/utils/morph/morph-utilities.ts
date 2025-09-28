@@ -366,6 +366,11 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
       return null;
     }
 
+    const specialClone = this._attemptSpecialClone(element, originalDomElement, context);
+    if (specialClone) {
+      return specialClone;
+    }
+
     const renderedClone = this.createSyntheticElement(element, context.animationContext, {
       initialOpacity: 1,
       idSuffix: '__morph_source'
@@ -392,6 +397,48 @@ export class MorphUtilities implements SvgRootLocator, OverlayManager, Synthetic
       clone: renderedClone,
       hiddenOriginalElement
     };
+  }
+
+  private _attemptSpecialClone(
+    element: LayoutElement,
+    originalDomElement: Element,
+    context: CloneContext
+  ): CloneResult | null {
+    const loggerMeta = (element as any)?.__loggerEntryMeta;
+    if (!loggerMeta) {
+      return null;
+    }
+
+    try {
+      const clonedDom = originalDomElement.cloneNode(true) as Element;
+      if (!clonedDom) {
+        return null;
+      }
+
+      clonedDom.removeAttribute('data-lcars-morph-hidden');
+      const cloneWithStyle = clonedDom as Element & { style?: CSSStyleDeclaration };
+      if (cloneWithStyle.style) {
+        cloneWithStyle.style.visibility = '';
+      }
+
+      this._applyCloneIdSuffix(clonedDom, element, '__morph_source');
+
+      context.overlay.appendChild(clonedDom);
+
+      const hiddenApplied = this._applyHiddenState(originalDomElement, true);
+      if (!hiddenApplied) {
+        logger.warn('failed to hide original element ', element.id);
+      }
+
+      this._suppressInteractionState(element);
+
+      return {
+        clone: clonedDom,
+        hiddenOriginalElement: null
+      };
+    } catch {
+      return null;
+    }
   }
 
   private _suppressInteractionState(element: LayoutElement): void {

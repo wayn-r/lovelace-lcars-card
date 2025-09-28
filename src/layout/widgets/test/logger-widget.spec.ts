@@ -572,6 +572,57 @@ describe('LoggerWidget', () => {
       expect(runtime.logger.addMessagesInOrder).toHaveBeenCalledWith(newMessages);
       expect(mockRequestUpdate).toHaveBeenCalled();
     });
+
+    it('should restore existing messages with their original positions', () => {
+      runtime.logger.getMessages.mockReturnValue(mockLogMessages);
+
+      widget = new LoggerWidget(
+        'restore_positions_test',
+        { maxLines: 3, lineSpacing: 20 },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement,
+        runtime
+      );
+
+      const textElements = widget.expand().slice(1) as TextElement[];
+
+      expect(textElements[0].layoutConfig.offsetY).toBe(0);
+      expect(textElements[1].layoutConfig.offsetY).toBe(20);
+      expect(textElements[2].layoutConfig.offsetY).toBe(40);
+    });
+
+    it('should keep entry offsets in sync after processing new messages', async () => {
+      runtime.logger.getMessages.mockReturnValue(mockLogMessages.slice(0, 3));
+
+      widget = new LoggerWidget(
+        'sync_offsets_test',
+        { maxLines: 3, lineSpacing: 20 },
+        {},
+        mockHass,
+        mockRequestUpdate,
+        mockGetShadowElement,
+        runtime
+      );
+
+      const messageCallback = runtime.logger.registerWidget.mock.calls[0][1];
+      const newMessage: LogMessage = {
+        id: 'msg-new',
+        text: 'New entry',
+        timestamp: Date.now() + 1000
+      };
+
+      messageCallback(newMessage);
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      const textElements = widget.expand().slice(1) as TextElement[];
+
+      expect(textElements[0].layoutConfig.offsetY).toBe(0);
+      expect(textElements[1].layoutConfig.offsetY).toBe(20);
+      expect(textElements[2].layoutConfig.offsetY).toBe(40);
+    });
   });
 
   describe('Widget Destruction and Cleanup', () => {

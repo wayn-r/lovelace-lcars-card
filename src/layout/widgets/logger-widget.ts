@@ -199,6 +199,7 @@ class ColorStateManager {
     this.currentPhaseIndex = newPhaseIndex;
 
     await this.animator.changeColor(startColor, endColor);
+    this.entry.setColor(endColor, { silent: true });
 
     if (this.currentPhaseIndex < this.colorCycle.length) {
       this.scheduleNextPhase(this.colorCycle[this.currentPhaseIndex].duration);
@@ -211,6 +212,7 @@ class LogEntry {
   public isMoving: boolean = false;
   private colorManager?: ColorStateManager;
   public animator?: LogEntryAnimator;
+  private currentOffsetY: number = 0;
 
   constructor(
     private readonly elementId: string,
@@ -226,11 +228,15 @@ class LogEntry {
     private readonly colorCycle?: ColorPhaseConfig[]
   ) {
     this.textElement = this.createTextElement();
+    (this.textElement as any).__loggerEntryMeta = {
+      widgetId: this.boundsElementId,
+      entryId: this.elementId
+    };
   }
 
   private createTextElement(): TextElement {
     const isEndAnchor = this.textAnchor === 'end';
-    
+
     return new TextElement(
       this.elementId,
       {
@@ -268,12 +274,15 @@ class LogEntry {
   }
 
   setPosition(index: number, lineSpacing: number): void {
-    this.setOffsetY(index * lineSpacing);
+    const targetOffset = index * lineSpacing;
+    this.setOffsetY(targetOffset);
   }
 
-  setColor(color: string): void {
+  setColor(color: string, options?: { silent?: boolean }): void {
     this.textElement.props.fill = color;
-    this.requestUpdateCallback?.();
+    if (!options?.silent) {
+      this.requestUpdateCallback?.();
+    }
   }
 
   setText(text: string): void {
@@ -283,6 +292,18 @@ class LogEntry {
 
   setVisible(visible: boolean): void {
     (this.textElement.props as any).fillOpacity = visible ? 1 : 0;
+
+    if (visible) {
+      const domElement = this.getShadowElement?.(this.textElement.id) as Element | null;
+      if (domElement) {
+        domElement.removeAttribute('data-lcars-morph-hidden');
+        const domWithStyle = domElement as Element & { style?: CSSStyleDeclaration };
+        if (domWithStyle.style) {
+          domWithStyle.style.visibility = '';
+        }
+      }
+    }
+
     this.requestUpdateCallback?.();
   }
 
@@ -294,9 +315,23 @@ class LogEntry {
     return (this.textElement.props as any).fillOpacity === 1;
   }
 
-  setOffsetY(offset: number): void {
+  setOffsetY(offset: number, options?: { suppressUpdate?: boolean }): void {
+    const delta = offset - this.currentOffsetY;
+
+    if (delta === 0 && this.textElement.layoutConfig.offsetY === offset) {
+      return;
+    }
+
+    if (this.textElement.layout.calculated) {
+      this.textElement.layout.y += delta;
+    }
+
     this.textElement.layoutConfig.offsetY = offset;
-    this.requestUpdateCallback?.();
+    this.currentOffsetY = offset;
+
+    if (!options?.suppressUpdate) {
+      this.requestUpdateCallback?.();
+    }
   }
 
   public initializeAnimation(animationContext: AnimationContext, onFadeOut: () => void): void {
@@ -313,6 +348,7 @@ class LogEntry {
   }
 
   public reset(): void {
+    this.setOffsetY(0, { suppressUpdate: true });
     this.hide();
     this.colorManager?.reset();
     this.animator?.reset();
@@ -536,8 +572,6 @@ export class LoggerWidget extends Widget {
   }
 
   private populateFromExisting(): void {
-    this.entries.forEach(entry => entry.hide());
-    
     const widgetWidth = this.boundsElement?.layout.width || 0;
     const textConfig = {
       fontFamily: this.props.fontFamily || LoggerWidget.DEFAULTS.FONT_FAMILY,
@@ -545,15 +579,33 @@ export class LoggerWidget extends Widget {
       fontWeight: this.props.fontWeight || LoggerWidget.DEFAULTS.FONT_WEIGHT,
     };
 
-    (this.runtimeLogger()).getMessages()
+    const activeMessages = (this.runtimeLogger())
+      .getMessages()
+      .slice(0, this.maxLines);
+
+    this.entries.forEach((entry, index) => {
+      const message = activeMessages[index];
+
+      if (!message) {
+        entry.hide();
+        return;
+      }
+
+      const trimmedText = this.trimTextToWidth(message.text, widgetWidth, textConfig);
+      entry.show(trimmedText);
+      entry.setPosition(index, this.lineSpacing);
+    });
+  }
+
+  private syncVisibleEntryPositions(): void {
+    this.entries
       .slice(0, this.maxLines)
-      .forEach((message, messageIndex) => {
-        const entry = this.entries.find(e => e.getText() === message.text);
-        if (entry) {
-          const trimmedText = this.trimTextToWidth(message.text, widgetWidth, textConfig);
-          entry.show(trimmedText);
-          entry.setPosition(messageIndex, this.lineSpacing);
+      .forEach((entry, index) => {
+        if (!entry.isVisible()) {
+          return;
         }
+
+        entry.setPosition(index, this.lineSpacing);
       });
   }
 
@@ -594,7 +646,6 @@ export class LoggerWidget extends Widget {
 
   private prepareForReuse(entry: LogEntry): void {
     entry.reset();
-    entry.setOffsetY(0);
     this.requestUpdateCallback?.();
   }
 
@@ -645,6 +696,8 @@ export class LoggerWidget extends Widget {
     });
 
     await Promise.all([fadeOutPromise, fadeInPromise, slideDownPromise]);
+
+    this.syncVisibleEntryPositions();
   }
 
   public override onResize(): void {
