@@ -605,3 +605,17 @@ export class ValidationUtils {
     return Boolean(rect && rect.width > 0 && rect.height > 0);
   }
 }
+
+class MorphControllerSingleton {
+    private _isMorphing: boolean = false;
+
+    get isMorphing(): boolean {
+        return this._isMorphing;
+    }
+
+    set isMorphing(value: boolean) {
+        this._isMorphing = value;
+    }
+}
+
+export const MorphController = new MorphControllerSingleton();

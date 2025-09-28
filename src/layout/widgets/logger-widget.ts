@@ -15,6 +15,7 @@ import { ColorResolver } from '../../utils/color-resolver.js';
 import gsap from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { FontManager } from '../../utils/font-manager.js';
+import { MorphController } from '../../utils/morph/morph-utilities.js';
 
 gsap.registerPlugin(CustomEase);
 
@@ -472,7 +473,6 @@ export class LoggerWidget extends Widget {
     });
     this.entries.forEach(entry => entry.hide());
     this.entries = [];
-    this.queue = [];
     this.unsubscribe = undefined;
     try { (this.runtimeLogger()).destroy(); } catch {}
   }
@@ -493,7 +493,11 @@ export class LoggerWidget extends Widget {
       this.entries.forEach(entry => {
         const animationContext = this.createAnimationContext(entry.textElement.id);
         entry.initializeAnimation(animationContext, () => {
+          if (MorphController.isMorphing) return;
+
           entry.animator?.fadeOut().then(() => {
+            if (MorphController.isMorphing) return;
+
             entry.hide();
             
             const index = this.entries.findIndex(e => e === entry);
@@ -610,6 +614,8 @@ export class LoggerWidget extends Widget {
   }
 
   private isDuplicate(messageText: string): boolean {
+    if (MorphController.isMorphing) return true;
+
     const textLower = messageText.toLowerCase();
     
     const activeEntries = this.entries.filter(entry => 
@@ -650,9 +656,12 @@ export class LoggerWidget extends Widget {
   }
 
   private async displayMessage(message: LogMessage): Promise<void> {
+    if (MorphController.isMorphing) return;
+
     const entryToFadeOut = this.entries[this.maxLines - 1];
     const fadeOutPromise = entryToFadeOut.isVisible()
       ? entryToFadeOut.animator?.fadeOut().then(() => {
+          if (MorphController.isMorphing) return;
           entryToFadeOut.reset();
         })
       : Promise.resolve();
@@ -696,6 +705,8 @@ export class LoggerWidget extends Widget {
     });
 
     await Promise.all([fadeOutPromise, fadeInPromise, slideDownPromise]);
+
+    if (MorphController.isMorphing) return;
 
     this.syncVisibleEntryPositions();
   }

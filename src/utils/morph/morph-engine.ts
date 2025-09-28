@@ -13,7 +13,7 @@ import {
   type PhaseAnimationBundle, 
   type MorphAnimationContext 
 } from './morph-animation-builder';
-import { MorphUtilities, ValidationUtils, TimeUtils } from './morph-utilities.js';
+import { MorphUtilities, ValidationUtils, TimeUtils, MorphController } from './morph-utilities.js';
 import { MorphPhaseFactory } from './phases/phase-factory.js';
 import type { IMorphPhase, MorphPhaseContext, ElbowCascadePlan } from './phases/types.js';
 import { ElbowCascadePlanBuilder } from './phases/utils.js';
@@ -254,6 +254,7 @@ export class MorphEngine {
     elementMapping: Map<string, string>,
     options: MorphEngineOptions = {}
   ): Promise<void> {
+    MorphController.isMorphing = true;
     const utilities = new MorphUtilities();
     
     const { overlay, cloneElementsById: sourceCloneElementsById, hiddenOriginalElements } = utilities.createOverlayWithClones(
@@ -262,7 +263,6 @@ export class MorphEngine {
       hooks.getShadowElement,
       hooks.getAnimationContext()
     );
-
     const targetCloneElementsById = this._createTargetElementClones(
       overlay,
       targetElements,
@@ -324,6 +324,7 @@ export class MorphEngine {
     await this._executeAnimationPhases(morphPhases, animationContext, hooks);    
     
     utilities.scheduleOverlayCleanup(overlay, hiddenOriginalElements, this.defaultPhaseDurationSeconds * morphPhases.length);
+    MorphController.isMorphing = false;
   }
   
 
