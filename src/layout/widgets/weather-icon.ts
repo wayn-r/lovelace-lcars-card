@@ -3,6 +3,7 @@ import { LayoutElement } from '../elements/element.js';
 import { LayoutElementProps, LayoutConfigOptions } from '../engine.js';
 import type { CardRuntime } from '../../core/runtime.js';
 import { SVGTemplateResult, svg } from 'lit';
+import { ColorResolver } from '../../utils/color-resolver.js';
 
 const WEATHER_ICONS: { [key: string]: string } = {
     'clear-night': 'mdi:weather-night',
@@ -66,11 +67,37 @@ export class WeatherIcon extends LayoutElement {
         const width = this.layout.width || 24;
         const height = this.layout.height || 24;
 
+        const fallbackColor = 'var(--lcars-color-environmental-weather-icon)';
+        const colors = this.resolveElementColors({ fallbackFillColor: fallbackColor });
+        const rawColor = (colors.fillColor ?? fallbackColor).toString().trim();
+        let iconColor = rawColor.length > 0 ? rawColor : fallbackColor;
+
+        const resolvedThemeColor = ColorResolver
+            .resolve(iconColor)
+            .withFallback(iconColor)
+            .withDom({ themeOnly: true } as any)
+            .toString()
+            .trim();
+        if (resolvedThemeColor && !resolvedThemeColor.startsWith('var(')) {
+            iconColor = resolvedThemeColor;
+        }
+
+        const styleSegments = [
+            `width: ${width}px`,
+            `height: ${height}px`,
+            `--mdc-icon-size: ${width}px`,
+            'display: block',
+            `--icon-color: ${iconColor}`,
+            `color: ${iconColor}`,
+            `--mdc-icon-color: ${iconColor}`
+        ];
+        const styleAttribute = `${styleSegments.join('; ')};`;
+
         return svg`
             <foreignObject x="${this.layout.x}" y="${this.layout.y}" width="${width}" height="${height}">
                 <ha-icon
                     .icon=${icon}
-                    style="width: ${width}px; height: ${height}px; --mdc-icon-size: ${width}px; display: block; color: var(--lcars-color-environmental-weather-icon);"
+                    style="${styleAttribute}"
                 ></ha-icon>
             </foreignObject>
         `;
