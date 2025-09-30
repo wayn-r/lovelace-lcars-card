@@ -49,6 +49,8 @@ import { LayoutElementProps } from '../../engine.js';
 import { HomeAssistant } from 'custom-card-helpers';
 import { svg, SVGTemplateResult } from 'lit';
 
+vi.useFakeTimers();
+
 function createRuntime() {
   return {
     state: {
@@ -285,7 +287,7 @@ describe('GraphElement', () => {
       expect(result).toBeNull();
     });
 
-    it('should render "Insufficient data" message when no data available', () => {
+    it('should NOT render "Insufficient data" message immediately on loading', () => {
       const configs: RichEntityConfig[] = [{ id: 'sensor.temperature' }];
       graphElement.setEntityConfigs(configs);
       // No history data provided
@@ -294,8 +296,25 @@ describe('GraphElement', () => {
       expect(result).toBeDefined();
       
       const templateString = result!.strings.join('');
-      expect(templateString).toContain('Insufficient data');
-      expect(templateString).toContain('text');
+      expect(templateString).not.toContain('Insufficient data');
+      expect(templateString).not.toContain('text');
+    });
+
+    it('should render "Insufficient data" message after a delay when no data available', () => {
+      const configs: RichEntityConfig[] = [{ id: 'sensor.temperature' }];
+      graphElement.setEntityConfigs(configs);
+      // No history data provided
+
+      const result = (graphElement as any).renderShape();
+      expect(result).toBeDefined();
+
+      vi.advanceTimersByTime(3000);
+      mockRequestUpdate(); // Trigger update after timeout
+      const updatedResult = (graphElement as any).renderShape();
+
+      const templateJSON = JSON.stringify(updatedResult);
+      expect(templateJSON).toContain('Insufficient data');
+      expect(templateJSON).toContain('text');
     });
 
     it('should render graph with paths when sufficient data available', () => {
