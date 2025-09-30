@@ -11,16 +11,16 @@ groups:
           left_content: Text Size Overrides
           right_content: Example
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
 
   - group_id: "height_override_examples"
     elements:
@@ -30,14 +30,14 @@ groups:
         text:
           content: "Traditional: fontSize 16"
           fill: "#FF9900"
-          fontSize: 16
-          fontFamily: "Antonio"
+          font_size: 16
+          font_family: "Antonio"
         layout:
           anchor:
             to: nav_header.main_header
-            element_point: topLeft
-            target_point: bottomLeft
-          offsetY: 10
+            element_point: top-left
+            target_point: bottom-left
+          offset_y: 10
 
       # Text using height override (no fontSize specified)
       - id: "height_override_text"
@@ -45,15 +45,15 @@ groups:
         text:
           content: "Height Override: 30px height"
           fill: "#99CCFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
           # No fontSize specified - will be calculated from layout.height
         layout:
           height: 30  # This will calculate fontSize automatically
           anchor:
             to: height_override_examples.traditional_text
-            element_point: topLeft
-            target_point: bottomLeft
-          offsetY: 5
+            element_point: top-left
+            target_point: bottom-left
+          offset_y: 5
 
       # Text using larger height override
       - id: "large_height_text"
@@ -61,14 +61,14 @@ groups:
         text:
           content: "Large Height: 50px"
           fill: "#FFCC00"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           height: 50  # Larger height = larger calculated fontSize
           anchor:
             to: height_override_examples.height_override_text
-            element_point: topLeft
-            target_point: bottomLeft
-          offsetY: 5
+            element_point: top-left
+            target_point: bottom-left
+          offset_y: 5
 
   - group_id: "width_override_examples"
     elements:
@@ -78,15 +78,15 @@ groups:
         text:
           content: "NORMAL SPACING"
           fill: "#FF9900"
-          fontSize: 16
-          letterSpacing: "normal"
-          fontFamily: "Antonio"
+          font_size: 16
+          letter_spacing: "normal"
+          font_family: "Antonio"
         layout:
           anchor:
             to: height_override_examples.large_height_text
-            element_point: topLeft
-            target_point: bottomLeft
-          offsetY: 20
+            element_point: top-left
+            target_point: bottom-left
+          offset_y: 20
 
       # Text using width override for tight spacing
       - id: "tight_width_text"
@@ -94,16 +94,16 @@ groups:
         text:
           content: "COMPRESSED TEXT"
           fill: "#99CCFF"
-          fontSize: 16
-          fontFamily: "Antonio"
+          font_size: 16
+          font_family: "Antonio"
           # letterSpacing will be calculated from layout.width
         layout:
           width: 120  # Narrow width = tight letter spacing
           anchor:
             to: width_override_examples.traditional_spacing
-            element_point: topLeft
-            target_point: bottomLeft
-          offsetY: 5
+            element_point: top-left
+            target_point: bottom-left
+          offset_y: 5
 
       # Text using width override for expanded spacing
       - id: "expanded_width_text"
@@ -111,15 +111,15 @@ groups:
         text:
           content: "EXPANDED TEXT"
           fill: "#FFCC00"
-          fontSize: 16
-          fontFamily: "Antonio"
+          font_size: 16
+          font_family: "Antonio"
         layout:
           width: 300  # Wide width = expanded letter spacing
           anchor:
             to: width_override_examples.tight_width_text
-            element_point: topLeft
-            target_point: bottomLeft
-          offsetY: 5
+            element_point: top-left
+            target_point: bottom-left
+          offset_y: 5
 
   - group_id: "combined_override_examples"
     elements:
@@ -129,16 +129,16 @@ groups:
         text:
           content: "BOTH OVERRIDES"
           fill: "#FF6600"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
           # Both fontSize and letterSpacing calculated from layout
         layout:
           height: 35   # Calculates fontSize
           width: 250   # Calculates letterSpacing
           anchor:
             to: width_override_examples.expanded_width_text
-            element_point: topLeft
-            target_point: bottomLeft
-          offsetY: 20
+            element_point: top-left
+            target_point: bottom-left
+          offset_y: 20
 
       # Button with text size overrides
       - id: "button_with_overrides"
@@ -148,16 +148,16 @@ groups:
         text:
           content: "BUTTON TEXT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
           # Size calculated from layout dimensions
         layout:
           height: 40   # Button height drives text fontSize
           width: 180   # Button width drives text letterSpacing
           anchor:
             to: combined_override_examples.combined_override_text
-            element_point: topLeft
-            target_point: bottomLeft
-          offsetY: 10
+            element_point: top-left
+            target_point: bottom-left
+          offset_y: 10
         button:
           enabled: true
           actions:
@@ -172,14 +172,14 @@ groups:
         text:
           content: "Percentage: keeps explicit fontSize 14"
           fill: "#CCCCCC"
-          fontSize: 14
-          letterSpacing: "1px"
-          fontFamily: "Antonio"
+          font_size: 14
+          letter_spacing: "1px"
+          font_family: "Antonio"
         layout:
           height: "25%"  # Percentage doesn't override fontSize
           width: "50%"   # Percentage doesn't override letterSpacing
           anchor:
             to: combined_override_examples.button_with_overrides
-            element_point: topLeft
-            target_point: bottomLeft
-          offsetY: 20 
+            element_point: top-left
+            target_point: bottom-left
+          offset_y: 20 

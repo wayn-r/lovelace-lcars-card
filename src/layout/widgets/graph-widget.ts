@@ -130,7 +130,7 @@ class GraphButtonFactory {
         enabled: true,
         actions: {
           tap: {
-            action: "toggle_state",
+            action: "toggle-state",
             target_element_ref: stateName,
             states: ["visible", "hidden"]
           }
@@ -151,8 +151,8 @@ class GraphButtonFactory {
       height: dimensions.height,
       anchor: {
         anchorTo: `${parentGraphId}_graph`,
-        anchorPoint: 'topLeft',
-        targetAnchorPoint: 'topRight',
+        anchorPoint: 'top-left',
+        targetAnchorPoint: 'top-right',
       },
       offsetX: 20,
       offsetY: currentYOffset,
@@ -226,8 +226,8 @@ export class GraphWidget extends Widget {
       height: graphHeight,
       anchor: {
         anchorTo: this.id,
-        anchorPoint: 'topLeft',
-        targetAnchorPoint: 'topLeft',
+        anchorPoint: 'top-left',
+        targetAnchorPoint: 'top-left',
       },
     };
     this.graphElement.layoutConfig = graphLayoutConfig;

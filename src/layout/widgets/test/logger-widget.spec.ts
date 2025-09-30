@@ -729,8 +729,8 @@ describe('LoggerWidget', () => {
       const textElement = elements[1] as TextElement;
       
       // For end anchor, should anchor to topRight
-      expect(textElement.layoutConfig.anchor?.anchorPoint).toBe('topRight');
-      expect(textElement.layoutConfig.anchor?.targetAnchorPoint).toBe('topRight');
+      expect(textElement.layoutConfig.anchor?.anchorPoint).toBe('top-right');
+      expect(textElement.layoutConfig.anchor?.targetAnchorPoint).toBe('top-right');
     });
 
     it('should use start anchor by default', () => {
@@ -747,8 +747,8 @@ describe('LoggerWidget', () => {
       const elements = widget.expand();
       const textElement = elements[1] as TextElement;
       
-      expect(textElement.layoutConfig.anchor?.anchorPoint).toBe('topLeft');
-      expect(textElement.layoutConfig.anchor?.targetAnchorPoint).toBe('topLeft');
+      expect(textElement.layoutConfig.anchor?.anchorPoint).toBe('top-left');
+      expect(textElement.layoutConfig.anchor?.targetAnchorPoint).toBe('top-left');
     });
   });
 });

@@ -256,8 +256,8 @@ describe('Widget', () => {
       const complexLayoutConfig: LayoutConfigOptions = {
         anchor: {
           anchorTo: 'other-element',
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'bottomRight'
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'bottom-right'
         },
         stretch: {
           stretchTo1: 'container',

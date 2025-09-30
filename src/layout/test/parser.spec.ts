@@ -95,7 +95,7 @@ describe('parseConfig', () => {
                   id: 'el1',
                   type: 'rectangle',
                   appearance: { fill: '#FF0000' },
-                  layout: { offsetX: 10 }
+                  layout: { offset_x: 10 }
                 }
               ]
             }
@@ -316,8 +316,8 @@ describe('parseConfig', () => {
                   text: {
                     content: 'Hello',
                     fill: '#0000FF',
-                    fontSize: 20,
-                    fontWeight: 'bold'
+                    font_size: 20,
+                    font_weight: 'bold'
                   }
                 }
               ]
@@ -350,7 +350,7 @@ describe('parseConfig', () => {
                   text: {
                     content: 'Button Text',
                     fill: '#FFFFFF',
-                    fontSize: 14
+                    font_size: 14
                   }
                 }
               ]
@@ -382,12 +382,12 @@ describe('parseConfig', () => {
                   layout: {
                     width: 100,
                     height: 50,
-                    offsetX: 10,
-                    offsetY: 20,
+                    offset_x: 10,
+                    offset_y: 20,
                     anchor: {
                       to: 'container',
-                      element_point: 'topLeft',
-                      target_point: 'topLeft'
+                      element_point: 'top-left',
+                      target_point: 'top-left'
                     }
                   }
                 }
@@ -407,8 +407,8 @@ describe('parseConfig', () => {
         expect(layoutConfig.offsetY).toBe(20);
         expect(layoutConfig.anchor).toBeDefined();
         expect(layoutConfig.anchor.anchorTo).toBe('container');
-        expect(layoutConfig.anchor.anchorPoint).toBe('topLeft');
-        expect(layoutConfig.anchor.targetAnchorPoint).toBe('topLeft');
+        expect(layoutConfig.anchor.anchorPoint).toBe('top-left');
+        expect(layoutConfig.anchor.targetAnchorPoint).toBe('top-left');
       });
     });
 

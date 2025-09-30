@@ -141,8 +141,8 @@ export class EntityMetricWidget extends Widget {
       {
         anchor: {
           anchorTo: bounds.id,
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topLeft',
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'top-left',
         },
         offsetX: labelConfig.offsetX || EntityMetricWidget.DEFAULT_LABEL_OFFSET_X,
         height,
@@ -174,8 +174,8 @@ export class EntityMetricWidget extends Widget {
         height,
         anchor: {
           anchorTo: labelRect.id,
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topRight',
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'top-right',
         },
         offsetX: valueConfig.offsetX || EntityMetricWidget.DEFAULT_VALUE_OFFSET_X,
       },
@@ -275,8 +275,8 @@ export class EntityMetricWidget extends Widget {
       {
         anchor: {
           anchorTo: valueText.id,
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topRight',
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'top-right',
         },
         offsetX: unitConfig.offsetX || EntityMetricWidget.DEFAULT_UNIT_OFFSET_X,
         height: unitHeight,

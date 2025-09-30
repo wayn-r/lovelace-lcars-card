@@ -298,7 +298,7 @@ describe('LayoutElement', () => {
         });
 
         it('should anchor to container bottomRight to element topLeft', () => {
-            element.layoutConfig = { anchor: { anchorTo: 'container', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomRight' }};
+            element.layoutConfig = { anchor: { anchorTo: 'container', anchorPoint: 'top-left', targetAnchorPoint: 'bottom-right' }};
             // (containerWidth - elWidth_via_anchorPoint) = 1000 - 0 = 1000
             // (containerHeight - elHeight_via_anchorPoint) = 800 - 0 = 800
             element.calculateLayout(elementsMap, containerRect);
@@ -317,7 +317,7 @@ describe('LayoutElement', () => {
         });
 
         it('should anchor topLeft of el1 to center of target', () => {
-            element.layoutConfig = { anchor: { anchorTo: 'target', anchorPoint: 'topLeft', targetAnchorPoint: 'center' }};
+            element.layoutConfig = { anchor: { anchorTo: 'target', anchorPoint: 'top-left', targetAnchorPoint: 'center' }};
             // targetCenter = (100 + 200/2, 100 + 100/2) = (200, 150)
             // el1.x = targetCenter.x - el1_anchor_topLeft.x = 200 - 0 = 200
             // el1.y = targetCenter.y - el1_anchor_topLeft.y = 150 - 0 = 150
@@ -399,15 +399,15 @@ describe('LayoutElement', () => {
     });
 
     it.each([
-        ['topLeft', { x: 0, y: 0 }],
+        ['top-left', { x: 0, y: 0 }],
         ['topCenter', { x: 50, y: 0 }],
-        ['topRight', { x: 100, y: 0 }],
+        ['top-right', { x: 100, y: 0 }],
         ['centerLeft', { x: 0, y: 30 }],
         ['center', { x: 50, y: 30 }],
         ['centerRight', { x: 100, y: 30 }],
-        ['bottomLeft', { x: 0, y: 60 }],
+        ['bottom-left', { x: 0, y: 60 }],
         ['bottomCenter', { x: 50, y: 60 }],
-        ['bottomRight', { x: 100, y: 60 }],
+        ['bottom-right', { x: 100, y: 60 }],
     ])('should return correct coordinates for anchorPoint "%s"', (anchorPoint, expected) => {
         expect(element.getRelativeAnchorPosition(anchorPoint)).toEqual(expected);
     });
@@ -530,8 +530,8 @@ describe('LayoutElement', () => {
                 height: 46,
                 anchor: {
                     anchorTo: 'target',
-                    anchorPoint: 'topRight',
-                    targetAnchorPoint: 'topLeft'
+                    anchorPoint: 'top-right',
+                    targetAnchorPoint: 'top-left'
                 },
                 stretch: {
                     stretchTo1: 'container',

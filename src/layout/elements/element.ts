@@ -346,8 +346,8 @@ export abstract class LayoutElement {
     ): { x: number, y: number } {
         const anchorConfig = this.layoutConfig.anchor;
         const anchorTo = anchorConfig?.anchorTo;
-        const anchorPoint = anchorConfig?.anchorPoint || 'topLeft';
-        const targetAnchorPoint = anchorConfig?.targetAnchorPoint || 'topLeft';
+        const anchorPoint = anchorConfig?.anchorPoint || 'top-left';
+        const targetAnchorPoint = anchorConfig?.targetAnchorPoint || 'top-left';
 
         let x = 0;
         let y = 0;
@@ -715,7 +715,7 @@ export abstract class LayoutElement {
         const anchorConfig = this.layoutConfig.anchor;
         
         if (anchorConfig?.anchorTo && anchorConfig.anchorTo !== 'container') {
-            const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
+            const anchorPoint = anchorConfig.anchorPoint || 'top-left';
 
             if (isHorizontal) {
                 if (anchorPoint.includes('Right')) {
@@ -754,15 +754,15 @@ export abstract class LayoutElement {
         const h = height !== undefined ? height : this.layout.height;
 
         switch (anchorPoint) {
-            case 'topLeft': return { x: 0, y: 0 };
+            case 'top-left': return { x: 0, y: 0 };
             case 'topCenter': return { x: w / 2, y: 0 };
-            case 'topRight': return { x: w, y: 0 };
+            case 'top-right': return { x: w, y: 0 };
             case 'centerLeft': return { x: 0, y: h / 2 };
             case 'center': return { x: w / 2, y: h / 2 };
             case 'centerRight': return { x: w, y: h / 2 };
-            case 'bottomLeft': return { x: 0, y: h };
+            case 'bottom-left': return { x: 0, y: h };
             case 'bottomCenter': return { x: w / 2, y: h };
-            case 'bottomRight': return { x: w, y: h };
+            case 'bottom-right': return { x: w, y: h };
             default:
                 console.warn(`Unknown anchor point: ${anchorPoint}. Defaulting to topLeft.`);
                 return { x: 0, y: 0 };

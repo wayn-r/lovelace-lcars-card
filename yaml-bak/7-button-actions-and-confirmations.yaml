@@ -11,16 +11,16 @@ groups:
           left_content: Button Actions and Confirmations
           right_content: example
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
   - group_id: action_buttons
     elements:
       - id: light_toggle
@@ -30,15 +30,15 @@ groups:
         text:
           content: LIGHTS
           fill: "#000000"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 100
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_header.main_header
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -53,14 +53,14 @@ groups:
         text:
           content: COOL
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 100
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: action_buttons.light_toggle
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
           stretch:
             target1:
               id: action_buttons.light_toggle
@@ -83,15 +83,15 @@ groups:
         text:
           content: SECURITY
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
           cutout: true
         layout:
           height: 80
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: action_buttons.light_toggle
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
           stretch:
             target1:
               id: action_buttons.light_toggle
@@ -114,14 +114,14 @@ groups:
         text:
           content: EMERGENCY
           fill: "#FFFFFF"
-          fontWeight: bold
-          fontFamily: Antonio
+          font_weight: bold
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: action_buttons.mode_switch
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
           stretch:
             target1:
               id: action_buttons.mode_switch
@@ -144,14 +144,14 @@ groups:
         text:
           content: MODE
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: action_buttons.security_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
           stretch:
             target1:
               id: action_buttons.light_toggle

@@ -11,16 +11,16 @@ groups:
           left_content: Animation Configuration
           right_content: example
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
 
   - group_id: fade_in_group
     elements:
@@ -31,15 +31,15 @@ groups:
         text:
           content: LOADING...
           fill: "#000000"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 100
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_header.main_header
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         animations:
           on_load:
             type: fade
@@ -54,9 +54,9 @@ groups:
         text:
           content: This element should have a fade-in effect when it loads.
           fill: "#00CC99"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: fade_in_group.fade_in_element
             element_point: centerLeft
@@ -75,20 +75,20 @@ groups:
         text:
           content: SHOW PANEL
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 100
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: fade_in_group.fade_in_element
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
             tap:
-              action: toggle_state
+              action: toggle-state
               target_element_ref: sliding_panel_group.sliding_panel
               states:
                 - hidden
@@ -99,9 +99,9 @@ groups:
         text:
           content: This button should trigger a panel to slide in from the left..
           fill: "#00CC99"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: sliding_panel_group.sliding_panel_trigger_button
             element_point: centerLeft
@@ -116,15 +116,15 @@ groups:
         text:
           content: SLIDING PANEL
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 200
           height: 100
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_header.main_header
-            element_point: topRight
-            target_point: bottomRight
+            element_point: top-right
+            target_point: bottom-right
         state_management:
           default_state: hidden
         animations:
@@ -162,20 +162,20 @@ groups:
         text:
           content: SCALE
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 100
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: sliding_panel_group.sliding_panel_trigger_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
             tap:
-              action: toggle_state
+              action: toggle-state
               target_element_ref: scale_target_group.scale_target
               states:
                 - normal
@@ -188,9 +188,9 @@ groups:
             This button should toggle the scale of the "scale_target" element
             when pressed.
           fill: "#00CC99"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: scale_target_group.scale_target
             element_point: centerLeft
@@ -203,15 +203,15 @@ groups:
         text:
           content: SCALE TARGET
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 100
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: scale_target_group.scale_trigger_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
         state_management:
           default_state: normal
         animations:
@@ -243,15 +243,15 @@ groups:
         text:
           content: SEQUENCE
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 100
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: scale_target_group.scale_trigger_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         state_management:
           default_state: idle
         animations:
@@ -288,9 +288,9 @@ groups:
         text:
           content: This element should fade in, slide up, and scale up when it loads.
           fill: "#00CC99"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: sequence_group.sequence_element
             element_point: centerLeft
@@ -309,23 +309,23 @@ groups:
         text:
           content: MULTI ACTION
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 100
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: sequence_group.sequence_element
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
             tap:
-              - action: set_state
+              - action: set-state
                 target_element_ref: sliding_panel_group.sliding_panel
                 state: visible
-              - action: set_state
+              - action: set-state
                 target_element_ref: scale_target_group.scale_target
                 state: scaled
 
@@ -339,22 +339,22 @@ groups:
         text:
           content: RESET ALL
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 100
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: multi_action_group.multi_trigger_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
             tap:
-              - action: set_state
+              - action: set-state
                 target_element_ref: sliding_panel_group.sliding_panel
                 state: hidden
-              - action: set_state
+              - action: set-state
                 target_element_ref: scale_target_group.scale_target
                 state: normal

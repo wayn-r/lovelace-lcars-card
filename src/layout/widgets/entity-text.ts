@@ -82,8 +82,8 @@ export class EntityTextWidget extends Widget {
       {
         anchor: {
           anchorTo: bounds.id,
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topLeft'
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'top-left'
         },
         height
       },
@@ -120,8 +120,8 @@ export class EntityTextWidget extends Widget {
       {
         anchor: {
           anchorTo: leadingRect.id,
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topRight'
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'top-right'
         },
         offsetX: labelConfig.offsetX || EntityTextWidget.DEFAULT_LABEL_OFFSET_X,
         height
@@ -161,8 +161,8 @@ export class EntityTextWidget extends Widget {
         height,
         anchor: {
           anchorTo: labelRect.id,
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topRight'
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'top-right'
         },
         offsetX: valueConfig.offsetX || EntityTextWidget.DEFAULT_VALUE_OFFSET_X
       },

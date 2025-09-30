@@ -10,14 +10,14 @@ groups:
         text:
           content: "CONTAINER ANCHOR TOP LEFT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
           anchor:
             to: "container"
-            element_point: "topLeft"
-            target_point: "topLeft"
+            element_point: "top-left"
+            target_point: "top-left"
       - id: CA_TC
         type: "rectangle"
         appearance:
@@ -25,7 +25,7 @@ groups:
         text:
           content: "CONTAINER ANCHOR TOP CENTER"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
@@ -40,14 +40,14 @@ groups:
         text:
           content: "CONTAINER ANCHOR TOP RIGHT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
           anchor:
             to: "container"
-            element_point: "topRight"
-            target_point: "topRight"
+            element_point: "top-right"
+            target_point: "top-right"
 
       - id: CA_CL
         type: "rectangle"
@@ -56,7 +56,7 @@ groups:
         text:
           content: "CONTAINER ANCHOR CENTER LEFT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
@@ -71,7 +71,7 @@ groups:
         text:
           content: "CONTAINER ANCHOR CENTER CENTER"
           fill: "#FFFFFF" 
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
@@ -86,7 +86,7 @@ groups:
         text:
           content: "CONTAINER ANCHOR CENTER RIGHT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
@@ -102,14 +102,14 @@ groups:
         text:
           content: "CONTAINER ANCHOR BOTTOM LEFT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
           anchor:
             to: "container"
-            element_point: "bottomLeft"
-            target_point: "bottomLeft"
+            element_point: "bottom-left"
+            target_point: "bottom-left"
       - id: CA_BC
         type: "rectangle"
         appearance:
@@ -117,7 +117,7 @@ groups:
         text:
           content: "CONTAINER ANCHOR BOTTOM CENTER"
           fill: "#FFFFFF" 
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
@@ -132,14 +132,14 @@ groups:
         text:
           content: "CONTAINER ANCHOR BOTTOM RIGHT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
           anchor:
             to: "container"
-            element_point: "bottomRight"
-            target_point: "bottomRight"
+            element_point: "bottom-right"
+            target_point: "bottom-right"
 
       # Anchoring to another element
   - group_id: "element_anchors"
@@ -151,14 +151,14 @@ groups:
         text:
           content: "ELEMENT ANCHOR TOP LEFT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
           anchor:
             to: "container_anchors.CA_TL"
-            element_point: "topLeft"
-            target_point: "bottomRight"
+            element_point: "top-left"
+            target_point: "bottom-right"
       - id: "EL_TC"
         type: "rectangle"
         appearance:
@@ -166,7 +166,7 @@ groups:
         text:
           content: "ELEMENT ANCHOR TOP CENTER"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
@@ -181,14 +181,14 @@ groups:
         text:
           content: "ELEMENT ANCHOR TOP RIGHT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
           anchor:
             to: "container_anchors.CA_TR"
-            element_point: "topRight"
-            target_point: "bottomLeft"
+            element_point: "top-right"
+            target_point: "bottom-left"
             
       - id: "EL_CL"
         type: "rectangle"
@@ -197,7 +197,7 @@ groups:
         text:
           content: "ELEMENT ANCHOR CENTER LEFT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
@@ -212,7 +212,7 @@ groups:
         text:
           content: "ELEMENT ANCHOR CENTER CENTER"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
@@ -227,7 +227,7 @@ groups:
         text:
           content: "ELEMENT ANCHOR CENTER RIGHT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
@@ -243,14 +243,14 @@ groups:
         text:
           content: "ELEMENT ANCHOR BOTTOM LEFT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
           anchor:
             to: "container_anchors.CA_BL"
-            element_point: "bottomLeft"
-            target_point: "topRight"
+            element_point: "bottom-left"
+            target_point: "top-right"
       - id: "EL_BC"
         type: "rectangle"
         appearance:
@@ -258,7 +258,7 @@ groups:
         text:
           content: "ELEMENT ANCHOR BOTTOM CENTER"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
@@ -273,14 +273,14 @@ groups:
         text:
           content: "ELEMENT ANCHOR BOTTOM RIGHT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
           anchor:
             to: "container_anchors.CA_BR"
-            element_point: "bottomRight"
-            target_point: "topLeft"
+            element_point: "bottom-right"
+            target_point: "top-left"
 
   - group_id: "scaffolding"
     elements:
@@ -291,9 +291,9 @@ groups:
         layout:
           width: 30
           height: 300
-          offsetX: 450
+          offset_x: 450
           anchor:
             to: "container"
-            element_point: "topLeft"
-            target_point: "topLeft"
+            element_point: "top-left"
+            target_point: "top-left"
             

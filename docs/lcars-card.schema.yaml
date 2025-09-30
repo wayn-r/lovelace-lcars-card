@@ -131,27 +131,27 @@ definitions:
                               fill:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill
-                              fontFamily:
+                              font_family:
                                 type: string
-                              fontSize:
+                              font_size:
                                 type: number
-                              fontWeight:
+                              font_weight:
                                 type:
                                   - string
                                   - number
-                              letterSpacing:
+                              letter_spacing:
                                 type:
                                   - string
                                   - number
-                              textAnchor:
+                              text_anchor:
                                 type: string
                                 enum:
                                   - start
                                   - middle
                                   - end
-                              dominantBaseline:
+                              dominant_baseline:
                                 type: string
-                              textTransform:
+                              text_transform:
                                 type: string
                               cutout:
                                 type: boolean
@@ -164,11 +164,11 @@ definitions:
                                 type: string
                               right_content:
                                 type: string
-                              offsetX:
+                              offset_x:
                                 type:
                                   - number
                                   - string
-                              offsetY:
+                              offset_y:
                                 type:
                                   - number
                                   - string
@@ -207,11 +207,11 @@ definitions:
                                 type:
                                   - number
                                   - string
-                              offsetX:
+                              offset_x:
                                 type:
                                   - number
                                   - string
-                              offsetY:
+                              offset_y:
                                 type:
                                   - number
                                   - string
@@ -273,8 +273,8 @@ definitions:
                                               - toggle
                                               - more-info
                                               - none
-                                              - set_state
-                                              - toggle_state
+                                              - set-state
+                                              - toggle-state
                                           service:
                                             type: string
                                           service_data:
@@ -925,22 +925,22 @@ definitions:
                               height:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/height
-                              offsetX:
+                              offset_x:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/offsetX
-                              offsetY:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/offset_x
+                              offset_y:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/offsetY
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/offset_y
                               anchor:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/anchor
                               stretch:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/stretch
-                              bodyWidth:
+                              body_width:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/line_spacing
-                              armHeight:
+                              arm_height:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/line_spacing
                             additionalProperties: false
@@ -986,18 +986,18 @@ definitions:
                               right_content:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/right_content
-                              fontFamily:
+                              font_family:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontFamily
-                              fontWeight:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_family
+                              font_weight:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontWeight
-                              letterSpacing:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_weight
+                              letter_spacing:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letterSpacing
-                              textTransform:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letter_spacing
+                              text_transform:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textTransform
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/text_transform
                             additionalProperties: true
                           layout:
                             $ref: >-
@@ -1115,27 +1115,27 @@ definitions:
                               fill:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fill
-                              fontFamily:
+                              font_family:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontFamily
-                              fontSize:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_family
+                              font_size:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontSize
-                              fontWeight:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_size
+                              font_weight:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontWeight
-                              letterSpacing:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_weight
+                              letter_spacing:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letterSpacing
-                              textAnchor:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letter_spacing
+                              text_anchor:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textAnchor
-                              dominantBaseline:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/text_anchor
+                              dominant_baseline:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/dominantBaseline
-                              textTransform:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/dominant_baseline
+                              text_transform:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textTransform
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/text_transform
                               cutout:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/cutout
@@ -1148,12 +1148,12 @@ definitions:
                               right_content:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/right_content
-                              offsetX:
+                              offset_x:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offsetX
-                              offsetY:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offset_x
+                              offset_y:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offsetY
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offset_y
                               max_lines:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/max_lines
@@ -1175,18 +1175,18 @@ definitions:
                                     type: number
                                   height:
                                     type: number
-                                  fontFamily:
+                                  font_family:
                                     type: string
-                                  fontWeight:
+                                  font_weight:
                                     type:
                                       - string
                                       - number
                                   fill:
                                     $ref: >-
                                       #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill
-                                  offsetX:
+                                  offset_x:
                                     type: number
-                                  textTransform:
+                                  text_transform:
                                     type: string
                                   cutout:
                                     type: boolean
@@ -1247,27 +1247,27 @@ definitions:
                               fill:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fill
-                              fontFamily:
+                              font_family:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontFamily
-                              fontSize:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_family
+                              font_size:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontSize
-                              fontWeight:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_size
+                              font_weight:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontWeight
-                              letterSpacing:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_weight
+                              letter_spacing:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letterSpacing
-                              textAnchor:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letter_spacing
+                              text_anchor:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textAnchor
-                              dominantBaseline:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/text_anchor
+                              dominant_baseline:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/dominantBaseline
-                              textTransform:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/dominant_baseline
+                              text_transform:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textTransform
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/text_transform
                               cutout:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/cutout
@@ -1280,12 +1280,12 @@ definitions:
                               right_content:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/right_content
-                              offsetX:
+                              offset_x:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offsetX
-                              offsetY:
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offset_x
+                              offset_y:
                                 $ref: >-
-                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offsetY
+                                  #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offset_y
                               max_lines:
                                 $ref: >-
                                   #/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/max_lines

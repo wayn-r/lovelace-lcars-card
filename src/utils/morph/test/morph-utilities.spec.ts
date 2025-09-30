@@ -59,8 +59,8 @@ describe('MorphUtilities', () => {
     } as any, {
       anchor: {
         anchorTo: 'logger_widget',
-        anchorPoint: 'topLeft',
-        targetAnchorPoint: 'topLeft'
+        anchorPoint: 'top-left',
+        targetAnchorPoint: 'top-left'
       }
     } as any);
 

@@ -27,16 +27,16 @@ groups:
           left_content: Smart Home Control
           right_content: example
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
 
   - group_id: "nav"
     elements:
@@ -48,14 +48,14 @@ groups:
         text:
           content: "LIVING"
           fill: "#000000"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 100
           height: 40
           anchor:
             to: nav_header.main_header
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            element_point: "top-left"
+            target_point: "bottom-left"
         button:
           enabled: true
           actions:
@@ -79,14 +79,14 @@ groups:
         text:
           content: "LIGHTS"
           fill: "#000000"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 120
           height: 45
           anchor:
             to: "nav.living_room_btn"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            element_point: "top-left"
+            target_point: "bottom-left"
         button:
           enabled: true
           actions:
@@ -101,14 +101,14 @@ groups:
         text:
           content: "TEMP: 22°C"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 100
           height: 35
           anchor:
             to: "living_room.lights_control"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            element_point: "top-left"
+            target_point: "bottom-left"
         button:
           enabled: true
           actions:

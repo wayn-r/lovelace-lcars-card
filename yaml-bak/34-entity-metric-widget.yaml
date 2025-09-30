@@ -11,16 +11,16 @@ groups:
           left_content: entity-metric widget
           right_content: example
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
   - group_id: widgets
     elements:
       - id: widget1
@@ -29,14 +29,14 @@ groups:
         appearance:
           rounded: right
         layout:
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: nav_header.main_header
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         text:
           value:
-            fontWeight: bold
+            font_weight: bold
       - id: widget2
         type: entity-metric-widget
         entity: sensor.kevv_wind_speed
@@ -45,8 +45,8 @@ groups:
         layout:
           anchor:
             to: widgets.widget1
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
         text:
           value:
-            fontWeight: bold
+            font_weight: bold

@@ -8,17 +8,17 @@ groups:
         text:
           left_content: U.S.S. HERCULES / WILLEMETTE CLASS
           right_content: NCC-1901
-          fontWeight: bold
+          font_weight: bold
           color: "#FFCC00"
         layout:
           width: 100%
           height: 30
-          offsetX: 0
-          offsetY: 0
+          offset_x: 0
+          offset_y: 0
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
   - group_id: sub-header
     elements:
       - id: right-endcap
@@ -29,37 +29,37 @@ groups:
         layout:
           height: 40
           width: 50
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: top-header.top-header
-            element_point: topRight
-            target_point: bottomRight
+            element_point: top-right
+            target_point: bottom-right
       - id: header
         type: text
         text:
           content: main
           fill: "#DA9A4D"
           text_anchor: end
-          textTransform: uppercase
-          fontFamily: Antonio
-          fontWeight: bold
+          text_transform: uppercase
+          font_family: Antonio
+          font_weight: bold
         layout:
           height: 40
-          offsetX: -5
+          offset_x: -5
           anchor:
             to: sub-header.right-endcap
-            element_point: topRight
-            target_point: topLeft
+            element_point: top-right
+            target_point: top-left
       - id: header-bar
         type: rectangle
         appearance:
           fill: "#0099CC"
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: sub-header.elbow
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
           stretch:
             target1:
               id: sub-header.header
@@ -74,90 +74,90 @@ groups:
           orientation: top-left
           fill: "#0099CC"
         layout:
-          bodyWidth: 130
-          armHeight: 40
+          body_width: 130
+          arm_height: 40
           width: 145
           height: 55
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: top-header.top-header
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
   - group_id: buttons
     elements:
       - id: environmental
         type: rectangle
         text:
           content: environmental
-          fontFamily: Antonio
-          textTransform: uppercase
-          textAnchor: end
-          fontSize: 22
-          offsetX: -5
+          font_family: Antonio
+          text_transform: uppercase
+          text_anchor: end
+          font_size: 22
+          offset_x: -5
         appearance:
           fill: "#0099CC"
         layout:
           width: 130
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: sub-header.elbow
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: sickbay
         type: rectangle
         text:
           content: sickbay
-          fontFamily: Antonio
-          textTransform: uppercase
-          textAnchor: end
-          fontSize: 22
-          offsetX: -5
+          font_family: Antonio
+          text_transform: uppercase
+          text_anchor: end
+          font_size: 22
+          offset_x: -5
         appearance:
           fill: "#0099CC"
         layout:
           width: 130
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: buttons.environmental
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: ship_map
         type: rectangle
         text:
           content: ship map
-          fontFamily: Antonio
-          textTransform: uppercase
-          textAnchor: end
-          fontSize: 22
-          offsetX: -5
+          font_family: Antonio
+          text_transform: uppercase
+          text_anchor: end
+          font_size: 22
+          offset_x: -5
         appearance:
           fill: "#0099CC"
         layout:
           width: 130
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: buttons.sickbay
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: sensors
         type: rectangle
         text:
           content: sensors
-          fontFamily: Antonio
-          textTransform: uppercase
-          textAnchor: end
-          fontSize: 22
-          offsetX: -5
+          font_family: Antonio
+          text_transform: uppercase
+          text_anchor: end
+          font_size: 22
+          offset_x: -5
         appearance:
           fill: "#0099CC"
         layout:
           width: 130
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: buttons.ship_map
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left

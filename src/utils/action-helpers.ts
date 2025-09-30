@@ -3,7 +3,7 @@ import { HomeAssistant, handleAction } from 'custom-card-helpers';
 
 export class ActionProcessor {
   static actionIsCustom(action: Action): action is CustomAction {
-    return action.action === 'set_state' || action.action === 'toggle_state';
+    return action.action === 'set-state' || action.action === 'toggle-state';
   }
 
   static isHassAction(action: Action): action is HassAction {
@@ -42,11 +42,11 @@ export class ActionProcessor {
   }
 
   static isSetState(action: Action): action is import('../types.js').SetStateAction {
-    return action.action === 'set_state';
+    return action.action === 'set-state';
   }
 
   static isToggleState(action: Action): action is import('../types.js').ToggleStateAction {
-    return action.action === 'toggle_state';
+    return action.action === 'toggle-state';
   }
 
   static async processHassAction(
@@ -96,11 +96,11 @@ export class ActionProcessor {
       case 'more-info':
         if (!(this.isToggle(action) || this.isMoreInfo(action)) || !action.entity) errors.push('entity is required for toggle/more-info action');
         break;
-      case 'set_state':
+      case 'set-state':
         if (!this.isSetState(action) || !action.target_element_ref) errors.push('target_element_ref is required for set_state action');
         if (!this.isSetState(action) || !action.state) errors.push('state is required for set_state action');
         break;
-      case 'toggle_state':
+      case 'toggle-state':
         if (!this.isToggleState(action) || !action.target_element_ref) errors.push('target_element_ref is required for toggle_state action');
         if (!this.isToggleState(action) || !action.states || !Array.isArray(action.states) || action.states.length < 2) {
           errors.push('states array with at least 2 states is required for toggle_state action');

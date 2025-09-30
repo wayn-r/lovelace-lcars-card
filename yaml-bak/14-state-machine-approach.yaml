@@ -59,16 +59,16 @@ groups:
           left_content: Declarative State Machine
           right_content: example
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
 
   - group_id: "nav"
     elements:
@@ -79,14 +79,14 @@ groups:
         text:
           content: "FOCUS A"
           fill: "#000000"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 100
           height: 40
           anchor:
             to: nav_header.main_header
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            element_point: "top-left"
+            target_point: "bottom-left"
         button:
           enabled: true
       
@@ -97,14 +97,14 @@ groups:
         text:
           content: "ACTIVATE B"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 100
           height: 40
           anchor:
             to: "nav.button_a"
-            element_point: "topLeft"
-            target_point: "topRight"
+            element_point: "top-left"
+            target_point: "top-right"
         button:
           enabled: true
       
@@ -115,14 +115,14 @@ groups:
         text:
           content: "BUTTON C"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 100
           height: 40
           anchor:
             to: "nav.button_b"
-            element_point: "topLeft"
-            target_point: "topRight"
+            element_point: "top-left"
+            target_point: "top-right"
         button:
           enabled: true
 
@@ -135,14 +135,14 @@ groups:
         text:
           content: "Panel A Content"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 80
           anchor:
             to: "nav.button_a"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            element_point: "top-left"
+            target_point: "bottom-left"
 
   - group_id: "group_b"
     elements:
@@ -153,11 +153,11 @@ groups:
         text:
           content: "Panel B Content"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 80
           anchor:
             to: "nav.button_a"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            element_point: "top-left"
+            target_point: "bottom-left"

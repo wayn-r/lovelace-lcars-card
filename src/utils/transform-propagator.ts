@@ -326,8 +326,8 @@ export class TransformPropagator {
       dependencies.push({
         dependentElementId: elementId,
         targetElementId: anchorConfig.anchorTo,
-        anchorPoint: anchorConfig.anchorPoint || 'topLeft',
-        targetAnchorPoint: anchorConfig.targetAnchorPoint || 'topLeft',
+        anchorPoint: anchorConfig.anchorPoint || 'top-left',
+        targetAnchorPoint: anchorConfig.targetAnchorPoint || 'top-left',
         dependencyType: 'anchor'
       });
     }
@@ -340,7 +340,7 @@ export class TransformPropagator {
         dependentElementId: elementId,
         targetElementId: stretchConfig.stretchTo1,
         anchorPoint: 'unknown',
-        targetAnchorPoint: stretchConfig.targetStretchAnchorPoint1 || 'topLeft',
+        targetAnchorPoint: stretchConfig.targetStretchAnchorPoint1 || 'top-left',
         dependencyType: 'stretch'
       });
     }
@@ -352,7 +352,7 @@ export class TransformPropagator {
         dependentElementId: elementId,
         targetElementId: stretchConfig.stretchTo2,
         anchorPoint: 'unknown',
-        targetAnchorPoint: stretchConfig.targetStretchAnchorPoint2 || 'topLeft',
+        targetAnchorPoint: stretchConfig.targetStretchAnchorPoint2 || 'top-left',
         dependencyType: 'stretch'
       });
     }
@@ -401,7 +401,7 @@ export class TransformPropagator {
     let transformOriginString = scaleParams?.transform_origin;
     
     if (!transformOriginString && element.layoutConfig.anchor?.anchorTo && element.layoutConfig.anchor.anchorTo !== 'container') {
-      const anchorPoint = element.layoutConfig.anchor.anchorPoint || 'topLeft';
+      const anchorPoint = element.layoutConfig.anchor.anchorPoint || 'top-left';
       transformOriginString = TransformOriginUtils.anchorPointToTransformOriginString(anchorPoint);
     }
     
@@ -550,7 +550,7 @@ export class TransformPropagator {
       return null;
     }
 
-    const ownAnchorPoint = anchorConfig.anchorPoint || 'topLeft';
+    const ownAnchorPoint = anchorConfig.anchorPoint || 'top-left';
     const anchorDisplacement = this.calculateAnchorDisplacement(
       element,
       ownAnchorPoint,
@@ -914,7 +914,7 @@ export class TransformPropagator {
     const anchorConfig = element.layoutConfig.anchor;
     
     if (anchorConfig.anchorTo && anchorConfig.anchorTo !== 'container') {
-      const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
+      const anchorPoint = anchorConfig.anchorPoint || 'top-left';
       const transformOriginString = TransformOriginUtils.anchorPointToTransformOriginString(anchorPoint);
       const transformOrigin = TransformOriginUtils.parseTransformOrigin(transformOriginString, element);
       

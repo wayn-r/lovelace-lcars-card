@@ -17,15 +17,15 @@ export class TransformOriginUtils {
 
   static anchorPointToTransformOriginString(anchorPoint: string): string {
     switch (anchorPoint) {
-      case 'topLeft': return 'left top';
+      case 'top-left': return 'left top';
       case 'topCenter': return 'center top';
-      case 'topRight': return 'right top';
+      case 'top-right': return 'right top';
       case 'centerLeft': return 'left center';
       case 'center': return 'center center';
       case 'centerRight': return 'right center';
-      case 'bottomLeft': return 'left bottom';
+      case 'bottom-left': return 'left bottom';
       case 'bottomCenter': return 'center bottom';
-      case 'bottomRight': return 'right bottom';
+      case 'bottom-right': return 'right bottom';
       default: return 'center center';
     }
   }
@@ -60,15 +60,15 @@ export class AnchorPointUtils {
     const { x, y, width, height } = element.layout;
 
     switch (anchorPoint) {
-      case 'topLeft': return { x, y };
+      case 'top-left': return { x, y };
       case 'topCenter': return { x: x + width / 2, y };
-      case 'topRight': return { x: x + width, y };
+      case 'top-right': return { x: x + width, y };
       case 'centerLeft': return { x, y: y + height / 2 };
       case 'center': return { x: x + width / 2, y: y + height / 2 };
       case 'centerRight': return { x: x + width, y: y + height / 2 };
-      case 'bottomLeft': return { x, y: y + height };
+      case 'bottom-left': return { x, y: y + height };
       case 'bottomCenter': return { x: x + width / 2, y: y + height };
-      case 'bottomRight': return { x: x + width, y: y + height };
+      case 'bottom-right': return { x: x + width, y: y + height };
       default: return { x, y };
     }
   }

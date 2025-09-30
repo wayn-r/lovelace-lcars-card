@@ -11,16 +11,16 @@ groups:
           left_content: Navigation Control panel
           right_content: example
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
   - group_id: nav_controls
     elements:
       - id: basic_card_structure_button
@@ -30,18 +30,18 @@ groups:
         text:
           content: Basic Card Structure
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5px
+          offset_y: 5px
           anchor:
             to: nav_header.main_header
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -56,17 +56,17 @@ groups:
         text:
           content: "1"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.basic_card_structure_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_color_button
         type: rectangle
         appearance:
@@ -74,18 +74,18 @@ groups:
         text:
           content: Dynamic Color
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.basic_card_structure_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -100,17 +100,17 @@ groups:
         text:
           content: "3"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.dynamic_color_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: advanced_layout_and_positioning_button
         type: rectangle
         appearance:
@@ -118,18 +118,18 @@ groups:
         text:
           content: Advanced Layout And Positioning
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.dynamic_color_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -144,17 +144,17 @@ groups:
         text:
           content: "4"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.advanced_layout_and_positioning_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: lcars_shape_elements_button
         type: rectangle
         appearance:
@@ -162,18 +162,18 @@ groups:
         text:
           content: LCARS Shape Elements
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.advanced_layout_and_positioning_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -188,17 +188,17 @@ groups:
         text:
           content: "5"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.lcars_shape_elements_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: complex_actions_and_visibility_button
         type: rectangle
         appearance:
@@ -206,18 +206,18 @@ groups:
         text:
           content: Complex Actions And Visibility
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.lcars_shape_elements_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -232,17 +232,17 @@ groups:
         text:
           content: "6"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.complex_actions_and_visibility_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: button_actions_and_confirmations_button
         type: rectangle
         appearance:
@@ -250,18 +250,18 @@ groups:
         text:
           content: Button Actions And Confirmations
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.complex_actions_and_visibility_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -276,17 +276,17 @@ groups:
         text:
           content: "7"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.button_actions_and_confirmations_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: animations_button
         type: rectangle
         appearance:
@@ -294,18 +294,18 @@ groups:
         text:
           content: Animations
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.button_actions_and_confirmations_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -320,17 +320,17 @@ groups:
         text:
           content: "8"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.animations_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: text_styling_button
         type: rectangle
         appearance:
@@ -338,18 +338,18 @@ groups:
         text:
           content: Text Styling
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.animations_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -364,17 +364,17 @@ groups:
         text:
           content: "9"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.text_styling_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: complete_dashboard_button
         type: rectangle
         appearance:
@@ -382,18 +382,18 @@ groups:
         text:
           content: Complete Dashboard
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.text_styling_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -408,17 +408,17 @@ groups:
         text:
           content: "10"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.complete_dashboard_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: simple_state_group_for_navigation_button
         type: rectangle
         appearance:
@@ -426,18 +426,18 @@ groups:
         text:
           content: Simple State Group For Navigation
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.complete_dashboard_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -452,17 +452,17 @@ groups:
         text:
           content: "11"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.simple_state_group_for_navigation_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: toggle_with_dependencies_button
         type: rectangle
         appearance:
@@ -470,18 +470,18 @@ groups:
         text:
           content: Toggle With Dependencies
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.simple_state_group_for_navigation_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -496,17 +496,17 @@ groups:
         text:
           content: "12"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.toggle_with_dependencies_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: conditional_actions_based_on_state_button
         type: rectangle
         appearance:
@@ -514,18 +514,18 @@ groups:
         text:
           content: Conditional Actions Based On State
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.toggle_with_dependencies_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -540,17 +540,17 @@ groups:
         text:
           content: "13"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.conditional_actions_based_on_state_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: state_machine_approach_button
         type: rectangle
         appearance:
@@ -558,18 +558,18 @@ groups:
         text:
           content: State Machine Approach
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.conditional_actions_based_on_state_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -584,17 +584,17 @@ groups:
         text:
           content: "14"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.state_machine_approach_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: hass_integration_with_state_management_button
         type: rectangle
         appearance:
@@ -602,18 +602,18 @@ groups:
         text:
           content: Hass Integration With State Management
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.state_machine_approach_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -628,17 +628,17 @@ groups:
         text:
           content: "15"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.hass_integration_with_state_management_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: anchoring_button
         type: rectangle
         appearance:
@@ -646,18 +646,18 @@ groups:
         text:
           content: Anchoring
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.hass_integration_with_state_management_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -672,17 +672,17 @@ groups:
         text:
           content: "16"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.anchoring_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: stretching_button
         type: rectangle
         appearance:
@@ -690,18 +690,18 @@ groups:
         text:
           content: Stretching
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.anchoring_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -716,17 +716,17 @@ groups:
         text:
           content: "17"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.stretching_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: sequential_animation_and_propogation_button
         type: rectangle
         appearance:
@@ -734,18 +734,18 @@ groups:
         text:
           content: Sequential Animation And Propogation
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.stretching_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -760,17 +760,17 @@ groups:
         text:
           content: "18"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.sequential_animation_and_propogation_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: on_load_animation_button
         type: rectangle
         appearance:
@@ -778,18 +778,18 @@ groups:
         text:
           content: On Load Animation
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.sequential_animation_and_propogation_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -804,17 +804,17 @@ groups:
         text:
           content: "19"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.on_load_animation_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: on_show_hide_animation_button
         type: rectangle
         appearance:
@@ -822,18 +822,18 @@ groups:
         text:
           content: On Show Hide Animation
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.on_load_animation_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -848,17 +848,17 @@ groups:
         text:
           content: "20"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.on_show_hide_animation_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: on_state_change_animation_button
         type: rectangle
         appearance:
@@ -866,18 +866,18 @@ groups:
         text:
           content: On State Change Animation
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
-          textAnchor: end
+          text_anchor: end
         layout:
           width: 250
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_controls.on_show_hide_animation_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -892,14 +892,14 @@ groups:
         text:
           content: "21"
           fill: "#FFFFFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
           cutout: false
         layout:
           width: 40
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: nav_controls.on_state_change_animation_button
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right

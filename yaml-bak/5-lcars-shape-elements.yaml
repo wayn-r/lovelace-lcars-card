@@ -11,16 +11,16 @@ groups:
           left_content: LCARS Shape Elements
           right_content: example
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
   - group_id: middle_aligned_text
     elements:
       - id: left_endcap
@@ -31,15 +31,15 @@ groups:
         text:
           content: LEFT ENDCAP
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 100
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_header.main_header
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: rectangle_1
         type: rectangle
         appearance:
@@ -47,14 +47,14 @@ groups:
         text:
           content: rectangle
           fill: "#000000"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 180
           height: 40
           anchor:
             to: middle_aligned_text.left_endcap
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: right_endcap
         type: endcap
         appearance:
@@ -63,14 +63,14 @@ groups:
         text:
           content: RIGHT ENDCAP
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 100
           height: 40
           anchor:
             to: middle_aligned_text.rectangle_1
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: chisel_left
         type: chisel-endcap
         appearance:
@@ -79,15 +79,15 @@ groups:
         text:
           content: CHISEL LEFT
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 120
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: middle_aligned_text.right_endcap
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: rectangle_2
         type: rectangle
         appearance:
@@ -95,14 +95,14 @@ groups:
         text:
           content: rectangle
           fill: "#000000"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 180
           height: 40
           anchor:
             to: middle_aligned_text.chisel_left
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: chisel_right
         type: chisel-endcap
         appearance:
@@ -111,14 +111,14 @@ groups:
         text:
           content: CHISEL RIGHT
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 120
           height: 40
           anchor:
             to: middle_aligned_text.rectangle_2
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: rounded_rect
         type: rectangle
         appearance:
@@ -127,16 +127,16 @@ groups:
         text:
           content: ROUNDED RECTANGLE
           fill: "#000000"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 180
           height: 40
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: middle_aligned_text.chisel_right
-            element_point: topLeft
-            target_point: topRight
-      - id: elbow_top_left
+            element_point: top-left
+            target_point: top-right
+      - id: elbow_top-left
         type: elbow
         appearance:
           fill: "#9966CC"
@@ -144,19 +144,19 @@ groups:
         text:
           content: ELBOW TL
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
           elbow_text_position: arm
         layout:
-          bodyWidth: 80
-          armHeight: 25
+          body_width: 80
+          arm_height: 25
           width: 180
           height: 80
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: middle_aligned_text.left_endcap
-            element_point: topLeft
-            target_point: bottomLeft
-      - id: elbow_bottom_left
+            element_point: top-left
+            target_point: bottom-left
+      - id: elbow_bottom-left
         type: elbow
         appearance:
           fill: "#66CC99"
@@ -164,18 +164,18 @@ groups:
         text:
           content: ELBOW BL
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
           elbow_text_position: body
         layout:
-          bodyWidth: 80
-          armHeight: 25
+          body_width: 80
+          arm_height: 25
           width: 180
           height: 90
           anchor:
-            to: middle_aligned_text.elbow_top_left
-            element_point: topLeft
-            target_point: bottomLeft
-      - id: elbow_bottom_right
+            to: middle_aligned_text.elbow_top-left
+            element_point: top-left
+            target_point: bottom-left
+      - id: elbow_bottom-right
         type: elbow
         appearance:
           fill: "#9966CC"
@@ -183,18 +183,18 @@ groups:
         text:
           content: ELBOW BR
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
           elbow_text_position: arm
         layout:
-          bodyWidth: 80
-          armHeight: 25
+          body_width: 80
+          arm_height: 25
           width: 180
           height: 90
           anchor:
-            to: middle_aligned_text.elbow_bottom_left
-            element_point: topLeft
-            target_point: topRight
-      - id: elbow_top_right
+            to: middle_aligned_text.elbow_bottom-left
+            element_point: top-left
+            target_point: top-right
+      - id: elbow_top-right
         type: elbow
         appearance:
           fill: "#66CC99"
@@ -202,14 +202,14 @@ groups:
         text:
           content: ELBOW TR
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
           elbow_text_position: body
         layout:
-          bodyWidth: 80
-          armHeight: 25
+          body_width: 80
+          arm_height: 25
           width: 180
           height: 90
           anchor:
-            to: middle_aligned_text.elbow_top_left
-            element_point: topLeft
-            target_point: topRight
+            to: middle_aligned_text.elbow_top-left
+            element_point: top-left
+            target_point: top-right

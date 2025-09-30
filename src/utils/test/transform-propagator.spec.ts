@@ -66,8 +66,8 @@ describe('TransformPropagator', () => {
       scaleTarget.layoutConfig = {
         anchor: {
           anchorTo: 'scale_target_group.scale_trigger_button',
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topRight'
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'top-right'
         }
       };
 
@@ -213,8 +213,8 @@ describe('TransformPropagator', () => {
       squareElement.layoutConfig = {
         anchor: {
           anchorTo: 'target',
-          anchorPoint: 'topLeft',  // This is the point that should stay fixed
-          targetAnchorPoint: 'topRight'
+          anchorPoint: 'top-left',  // This is the point that should stay fixed
+          targetAnchorPoint: 'top-right'
         }
       };
 
@@ -252,8 +252,8 @@ describe('TransformPropagator', () => {
       element.layoutConfig = {
         anchor: {
           anchorTo: 'other',
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topRight'
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'top-right'
         }
       };
 
@@ -477,7 +477,7 @@ describe('TransformPropagator', () => {
       const anchorTarget = new MockLayoutElement('anchor_target', { x: 0, y: 0, width: 10, height: 10, calculated: true });
       const primaryElement = new MockLayoutElement('primary', { x: 10, y: 0, width: 100, height: 40, calculated: true });
       primaryElement.layoutConfig = {
-        anchor: { anchorTo: 'anchor_target', anchorPoint: 'topLeft', targetAnchorPoint: 'topRight' }
+        anchor: { anchorTo: 'anchor_target', anchorPoint: 'top-left', targetAnchorPoint: 'top-right' }
       };
       const dependentElement = new MockLayoutElement('dependent', { x: 115, y: 20, width: 50, height: 20, calculated: true });
       dependentElement.layoutConfig = {
@@ -503,7 +503,7 @@ describe('TransformPropagator', () => {
       propagator.processAnimationWithPropagation('primary', slideAnimation, slideSyncData);
 
       // Check self-compensation for primary during slide (should be none if slide doesn't move its own anchor point)
-      // The primary's own 'topLeft' anchor point (10,0) does not move relative to its geometry due to a slide.
+      // The primary's own 'top-left' anchor point (10,0) does not move relative to its geometry due to a slide.
       // So self-compensation for slide should be {translateX:0, translateY:0} or null.
       // The spy will capture all calls. We need to identify the one for self-compensation if it occurs.
 
@@ -536,14 +536,14 @@ describe('TransformPropagator', () => {
 
       // Primary's original layout: x:10, y:0, w:100, h:40. Origin for scale: center center (60, 20 relative to layout)
       // After slide, its effective y is -20. So visual center is (60, 0).
-      // Primary's own anchorPoint 'topLeft' is (10, 0) in layout. After slide: (10, -20).
+      // Primary's own anchorPoint 'top-left' is (10, 0) in layout. After slide: (10, -20).
       // Relative to scale origin (60,0): (-50, -20).
       // Scaled: (-50*1.2, -20*1.2) = (-60, -24).
       // New topLeft: (60-60, 0-24) = (0, -24) relative to original layout, or (0, -4) relative to slid position.
       // Displacement of primary's topLeft: (0 - 10, -24 - (-20)) = (-10, -4). This is simplified.
       // Let's re-evaluate self-compensation for primary due to scale:
       // Initial state for scale: translateY=-20, scaleX=1, scaleY=1.
-      // Primary's anchor 'topLeft' is at (10, -20) absolute.
+      // Primary's anchor 'top-left' is at (10, -20) absolute.
       // Scale origin (center center of 100x40 element) is (layout.x + 50*scaleX + translateX, layout.y + 20*scaleY + translateY)
       // = (10 + 50*1 + 0, 0 + 20*1 - 20) = (60, 0) absolute.
       // Vector from origin (60,0) to anchor (10,-20) is (-50, -20).
@@ -602,7 +602,7 @@ describe('TransformPropagator', () => {
       const primaryElement = new MockLayoutElement('primary', {
         x: 100, y: 100, width: 50, height: 30, calculated: true
       });
-      primaryElement.layoutConfig = { anchor: { anchorTo: 'container', anchorPoint: 'topLeft' } };
+      primaryElement.layoutConfig = { anchor: { anchorTo: 'container', anchorPoint: 'top-left' } };
       
       // Create dependent element anchored to the primary element
       const dependentElement = new MockLayoutElement('dependent', {
@@ -611,8 +611,8 @@ describe('TransformPropagator', () => {
       dependentElement.layoutConfig = { 
         anchor: { 
           anchorTo: 'primary', 
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topRight'
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'top-right'
         } 
       };
       
@@ -698,8 +698,8 @@ describe('TransformPropagator', () => {
       scaleTarget.layoutConfig = {
         anchor: {
           anchorTo: 'scale_target_group.scale_trigger_button',
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topRight'
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'top-right'
         }
       };
 
@@ -764,8 +764,8 @@ describe('TransformPropagator', () => {
        scaleTarget.layoutConfig = {
          anchor: {
            anchorTo: 'scale_target_group.scale_trigger_button',
-           anchorPoint: 'topLeft',
-           targetAnchorPoint: 'topRight'
+           anchorPoint: 'top-left',
+           targetAnchorPoint: 'top-right'
          }
        };
 

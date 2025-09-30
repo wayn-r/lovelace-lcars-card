@@ -18,16 +18,16 @@ groups:
           left_content: graph-widget-buttons
           right_content: example
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
 
   - group_id: graph_1
     elements:
@@ -37,11 +37,11 @@ groups:
         layout:
           height: 150
           width: 450
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: nav_header.main_header
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         entity:
           - id: sensor.living_room_temperature
           - id: sensor.living_room_humidity
@@ -53,10 +53,10 @@ groups:
         text:
           content: "5 entities with default options"
           fill: "#99CCFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
         layout:
-          offsetX: 250
+          offset_x: 250
           anchor:
             to: graph_1.graph_1
             element_point: centerLeft
@@ -70,11 +70,11 @@ groups:
         layout:
           height: 150
           width: 450
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: graph_1.graph_1
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         entity:
           - id: sensor.living_room_temperature
             animated: false
@@ -91,10 +91,10 @@ groups:
         text:
           content: "5 entities with animations disabled"
           fill: "#99CCFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
         layout:
-          offsetX: 250
+          offset_x: 250
           anchor:
             to: graph_2.graph_2
             element_point: centerLeft
@@ -108,11 +108,11 @@ groups:
         layout:
           height: 150
           width: 450
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: graph_2.graph_2
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         entity:
           - id: sensor.living_room_temperature
             animated: false
@@ -134,10 +134,10 @@ groups:
         text:
           content: "5 entities with animations and toggles disabled"
           fill: "#99CCFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
         layout:
-          offsetX: 250
+          offset_x: 250
           anchor:
             to: graph_3.graph_3
             element_point: centerLeft
@@ -151,11 +151,11 @@ groups:
         layout:
           height: 150
           width: 450
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: graph_3.graph_3
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         entity:
           - id: sensor.living_room_temperature
             animated: false
@@ -173,10 +173,10 @@ groups:
         text:
           content: "5 entities, first one toggleable: false"
           fill: "#99CCFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
         layout:
-          offsetX: 250
+          offset_x: 250
           anchor:
             to: graph_4.graph_4
             element_point: centerLeft
@@ -190,11 +190,11 @@ groups:
         layout:
           height: 150
           width: 450
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: graph_4.graph_4
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         entity:
           - id: sensor.living_room_temperature
             animated: false
@@ -215,10 +215,10 @@ groups:
         text:
           content: "5 entities, last one toggleable: true"
           fill: "#99CCFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
         layout:
-          offsetX: 250
+          offset_x: 250
           anchor:
             to: graph_5.graph_5
             element_point: centerLeft
@@ -232,11 +232,11 @@ groups:
         layout:
           height: 150
           width: 450
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: graph_5.graph_5
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         entity:
           - id: sensor.living_room_temperature
             duration: 1000
@@ -253,10 +253,10 @@ groups:
         text:
           content: "5 entities with varying durations"
           fill: "#99CCFF"
-          fontSize: 16
-          fontFamily: Antonio
+          font_size: 16
+          font_family: Antonio
         layout:
-          offsetX: 250
+          offset_x: 250
           anchor:
             to: graph_6.graph_6
             element_point: centerLeft

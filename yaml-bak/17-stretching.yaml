@@ -10,11 +10,11 @@ groups:
         layout:
           width: 30
           height: 300
-          offsetX: 450
+          offset_x: 450
           anchor:
             to: "container"
-            element_point: "topLeft"
-            target_point: "topLeft"
+            element_point: "top-left"
+            target_point: "top-left"
 
   - group_id: "container_anchors"
     elements:
@@ -25,14 +25,14 @@ groups:
         text:
           content: "CONTAINER ANCHOR TOP LEFT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
           anchor:
             to: "container"
-            element_point: "topLeft"
-            target_point: "topLeft"
+            element_point: "top-left"
+            target_point: "top-left"
       - id: CA_TR
         type: "rectangle"
         appearance:
@@ -40,14 +40,14 @@ groups:
         text:
           content: "CONTAINER ANCHOR TOP RIGHT"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
         layout:
           width: 200
           height: 30
           anchor:
             to: "container"
-            element_point: "topRight"
-            target_point: "topRight"
+            element_point: "top-right"
+            target_point: "top-right"
 
   - group_id: stretch_bars
     elements:
@@ -58,13 +58,13 @@ groups:
         text:
           content: STRETCH BAR TOP LEFT
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           height: 30
           anchor:
             to: container_anchors.CA_TL
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
           stretch:
             target1:
               id: scaffolding.column_1
@@ -76,13 +76,13 @@ groups:
         text:
           content: STRETCH BAR TOP RIGHT
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           height: 30
           anchor:
             to: container_anchors.CA_TR
-            element_point: topRight
-            target_point: topLeft
+            element_point: top-right
+            target_point: top-left
           stretch:
             target1:
               id: scaffolding.column_1
@@ -95,7 +95,7 @@ groups:
         text:
           content: STRETCH BAR CENTER LEFT
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           height: 30
           anchor:
@@ -113,7 +113,7 @@ groups:
         text:
           content: STRETCH BAR CENTER RIGHT
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           height: 30
           anchor:
@@ -132,13 +132,13 @@ groups:
         text:
           content: STRETCH BAR BOTTOM LEFT
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           height: 30
           anchor:
             to: container
-            element_point: bottomLeft
-            target_point: bottomLeft
+            element_point: bottom-left
+            target_point: bottom-left
           stretch:
             target1:
               id: scaffolding.column_1
@@ -150,13 +150,13 @@ groups:
         text:
           content: STRETCH BAR BOTTOM RIGHT
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           height: 30
           anchor:
             to: container
-            element_point: bottomRight
-            target_point: bottomRight
+            element_point: bottom-right
+            target_point: bottom-right
           stretch:
             target1:
               id: scaffolding.column_1

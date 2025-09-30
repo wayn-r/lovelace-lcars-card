@@ -20,8 +20,8 @@ export const stretchSchema = z.object({
 export const layoutSchema = z.object({
   width: z.union([z.number(), z.string()]).optional(),
   height: z.union([z.number(), z.string()]).optional(),
-  offsetX: z.union([z.number(), z.string()]).optional(),
-  offsetY: z.union([z.number(), z.string()]).optional(),
+  offset_x: z.union([z.number(), z.string()]).optional(),
+  offset_y: z.union([z.number(), z.string()]).optional(),
   anchor: anchorSchema.optional(),
   stretch: stretchSchema.optional(),
 });

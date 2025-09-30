@@ -14,12 +14,12 @@ groups:
         layout:
           width: 100%
           height: 30
-          offsetX: 0
-          offsetY: 5
+          offset_x: 0
+          offset_y: 5
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
   - group_id: a2-mh
     elements:
       - id: endcap
@@ -30,38 +30,38 @@ groups:
         layout:
           height: 40
           width: 10%
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: a2-th.top-header
-            element_point: topRight
-            target_point: bottomRight
+            element_point: top-right
+            target_point: bottom-right
       - id: text
         type: text
         text:
           content: animate-2
           fill: "#5ca8ea"
           text_anchor: end
-          textTransform: uppercase
-          fontFamily: Antonio
-          fontWeight: bold
+          text_transform: uppercase
+          font_family: Antonio
+          font_weight: bold
         layout:
           height: 40
-          offsetX: -5
+          offset_x: -5
           anchor:
             to: a2-mh.endcap
-            element_point: topRight
-            target_point: topLeft
+            element_point: top-right
+            target_point: top-left
       - id: rectangle
         type: rectangle
         appearance:
           fill: "#3ad9e7"
         layout:
-          offsetX: -5
+          offset_x: -5
           width: 25%
           anchor:
             to: a2-mh.text
-            element_point: topRight
-            target_point: topLeft
+            element_point: top-right
+            target_point: top-left
           stretch:
             target1:
               id: a2-mh.endcap
@@ -72,15 +72,15 @@ groups:
           orientation: top-left
           fill: "#12a4e3"
         layout:
-          bodyWidth: 130
-          armHeight: 40
+          body_width: 130
+          arm_height: 40
           width: 25%
           height: 60
-          offsetX: -5
+          offset_x: -5
           anchor:
             to: a2-mh.rectangle
-            element_point: topRight
-            target_point: topLeft
+            element_point: top-right
+            target_point: top-left
   - group_id: a2-env
     elements:
       - id: left-elbow
@@ -90,24 +90,24 @@ groups:
           fill: "#5ca8ea"
         text:
           content: environmental
-          fontFamily: Antonio
-          textTransform: uppercase
+          font_family: Antonio
+          text_transform: uppercase
           elbow_text_position: body
-          textAnchor: end
-          fontSize: 22
-          offsetX: -5
-          offsetY: -40
+          text_anchor: end
+          font_size: 22
+          offset_x: -5
+          offset_y: -40
           cutout: true
         layout:
-          bodyWidth: 130
-          armHeight: 15
+          body_width: 130
+          arm_height: 15
           width: 145
           height: 190
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: a2-mh.left-elbow
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: rectangle-1
         type: rectangle
         appearance:
@@ -115,11 +115,11 @@ groups:
         layout:
           width: 5
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: a2-env.left-elbow
-            element_point: bottomLeft
-            target_point: bottomRight
+            element_point: bottom-left
+            target_point: bottom-right
           stretch:
             target1:
               id: a2-mh.left-elbow
@@ -131,11 +131,11 @@ groups:
         layout:
           width: 10%
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: a2-env.rectangle-1
-            element_point: bottomLeft
-            target_point: bottomRight
+            element_point: bottom-left
+            target_point: bottom-right
       - id: rectangle-3
         type: rectangle
         appearance:
@@ -143,11 +143,11 @@ groups:
         layout:
           width: 25%
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: a2-env.rectangle-2
-            element_point: bottomLeft
-            target_point: bottomRight
+            element_point: bottom-left
+            target_point: bottom-right
       - id: rectangle-4
         type: rectangle
         appearance:
@@ -155,11 +155,11 @@ groups:
         layout:
           width: 40
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: a2-env.rectangle-3
-            element_point: bottomLeft
-            target_point: bottomRight
+            element_point: bottom-left
+            target_point: bottom-right
           stretch:
             target1:
               id: container
@@ -170,12 +170,12 @@ groups:
         type: elbow
         text:
           content: main
-          fontFamily: Antonio
-          textTransform: uppercase
-          textAnchor: end
-          fontSize: 22
-          offsetX: -5
-          offsetY: 18
+          font_family: Antonio
+          text_transform: uppercase
+          text_anchor: end
+          font_size: 22
+          offset_x: -5
+          offset_y: 18
           elbow_text_position: body
           fill: "#000000"
         appearance:
@@ -185,15 +185,15 @@ groups:
             active: "#0066AA"
             orientation: top-left
         layout:
-          bodyWidth: 130
-          armHeight: 15
+          body_width: 130
+          arm_height: 15
           width: 145
           height: 80
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: a2-env.left-elbow
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -204,11 +204,11 @@ groups:
         type: rectangle
         text:
           content: sickbay
-          fontFamily: Antonio
-          textTransform: uppercase
-          textAnchor: end
-          fontSize: 22
-          offsetX: -5
+          font_family: Antonio
+          text_transform: uppercase
+          text_anchor: end
+          font_size: 22
+          offset_x: -5
           fill: "#000000"
         appearance:
           fill:
@@ -218,20 +218,20 @@ groups:
         layout:
           width: 130
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: a2-eb.left-elbow
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: button-2
         type: rectangle
         text:
           content: ship map
-          fontFamily: Antonio
-          textTransform: uppercase
-          textAnchor: end
-          fontSize: 22
-          offsetX: -5
+          font_family: Antonio
+          text_transform: uppercase
+          text_anchor: end
+          font_size: 22
+          offset_x: -5
           fill: "#000000"
         appearance:
           fill:
@@ -241,11 +241,11 @@ groups:
         layout:
           width: 130
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: a2-eb.button-1
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
   - group_id: a2-eb-ext
     elements:
       - id: rectangle-1
@@ -255,22 +255,22 @@ groups:
         layout:
           width: 35%
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: a2-eb.left-elbow
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: rectangle-2
         type: rectangle
         appearance:
           fill: "#7addee"
         layout:
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: a2-eb-ext.rectangle-1
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
           stretch:
             target1:
               id: a2-eb-ext.right-elbow
@@ -282,15 +282,15 @@ groups:
           fill: "#7addee"
           orientation: top-right
         layout:
-          bodyWidth: 80
-          armHeight: 15
+          body_width: 80
+          arm_height: 15
           width: 320
           height: 80
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: a2-env.rectangle-4
-            element_point: topRight
-            target_point: bottomRight
+            element_point: top-right
+            target_point: bottom-right
           stretch:
             target1:
               id: container

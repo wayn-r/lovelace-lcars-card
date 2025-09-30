@@ -242,7 +242,7 @@ describe('EndcapElement', () => {
       beforeEach(() => {
         endcapElement.intrinsicSize = { width: 40, height: 0, calculated: true };
         endcapElement.layoutConfig = { 
-          anchor: { anchorTo: targetId, anchorPoint: 'topLeft', targetAnchorPoint: 'topLeft' },
+          anchor: { anchorTo: targetId, anchorPoint: 'top-left', targetAnchorPoint: 'top-left' },
           height: 10 // Original layoutConfig height
         };
         anchorTarget = new RectangleElement(targetId) as LayoutElement; // Using Rectangle as a concrete LayoutElement

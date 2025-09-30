@@ -10,8 +10,8 @@ export const elbowSchema = baseElementSchema.extend({
     orientation: z.enum(['top-left','top-right','bottom-left','bottom-right']).optional(),
   }).optional(),
   layout: layoutSchema.extend({
-    bodyWidth: sizeSchema.optional(),
-    armHeight: sizeSchema.optional(),
+    body_width: sizeSchema.optional(),
+    arm_height: sizeSchema.optional(),
   }).optional(),
 });
 

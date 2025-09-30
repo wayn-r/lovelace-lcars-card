@@ -149,7 +149,7 @@ describe('Button', () => {
                 entity: 'light.living_room'
               },
               {
-                action: 'set_state',
+                action: 'set-state',
                 target_element_ref: 'group.element',
                 state: 'active'
               }
@@ -174,7 +174,7 @@ describe('Button', () => {
       );
       expect(executeActionSpy).toHaveBeenNthCalledWith(2,
         expect.objectContaining({
-          action: 'set_state',
+          action: 'set-state',
           target_element_ref: 'group.element',
           state: 'active'
         }),
@@ -257,7 +257,7 @@ describe('Button', () => {
       
       const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
       const action = {
-        action: 'set_state' as const,
+        action: 'set-state' as const,
         target_element_ref: 'test.element',
         state: 'active'
       };
@@ -265,10 +265,10 @@ describe('Button', () => {
       // Spy on the actual dynamic import and replace it
       const importSpy = vi.spyOn(button as any, 'executeCustomAction').mockImplementation(async (action: any) => {
         switch (action.action) {
-          case 'set_state':
+          case 'set-state':
             mockStateManager.executeSetStateAction(action);
             break;
-          case 'toggle_state':
+          case 'toggle-state':
             mockStateManager.executeToggleStateAction(action);
             break;
         }
@@ -289,7 +289,7 @@ describe('Button', () => {
       
       const button = new Button('test-button', {}, mockHass, mockRequestUpdate);
       const action = {
-        action: 'toggle_state' as const,
+        action: 'toggle-state' as const,
         target_element_ref: 'test.element',
         states: ['state1', 'state2']
       };
@@ -297,10 +297,10 @@ describe('Button', () => {
       // Spy on the actual dynamic import and replace it
       const importSpy = vi.spyOn(button as any, 'executeCustomAction').mockImplementation(async (action: any) => {
         switch (action.action) {
-          case 'set_state':
+          case 'set-state':
             mockStateManager.executeSetStateAction(action);
             break;
-          case 'toggle_state':
+          case 'toggle-state':
             mockStateManager.executeToggleStateAction(action);
             break;
         }

@@ -11,16 +11,16 @@ groups:
           left_content: dynamic color configuration
           right_content: example
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
   - group_id: static_hex_description
     elements:
       - id: static_hex_example
@@ -30,13 +30,13 @@ groups:
         text:
           content: "Static Hex should render #FF9900"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: nav_header.main_header
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: static_hex_fill_expect
         type: rectangle
         appearance:
@@ -44,11 +44,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: static_hex_description.static_hex_example
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: static_hex_text_part1
         type: text
         appearance:
@@ -56,13 +56,13 @@ groups:
         text:
           content: "for the rectangle fill and #000000"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: static_hex_description.static_hex_fill_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: static_hex_text_expect
         type: rectangle
         appearance:
@@ -70,11 +70,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: static_hex_description.static_hex_text_part1
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: static_hex_text_part2
         type: text
         appearance:
@@ -82,13 +82,13 @@ groups:
         text:
           content: for the text.
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: static_hex_description.static_hex_text_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: static_hex_test
         type: rectangle
         appearance:
@@ -97,15 +97,15 @@ groups:
         text:
           content: "Static Hex: #FF9900"
           fill: "#000000"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 150
           height: 30
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: static_hex_description.static_hex_example
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
   - group_id: static_rgb_description
     elements:
       - id: rgb_example
@@ -115,13 +115,13 @@ groups:
         text:
           content: Static RGB should render RGB [255, 153, 0]
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: static_hex_description.static_hex_test
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: rgb_fill_expect
         type: rectangle
         appearance:
@@ -132,11 +132,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: static_rgb_description.rgb_example
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: rgb_text_part1
         type: text
         appearance:
@@ -144,13 +144,13 @@ groups:
         text:
           content: for the rectangle fill and RGB [0, 0, 0]
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: static_rgb_description.rgb_fill_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: rgb_text_expect
         type: rectangle
         appearance:
@@ -161,11 +161,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: static_rgb_description.rgb_text_part1
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: rgb_text_part2
         type: text
         appearance:
@@ -173,13 +173,13 @@ groups:
         text:
           content: for the text.
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: static_rgb_description.rgb_text_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: static_rgb_test
         type: rectangle
         appearance:
@@ -190,15 +190,15 @@ groups:
         text:
           content: "Static RGB: [255, 153, 0]"
           fill: "#000000"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 150
           height: 30
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: static_rgb_description.rgb_example
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
   - group_id: dynamic_description
     elements:
       - id: dynamic_example_line1
@@ -208,13 +208,13 @@ groups:
         text:
           content: "Dynamic should render #FFFF00"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: static_rgb_description.static_rgb_test
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: dynamic_fill_on_expect
         type: rectangle
         appearance:
@@ -222,11 +222,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_example_line1
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_text_line1
         type: text
         appearance:
@@ -234,13 +234,13 @@ groups:
         text:
           content: "when on, #333333"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_fill_on_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_fill_off_expect
         type: rectangle
         appearance:
@@ -248,11 +248,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_text_line1
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_text_line1_end
         type: text
         appearance:
@@ -260,13 +260,13 @@ groups:
         text:
           content: when off,
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_fill_off_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_example_line2
         type: text
         appearance:
@@ -274,13 +274,13 @@ groups:
         text:
           content: "#FF0000"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: dynamic_description.dynamic_example_line1
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: dynamic_fill_unavail_expect
         type: rectangle
         appearance:
@@ -288,11 +288,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_example_line2
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_text_line2
         type: text
         appearance:
@@ -300,13 +300,13 @@ groups:
         text:
           content: "when unavailable, and #666666"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_fill_unavail_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_fill_default_expect
         type: rectangle
         appearance:
@@ -314,11 +314,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_text_line2
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_text_line2_end
         type: text
         appearance:
@@ -326,13 +326,13 @@ groups:
         text:
           content: as default.
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_fill_default_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_example_line3
         type: text
         appearance:
@@ -340,13 +340,13 @@ groups:
         text:
           content: "Text should render #000000"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: dynamic_description.dynamic_example_line2
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: dynamic_text_on_expect
         type: rectangle
         appearance:
@@ -354,11 +354,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_example_line3
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_text_line3
         type: text
         appearance:
@@ -366,13 +366,13 @@ groups:
         text:
           content: "when on, #FFFFFF"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_text_on_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_text_off_expect
         type: rectangle
         appearance:
@@ -380,11 +380,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_text_line3
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_text_line3_end
         type: text
         appearance:
@@ -392,13 +392,13 @@ groups:
         text:
           content: "when off, and #CCCCCC"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_text_off_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_text_default_expect
         type: rectangle
         appearance:
@@ -406,11 +406,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_text_line3_end
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_text_final
         type: text
         appearance:
@@ -418,13 +418,13 @@ groups:
         text:
           content: as default.
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_description.dynamic_text_default_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_test
         type: rectangle
         appearance:
@@ -443,15 +443,15 @@ groups:
               "on": "#000000"
               "off": "#FFFFFF"
             default: "#CCCCCC"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 150
           height: 30
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: dynamic_description.dynamic_example_line3
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
   - group_id: dynamic_interpolation_description
     elements:
       - id: interp_example_line1
@@ -461,13 +461,13 @@ groups:
         text:
           content: "Dynamic Interpolation should render #000000"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: dynamic_description.dynamic_test
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: interp_fill_0_expect
         type: rectangle
         appearance:
@@ -475,11 +475,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_example_line1
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: interp_text_line1
         type: text
         appearance:
@@ -487,13 +487,13 @@ groups:
         text:
           content: at brightness 0,
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_fill_0_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: interp_example_line2
         type: text
         appearance:
@@ -501,13 +501,13 @@ groups:
         text:
           content: "#FF9900"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: dynamic_interpolation_description.interp_example_line1
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: interp_fill_128_expect
         type: rectangle
         appearance:
@@ -515,11 +515,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_example_line2
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: interp_text_line2
         type: text
         appearance:
@@ -527,13 +527,13 @@ groups:
         text:
           content: "at brightness 128, #FFFF00"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_fill_128_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: interp_fill_255_expect
         type: rectangle
         appearance:
@@ -541,11 +541,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_text_line2
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: interp_text_line2_end
         type: text
         appearance:
@@ -553,13 +553,13 @@ groups:
         text:
           content: at brightness 255,
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_fill_255_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: interp_example_line3
         type: text
         appearance:
@@ -567,13 +567,13 @@ groups:
         text:
           content: "and #333333"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: dynamic_interpolation_description.interp_example_line2
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: interp_fill_default_expect
         type: rectangle
         appearance:
@@ -581,11 +581,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_example_line3
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: interp_text_line3
         type: text
         appearance:
@@ -593,13 +593,13 @@ groups:
         text:
           content: "as default. Text should render #FFFFFF"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_fill_default_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: interp_text_0_expect
         type: rectangle
         appearance:
@@ -607,11 +607,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_text_line3
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: interp_text_line3_end
         type: text
         appearance:
@@ -619,13 +619,13 @@ groups:
         text:
           content: at brightness 0,
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_text_0_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: interp_example_line4
         type: text
         appearance:
@@ -633,13 +633,13 @@ groups:
         text:
           content: "#000000"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: dynamic_interpolation_description.interp_example_line3
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: interp_text_255_expect
         type: rectangle
         appearance:
@@ -647,11 +647,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_example_line4
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: interp_text_line4
         type: text
         appearance:
@@ -659,13 +659,13 @@ groups:
         text:
           content: "at brightness 255, and #FFFFFF"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_text_255_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: interp_text_default_expect
         type: rectangle
         appearance:
@@ -673,11 +673,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_text_line4
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: interp_text_final
         type: text
         appearance:
@@ -685,13 +685,13 @@ groups:
         text:
           content: as default.
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: dynamic_interpolation_description.interp_text_default_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: dynamic_interpolation_test
         type: rectangle
         appearance:
@@ -714,15 +714,15 @@ groups:
               "255": "#000000"
             interpolate: true
             default: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 150
           height: 30
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: dynamic_interpolation_description.interp_example_line4
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
   - group_id: stateful_description
     elements:
       - id: stateful_example_line1
@@ -732,13 +732,13 @@ groups:
         text:
           content: "Stateful should render #0099CC"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: dynamic_interpolation_description.dynamic_interpolation_test
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: stateful_fill_default_expect
         type: rectangle
         appearance:
@@ -746,11 +746,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: stateful_description.stateful_example_line1
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: stateful_text_line1
         type: text
         appearance:
@@ -758,13 +758,13 @@ groups:
         text:
           content: "by default, #00CCFF"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: stateful_description.stateful_fill_default_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: stateful_fill_hover_expect
         type: rectangle
         appearance:
@@ -772,11 +772,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: stateful_description.stateful_text_line1
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: stateful_text_line1_end
         type: text
         appearance:
@@ -784,13 +784,13 @@ groups:
         text:
           content: when hovered,
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: stateful_description.stateful_fill_hover_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: stateful_example_line2
         type: text
         appearance:
@@ -798,13 +798,13 @@ groups:
         text:
           content: "and #0066AA"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: stateful_description.stateful_example_line1
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: stateful_fill_active_expect
         type: rectangle
         appearance:
@@ -812,11 +812,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: stateful_description.stateful_example_line2
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: stateful_text_line2
         type: text
         appearance:
@@ -824,13 +824,13 @@ groups:
         text:
           content: when active. Text should always render
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: stateful_description.stateful_fill_active_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: stateful_example_line3
         type: text
         appearance:
@@ -838,13 +838,13 @@ groups:
         text:
           content: "#FFFFFF"
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: stateful_description.stateful_example_line2
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: stateful_text_expect
         type: rectangle
         appearance:
@@ -852,11 +852,11 @@ groups:
         layout:
           width: 15
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: stateful_description.stateful_example_line3
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: stateful_text_final
         type: text
         appearance:
@@ -864,13 +864,13 @@ groups:
         text:
           content: in all states.
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: stateful_description.stateful_text_expect
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: stateful_test
         type: rectangle
         appearance:
@@ -881,15 +881,15 @@ groups:
         text:
           content: kitchen sink toggle
           fill: "#99CCFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 150
           height: 30
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: stateful_description.stateful_example_line3
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:

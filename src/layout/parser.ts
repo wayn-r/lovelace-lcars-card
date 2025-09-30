@@ -73,23 +73,23 @@ export class ConfigParser {
       chisel: appearance.chisel,
       direction: appearance.direction,
       orientation: appearance.orientation,
-      bodyWidth: elementConfig.layout?.bodyWidth,
-      armHeight: elementConfig.layout?.armHeight,
+      bodyWidth: elementConfig.layout?.body_width,
+      armHeight: elementConfig.layout?.arm_height,
       
       text: text.content,
-      fontFamily: text.fontFamily,
-      fontSize: text.fontSize,
-      fontWeight: text.fontWeight,
-      letterSpacing: text.letterSpacing,
-      textAnchor: text.textAnchor,
-      dominantBaseline: text.dominantBaseline,
-      textTransform: text.textTransform,
+      fontFamily: text.font_family,
+      fontSize: text.font_size,
+      fontWeight: text.font_weight,
+      letterSpacing: text.letter_spacing,
+      textAnchor: text.text_anchor,
+      dominantBaseline: text.dominant_baseline,
+      textTransform: text.text_transform,
       cutout: text.cutout,
       elbowTextPosition: text.elbow_text_position,
       leftContent: text.left_content,
       rightContent: text.right_content,
-      textOffsetX: text.offsetX,
-      textOffsetY: text.offsetY,
+      textOffsetX: text.offset_x,
+      textOffsetY: text.offset_y,
       
       button: elementConfig.button,
       visibility_rules: elementConfig.visibility_rules,
@@ -135,8 +135,8 @@ export class ConfigParser {
     
     if (layout.width !== undefined) engineLayout.width = layout.width;
     if (layout.height !== undefined) engineLayout.height = layout.height;
-    if (layout.offsetX !== undefined) engineLayout.offsetX = layout.offsetX;
-    if (layout.offsetY !== undefined) engineLayout.offsetY = layout.offsetY;
+    if (layout.offset_x !== undefined) engineLayout.offsetX = layout.offset_x;
+    if (layout.offset_y !== undefined) engineLayout.offsetY = layout.offset_y;
     
     if (layout.anchor) {
       (engineLayout as any).anchor = {

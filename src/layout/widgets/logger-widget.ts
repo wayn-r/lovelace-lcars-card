@@ -253,8 +253,8 @@ class LogEntry {
       {
         anchor: {
           anchorTo: this.boundsElementId,
-          anchorPoint: isEndAnchor ? 'topRight' : 'topLeft',
-          targetAnchorPoint: isEndAnchor ? 'topRight' : 'topLeft'
+          anchorPoint: isEndAnchor ? 'top-right' : 'top-left',
+          targetAnchorPoint: isEndAnchor ? 'top-right' : 'top-left'
         },
         offsetY: 0
       },

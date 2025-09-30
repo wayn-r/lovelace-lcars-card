@@ -11,16 +11,16 @@ groups:
           left_content: Bridge Operations
           right_content: Dashboard
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
 
   - group_id: "navigation"
     elements:
@@ -45,8 +45,8 @@ groups:
         text:
           content: "HOME"
           fill: "#FFFFFF"
-          fontSize: 14
-          fontFamily: "Antonio"
+          font_size: 14
+          font_family: "Antonio"
         layout:
           width: 80
           height: 35
@@ -79,15 +79,15 @@ groups:
         text:
           content: "POWER"
           fill: "#000000"
-          fontWeight: "bold"
-          fontFamily: "Antonio"
+          font_weight: "bold"
+          font_family: "Antonio"
         layout:
           width: 100
           height: 40
           anchor:
             to: "navigation.nav_bar"
-            element_point: "topLeft"
-            target_point: "bottomLeft"
+            element_point: "top-left"
+            target_point: "bottom-left"
         button:
           enabled: true
           actions:
@@ -108,17 +108,17 @@ groups:
         text:
           content: "SHIELDS"
           fill: "#FFFFFF"
-          fontFamily: "Antonio"
+          font_family: "Antonio"
           elbow_text_position: "arm"
         layout:
-          bodyWidth: 20
-          armHeight: 15
+          body_width: 20
+          arm_height: 15
           width: 120
           height: 80
           anchor:
             to: "systems.power_status"
-            element_point: "topLeft"
-            target_point: "topRight"
+            element_point: "top-left"
+            target_point: "top-right"
         button:
           enabled: true
           actions:
@@ -143,17 +143,17 @@ groups:
         text:
           content: "RED ALERT"
           fill: "#FFFFFF"
-          fontSize: 20
-          fontWeight: "bold"
-          fontFamily: "Antonio"
+          font_size: 20
+          font_weight: "bold"
+          font_family: "Antonio"
           cutout: true
         layout:
           width: 200
           height: 60
           anchor:
             to: "container"
-            element_point: "bottomRight"
-            target_point: "bottomRight"
+            element_point: "bottom-right"
+            target_point: "bottom-right"
         button:
           enabled: true
         animations:
@@ -174,15 +174,15 @@ groups:
         text:
           content: "HULL BREACH - DECK 7\nAUTOMATIC CONTAINMENT ACTIVE"
           fill: "#FFFFFF"
-          fontSize: 12
-          fontFamily: "Antonio"
+          font_size: 12
+          font_family: "Antonio"
         layout:
           width: 250
           height: 80
           anchor:
             to: "alerts.alert_panel"
-            element_point: "bottomRight"
-            target_point: "topRight"
+            element_point: "bottom-right"
+            target_point: "top-right"
         animations:
           on_show:
             type: "slide"

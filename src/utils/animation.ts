@@ -532,7 +532,7 @@ export class AnimationManager {
     const anchorConfig = element.layoutConfig.anchor;
     
     if (anchorConfig.anchorTo && anchorConfig.anchorTo !== 'container') {
-      const anchorPoint = anchorConfig.anchorPoint || 'topLeft';
+      const anchorPoint = anchorConfig.anchorPoint || 'top-left';
       return TransformOriginUtils.anchorPointToTransformOriginString(anchorPoint);
     }
 

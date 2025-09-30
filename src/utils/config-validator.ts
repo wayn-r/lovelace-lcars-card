@@ -112,7 +112,7 @@ export class ConfigValidator {
             ActionProcessor.validateAction(act).forEach((msg: string) => errors.push(`${contextId} button.action – ${msg}`));
 
             if (
-              (act.action === 'set_state' || act.action === 'toggle_state') &&
+              (act.action === 'set-state' || act.action === 'toggle-state') &&
               act.target_element_ref &&
               !refExists(act.target_element_ref)
             ) {

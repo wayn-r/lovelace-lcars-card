@@ -132,7 +132,7 @@ export class Button {
 
     private normalizeActionFormat(actionConfig: any): Action {
         let actionType = actionConfig.action || actionConfig.type || 'none';
-        if (actionType === 'set-state') actionType = 'set_state';
+        if (actionType === 'set-state') actionType = 'set-state';
 
         const normalizedAction: Action = {
             action: actionType,
@@ -179,10 +179,10 @@ export class Button {
         try {
             const sm = this._runtime?.state;
             switch (action.action) {
-                case 'set_state':
+                case 'set-state':
                     sm?.executeSetStateAction(action);
                     break;
-                case 'toggle_state':
+                case 'toggle-state':
                     sm?.executeToggleStateAction(action);
                     break;
                 default:

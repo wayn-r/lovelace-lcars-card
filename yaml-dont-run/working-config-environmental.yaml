@@ -14,12 +14,12 @@ groups:
         layout:
           width: 100%
           height: 30
-          offsetX: 0
-          offsetY: 5
+          offset_x: 0
+          offset_y: 5
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
   - group_id: sub-header
     elements:
       - id: right-endcap
@@ -30,37 +30,37 @@ groups:
         layout:
           height: 40
           width: 10%
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: top-header.top-header
-            element_point: topRight
-            target_point: bottomRight
+            element_point: top-right
+            target_point: bottom-right
       - id: header
         type: text
         text:
           content: evansville • IN
           fill: "#5ca8ea"
           text_anchor: end
-          textTransform: uppercase
-          fontFamily: Antonio
-          fontWeight: bold
+          text_transform: uppercase
+          font_family: Antonio
+          font_weight: bold
         layout:
           height: 40
-          offsetX: -5
+          offset_x: -5
           anchor:
             to: sub-header.right-endcap
-            element_point: topRight
-            target_point: topLeft
+            element_point: top-right
+            target_point: top-left
       - id: header-bar
         type: rectangle
         appearance:
           fill: "#3ad9e7"
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: sub-header.elbow
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
           stretch:
             target1:
               id: sub-header.header
@@ -75,15 +75,15 @@ groups:
           orientation: top-left
           fill: "#12a4e3"
         layout:
-          bodyWidth: 130
-          armHeight: 40
+          body_width: 130
+          arm_height: 40
           width: 25%
           height: 60
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: top-header.top-header
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
   - group_id: environmental-header
     elements:
       - id: elbow
@@ -93,40 +93,40 @@ groups:
           fill: "#5ca8ea"
         text:
           content: environmental
-          fontFamily: Antonio
-          textTransform: uppercase
+          font_family: Antonio
+          text_transform: uppercase
           elbow_text_position: body
-          textAnchor: end
-          fontSize: 22
-          offsetX: -5
-          offsetY: -40
+          text_anchor: end
+          font_size: 22
+          offset_x: -5
+          offset_y: -40
           cutout: true
         layout:
-          bodyWidth: 130
-          armHeight: 15
+          body_width: 130
+          arm_height: 15
           width: 145
           height: 190
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: sub-header.elbow
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: logger
         type: logger-widget
         text:
           max_lines: 6
           fill: "#FFFFFF"
           text_anchor: start
-          fontSize: 22
-          textTransform: uppercase
+          font_size: 22
+          text_transform: uppercase
         layout:
           width: 400
           height: 200
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: sub-header.header-bar
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: bar-1
         type: rectangle
         appearance:
@@ -134,11 +134,11 @@ groups:
         layout:
           width: 5
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: environmental-header.elbow
-            element_point: bottomLeft
-            target_point: bottomRight
+            element_point: bottom-left
+            target_point: bottom-right
           stretch:
             target1:
               id: sub-header.elbow
@@ -150,11 +150,11 @@ groups:
         layout:
           width: 10%
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: environmental-header.bar-1
-            element_point: bottomLeft
-            target_point: bottomRight
+            element_point: bottom-left
+            target_point: bottom-right
       - id: bar-3
         type: rectangle
         appearance:
@@ -162,11 +162,11 @@ groups:
         layout:
           width: 25%
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: environmental-header.bar-2
-            element_point: bottomLeft
-            target_point: bottomRight
+            element_point: bottom-left
+            target_point: bottom-right
       - id: bar-4
         type: rectangle
         appearance:
@@ -174,11 +174,11 @@ groups:
         layout:
           width: 40
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: environmental-header.bar-3
-            element_point: bottomLeft
-            target_point: bottomRight
+            element_point: bottom-left
+            target_point: bottom-right
           stretch:
             target1:
               id: container
@@ -190,19 +190,19 @@ groups:
           fill: "#5ca8ea"
         text:
           label:
-            fontFamily: Antonio
+            font_family: Antonio
             content: current conditions
           value:
-            fontFamily: Antonio
+            font_family: Antonio
             fill: "#3ad9e7"
-            textTransform: lowercase
+            text_transform: lowercase
         layout:
           height: 25
-          offsetY: -160
+          offset_y: -160
           anchor:
             to: environmental-header.bar-3
-            element_point: bottomLeft
-            target_point: topRight
+            element_point: bottom-left
+            target_point: top-right
       - id: current-temp-widget
         type: entity-text-widget
         entity:
@@ -212,18 +212,18 @@ groups:
           fill: "#12a4e3"
         text:
           label:
-            fontFamily: Antonio
+            font_family: Antonio
             content: Temperature (feel)
           value:
-            fontFamily: Antonio
+            font_family: Antonio
             fill: "#5ca8ea"
         layout:
           height: 25
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: environmental-header.current-condition-widget
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: precipitation-chance-widget
         type: entity-text-widget
         entity: weather.kevv_daynight
@@ -231,19 +231,19 @@ groups:
           fill: "#12a4e3"
         text:
           label:
-            fontFamily: Antonio
+            font_family: Antonio
             content: precipitation chance
           value:
-            fontFamily: Antonio
+            font_family: Antonio
             content: "-50%"
             fill: "#5ca8ea"
         layout:
           height: 25
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: environmental-header.current-temp-widget
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: uv-index-widget
         type: entity-text-widget
         entity: weather.home
@@ -252,18 +252,18 @@ groups:
           fill: "#225782"
         text:
           label:
-            fontFamily: Antonio
+            font_family: Antonio
             content: Uv index
           value:
-            fontFamily: Antonio
+            font_family: Antonio
             fill: "#044ea9"
         layout:
           height: 25
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: environmental-header.precipitation-chance-widget
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: air-quality-index-widget
         type: entity-text-widget
         entity: weather.kevv_daynight
@@ -271,19 +271,19 @@ groups:
           fill: "#225782"
         text:
           label:
-            fontFamily: Antonio
+            font_family: Antonio
             content: Air Quality index
           value:
-            fontFamily: Antonio
+            font_family: Antonio
             content: "100"
             fill: "#044ea9"
         layout:
           height: 25
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: environmental-header.uv-index-widget
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: wind-widget
         type: entity-text-widget
         entity:
@@ -293,30 +293,30 @@ groups:
           fill: "#04bfd8"
         text:
           label:
-            fontFamily: Antonio
+            font_family: Antonio
             content: Wind Speed (direction))
           value:
-            fontFamily: Antonio
+            font_family: Antonio
             fill: "#04bfd8"
         layout:
           height: 25
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: environmental-header.air-quality-index-widget
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
   - group_id: environmental-buttons
     elements:
       - id: main
         type: elbow
         text:
           content: main
-          fontFamily: Antonio
-          textTransform: uppercase
-          textAnchor: end
-          fontSize: 22
-          offsetX: -5
-          offsetY: 18
+          font_family: Antonio
+          text_transform: uppercase
+          text_anchor: end
+          font_size: 22
+          offset_x: -5
+          offset_y: 18
           elbow_text_position: body
           fill: "#000000"
         appearance:
@@ -326,15 +326,15 @@ groups:
             active: "#0066AA"
             orientation: top-left
         layout:
-          bodyWidth: 130
-          armHeight: 15
+          body_width: 130
+          arm_height: 15
           width: 145
           height: 80
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: environmental-header.elbow
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -345,11 +345,11 @@ groups:
         type: rectangle
         text:
           content: sickbay
-          fontFamily: Antonio
-          textTransform: uppercase
-          textAnchor: end
-          fontSize: 22
-          offsetX: -5
+          font_family: Antonio
+          text_transform: uppercase
+          text_anchor: end
+          font_size: 22
+          offset_x: -5
           fill: "#000000"
         appearance:
           fill:
@@ -359,20 +359,20 @@ groups:
         layout:
           width: 130
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: environmental-buttons.main
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: ship_map
         type: rectangle
         text:
           content: ship map
-          fontFamily: Antonio
-          textTransform: uppercase
-          textAnchor: end
-          fontSize: 22
-          offsetX: -5
+          font_family: Antonio
+          text_transform: uppercase
+          text_anchor: end
+          font_size: 22
+          offset_x: -5
           fill: "#000000"
         appearance:
           fill:
@@ -382,20 +382,20 @@ groups:
         layout:
           width: 130
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: environmental-buttons.sickbay
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: sensors
         type: rectangle
         text:
           content: sensors
-          fontFamily: Antonio
-          textTransform: uppercase
-          textAnchor: end
-          fontSize: 22
-          offsetX: -5
+          font_family: Antonio
+          text_transform: uppercase
+          text_anchor: end
+          font_size: 22
+          offset_x: -5
           fill: "#000000"
         appearance:
           fill:
@@ -405,11 +405,11 @@ groups:
         layout:
           width: 130
           height: 40
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: environmental-buttons.ship_map
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
@@ -425,22 +425,22 @@ groups:
         layout:
           width: 35%
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: environmental-buttons.main
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
       - id: bar-2
         type: rectangle
         appearance:
           fill: "#7addee"
         layout:
           height: 15
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: environmental-lower-section.bar-1
-            element_point: topLeft
-            target_point: topRight
+            element_point: top-left
+            target_point: top-right
           stretch:
             target1:
               id: environmental-lower-section.elbow
@@ -452,15 +452,15 @@ groups:
           fill: "#7addee"
           orientation: top-right
         layout:
-          bodyWidth: 80
-          armHeight: 15
+          body_width: 80
+          arm_height: 15
           width: 320
           height: 80
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: environmental-header.bar-4
-            element_point: topRight
-            target_point: bottomRight
+            element_point: top-right
+            target_point: bottom-right
           stretch:
             target1:
               id: container
@@ -479,18 +479,18 @@ groups:
         layout:
           width: 500
           height: 150
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: environmental-lower-section.bar-1
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: weather
         type: weather-icon
         entity: weather.openweathermap
         layout:
           width: 210
           height: 210
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: environmental-header.bar-1
             element_point: bottomCenter
@@ -514,13 +514,13 @@ groups:
           top_padding: 6
           label_height: 50
         layout:
-          offsetY: 25
+          offset_y: 25
           width: 220
           height: 200
           anchor:
             to: environmental-lower-section.elbow
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
   - group_id: metric-widgets
     elements:
       - id: widget1
@@ -529,36 +529,36 @@ groups:
         appearance:
           rounded: right
         layout:
-          offsetY: 10
+          offset_y: 10
           anchor:
             to: environmental-lower-section.bar-2
-            element_point: topRight
-            target_point: bottomRight
+            element_point: top-right
+            target_point: bottom-right
         text:
           value:
-            fontWeight: bold
+            font_weight: bold
       - id: widget2
         type: entity-metric-widget
         entity: sensor.openweathermap_cloud_coverage
         appearance:
           rounded: right
         layout:
-          offsetY: 30
+          offset_y: 30
           anchor:
             to: metric-widgets.widget1
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         text:
           value:
-            fontWeight: bold
+            font_weight: bold
       - id: widget3
         type: entity-metric-widget
         entity: sensor.openweathermap_dew_point_temperature
         appearance:
           rounded: right
         layout:
-          offsetY: 30
+          offset_y: 30
           anchor:
             to: metric-widgets.widget2
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left

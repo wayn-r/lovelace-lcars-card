@@ -42,17 +42,17 @@ type: elbow
   appearance:
     orientation: < top-left | top-right | bottom-left | bottom-right >
   layout:
-    armHeight: < number | string >
-    bodyWidth: < number | string >
+    arm_height: < number | string >
+    body_width: < number | string >
 
 type: top_header
   text:
     left_content: < string >
     right_content: < string >
-    fontFamily: < string >
-    fontWeight: < string | number >
-    letterSpacing: < string | number >
-    textTransform: < string >
+    font_family: < string >
+    font_weight: < string | number >
+    letter_spacing: < string | number >
+    text_transform: < string >
 
 type: graph-widget
   entity: <string | array<string|{ id: <string>, color?: <string|array|object>, toggleable?: <boolean>, animated?: <boolean>, duration?: <number>, label?: <string>, min?: <number>, max?: <number>, attribute?: <string> }>>
@@ -98,19 +98,19 @@ color:
 text:
   content: < string >
   fill: < string | array | object >
-  fontFamily: < string >
-  fontSize: < number >
-  fontWeight: < string | number >
-  letterSpacing: < string | number >
-  textAnchor: < start | middle | end >
-  dominantBaseline: < string >
-  textTransform: < string >
+  font_family: < string >
+  font_size: < number >
+  font_weight: < string | number >
+  letter_spacing: < string | number >
+  text_anchor: < start | middle | end >
+  dominant_baseline: < string >
+  text_transform: < string >
   cutout: < boolean >
   elbow_text_position: < arm | body >
   left_content: < string >
   right_content: < string >
-  offsetX: < number | string >
-  offsetY: < number | string >
+  offset_x: < number | string >
+  offset_y: < number | string >
   max_lines: < number >
   line_spacing: < number | string >
   text_color: < string | array | object >
@@ -124,7 +124,7 @@ button:
     double_tap: < object | array >
 
 action:
-  action: < call-service | navigate | url | toggle | more-info | none | set_state | toggle_state >
+  action: < call-service | navigate | url | toggle | more-info | none | set-state | toggle-state >
   service: < string >
   service_data: < any >
   target: < any >
@@ -161,7 +161,7 @@ animations:
   on_hide: < object >
   on_state_change: < array >
 
-Animation:
+animation:
   type: < fade | slide | scale | color | custom_gsap >
   fade_params:
     opacity_start: < number >
@@ -189,7 +189,7 @@ Animation:
   target_self: < boolean >
   target_elements_ref: < array >
   target_groups_ref: < array >
-Sequence:
+sequence:
   target_self: < boolean >
   target_elements_ref: < array >
   target_groups_ref: < array >

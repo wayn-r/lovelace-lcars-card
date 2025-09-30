@@ -186,25 +186,25 @@
                                 "fill": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
                                 },
-                                "fontFamily": {
+                                "font_family": {
                                   "type": "string"
                                 },
-                                "fontSize": {
+                                "font_size": {
                                   "type": "number"
                                 },
-                                "fontWeight": {
+                                "font_weight": {
                                   "type": [
                                     "string",
                                     "number"
                                   ]
                                 },
-                                "letterSpacing": {
+                                "letter_spacing": {
                                   "type": [
                                     "string",
                                     "number"
                                   ]
                                 },
-                                "textAnchor": {
+                                "text_anchor": {
                                   "type": "string",
                                   "enum": [
                                     "start",
@@ -212,10 +212,10 @@
                                     "end"
                                   ]
                                 },
-                                "dominantBaseline": {
+                                "dominant_baseline": {
                                   "type": "string"
                                 },
-                                "textTransform": {
+                                "text_transform": {
                                   "type": "string"
                                 },
                                 "cutout": {
@@ -234,13 +234,13 @@
                                 "right_content": {
                                   "type": "string"
                                 },
-                                "offsetX": {
+                                "offset_x": {
                                   "type": [
                                     "number",
                                     "string"
                                   ]
                                 },
-                                "offsetY": {
+                                "offset_y": {
                                   "type": [
                                     "number",
                                     "string"
@@ -295,13 +295,13 @@
                                     "string"
                                   ]
                                 },
-                                "offsetX": {
+                                "offset_x": {
                                   "type": [
                                     "number",
                                     "string"
                                   ]
                                 },
-                                "offsetY": {
+                                "offset_y": {
                                   "type": [
                                     "number",
                                     "string"
@@ -384,8 +384,8 @@
                                                 "toggle",
                                                 "more-info",
                                                 "none",
-                                                "set_state",
-                                                "toggle_state"
+                                                "set-state",
+                                                "toggle-state"
                                               ]
                                             },
                                             "service": {
@@ -1250,11 +1250,11 @@
                                 "height": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/height"
                                 },
-                                "offsetX": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/offsetX"
+                                "offset_x": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/offset_x"
                                 },
-                                "offsetY": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/offsetY"
+                                "offset_y": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/offset_y"
                                 },
                                 "anchor": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/anchor"
@@ -1262,10 +1262,10 @@
                                 "stretch": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/layout/properties/stretch"
                                 },
-                                "bodyWidth": {
+                                "body_width": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/line_spacing"
                                 },
-                                "armHeight": {
+                                "arm_height": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/line_spacing"
                                 }
                               },
@@ -1318,17 +1318,17 @@
                                 "right_content": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/right_content"
                                 },
-                                "fontFamily": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontFamily"
+                                "font_family": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_family"
                                 },
-                                "fontWeight": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontWeight"
+                                "font_weight": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_weight"
                                 },
-                                "letterSpacing": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letterSpacing"
+                                "letter_spacing": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letter_spacing"
                                 },
-                                "textTransform": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textTransform"
+                                "text_transform": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/text_transform"
                                 }
                               },
                               "additionalProperties": true
@@ -1481,26 +1481,26 @@
                                 "fill": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fill"
                                 },
-                                "fontFamily": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontFamily"
+                                "font_family": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_family"
                                 },
-                                "fontSize": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontSize"
+                                "font_size": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_size"
                                 },
-                                "fontWeight": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontWeight"
+                                "font_weight": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_weight"
                                 },
-                                "letterSpacing": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letterSpacing"
+                                "letter_spacing": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letter_spacing"
                                 },
-                                "textAnchor": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textAnchor"
+                                "text_anchor": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/text_anchor"
                                 },
-                                "dominantBaseline": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/dominantBaseline"
+                                "dominant_baseline": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/dominant_baseline"
                                 },
-                                "textTransform": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textTransform"
+                                "text_transform": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/text_transform"
                                 },
                                 "cutout": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/cutout"
@@ -1514,11 +1514,11 @@
                                 "right_content": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/right_content"
                                 },
-                                "offsetX": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offsetX"
+                                "offset_x": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offset_x"
                                 },
-                                "offsetY": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offsetY"
+                                "offset_y": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offset_y"
                                 },
                                 "max_lines": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/max_lines"
@@ -1544,10 +1544,10 @@
                                     "height": {
                                       "type": "number"
                                     },
-                                    "fontFamily": {
+                                    "font_family": {
                                       "type": "string"
                                     },
-                                    "fontWeight": {
+                                    "font_weight": {
                                       "type": [
                                         "string",
                                         "number"
@@ -1556,10 +1556,10 @@
                                     "fill": {
                                       "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/appearance/properties/fill"
                                     },
-                                    "offsetX": {
+                                    "offset_x": {
                                       "type": "number"
                                     },
-                                    "textTransform": {
+                                    "text_transform": {
                                       "type": "string"
                                     },
                                     "cutout": {
@@ -1638,26 +1638,26 @@
                                 "fill": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fill"
                                 },
-                                "fontFamily": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontFamily"
+                                "font_family": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_family"
                                 },
-                                "fontSize": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontSize"
+                                "font_size": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_size"
                                 },
-                                "fontWeight": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/fontWeight"
+                                "font_weight": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/font_weight"
                                 },
-                                "letterSpacing": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letterSpacing"
+                                "letter_spacing": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/letter_spacing"
                                 },
-                                "textAnchor": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textAnchor"
+                                "text_anchor": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/text_anchor"
                                 },
-                                "dominantBaseline": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/dominantBaseline"
+                                "dominant_baseline": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/dominant_baseline"
                                 },
-                                "textTransform": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/textTransform"
+                                "text_transform": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/text_transform"
                                 },
                                 "cutout": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/cutout"
@@ -1671,11 +1671,11 @@
                                 "right_content": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/right_content"
                                 },
-                                "offsetX": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offsetX"
+                                "offset_x": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offset_x"
                                 },
-                                "offsetY": {
-                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offsetY"
+                                "offset_y": {
+                                  "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/offset_y"
                                 },
                                 "max_lines": {
                                   "$ref": "#/definitions/LcarsCardConfig/properties/groups/items/properties/elements/items/anyOf/0/anyOf/0/properties/text/properties/max_lines"

@@ -52,27 +52,27 @@ groups: <array>                  # Required: Defines groups of elements. Element
            content: <string>              # Text for the label pill. Defaults to entity friendly name
            width: <number>                # Width of the label pill in px. Default: 200
            height: <number>               # Font-cap height used to compute font size. Default: 80% of widget height
-           fontFamily: <string>
-           fontWeight: <string|number>
+           font_family: <string>
+           font_weight: <string|number>
            fill: <color_property>         # Text color inside the pill (cutout). Default: inherits
-           offsetX: <number>              # Horizontal spacing between leading edge and label pill
-           textTransform: <string>        # Default: uppercase
+           offset_x: <number>              # Horizontal spacing between leading edge and label pill
+           text_transform: <string>        # Default: uppercase
          value:                         # Optional overrides for the middle numeric value text
            content: <string>              # Value text. Defaults to entity state or selected attribute
-           fontFamily: <string>
-           fontWeight: <string|number>
+           font_family: <string>
+           font_weight: <string|number>
            fill: <color_property>         # Default: var(--lcars-color-white)
-           offsetX: <number>              # Horizontal spacing between label pill and value text
-           textTransform: <string>
+           offset_x: <number>              # Horizontal spacing between label pill and value text
+           text_transform: <string>
          unit:                          # Optional overrides for the trailing unit pill
            content: <string>              # Defaults to entity attribute 'unit_of_measurement'
            width: <number>                # Pill width in px. Default: 60
            height: <number>               # Pill height. Default: widget height
-           fontFamily: <string>
-           fontWeight: <string|number>
+           font_family: <string>
+           font_weight: <string|number>
            fill: <color_property>         # Pill fill color; defaults to appearance.fill
-           offsetX: <number>              # Horizontal spacing between value text and unit pill
-           textTransform: <string>
+           offset_x: <number>              # Horizontal spacing between value text and unit pill
+           text_transform: <string>
          appearance:
            fill: <color_property>         # Pill background color and default value text color. Default: var(--lcars-color-entity-metric)
            rounded: <string>              # Which outer side(s) are rounded: 'left' | 'right' | 'both'. Default: none. The inside edges are always square.
@@ -120,21 +120,21 @@ groups: <array>                  # Required: Defines groups of elements. Element
           content: <string>          # The text to display.
                                      #   For buttonized elements, this is the button's label.
           fill: <color_property>     # Color of the text.
-          fontFamily: <string>       # e.g., "Antonio, Arial, sans-serif". Default: "Antonio".
-          fontSize: <number>         # Font size in pixels. Default: 16.
+          font_family: <string>       # e.g., "Antonio, Arial, sans-serif". Default: "Antonio".
+          font_size: <number>         # Font size in pixels. Default: 16.
                                      #   Note: If layout.height is specified as a number, it will be used
                                      #   to calculate fontSize automatically and supersede this value.
-          fontWeight: <string|number>  # e.g., "normal", "bold", 400, 700. Default: "normal".
-          letterSpacing: <string|number>  # e.g., "1px", 0.5. Default: "normal".
+          font_weight: <string|number>  # e.g., "normal", "bold", 400, 700. Default: "normal".
+          letter_spacing: <string|number>  # e.g., "1px", 0.5. Default: "normal".
                                      #   Note: If layout.width is specified as a number, it will be used
                                      #   to calculate letterSpacing automatically and supersede this value.
-          textAnchor: <string>       # SVG text-anchor: "start", "middle", "end". Default: "start".
-          dominantBaseline: <string>  # SVG dominant-baseline. Default: "auto".
-          textTransform: <string>    # CSS text-transform. Default: "none".
+          text_anchor: <string>       # SVG text-anchor: "start", "middle", "end". Default: "start".
+          dominant_baseline: <string>  # SVG dominant-baseline. Default: "auto".
+          text_transform: <string>    # CSS text-transform. Default: "none".
           cutout: <boolean>          # For buttonized elements: True for "cut-out" text. Default: false.
           elbow_text_position: <string>  # For 'elbow' (buttonized): "arm" or "body". Default: "arm".
-          offsetX: <number | string_percentage>  # Optional: Horizontal text offset. e.g., 10 or "5%". Default: 0.
-          offsetY: <number | string_percentage>  # Optional: Vertical text offset. e.g., -5 or "10%". Default: 0.
+          offset_x: <number | string_percentage>  # Optional: Horizontal text offset. e.g., 10 or "5%". Default: 0.
+          offset_y: <number | string_percentage>  # Optional: Vertical text offset. e.g., -5 or "10%". Default: 0.
 
           # --- Specific to 'top_header' type ---
           left_content: <string>     # Text for the left side of the top_header.
@@ -162,20 +162,20 @@ groups: <array>                  # Required: Defines groups of elements. Element
                                                  #   Note: For text elements, numeric height values will
                                                  #   automatically calculate fontSize to fit the text
                                                  #   within the specified height, superseding text.fontSize.
-          offsetX: <number | string_percentage>  # e.g., 10 or "-5%"
-          offsetY: <number | string_percentage>  # e.g., 10 or "-5%"
+          offset_x: <number | string_percentage>  # e.g., 10 or "-5%"
+          offset_y: <number | string_percentage>  # e.g., 10 or "-5%"
 
           # --- Shape-Specific Layout Properties ---
-          bodyWidth: <number>        # For 'elbow': Thickness of the main body segment.
-          armHeight: <number>        # For 'elbow': Thickness of the arm segment.
+          body_width: <number>        # For 'elbow': Thickness of the main body segment.
+          arm_height: <number>        # For 'elbow': Thickness of the arm segment.
 
           anchor:                    # Optional: (Not for 'top_header')
             to: <string>               # Full ID of target element ("group.base_id") or "container".
             element_point: <string>    # Point on *this* element.
             target_point: <string>     # Point on the *target*.
-                                       #   Anchor point options: "topLeft", "topCenter", "topRight", 
-                                       #   "centerLeft", "center", "centerRight", "bottomLeft", 
-                                       #   "bottomCenter", "bottomRight".
+                                       #   Anchor point options: "top-left", "topCenter", "top-right", 
+                                       #   "centerLeft", "center", "centerRight", "bottom-left", 
+                                       #   "bottomCenter", "bottom-right".
 
           stretch:                   # Optional: (Not for 'top_header')
             target1:
@@ -275,7 +275,7 @@ color_property:                      # Option 4: Stateful color configuration fo
 action_definition:                   # Action configuration object.
   action: <string>                   # Required: Type of action.
                                      #   Options: "call-service", "navigate", "url", "toggle", "more-info", 
-                                     #           "set_state", "toggle_state", "none".
+                                     #           "set-state", "toggle-state", "none".
 
   # --- Service Call Specific (if action: "call-service") ---
   service: <string>                  # Required: Service to call (e.g., "light.turn_on").
@@ -291,7 +291,7 @@ action_definition:                   # Action configuration object.
   # --- Entity Specific (if action: "toggle" or "more-info") ---
   entity: <string>                   # Required: Entity ID for the action (e.g., "switch.fan").
 
-  # --- State Setting Specific (if action: "set_state") ---
+  # --- State Setting Specific (if action: "set-state") ---
   target_id: <string>                # Required: Full ID of target element/group ("group_id.element_id" or "group_id").
   state: <string>                    # Required: State value to set.
 

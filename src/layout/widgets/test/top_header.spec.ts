@@ -247,8 +247,8 @@ describe('TopHeaderWidget', () => {
         
         expect(leftEndcap.layoutConfig.anchor).toEqual({
           anchorTo: bounds.id,
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topLeft'
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'top-left'
         });
       });
 
@@ -260,8 +260,8 @@ describe('TopHeaderWidget', () => {
         
         expect(rightEndcap.layoutConfig.anchor).toEqual({
           anchorTo: bounds.id,
-          anchorPoint: 'topRight',
-          targetAnchorPoint: 'topRight'
+          anchorPoint: 'top-right',
+          targetAnchorPoint: 'top-right'
         });
       });
 
@@ -273,8 +273,8 @@ describe('TopHeaderWidget', () => {
         
         expect(leftText.layoutConfig.anchor).toEqual({
           anchorTo: leftEndcap.id,
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topRight'
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'top-right'
         });
         expect(leftText.layoutConfig.offsetX).toBe(5); // TEXT_GAP
       });
@@ -287,8 +287,8 @@ describe('TopHeaderWidget', () => {
         
         expect(rightText.layoutConfig.anchor).toEqual({
           anchorTo: rightEndcap.id,
-          anchorPoint: 'topRight',
-          targetAnchorPoint: 'topLeft'
+          anchorPoint: 'top-right',
+          targetAnchorPoint: 'top-left'
         });
         expect(rightText.layoutConfig.offsetX).toBe(-5); // -TEXT_GAP
       });
@@ -302,8 +302,8 @@ describe('TopHeaderWidget', () => {
         
         expect(headerBar.layoutConfig.anchor).toEqual({
           anchorTo: leftText.id,
-          anchorPoint: 'topLeft',
-          targetAnchorPoint: 'topRight'
+          anchorPoint: 'top-left',
+          targetAnchorPoint: 'top-right'
         });
         expect(headerBar.layoutConfig.offsetX).toBe(5); // TEXT_GAP
         

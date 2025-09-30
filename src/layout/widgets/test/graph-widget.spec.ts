@@ -340,7 +340,7 @@ describe('GraphWidget', () => {
       const button = elements[2] as RectangleElement;
       
       expect(button.props.button?.enabled).toBe(true);
-      expect(button.props.button?.actions?.tap?.action).toBe('toggle_state');
+      expect(button.props.button?.actions?.tap?.action).toBe('toggle-state');
       expect(button.props.button?.actions?.tap?.target_element_ref).toBe('toggle_func_test_sensor.temperature_visible');
       expect(button.props.button?.actions?.tap?.states).toEqual(['visible', 'hidden']);
     });
@@ -442,8 +442,8 @@ describe('GraphWidget', () => {
       
       expect(button.layoutConfig.anchor).toEqual({
         anchorTo: 'anchor_test_graph',
-        anchorPoint: 'topLeft',
-        targetAnchorPoint: 'topRight'
+        anchorPoint: 'top-left',
+        targetAnchorPoint: 'top-right'
       });
       expect(button.layoutConfig.offsetX).toBe(20);
     });

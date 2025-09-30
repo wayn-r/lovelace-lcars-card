@@ -29,7 +29,7 @@ export class TopHeaderWidget extends Widget {
     const leftEndcap = new EndcapElement(
       `${this.id}_left_endcap`,
       { direction: 'left', fill: fillColor },
-      { anchor: { anchorTo: bounds.id, anchorPoint: 'topLeft', targetAnchorPoint: 'topLeft' }, width: endcapWidth, height },
+      { anchor: { anchorTo: bounds.id, anchorPoint: 'top-left', targetAnchorPoint: 'top-left' }, width: endcapWidth, height },
       this.hass,
       this.requestUpdateCallback,
       this.getShadowElement
@@ -38,7 +38,7 @@ export class TopHeaderWidget extends Widget {
     const rightEndcap = new EndcapElement(
       `${this.id}_right_endcap`,
       { direction: 'right', fill: fillColor },
-      { anchor: { anchorTo: bounds.id, anchorPoint: 'topRight', targetAnchorPoint: 'topRight' }, width: endcapWidth, height },
+      { anchor: { anchorTo: bounds.id, anchorPoint: 'top-right', targetAnchorPoint: 'top-right' }, width: endcapWidth, height },
       this.hass,
       this.requestUpdateCallback,
       this.getShadowElement
@@ -54,7 +54,7 @@ export class TopHeaderWidget extends Widget {
         letterSpacing: this.props.letterSpacing || 'normal',
         textTransform: this.props.textTransform || 'uppercase',
       },
-      { anchor: { anchorTo: leftEndcap.id, anchorPoint: 'topLeft', targetAnchorPoint: 'topRight' }, offsetX: TEXT_GAP, height },
+      { anchor: { anchorTo: leftEndcap.id, anchorPoint: 'top-left', targetAnchorPoint: 'top-right' }, offsetX: TEXT_GAP, height },
       this.hass,
       this.requestUpdateCallback,
       this.getShadowElement
@@ -71,7 +71,7 @@ export class TopHeaderWidget extends Widget {
         textTransform: this.props.textTransform || 'uppercase',
         textAnchor: 'end',
       },
-      { anchor: { anchorTo: rightEndcap.id, anchorPoint: 'topRight', targetAnchorPoint: 'topLeft' }, offsetX: -TEXT_GAP, height },
+      { anchor: { anchorTo: rightEndcap.id, anchorPoint: 'top-right', targetAnchorPoint: 'top-left' }, offsetX: -TEXT_GAP, height },
       this.hass,
       this.requestUpdateCallback,
       this.getShadowElement
@@ -81,7 +81,7 @@ export class TopHeaderWidget extends Widget {
       `${this.id}_header_bar`,
       { fill: fillColor },
       {
-        anchor: { anchorTo: leftText.id, anchorPoint: 'topLeft', targetAnchorPoint: 'topRight' },
+        anchor: { anchorTo: leftText.id, anchorPoint: 'top-left', targetAnchorPoint: 'top-right' },
         offsetX: TEXT_GAP,
         height,
         stretch: {

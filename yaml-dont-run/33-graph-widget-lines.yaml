@@ -11,16 +11,16 @@ groups:
           left_content: graph-widget-lines
           right_content: example
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
   - group_id: graphs
     elements:
       - id: graph_1
@@ -28,11 +28,11 @@ groups:
         layout:
           height: 150
           width: 450
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: nav_header.main_header
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         entity:
           - id: sensor.living_room_temperature
             animated: false
@@ -56,11 +56,11 @@ groups:
         layout:
           height: 150
           width: 450
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: graphs.graph_1
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         entity:
           - id: sensor.living_room_temperature
             animated: false
@@ -72,11 +72,11 @@ groups:
         layout:
           height: 150
           width: 450
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: graph_2.graph_2
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         entity:
           - id: sensor.living_room_humidity
             animated: false
@@ -88,11 +88,11 @@ groups:
         layout:
           height: 150
           width: 450
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: graph_3.graph_3
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         entity:
           - id: sensor.kevv_temperature
             animated: false
@@ -104,11 +104,11 @@ groups:
         layout:
           height: 150
           width: 450
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: graph_4.graph_4
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         entity:
           - id: sensor.kevv_relative_humidity
             animated: false
@@ -124,11 +124,11 @@ groups:
         layout:
           height: 150
           width: 450
-          offsetY: 20
+          offset_y: 20
           anchor:
             to: graph_5.graph_5
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         entity:
           - id: sensor.ep1_kitchen_temperature
             animated: false

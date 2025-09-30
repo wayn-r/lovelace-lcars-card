@@ -11,16 +11,16 @@ groups:
           left_content: Visibility Rules
           right_content: example
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
   - group_id: controller
     elements:
       - id: toggle_button
@@ -30,20 +30,20 @@ groups:
         text:
           content: TOGGLE
           fill: "#000000"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 80
           height: 30
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: nav_header.main_header
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:
             tap:
-              action: toggle_state
+              action: toggle-state
               target_element_ref: content_group.conditional_element
               states:
                 - hidden
@@ -57,15 +57,15 @@ groups:
         text:
           content: CONDITIONAL
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
           width: 120
           height: 30
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: controller.toggle_button
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         state_management:
           default_state: visible
       - id: dependent_text
@@ -73,9 +73,9 @@ groups:
         text:
           content: NOW YOU SEE ME
           fill: "#FFFFFF"
-          fontFamily: Antonio
+          font_family: Antonio
         layout:
-          offsetX: 5
+          offset_x: 5
           anchor:
             to: content_group.conditional_element
             element_point: centerLeft

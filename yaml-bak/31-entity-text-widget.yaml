@@ -14,16 +14,16 @@ groups:
           left_content: Entity Text widget
           right_content: example
           fill: "#99CCFF"
-          fontSize: 18
-          fontWeight: bold
-          fontFamily: Antonio
+          font_size: 18
+          font_weight: bold
+          font_family: Antonio
         layout:
           width: 100%
           height: 40
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
   - group_id: widgets
     elements:
       - id: widget_1
@@ -31,18 +31,18 @@ groups:
         entity: light.kitchen_sink_light
         text:
           label:
-            fontFamily: Antonio
+            font_family: Antonio
           value:
-            fontFamily: Antonio
+            font_family: Antonio
             fill: "#0099FF"
         layout:
           height: 30
-          offsetY: 10
-          offsetX: 5
+          offset_y: 10
+          offset_x: 5
           anchor:
             to: nav_header.main_header
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
       - id: widget_2
         type: entity-text-widget
         entity: light.kitchen_sink_light
@@ -50,23 +50,23 @@ groups:
           label:
             content: Sink Light
             height: 15
-            fontFamily: Antonio
-            fontWeight: Bold
+            font_family: Antonio
+            font_weight: Bold
             fill: "#00CC99"
-            offsetX: 8
+            offset_x: 8
             width: 100
           value:
             content: im a light
-            fontFamily: Antonio
-            fontWeight: bold
-            offsetX: 15
+            font_family: Antonio
+            font_weight: bold
+            offset_x: 15
             fill: "#00CC99"
         appearance:
           fill: "#0099CC"
         layout:
           height: 50
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: widgets.widget_1
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left

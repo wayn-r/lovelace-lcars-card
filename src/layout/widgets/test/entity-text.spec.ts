@@ -370,18 +370,18 @@ describe('EntityTextWidget', () => {
 
       // Leading rect anchors to bounds
       expect(leadingRect.layoutConfig.anchor?.anchorTo).toBe(bounds.id);
-      expect(leadingRect.layoutConfig.anchor?.anchorPoint).toBe('topLeft');
-      expect(leadingRect.layoutConfig.anchor?.targetAnchorPoint).toBe('topLeft');
+      expect(leadingRect.layoutConfig.anchor?.anchorPoint).toBe('top-left');
+      expect(leadingRect.layoutConfig.anchor?.targetAnchorPoint).toBe('top-left');
 
       // Label rect anchors to leading rect
       expect(labelRect.layoutConfig.anchor?.anchorTo).toBe(leadingRect.id);
-      expect(labelRect.layoutConfig.anchor?.anchorPoint).toBe('topLeft');
-      expect(labelRect.layoutConfig.anchor?.targetAnchorPoint).toBe('topRight');
+      expect(labelRect.layoutConfig.anchor?.anchorPoint).toBe('top-left');
+      expect(labelRect.layoutConfig.anchor?.targetAnchorPoint).toBe('top-right');
 
       // Value text anchors to label rect
       expect(valueText.layoutConfig.anchor?.anchorTo).toBe(labelRect.id);
-      expect(valueText.layoutConfig.anchor?.anchorPoint).toBe('topLeft');
-      expect(valueText.layoutConfig.anchor?.targetAnchorPoint).toBe('topRight');
+      expect(valueText.layoutConfig.anchor?.anchorPoint).toBe('top-left');
+      expect(valueText.layoutConfig.anchor?.targetAnchorPoint).toBe('top-right');
     });
 
     it('should use default offsets when not configured', () => {

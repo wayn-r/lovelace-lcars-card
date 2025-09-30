@@ -412,8 +412,8 @@ class YamlDefinitionGenerator {
     lines.push('');
     this._pushBlock(lines, 'animations', animationsSchema as unknown as ZodAny, 0, false);
     lines.push('');
-    this._pushBlock(lines, 'Animation', animationDefinitionSchema as unknown as ZodAny, 0, false);
-    this._pushBlock(lines, 'Sequence', animationSequenceSchema as unknown as ZodAny, 0, false);
+    this._pushBlock(lines, 'animation', animationDefinitionSchema as unknown as ZodAny, 0, false);
+    this._pushBlock(lines, 'sequence', animationSequenceSchema as unknown as ZodAny, 0, false);
 
     lines.push('');
     this._pushBlock(lines, 'element_state_management', elementStateManagementSchema as unknown as ZodAny, 0, false);

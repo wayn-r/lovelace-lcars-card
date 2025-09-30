@@ -8,18 +8,18 @@ groups:
         text:
           left_content: Left
           right_content: right
-          fontSize: 14
-          fontWeight: bold
+          font_size: 14
+          font_weight: bold
           color: "#FFAA00"
         layout:
           width: 100%
           height: 25
-          offsetX: 0
-          offsetY: 0
+          offset_x: 0
+          offset_y: 0
           anchor:
             to: container
-            element_point: topLeft
-            target_point: topLeft
+            element_point: top-left
+            target_point: top-left
   - group_id: a1-mh
     elements:
       - id: endcap
@@ -30,11 +30,11 @@ groups:
         layout:
           width: 120
           height: 50
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: a1-th.top-header
-            element_point: topRight
-            target_point: bottomRight
+            element_point: top-right
+            target_point: bottom-right
       - id: rectangle-right
         type: rectangle
         appearance:
@@ -42,26 +42,26 @@ groups:
         layout:
           width: 50
           height: 50
-          offsetX: -5
+          offset_x: -5
           anchor:
             to: a1-mh.endcap
-            element_point: topRight
-            target_point: topLeft
+            element_point: top-right
+            target_point: top-left
       - id: text
         type: text
         appearance:
           fill: "#fff"
         text:
           content: animate-1
-          fontFamily: antonio
-          textTransform: uppercase
+          font_family: antonio
+          text_transform: uppercase
         layout:
           height: 50
-          offsetX: -5
+          offset_x: -5
           anchor:
             to: a1-mh.rectangle-right
-            element_point: topRight
-            target_point: topLeft
+            element_point: top-right
+            target_point: top-left
       - id: rectangle-left
         type: rectangle
         appearance:
@@ -69,25 +69,25 @@ groups:
         layout:
           width: 50
           height: 50
-          offsetX: -5
+          offset_x: -5
           anchor:
             to: a1-mh.text
-            element_point: topRight
-            target_point: topLeft
+            element_point: top-right
+            target_point: top-left
       - id: left-elbow
         type: elbow
         appearance:
           fill: "#FF3300"
         layout:
-          bodyWidth: 50
-          armHeight: 50
+          body_width: 50
+          arm_height: 50
           width: 70
           height: 100
-          offsetX: -5
+          offset_x: -5
           anchor:
             to: a1-mh.rectangle-left
-            element_point: topRight
-            target_point: topLeft
+            element_point: top-right
+            target_point: top-left
           stretch:
             target1:
               id: container
@@ -101,11 +101,11 @@ groups:
         layout:
           width: 50
           height: 50
-          offsetY: 5
+          offset_y: 5
           anchor:
             to: a1-mh.left-elbow
-            element_point: topLeft
-            target_point: bottomLeft
+            element_point: top-left
+            target_point: bottom-left
         button:
           enabled: true
           actions:

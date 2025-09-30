@@ -93,9 +93,32 @@ export type LcarsCardConfig = SchemaLcarsCardConfig;
 export type GroupConfig = SchemaGroupConfig;
 export type ElementConfig = SchemaElementConfig;
 export type AppearanceConfig = SchemaAppearanceConfig;
-export type TextConfig = SchemaTextConfig;
 export type LayoutConfig = SchemaLayoutConfig;
 export type ButtonConfig = SchemaButtonConfig;
+
+// Internal runtime types (camelCase for TypeScript usage)
+// These are used in implementation, separate from schema types (snake_case for YAML)
+export interface TextConfig {
+  content?: string;
+  fill?: ColorValue;
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: string | number;
+  letterSpacing?: string | number;
+  textAnchor?: 'start' | 'middle' | 'end';
+  dominantBaseline?: string;
+  textTransform?: string;
+  cutout?: boolean;
+  elbow_text_position?: 'arm' | 'body';
+  left_content?: string;
+  right_content?: string;
+  offsetX?: number | string;
+  offsetY?: number | string;
+  max_lines?: number;
+  line_spacing?: number | string;
+  text_color?: ColorValue;
+  color_cycle?: Array<{ color: ColorValue; duration: number }>;
+}
 
 // ============================================================================
 // Appearance Configuration
@@ -161,13 +184,13 @@ export interface NoneAction {
 }
 
 export interface SetStateAction {
-  action: 'set_state';
+  action: 'set-state';
   target_element_ref: string;
   state: string;
 }
 
 export interface ToggleStateAction {
-  action: 'toggle_state';
+  action: 'toggle-state';
   target_element_ref: string;
   states: string[];
 }
@@ -369,7 +392,7 @@ export interface LcarsButtonElementConfig {
 
 export interface LcarsButtonActionConfig {
   /** Either 'action' (single) or 'actions' (multiple) should be provided. */
-  type?: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set_state' | 'toggle_state'; // legacy property (will be removed)
+  type?: 'call-service' | 'navigate' | 'toggle' | 'more-info' | 'url' | 'none' | 'set-state' | 'toggle-state'; // legacy property (will be removed)
   action?: Action; // preferred single action variant
   actions?: Action[]; // preferred multi-action variant
 

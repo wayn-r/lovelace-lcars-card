@@ -280,8 +280,8 @@ describe('AnimationManager - Pure Animation API', () => {
         layoutConfig: {
           anchor: {
             anchorTo: 'target-element',
-            anchorPoint: 'topLeft',
-            targetAnchorPoint: 'topRight'
+            anchorPoint: 'top-left',
+            targetAnchorPoint: 'top-right'
           }
         }
       };

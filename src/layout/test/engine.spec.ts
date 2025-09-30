@@ -674,7 +674,7 @@ describe('LayoutEngine', () => {
             // Create elements where el1 anchors to el2, but el2 is added to the engine after el1
             const el1 = new MockEngineLayoutElement('el1');
             el1.layoutConfig = {
-                anchor: { anchorTo: 'el2', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+                anchor: { anchorTo: 'el2', anchorPoint: 'top-left', targetAnchorPoint: 'bottom-left' }
             };
             el1.intrinsicSize = { width: 100, height: 50, calculated: true };
 
@@ -724,13 +724,13 @@ describe('LayoutEngine', () => {
             // Create a chain: el1 -> el2 -> el3, but add them in order el1, el3, el2
             const el1 = new MockEngineLayoutElement('el1');
             el1.layoutConfig = {
-                anchor: { anchorTo: 'el2', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+                anchor: { anchorTo: 'el2', anchorPoint: 'top-left', targetAnchorPoint: 'bottom-left' }
             };
             el1.intrinsicSize = { width: 100, height: 50, calculated: true };
 
             const el2 = new MockEngineLayoutElement('el2');
             el2.layoutConfig = {
-                anchor: { anchorTo: 'el3', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+                anchor: { anchorTo: 'el3', anchorPoint: 'top-left', targetAnchorPoint: 'bottom-left' }
             };
             el2.intrinsicSize = { width: 100, height: 50, calculated: true };
 
@@ -756,13 +756,13 @@ describe('LayoutEngine', () => {
             // Create circular dependency: el1 -> el2 -> el1
             const el1 = new MockEngineLayoutElement('el1');
             el1.layoutConfig = {
-                anchor: { anchorTo: 'el2', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+                anchor: { anchorTo: 'el2', anchorPoint: 'top-left', targetAnchorPoint: 'bottom-left' }
             };
             el1.intrinsicSize = { width: 100, height: 50, calculated: true };
 
             const el2 = new MockEngineLayoutElement('el2');
             el2.layoutConfig = {
-                anchor: { anchorTo: 'el1', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+                anchor: { anchorTo: 'el1', anchorPoint: 'top-left', targetAnchorPoint: 'bottom-left' }
             };
             el2.intrinsicSize = { width: 100, height: 50, calculated: true };
 
@@ -786,7 +786,7 @@ describe('LayoutEngine', () => {
             
             const el1 = new MockEngineLayoutElement('el1');
             el1.layoutConfig = {
-                anchor: { anchorTo: 'nonexistent_element', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+                anchor: { anchorTo: 'nonexistent_element', anchorPoint: 'top-left', targetAnchorPoint: 'bottom-left' }
             };
             el1.intrinsicSize = { width: 100, height: 50, calculated: true };
 
@@ -808,7 +808,7 @@ describe('LayoutEngine', () => {
             // Test forward references across different groups
             const el1 = new MockEngineLayoutElement('group1.el1');
             el1.layoutConfig = {
-                anchor: { anchorTo: 'group2.el1', anchorPoint: 'topLeft', targetAnchorPoint: 'bottomLeft' }
+                anchor: { anchorTo: 'group2.el1', anchorPoint: 'top-left', targetAnchorPoint: 'bottom-left' }
             };
             el1.intrinsicSize = { width: 100, height: 50, calculated: true };
 

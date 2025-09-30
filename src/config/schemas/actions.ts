@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const actionSchema: z.ZodType<any> = z.object({
-  action: z.enum(['call-service', 'navigate', 'url', 'toggle', 'more-info', 'none', 'set_state', 'toggle_state']),
+  action: z.enum(['call-service', 'navigate', 'url', 'toggle', 'more-info', 'none', 'set-state', 'toggle-state']),
   service: z.string().optional(),
   service_data: z.record(z.any()).optional(),
   target: z.record(z.any()).optional(),
