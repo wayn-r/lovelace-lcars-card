@@ -49,12 +49,19 @@ window.customCards.push({
 
 @customElement(CARD_TYPE)
 export class LcarsCard extends LitElement {
+  private static readonly PREVIEW_DESIGN_WIDTH = 900;
+  private static readonly PREVIEW_MIN_SCALE = 0.2;
+  private static readonly PREVIEW_MAX_SCALE = 1;
+
   @property({ attribute: false }) public hass!: HomeAssistant;
   @property({ attribute: false }) private _config!: LcarsCardConfig;
   @state() private _layoutElementTemplates: SVGTemplateResult[] = [];
   @state() private _viewBox: string = '0 0 100 100';
   @state() private _calculatedHeight: number = 100;
   @state() private _fontsLoaded = false;
+  @state() private _isPreviewMode = false;
+  @state() private _previewScale = 1;
+  @state() private _designWidth: number = LcarsCard.PREVIEW_DESIGN_WIDTH;
   
   private _layoutEngine: LayoutEngine = new LayoutEngine();
   private readonly logger = Diagnostics.create('LcarsCard');
@@ -107,6 +114,8 @@ export class LcarsCard extends LitElement {
     this._config = normalizedConfig;
     this._ensureRuntime();
     this._lastConfig = config;
+    this._designWidth = LcarsCard.PREVIEW_DESIGN_WIDTH;
+    this._previewScale = 1;
     
     this._cleanupElementGraph();
     this._elementGraph = undefined;
@@ -184,6 +193,7 @@ export class LcarsCard extends LitElement {
     }
     
     this._layoutInitialized = false;
+    this._checkPreviewMode();
 
     try {
       await FontManager.ensureFontsLoaded(['Antonio']);
@@ -268,6 +278,90 @@ export class LcarsCard extends LitElement {
     });
   }
 
+  private _resolveLayoutRect(rect: DOMRect): DOMRect {
+    if (!rect) {
+      return rect;
+    }
+
+    if (!this._isPreviewMode) {
+      return rect;
+    }
+
+    const width = this._designWidth || LcarsCard.PREVIEW_DESIGN_WIDTH;
+    const height = Math.max(rect.height, this._calculatedHeight || rect.height || 1);
+    return new DOMRect(rect.x, rect.y, width, height);
+  }
+
+  private _checkPreviewMode(): void {
+    let element: HTMLElement | null = this as HTMLElement;
+    let depth = 0;
+    const maxDepth = 10;
+    let isPreview = false;
+
+    while (element && depth < maxDepth) {
+      const classList = element.classList;
+      const tag = element.tagName?.toUpperCase();
+      if (classList?.contains('element-preview') || classList?.contains('element-editor') || tag === 'HUI-CARD-PREVIEW') {
+        isPreview = true;
+        break;
+      }
+      element = element.parentElement;
+      depth++;
+    }
+
+    if (this._isPreviewMode !== isPreview) {
+      this._isPreviewMode = isPreview;
+    }
+
+    if (this._isPreviewMode) {
+      this._calculatePreviewScale();
+    } else if (this._previewScale !== 1) {
+      this._previewScale = 1;
+    }
+  }
+
+  private _calculatePreviewScale(): void {
+    if (!this._isPreviewMode) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      const haCard = this.shadowRoot?.querySelector('ha-card') as HTMLElement | null;
+      if (!haCard) {
+        return;
+      }
+
+      const designWidth = this._designWidth > 0 ? this._designWidth : LcarsCard.PREVIEW_DESIGN_WIDTH;
+      if (designWidth <= 0) {
+        return;
+      }
+
+      const rect = haCard.getBoundingClientRect();
+      if (!rect || rect.width <= 0) {
+        return;
+      }
+
+      const computedStyle = window.getComputedStyle(haCard);
+      const paddingLeft = parseFloat(computedStyle.paddingLeft || '0');
+      const paddingRight = parseFloat(computedStyle.paddingRight || '0');
+      const availableWidth = Math.max(1, rect.width - (paddingLeft + paddingRight));
+
+      if (availableWidth >= designWidth) {
+        if (this._previewScale !== 1) {
+          this._previewScale = 1;
+        }
+        return;
+      }
+
+      let scale = availableWidth / designWidth;
+      scale = Math.max(LcarsCard.PREVIEW_MIN_SCALE, Math.min(LcarsCard.PREVIEW_MAX_SCALE, scale));
+
+      if (Math.abs(this._previewScale - scale) > 0.005) {
+        this._previewScale = scale;
+      }
+    });
+  }
+
   private async _tryCalculateInitialLayout(): Promise<void> {
     if (this._layoutInitialized) {
       return;
@@ -286,6 +380,7 @@ export class LcarsCard extends LitElement {
       this._containerRect = rect;
       await this._performLayoutCalculation(rect);
       this._layoutInitialized = true;
+      this._checkPreviewMode();
     } else {
       requestAnimationFrame(() => this._tryCalculateInitialLayout());
     }
@@ -366,7 +461,8 @@ export class LcarsCard extends LitElement {
       this._pendingLayoutRect = new DOMRect(rect.x, rect.y, rect.width, rect.height);
       return;
     }
-    const isValidLayoutRequest = this._config && rect && rect.width > 0 && rect.height > 0;
+    const adjustedRect = this._resolveLayoutRect(rect);
+    const isValidLayoutRequest = this._config && adjustedRect && adjustedRect.width > 0 && adjustedRect.height > 0;
     if (!isValidLayoutRequest) {
       this.logger.warn('Skipping layout calculation - invalid config or dimensions');
       return;
@@ -382,12 +478,12 @@ export class LcarsCard extends LitElement {
       const isFirstLayoutOrConfigChanged = !this._elementGraph;
       
       if (isFirstLayoutOrConfigChanged) {
-        this._performFullLayoutRebuild(rect);
+        this._performFullLayoutRebuild(adjustedRect);
       } else {
-        this._performLayoutRecalculation(rect);
+        this._performLayoutRecalculation(adjustedRect);
       }
     } catch (error) {
-      this._handleLayoutError(error, rect);
+      this._handleLayoutError(error, adjustedRect);
     }
   }
 
@@ -406,6 +502,7 @@ export class LcarsCard extends LitElement {
       containerRect.width,
       this._calculatedHeight
     );
+    this._designWidth = containerRect.width;
 
     this._clearDomTransformsForElements(groups);
 
@@ -429,6 +526,7 @@ export class LcarsCard extends LitElement {
       containerRect.width,
       this._calculatedHeight
     );
+    this._designWidth = containerRect.width;
 
     this._clearDomTransformsForElements(groups);
 
@@ -482,6 +580,8 @@ export class LcarsCard extends LitElement {
       
       this._performLayoutCalculation(this._containerRect);
     }
+
+    this._checkPreviewMode();
   }
 
   private _calculateLogicalHeightFromRenderHeight(renderHeight: number): number {
@@ -489,16 +589,8 @@ export class LcarsCard extends LitElement {
   }
 
   public static async getConfigElement(): Promise<LovelaceCardEditor> {
-    const element = document.createElement('div') as any;
-    element.innerHTML = `
-      <div style="padding: 16px; background: #f5f5f5; border-radius: 4px; font-family: monospace;">
-        <h3 style="margin-top: 0; color: #d32f2f;">Visual Editor Disabled</h3>
-        <p style="color: #666;">The visual editor is temporarily disabled while we migrate to the new YAML configuration system.</p>
-        <p style="color: #666;">Please configure this card using YAML only. See the documentation for the new configuration format.</p>
-      </div>
-    `;
-    element.setConfig = () => {};
-    return element;
+    await import('./editor.js');
+    return document.createElement('lovelace-lcars-card-editor');
   }
 
   public getCardSize(): number {
@@ -529,11 +621,47 @@ export class LcarsCard extends LitElement {
     }
 
     const viewBoxParts = this._viewBox.split(' ');
+    const viewBoxWidth = parseFloat(viewBoxParts[2]) || this._designWidth;
     const viewBoxHeight = parseFloat(viewBoxParts[3]) || 100;
     const logicalHeight = this._calculatedHeight || viewBoxHeight;
     const renderHeight = Math.max(logicalHeight, 1);
 
     const svgStyle = `width: 100%; height: ${renderHeight}px; min-height: 50px;`;
+
+    if (this._isPreviewMode) {
+      const scale = this._previewScale;
+      const designWidth = this._designWidth;
+      const scaledWidth = designWidth * scale;
+      const scaledHeight = renderHeight * scale;
+      const containerStyle = `width: ${designWidth}px; height: ${renderHeight}px; transform: scale(${scale}); transform-origin: top left;`;
+      const wrapperStyle = `width: ${scaledWidth}px; height: ${scaledHeight}px; overflow: hidden; margin: 0 auto;`;
+
+      return html`
+        <ha-card style="padding: 0;">
+          <div class="card-wrapper" style=${wrapperStyle}>
+            <div class="card-container"
+                 style=${containerStyle}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox=${this._viewBox}
+                preserveAspectRatio="none"
+                style=${svgStyle}
+              >
+                ${defsContent.length > 0 ? svg`<defs>${defsContent}</defs>` : ''}
+                ${this._layoutElementTemplates.length > 0
+                  ? repeat(
+                      this._layoutElementTemplates,
+                      (_t, index) => this._renderKeys[index] || index,
+                      (t) => t
+                    )
+                  : svgContent}
+              </svg>
+            </div>
+          </div>
+        </ha-card>
+      `;
+    }
+
     const containerStyle = `width: 100%; height: ${renderHeight}px; min-height: 50px; overflow: visible;`;
 
     return html`
@@ -737,6 +865,16 @@ export class LcarsCard extends LitElement {
     return new DOMRect(rect.x, rect.y, rect.width, requiredHeight);
   }
 
+  private _updateDesignWidthFromViewBox(viewBox: string): void {
+    const parts = viewBox.split(' ');
+    if (parts.length === 4) {
+      const width = parseFloat(parts[2]);
+      if (!Number.isNaN(width) && width > 0 && this._designWidth !== width) {
+        this._designWidth = width;
+      }
+    }
+  }
+
   private _shouldUpdateLayout(rect: DOMRect): boolean {
     const entries = this._renderElementsWithKeys();
     const newTemplates = entries.map(e => e.template);
@@ -753,6 +891,7 @@ export class LcarsCard extends LitElement {
     }
     if (viewBoxChanged) {
       this._viewBox = newViewBox;
+      this._updateDesignWidthFromViewBox(newViewBox);
     }
     return templatesChanged || viewBoxChanged;
   }

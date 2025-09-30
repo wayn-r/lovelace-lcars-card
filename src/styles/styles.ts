@@ -4,13 +4,227 @@ export const editorStyles = css`
   :host {
       display: block;
     }    
+  .card-config {
+    padding: 16px;
+    background: var(--primary-background-color);
+  }
+
+  .header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--divider-color);
+  }
+
+  .title {
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--primary-text-color);
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--secondary-text-color);
+  }
+
+  .option {
+    margin-bottom: 16px;
+  }
+
+  ha-textfield {
+    width: 100%;
+  }
+
+  .helper-text {
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    margin-top: 4px;
+    padding-left: 4px;
+  }
+
+  .section {
+    margin: 24px 0;
+    padding: 16px;
+    background: var(--secondary-background-color);
+    border-radius: 8px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--primary-text-color);
+    margin-bottom: 16px;
+  }
+
+  .section-header ha-icon {
+    color: var(--primary-color);
+  }
+
+  .groups-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .group-card {
+    background: var(--card-background-color);
+    border: 1px solid var(--divider-color);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .group-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--primary-background-color);
+    border-bottom: 1px solid var(--divider-color);
+  }
+
+  .group-header ha-icon {
+    color: var(--primary-color);
+  }
+
+  .group-info {
+    flex: 1;
+  }
+
+  .group-name {
+    font-weight: 500;
+    color: var(--primary-text-color);
+  }
+
+  .group-meta {
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    margin-top: 2px;
+  }
+
+  .elements-list {
+    padding: 8px;
+  }
+
+  .element-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: var(--primary-background-color);
+    border-radius: 4px;
+    margin-bottom: 4px;
+  }
+
+  .element-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .element-item ha-icon {
+    color: var(--secondary-text-color);
+    --mdc-icon-size: 18px;
+  }
+
+  .element-id {
+    font-weight: 500;
+    color: var(--primary-text-color);
+    flex: 1;
+  }
+
+  .element-type {
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    padding: 2px 8px;
+    background: var(--divider-color);
+    border-radius: 4px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 32px;
+    color: var(--secondary-text-color);
+  }
+
+  .empty-state ha-icon {
+    --mdc-icon-size: 48px;
+    opacity: 0.5;
+    margin-bottom: 8px;
+  }
+
+  .empty-state p {
+    margin: 8px 0;
+  }
+
+  .info-box {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: var(--info-color, #2196F3);
+    color: white;
+    border-radius: 8px;
+    margin: 24px 0;
+  }
+
+  .info-box ha-icon {
+    --mdc-icon-size: 24px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .info-content {
+    flex: 1;
+  }
+
+  .info-content strong {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 16px;
+  }
+
+  .info-content p {
+    margin: 4px 0;
+    font-size: 14px;
+    opacity: 0.95;
+  }
+
+  .yaml-section {
+    margin-top: 24px;
+  }
+
+  .yaml-preview {
+    background: var(--code-editor-background-color, #1e1e1e);
+    color: var(--code-editor-text-color, #d4d4d4);
+    padding: 16px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 600px) {
+    .card-config {
+      padding: 12px;
+    }
+
+    .title {
+      font-size: 20px;
+    }
+  }
     
     ha-card {
-      width: 100%;
       box-sizing: border-box;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+    }
+
+    .card-wrapper {
+      position: relative;
+      display: block;
     }
     
     .card-container {
