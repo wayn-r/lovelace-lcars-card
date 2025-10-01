@@ -110,7 +110,7 @@ groups:
         appearance:
           fill: "#333333"
           stroke: "#CC6600"
-          strokeWidth: 2
+          stroke_width: 2
         text:
           content: DETAILED INFORMATION PANEL
           fill: "#FFFFFF"
@@ -120,7 +120,7 @@ groups:
           height: 150
           anchor:
             to: nav_header.main_header
-            element_point: topCenter
-            target_point: bottomCenter
+            element_point: top-center
+            target_point: bottom-center
         state_management:
           default_state: hidden

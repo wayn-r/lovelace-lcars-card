@@ -59,8 +59,8 @@ groups:
           offset_x: 5
           anchor:
             to: fade_in_group.fade_in_element
-            element_point: centerLeft
-            target_point: centerRight
+            element_point: center-left
+            target_point: center-right
 
 
   - group_id: sliding_panel_group
@@ -104,8 +104,8 @@ groups:
           offset_x: 5
           anchor:
             to: sliding_panel_group.sliding_panel_trigger_button
-            element_point: centerLeft
-            target_point: centerRight
+            element_point: center-left
+            target_point: center-right
 
       - id: sliding_panel
         type: rectangle
@@ -193,8 +193,8 @@ groups:
           offset_x: 5
           anchor:
             to: scale_target_group.scale_target
-            element_point: centerLeft
-            target_point: centerRight
+            element_point: center-left
+            target_point: center-right
 
       - id: scale_target
         type: rectangle
@@ -293,8 +293,8 @@ groups:
           offset_x: 5
           anchor:
             to: sequence_group.sequence_element
-            element_point: centerLeft
-            target_point: centerRight
+            element_point: center-left
+            target_point: center-right
 
 
   - group_id: multi_action_group

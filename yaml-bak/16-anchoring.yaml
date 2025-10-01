@@ -31,8 +31,8 @@ groups:
           height: 30
           anchor:
             to: "container"
-            element_point: "topCenter"
-            target_point: "topCenter"
+            element_point: "top-center"
+            target_point: "top-center"
       - id: CA_TR
         type: "rectangle"
         appearance:
@@ -62,8 +62,8 @@ groups:
           height: 30
           anchor:
             to: "container"
-            element_point: "centerLeft"
-            target_point: "centerLeft"
+            element_point: "center-left"
+            target_point: "center-left"
       - id: CA_CC
         type: "rectangle"
         appearance:
@@ -92,8 +92,8 @@ groups:
           height: 30
           anchor:
             to: "container"
-            element_point: "centerRight"
-            target_point: "centerRight"
+            element_point: "center-right"
+            target_point: "center-right"
 
       - id: CA_BL
         type: "rectangle"
@@ -123,8 +123,8 @@ groups:
           height: 30
           anchor:
             to: "container"
-            element_point: "bottomCenter"
-            target_point: "bottomCenter"
+            element_point: "bottom-center"
+            target_point: "bottom-center"
       - id: CA_BR
         type: "rectangle"
         appearance:
@@ -172,8 +172,8 @@ groups:
           height: 30
           anchor:
             to: "container_anchors.CA_TC"
-            element_point: "topCenter"
-            target_point: "bottomCenter"
+            element_point: "top-center"
+            target_point: "bottom-center"
       - id: "EL_TR"
         type: "rectangle"
         appearance:
@@ -203,8 +203,8 @@ groups:
           height: 30
           anchor:
             to: "container_anchors.CA_CL"
-            element_point: "centerLeft"
-            target_point: "centerRight"
+            element_point: "center-left"
+            target_point: "center-right"
       - id: "EL_CC"
         type: "rectangle"
         appearance:
@@ -233,8 +233,8 @@ groups:
           height: 30
           anchor:
             to: "container_anchors.CA_CR"
-            element_point: "centerRight"
-            target_point: "centerLeft"
+            element_point: "center-right"
+            target_point: "center-left"
 
       - id: "EL_BL"
         type: "rectangle"
@@ -264,8 +264,8 @@ groups:
           height: 30
           anchor:
             to: "container_anchors.CA_BC"
-            element_point: "bottomCenter"
-            target_point: "topCenter"
+            element_point: "bottom-center"
+            target_point: "top-center"
       - id: "EL_BR"
         type: "rectangle"
         appearance:

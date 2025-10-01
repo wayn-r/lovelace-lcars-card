@@ -78,8 +78,8 @@ groups:
           offset_x: 5
           anchor:
             to: content_group.conditional_element
-            element_point: centerLeft
-            target_point: centerRight
+            element_point: center-left
+            target_point: center-right
         visibility_rules:
           operator: and
           conditions:

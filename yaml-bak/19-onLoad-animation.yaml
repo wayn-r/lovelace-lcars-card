@@ -57,5 +57,5 @@ groups:
           offset_x: 5
           anchor:
             to: fade_in_group.fade_in_element
-            element_point: centerLeft
-            target_point: centerRight 
+            element_point: center-left
+            target_point: center-right 

@@ -45,7 +45,7 @@ groups:
         appearance:
           fill: "#0099CC"
           stroke: "#FFFFFF"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: CENTER
           fill: "#FFFFFF"
@@ -83,7 +83,7 @@ groups:
         appearance:
           fill: "#CC6600"
           stroke: "#FFFFFF"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: RIGHT +10px
           fill: "#FFFFFF"
@@ -105,7 +105,7 @@ groups:
         appearance:
           fill: "#CC6600"
           stroke: "#FFFFFF"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: LEFT -10px
           fill: "#FFFFFF"
@@ -127,7 +127,7 @@ groups:
         appearance:
           fill: "#009933"
           stroke: "#FFFFFF"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: DOWN +8px
           fill: "#FFFFFF"
@@ -149,7 +149,7 @@ groups:
         appearance:
           fill: "#009933"
           stroke: "#FFFFFF"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: UP -8px
           fill: "#FFFFFF"
@@ -188,7 +188,7 @@ groups:
         appearance:
           fill: "#9933CC"
           stroke: "#FFFFFF"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: RIGHT +15%
           fill: "#FFFFFF"
@@ -210,7 +210,7 @@ groups:
         appearance:
           fill: "#9933CC"
           stroke: "#FFFFFF"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: LEFT -15%
           fill: "#FFFFFF"
@@ -232,7 +232,7 @@ groups:
         appearance:
           fill: "#CC3333"
           stroke: "#FFFFFF"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: DOWN +25%
           fill: "#FFFFFF"
@@ -254,7 +254,7 @@ groups:
         appearance:
           fill: "#CC3333"
           stroke: "#FFFFFF"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: UP -25%
           fill: "#FFFFFF"
@@ -293,7 +293,7 @@ groups:
         appearance:
           fill: "#006666"
           stroke: "#FFFFFF"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: 12px, -20%
           fill: "#FFFFFF"
@@ -316,7 +316,7 @@ groups:
         appearance:
           fill: "#006666"
           stroke: "#FFFFFF"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: "-8%, +6px"
           fill: "#FFFFFF"
@@ -355,7 +355,7 @@ groups:
         appearance:
           fill: "#996633"
           stroke: "#FFFFFF"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: START +5px
           fill: "#FFFFFF"
@@ -377,7 +377,7 @@ groups:
         appearance:
           fill: "#996633"
           stroke: "#FFFFFF"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: END -5px
           fill: "#FFFFFF"

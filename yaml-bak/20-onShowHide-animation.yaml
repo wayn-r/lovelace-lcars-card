@@ -96,5 +96,5 @@ groups:
           offset_x: 5
           anchor:
             to: show_hide_panel_group.panel_trigger_button
-            element_point: centerLeft
-            target_point: centerRight 
+            element_point: center-left
+            target_point: center-right 

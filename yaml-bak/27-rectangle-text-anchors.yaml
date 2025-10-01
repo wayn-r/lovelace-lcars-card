@@ -43,7 +43,7 @@ groups:
         type: rectangle
         appearance:
           fill: "#FF9900"
-          cornerRadius: 15
+          corner_radius: 15
         text:
           content: MIDDLE
           fill: "#000000"
@@ -79,7 +79,7 @@ groups:
         type: rectangle
         appearance:
           fill: "#FF9900"
-          cornerRadius: 15
+          corner_radius: 15
         text:
           content: START
           fill: "#000000"
@@ -116,7 +116,7 @@ groups:
         type: rectangle
         appearance:
           fill: "#FF9900"
-          cornerRadius: 15
+          corner_radius: 15
         text:
           content: END
           fill: "#000000"

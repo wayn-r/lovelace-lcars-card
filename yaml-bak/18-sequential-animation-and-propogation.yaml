@@ -80,8 +80,8 @@ groups:
           offset_x: 5
           anchor:
             to: sequence_group.sequence_element
-            element_point: centerLeft
-            target_point: centerRight
+            element_point: center-left
+            target_point: center-right
 
   - group_id: propogated_group
     elements:

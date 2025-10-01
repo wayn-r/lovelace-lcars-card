@@ -100,8 +100,8 @@ groups:
           height: 30
           anchor:
             to: container
-            element_point: centerLeft
-            target_point: centerLeft
+            element_point: center-left
+            target_point: center-left
           stretch:
             target1:
               id: scaffolding.column_1
@@ -118,8 +118,8 @@ groups:
           height: 30
           anchor:
             to: container
-            element_point: centerRight
-            target_point: centerRight
+            element_point: center-right
+            target_point: center-right
           stretch:
             target1:
               id: scaffolding.column_1
@@ -172,8 +172,8 @@ groups:
           width: 30
           anchor:
             to: container_anchors.CA_TL
-            element_point: topCenter
-            target_point: bottomCenter
+            element_point: top-center
+            target_point: bottom-center
           stretch:
             target1:
               id: stretch_bars.SB_CL
@@ -186,8 +186,8 @@ groups:
           width: 30
           anchor:
             to: stretch_bars.SB_TR
-            element_point: topCenter
-            target_point: bottomCenter
+            element_point: top-center
+            target_point: bottom-center
           stretch:
             target1:
               id: stretch_bars.SB_CR
@@ -200,8 +200,8 @@ groups:
           width: 30
           anchor:
             to: stretch_bars.SB_BL
-            element_point: bottomCenter
-            target_point: topCenter
+            element_point: bottom-center
+            target_point: top-center
           stretch:
             target1:
               id: stretch_bars.SB_CL
@@ -214,8 +214,8 @@ groups:
           width: 30
           anchor:
             to: stretch_bars.SB_BR
-            element_point: bottomCenter
-            target_point: topCenter
+            element_point: bottom-center
+            target_point: top-center
           stretch:
             target1:
               id: stretch_bars.SB_CR

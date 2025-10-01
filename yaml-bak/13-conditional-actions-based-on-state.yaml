@@ -68,7 +68,7 @@ groups:
         appearance:
           fill: "#333333"
           stroke: "#9966CC"
-          strokeWidth: 1
+          stroke_width: 1
         text:
           content: "Group A is currently visible\nClick smart button to hide"
           fill: "#FFFFFF"
