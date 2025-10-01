@@ -205,6 +205,188 @@ export const editorStyles = css`
     line-height: 1.5;
   }
 
+  /* New Editor Layout Styles */
+  .filter-box {
+    margin-bottom: 16px;
+  }
+
+  .browser-collapsed {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--card-background-color);
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    user-select: none;
+  }
+
+  .browser-collapsed:hover {
+    background: var(--secondary-background-color);
+  }
+
+  .collapsed-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+  }
+
+  .element-path {
+    font-weight: 500;
+    font-size: 16px;
+    color: var(--primary-text-color);
+    font-family: monospace;
+  }
+
+  .expand-icon {
+    color: var(--primary-color);
+    --mdc-icon-size: 24px;
+  }
+
+  .collapse-browser-icon {
+    margin-left: auto;
+    cursor: pointer;
+    color: var(--primary-color);
+    --mdc-icon-size: 20px;
+    padding: 4px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+  }
+
+  .collapse-browser-icon:hover {
+    background: var(--secondary-background-color);
+  }
+
+  .section-header {
+    position: relative;
+  }
+
+  .groups-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .group-item {
+    background: var(--card-background-color);
+    border: 1px solid var(--divider-color);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .group-header.clickable {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+  }
+
+  .group-header.clickable:hover {
+    background: var(--secondary-background-color);
+  }
+
+  .collapse-icon {
+    --mdc-icon-size: 20px;
+    transition: transform 0.2s;
+  }
+
+  .element-item {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s, border-color 0.2s;
+    border: 1px solid transparent;
+  }
+
+  .element-item:hover {
+    background: var(--secondary-background-color);
+  }
+
+  .element-item.selected {
+    background: var(--primary-color);
+    color: var(--text-primary-color);
+    border-color: var(--primary-color);
+  }
+
+  .element-item.selected .element-id,
+  .element-item.selected .element-type {
+    color: var(--text-primary-color);
+  }
+
+  .element-item.selected ha-icon {
+    color: var(--text-primary-color);
+  }
+
+  .config-panel {
+    padding: 16px;
+  }
+
+  .element-info-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--primary-background-color);
+    border: 1px solid var(--divider-color);
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+
+  .element-info-header ha-icon {
+    color: var(--primary-color);
+    --mdc-icon-size: 32px;
+  }
+
+  .element-title {
+    font-weight: 500;
+    font-size: 16px;
+    color: var(--primary-text-color);
+  }
+
+  .element-subtitle {
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    margin-top: 2px;
+  }
+
+  .config-section {
+    margin-bottom: 16px;
+  }
+
+  .config-section-header {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--primary-text-color);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--divider-color);
+  }
+
+  .config-row {
+    margin-bottom: 16px;
+  }
+
+  .config-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .config-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: var(--secondary-background-color);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    margin-top: 16px;
+  }
+
+  .config-footer ha-icon {
+    --mdc-icon-size: 16px;
+  }
+
   @media (max-width: 600px) {
     .card-config {
       padding: 12px;

@@ -120,11 +120,55 @@ describe('LcarsCardEditor', () => {
     });
   });
 
-  describe('YAML Preview', () => {
-    it('should generate YAML preview from config', () => {
+  describe('Element Selection', () => {
+    it('should select an element and collapse browser', () => {
       const config: LcarsCardConfig = {
         type: 'lovelace-lcars-card',
-        title: 'Test Card',
+        groups: [
+          {
+            group_id: 'test_group',
+            elements: [
+              { id: 'elem1', type: 'rectangle' }
+            ]
+          }
+        ]
+      };
+
+      editor.setConfig(config);
+      (editor as any)._selectElement(0, 0);
+
+      const selectedElement = (editor as any)._selectedElement;
+      expect(selectedElement).toBeTruthy();
+      expect(selectedElement.groupIndex).toBe(0);
+      expect(selectedElement.elementIndex).toBe(0);
+      expect((editor as any)._browserExpanded).toBe(false);
+    });
+
+    it('should generate correct element path', () => {
+      const config: LcarsCardConfig = {
+        type: 'lovelace-lcars-card',
+        groups: [
+          {
+            group_id: 'test_group',
+            elements: [
+              { id: 'elem1', type: 'rectangle' }
+            ]
+          }
+        ]
+      };
+
+      editor.setConfig(config);
+      (editor as any)._selectElement(0, 0);
+
+      const path = (editor as any)._getSelectedElementPath();
+      expect(path).toBe('test_group.elem1');
+    });
+  });
+
+  describe('Group Toggle', () => {
+    it('should toggle group collapse state', () => {
+      const config: LcarsCardConfig = {
+        type: 'lovelace-lcars-card',
         groups: [
           {
             group_id: 'test_group',
@@ -137,21 +181,132 @@ describe('LcarsCardEditor', () => {
 
       editor.setConfig(config);
 
-      const preview = (editor as any)._getYamlPreview();
-      expect(preview).toContain('Test Card');
-      expect(preview).toContain('test_group');
-    });
+      // Initially not collapsed
+      let collapsedGroups = (editor as any)._collapsedGroups;
+      expect(collapsedGroups.has(0)).toBe(false);
 
-    it('should handle config without title', () => {
+      // Toggle to collapsed
+      (editor as any)._toggleGroup(0);
+      collapsedGroups = (editor as any)._collapsedGroups;
+      expect(collapsedGroups.has(0)).toBe(true);
+
+      // Toggle back to expanded
+      (editor as any)._toggleGroup(0);
+      collapsedGroups = (editor as any)._collapsedGroups;
+      expect(collapsedGroups.has(0)).toBe(false);
+    });
+  });
+
+  describe('Browser Toggle', () => {
+    it('should toggle browser expand/collapse state', () => {
       const config: LcarsCardConfig = {
         type: 'lovelace-lcars-card',
-        groups: []
+        groups: [
+          {
+            group_id: 'test_group',
+            elements: [
+              { id: 'elem1', type: 'rectangle' }
+            ]
+          }
+        ]
       };
 
       editor.setConfig(config);
 
-      const preview = (editor as any)._getYamlPreview();
-      expect(preview).not.toContain('title');
+      // Initially expanded
+      expect((editor as any)._browserExpanded).toBe(true);
+
+      // Select element - should collapse
+      (editor as any)._selectElement(0, 0);
+      expect((editor as any)._browserExpanded).toBe(false);
+
+      // Toggle browser
+      (editor as any)._toggleBrowser();
+      expect((editor as any)._browserExpanded).toBe(true);
+
+      // Toggle again
+      (editor as any)._toggleBrowser();
+      expect((editor as any)._browserExpanded).toBe(false);
+    });
+  });
+
+  describe('Filter', () => {
+    it('should filter elements by ID', () => {
+      (editor as any)._filterText = 'test';
+      const matches = (editor as any)._matchesFilter('test_element', 'rectangle');
+      expect(matches).toBe(true);
+    });
+
+    it('should filter elements by type', () => {
+      (editor as any)._filterText = 'rect';
+      const matches = (editor as any)._matchesFilter('elem1', 'rectangle');
+      expect(matches).toBe(true);
+    });
+
+    it('should not match elements that dont contain filter text', () => {
+      (editor as any)._filterText = 'graph';
+      const matches = (editor as any)._matchesFilter('elem1', 'rectangle');
+      expect(matches).toBe(false);
+    });
+
+    it('should match all elements when filter is empty', () => {
+      (editor as any)._filterText = '';
+      const matches = (editor as any)._matchesFilter('elem1', 'rectangle');
+      expect(matches).toBe(true);
+    });
+  });
+
+  describe('Element Configuration', () => {
+    it('should handle element with layout config', () => {
+      const config: LcarsCardConfig = {
+        type: 'lovelace-lcars-card',
+        groups: [
+          {
+            group_id: 'test_group',
+            elements: [
+              {
+                id: 'elem1',
+                type: 'rectangle',
+                layout: {
+                  width: 100,
+                  height: 50
+                }
+              }
+            ]
+          }
+        ]
+      };
+
+      editor.setConfig(config);
+      (editor as any)._selectElement(0, 0);
+
+      const editorConfig = (editor as any)._config;
+      expect(editorConfig.groups[0].elements[0].layout.width).toBe(100);
+      expect(editorConfig.groups[0].elements[0].layout.height).toBe(50);
+    });
+
+    it('should handle element without layout config', () => {
+      const config: LcarsCardConfig = {
+        type: 'lovelace-lcars-card',
+        groups: [
+          {
+            group_id: 'test_group',
+            elements: [
+              {
+                id: 'elem1',
+                type: 'rectangle'
+              }
+            ]
+          }
+        ]
+      };
+
+      editor.setConfig(config);
+      (editor as any)._selectElement(0, 0);
+
+      const editorConfig = (editor as any)._config;
+      const element = editorConfig.groups[0].elements[0];
+      expect(element.layout).toBeUndefined();
     });
   });
 });
