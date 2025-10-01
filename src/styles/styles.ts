@@ -363,6 +363,20 @@ export const editorStyles = css`
     border-bottom: 1px solid var(--divider-color);
   }
 
+  .config-subsection {
+    margin-top: 16px;
+    margin-bottom: 12px;
+    padding-left: 12px;
+    border-left: 2px solid var(--divider-color);
+  }
+
+  .config-subsection-header {
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--secondary-text-color);
+    margin-bottom: 8px;
+  }
+
   .config-row {
     margin-bottom: 16px;
   }

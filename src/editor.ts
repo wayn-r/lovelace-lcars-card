@@ -1,8 +1,18 @@
 import { LitElement, html, TemplateResult, CSSResultGroup } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { HomeAssistant, fireEvent, LovelaceCardEditor } from 'custom-card-helpers';
+import { HomeAssistant, LovelaceCardEditor } from 'custom-card-helpers';
 import { LcarsCardConfig } from './types';
 import { editorStyles } from './styles/styles';
+import { ConfigUpdater } from './editor/config-updater.js';
+import { ElementMetadata } from './editor/element-metadata.js';
+import { BasicConfigRenderer } from './editor/section-renderers/basic-config-renderer.js';
+import { LayoutConfigRenderer } from './editor/section-renderers/layout-config-renderer.js';
+import { AppearanceConfigRenderer } from './editor/section-renderers/appearance-config-renderer.js';
+import { TextConfigRenderer } from './editor/section-renderers/text-config-renderer.js';
+import { EntityConfigRenderer } from './editor/section-renderers/entity-config-renderer.js';
+import { ButtonConfigRenderer } from './editor/section-renderers/button-config-renderer.js';
+import { WidgetConfigRenderer } from './editor/section-renderers/widget-config-renderer.js';
+import { AdvancedLayoutRenderer } from './editor/section-renderers/advanced-layout-renderer.js';
 
 interface SelectedElement {
   groupIndex: number;
@@ -30,43 +40,13 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
 
     const target = ev.target as any;
     const configValue = target.configValue;
-    let value = target.value;
+    const value = target.value;
 
     if (!configValue) {
       return;
     }
 
-    // Convert to number if it's a numeric string (for width/height)
-    if (value && !isNaN(value) && value.trim() !== '') {
-      value = Number(value);
-    }
-
-    // Create a deep copy of the config
-    const newConfig = JSON.parse(JSON.stringify(this._config));
-    
-    // Handle nested properties (e.g., "title" or element properties like "groups.0.elements.1.layout.width")
-    if (configValue.includes('.')) {
-      const keys = configValue.split('.');
-      let obj: any = newConfig;
-      for (let i = 0; i < keys.length - 1; i++) {
-        const key = keys[i];
-        // Handle array indices
-        if (!isNaN(Number(key))) {
-          obj = obj[Number(key)];
-        } else {
-          if (!obj[key]) {
-            obj[key] = {};
-          }
-          obj = obj[key];
-        }
-      }
-      const lastKey = keys[keys.length - 1];
-      obj[lastKey] = value;
-    } else {
-      (newConfig as any)[configValue] = value;
-    }
-
-    fireEvent(this, 'config-changed', { config: newConfig });
+    ConfigUpdater.updateNestedPath(this._config, configValue, value, this);
   }
 
   private _selectElement(groupIndex: number, elementIndex: number): void {
@@ -291,8 +271,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       `;
     }
 
-    const layout = element.layout || {};
-    const configPath = `groups.${groupIndex}.elements.${elementIndex}.layout`;
+    const basePath = `groups.${groupIndex}.elements.${elementIndex}`;
 
     return html`
       <div class="section">
@@ -310,55 +289,117 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
             </div>
           </div>
 
-          <div class="config-section">
-            <div class="config-section-header">Layout Properties</div>
-            
-            <div class="config-row">
-              <ha-textfield
-                label="Width"
-                .value=${layout.width?.toString() || ''}
-                .configValue=${`${configPath}.width`}
-                @input=${this._valueChanged}
-                .placeholder=${'auto'}
-              ></ha-textfield>
-              <div class="helper-text">Number (pixels) or percentage string (e.g., "50%")</div>
-            </div>
-
-            <div class="config-row">
-              <ha-textfield
-                label="Height"
-                .value=${layout.height?.toString() || ''}
-                .configValue=${`${configPath}.height`}
-                @input=${this._valueChanged}
-                .placeholder=${'auto'}
-              ></ha-textfield>
-              <div class="helper-text">Number (pixels) or percentage string (e.g., "25%")</div>
-            </div>
-          </div>
-
-          <div class="config-footer">
-            <ha-icon icon="mdi:information-outline"></ha-icon>
-            <span>More configuration options coming soon</span>
-          </div>
+          ${this._renderBasicConfig(element, basePath)}
+          ${this._renderLayoutConfig(element, basePath)}
+          ${this._renderAdvancedLayoutConfig(element, basePath)}
+          ${this._renderAppearanceConfig(element, basePath)}
+          ${this._renderTextConfig(element, basePath)}
+          ${this._renderEntityConfig(element, basePath)}
+          ${this._renderWidgetConfig(element, basePath)}
+          ${this._renderButtonConfig(element, basePath)}
         </div>
       </div>
     `;
   }
 
+  private _renderBasicConfig(element: any, basePath: string): TemplateResult {
+    return BasicConfigRenderer.render(element, basePath, this._valueChanged.bind(this));
+  }
+
+  private _renderLayoutConfig(element: any, basePath: string): TemplateResult {
+    return LayoutConfigRenderer.render(element, basePath, this._valueChanged.bind(this));
+  }
+
+  private _renderAppearanceConfig(element: any, basePath: string): TemplateResult {
+    return AppearanceConfigRenderer.render(
+      element,
+      basePath,
+      this._valueChanged.bind(this),
+      this._checkboxChanged.bind(this)
+    );
+  }
+
+  private _renderTextConfig(element: any, basePath: string): TemplateResult {
+    return TextConfigRenderer.render(
+      element,
+      basePath,
+      this._valueChanged.bind(this),
+      this._checkboxChanged.bind(this)
+    );
+  }
+
+  private _renderEntityConfig(element: any, basePath: string): TemplateResult | string {
+    return EntityConfigRenderer.render(
+      element,
+      basePath,
+      this.hass,
+      this._entityPickerChanged.bind(this),
+      this._entityArrayItemChanged.bind(this)
+    );
+  }
+
+  private _renderWidgetConfig(element: any, basePath: string): TemplateResult | string {
+    return WidgetConfigRenderer.render(element, basePath, this._valueChanged.bind(this));
+  }
+
+  private _renderAdvancedLayoutConfig(element: any, basePath: string): TemplateResult {
+    return AdvancedLayoutRenderer.render(element, basePath, this._valueChanged.bind(this));
+  }
+
+  private _renderButtonConfig(element: any, basePath: string): TemplateResult {
+    return ButtonConfigRenderer.render(element, basePath, this._checkboxChanged.bind(this));
+  }
+
+  private _checkboxChanged(ev: Event): void {
+    const target = ev.target as any;
+    const configValue = target.configValue;
+    const checked = target.checked;
+
+    if (!configValue || !this._config) {
+      return;
+    }
+
+    ConfigUpdater.updateBoolean(this._config, configValue, checked, this);
+  }
+
+  private _entityPickerChanged(ev: CustomEvent): void {
+    if (!this._config || !this._selectedElement) {
+      return;
+    }
+
+    const target = ev.target as any;
+    const configValue = target.configValue;
+    const value = ev.detail.value;
+
+    if (!configValue) {
+      return;
+    }
+
+    ConfigUpdater.updateEntity(this._config, configValue, value, this);
+  }
+
+  private _entityArrayItemChanged(ev: CustomEvent): void {
+    if (!this._config || !this._selectedElement) {
+      return;
+    }
+
+    const target = ev.target as any;
+    const configValue = target.configValue;
+    const value = ev.detail.value;
+
+    if (!configValue) {
+      return;
+    }
+
+    const pathParts = configValue.split('.');
+    const index = Number(pathParts[pathParts.length - 1]);
+    const basePath = pathParts.slice(0, -1).join('.');
+
+    ConfigUpdater.updateEntityArrayItem(this._config, basePath, index, value, this);
+  }
+
   private _getElementIcon(type: string): string {
-    const iconMap: Record<string, string> = {
-      'rectangle': 'mdi:rectangle-outline',
-      'text': 'mdi:format-text',
-      'endcap': 'mdi:arrow-right-bold',
-      'elbow': 'mdi:arrow-top-right',
-      'top_header': 'mdi:page-layout-header',
-      'graph-widget': 'mdi:chart-line',
-      'entity-text-widget': 'mdi:text-box',
-      'entity-metric-widget': 'mdi:counter',
-      'vertical-slider': 'mdi:tune-vertical',
-      'weather-icon': 'mdi:weather-partly-cloudy',
-    };
-    return iconMap[type] || 'mdi:shape';
+    return ElementMetadata.getIconForType(type);
   }
 
   static get styles(): CSSResultGroup {
