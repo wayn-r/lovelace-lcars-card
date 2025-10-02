@@ -258,14 +258,16 @@ export class LcarsCard extends LitElement {
   }
 
   private _scheduleInitialLayout(): void {
-    requestAnimationFrame(() => {
-      this._tryCalculateInitialLayout();
-    });
-    
+    setTimeout(() => {
+        requestAnimationFrame(() => {
+            this._tryCalculateInitialLayout();
+        });
+    }, 100);
+
     if (document.readyState !== 'complete') {
-      window.addEventListener('load', () => {
-        this._tryCalculateInitialLayout();
-      }, { once: true });
+        window.addEventListener('load', () => {
+            this._tryCalculateInitialLayout();
+        }, { once: true });
     }
   }
 
