@@ -9,6 +9,36 @@ import { ZodError } from 'zod';
 import { CardRuntime } from '../core/runtime.js';
 import { Diagnostics } from '../utils/diagnostics.js';
 
+type MutableStretchTargetConfig = {
+  id?: string;
+  edge?: string;
+  padding?: number;
+};
+
+type MutableStretchConfig = {
+  target1?: MutableStretchTargetConfig;
+  target2?: MutableStretchTargetConfig;
+};
+
+type MutableLayoutConfig = {
+  stretch?: MutableStretchConfig;
+};
+
+type MutableElementConfig = {
+  id?: string;
+  layout?: MutableLayoutConfig;
+};
+
+type MutableGroupConfig = {
+  group_id?: string;
+  elements?: MutableElementConfig[];
+};
+
+type MutableCardConfig = {
+  groups?: MutableGroupConfig[];
+  [key: string]: unknown;
+};
+
 export class ConfigParser {
   private static readonly logger = Diagnostics.create('ConfigParser');
   static parseConfig(
@@ -48,7 +78,8 @@ export class ConfigParser {
 
   private static _validateConfig(config: unknown): ParsedConfig {
     try {
-      return SchemaParser.parseCardConfig(config);
+      const preparedConfig = this._prepareConfigForValidation(config);
+      return SchemaParser.parseCardConfig(preparedConfig);
     } catch (error) {
       if (error instanceof ZodError) {
         const groupsError = error.errors.find(e => e.path.length === 1 && e.path[0] === 'groups');
@@ -61,6 +92,78 @@ export class ConfigParser {
     }
   }
 
+  private static _prepareConfigForValidation(config: unknown): unknown {
+    if (!config || typeof config !== 'object') {
+      return config;
+    }
+
+    type StructuredCloneFn = (value: unknown) => unknown;
+    const globalWithClone = globalThis as typeof globalThis & { structuredClone?: StructuredCloneFn };
+    const cloneFn = typeof globalWithClone.structuredClone === 'function'
+      ? globalWithClone.structuredClone
+      : undefined;
+
+    const clonedConfig = typeof cloneFn === 'function'
+      ? cloneFn(config)
+      : JSON.parse(JSON.stringify(config));
+
+    const workingConfig = clonedConfig as MutableCardConfig;
+
+    if (!Array.isArray(workingConfig.groups)) {
+      return workingConfig;
+    }
+
+    const removedStretchTargets: string[] = [];
+    const removedSecondaryTargets: string[] = [];
+
+    workingConfig.groups.forEach(group => {
+      if (!group || !Array.isArray(group.elements)) {
+        return;
+      }
+
+      group.elements.forEach(element => {
+        const layout = element?.layout;
+        const stretch = layout?.stretch;
+        if (!layout || !stretch) {
+          return;
+        }
+
+        const elementLabel = `${group.group_id ?? 'unknown-group'}.${element.id ?? 'unknown-element'}`;
+
+        if (!ConfigParser._stretchTargetIsValid(stretch.target1)) {
+          delete layout.stretch;
+          removedStretchTargets.push(elementLabel);
+          return;
+        }
+
+        if (stretch.target2 && !ConfigParser._stretchTargetIsValid(stretch.target2)) {
+          delete stretch.target2;
+          removedSecondaryTargets.push(elementLabel);
+        }
+      });
+    });
+
+    if (removedStretchTargets.length) {
+      this.logger.warn(`Removed invalid stretch configuration from elements: ${removedStretchTargets.join(', ')}`);
+    }
+
+    if (removedSecondaryTargets.length) {
+      this.logger.warn(`Removed invalid secondary stretch targets from elements: ${removedSecondaryTargets.join(', ')}`);
+    }
+
+    return workingConfig;
+  }
+
+  private static _stretchTargetIsValid(target?: MutableStretchTargetConfig): boolean {
+    if (!target) {
+      return false;
+    }
+
+    const idValid = typeof target.id === 'string' && target.id.trim() !== '';
+    const edgeValid = typeof target.edge === 'string' && target.edge.trim() !== '';
+
+    return idValid && edgeValid;
+  }
   private static _convertElementProps(elementConfig: any): LayoutElementProps {
     const appearance = elementConfig.appearance || {};
     const text = elementConfig.text || {};
