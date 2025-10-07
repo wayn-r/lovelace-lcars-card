@@ -8,6 +8,7 @@ import { SchemaParser, type ParsedConfig } from '../parsers/schema.js';
 import { ZodError } from 'zod';
 import { CardRuntime } from '../core/runtime.js';
 import { Diagnostics } from '../utils/diagnostics.js';
+import { normalizeAnchorPoint, type AnchorPoint } from '../config/schemas/layout.js';
 
 type MutableStretchTargetConfig = {
   id?: string;
@@ -20,7 +21,15 @@ type MutableStretchConfig = {
   target2?: MutableStretchTargetConfig;
 };
 
+type MutableAnchorConfig = {
+  to?: string;
+  element_point?: string;
+  target_point?: string;
+};
+
 type MutableLayoutConfig = {
+  anchor?: MutableAnchorConfig;
+  secondary_anchor?: MutableAnchorConfig;
   stretch?: MutableStretchConfig;
 };
 
@@ -123,8 +132,22 @@ export class ConfigParser {
 
       group.elements.forEach(element => {
         const layout = element?.layout;
-        const stretch = layout?.stretch;
-        if (!layout || !stretch) {
+        if (!layout) {
+          return;
+        }
+
+        const anchor = layout.anchor;
+        if (anchor) {
+          ConfigParser._normalizeAnchorPoints(anchor);
+        }
+
+        const secondaryAnchor = layout.secondary_anchor;
+        if (secondaryAnchor) {
+          ConfigParser._normalizeAnchorPoints(secondaryAnchor);
+        }
+
+        const stretch = layout.stretch;
+        if (!stretch) {
           return;
         }
 
@@ -163,6 +186,43 @@ export class ConfigParser {
     const edgeValid = typeof target.edge === 'string' && target.edge.trim() !== '';
 
     return idValid && edgeValid;
+  }
+
+  private static readonly anchorPointToEngineMap: Record<AnchorPoint, string> = {
+    'top-left': 'top-left',
+    'top-center': 'topCenter',
+    'top-right': 'top-right',
+    'center-left': 'centerLeft',
+    'center': 'center',
+    'center-right': 'centerRight',
+    'bottom-left': 'bottom-left',
+    'bottom-center': 'bottomCenter',
+    'bottom-right': 'bottom-right',
+  };
+
+  private static _normalizeAnchorPoints(anchor: { element_point?: string; target_point?: string }): void {
+    const normalizedElementPoint = normalizeAnchorPoint(anchor.element_point);
+    if (normalizedElementPoint) {
+      anchor.element_point = normalizedElementPoint;
+    }
+
+    const normalizedTargetPoint = normalizeAnchorPoint(anchor.target_point);
+    if (normalizedTargetPoint) {
+      anchor.target_point = normalizedTargetPoint;
+    }
+  }
+
+  private static _toEngineAnchorPoint(anchorPoint?: string): string | undefined {
+    if (!anchorPoint) {
+      return undefined;
+    }
+
+    const normalized = normalizeAnchorPoint(anchorPoint);
+    if (!normalized) {
+      return anchorPoint;
+    }
+
+    return ConfigParser.anchorPointToEngineMap[normalized];
   }
   private static _convertElementProps(elementConfig: any): LayoutElementProps {
     const appearance = elementConfig.appearance || {};
@@ -242,10 +302,28 @@ export class ConfigParser {
     if (layout.offset_y !== undefined) engineLayout.offsetY = layout.offset_y;
     
     if (layout.anchor) {
+      const anchorPoint = this._toEngineAnchorPoint(layout.anchor.element_point);
+      const targetAnchorPoint = this._toEngineAnchorPoint(layout.anchor.target_point);
+
       (engineLayout as any).anchor = {
         anchorTo: layout.anchor.to,
-        anchorPoint: layout.anchor.element_point,
-        targetAnchorPoint: layout.anchor.target_point
+        anchorPoint: anchorPoint ?? layout.anchor.element_point,
+        targetAnchorPoint: targetAnchorPoint ?? layout.anchor.target_point
+      };
+    }
+    
+    if (layout.secondary_anchor && (
+      layout.secondary_anchor.to !== undefined ||
+      layout.secondary_anchor.element_point !== undefined ||
+      layout.secondary_anchor.target_point !== undefined
+    )) {
+      const secondaryAnchorPoint = this._toEngineAnchorPoint(layout.secondary_anchor.element_point);
+      const secondaryTargetAnchorPoint = this._toEngineAnchorPoint(layout.secondary_anchor.target_point);
+
+      (engineLayout as any).secondaryAnchor = {
+        anchorTo: layout.secondary_anchor.to,
+        anchorPoint: secondaryAnchorPoint ?? layout.secondary_anchor.element_point,
+        targetAnchorPoint: secondaryTargetAnchorPoint ?? layout.secondary_anchor.target_point
       };
     }
     

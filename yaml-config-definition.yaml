@@ -173,9 +173,13 @@ groups: <array>                  # Required: Defines groups of elements. Element
             to: <string>               # Full ID of target element ("group.base_id") or "container".
             element_point: <string>    # Point on *this* element.
             target_point: <string>     # Point on the *target*.
-                                       #   Anchor point options: "top-left", "topCenter", "top-right", 
-                                       #   "centerLeft", "center", "centerRight", "bottom-left", 
-                                       #   "bottomCenter", "bottom-right".
+                                       #   Anchor point options: "top-left", "top-center", "top-right", 
+                                       #   "center-left", "center", "center-right", "bottom-left", 
+                                       #   "bottom-center", "bottom-right".
+          secondary_anchor:          # Optional: Configure a second anchor for another axis/target
+            to: <string>
+            element_point: <string>
+            target_point: <string>
 
           stretch:                   # Optional: (Not for 'top_header')
             target1:
@@ -356,4 +360,3 @@ animation_sequence:                  # Alternative: Animation sequence with mult
     # --- Animation Step Group Configuration (Each item in the 'steps' array) ---
     - index: <number>                # Required: Execution order. Groups with same index execute concurrently.
       animations: <animation_definition>            # Required: Array of animations to execute simultaneously in this group.
-

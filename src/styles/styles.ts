@@ -113,6 +113,8 @@ export const editorStyles = css`
     align-items: center;
     gap: 8px;
     padding: 8px;
+    width: 100%;
+    box-sizing: border-box;
     background: var(--primary-background-color);
     border-radius: 4px;
     margin-bottom: 4px;
@@ -124,7 +126,7 @@ export const editorStyles = css`
 
   .element-item ha-icon {
     color: var(--secondary-text-color);
-    --mdc-icon-size: 18px;
+    --mdc-icon-size: 24px;
   }
 
   .element-id {
@@ -287,6 +289,17 @@ export const editorStyles = css`
     background: var(--secondary-background-color);
   }
 
+  .group-header.editing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .group-header.editing ha-textfield {
+    flex: 1;
+  }
+
   .collapse-icon {
     --mdc-icon-size: 20px;
     transition: transform 0.2s;
@@ -318,36 +331,197 @@ export const editorStyles = css`
     color: var(--text-primary-color);
   }
 
-  .config-panel {
+  .delete-button {
+    color: var(--error-color);
+  }
+
+  .delete-element-button {
+    --mdc-icon-button-size: 32px;
+    margin-left: auto;
+  }
+
+  .delete-element-button ha-icon {
+    color: var(--error-color);
+    --mdc-icon-size: 18px;
+  }
+
+  .add-group-button {
+    padding: 12px 8px;
+    text-align: center;
+  }
+
+  .empty-state-small {
     padding: 16px;
+    text-align: center;
+    color: var(--secondary-text-color);
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  .icon-button-small {
+    --mdc-icon-button-size: 32px;
+  }
+
+  .icon-button-small ha-icon {
+    --mdc-icon-size: 18px;
+  }
+
+  .icon-button-tiny {
+    --mdc-icon-button-size: 28px;
+  }
+
+  .icon-button-tiny ha-icon {
+    --mdc-icon-size: 16px;
+  }
+
+  .element-id-input {
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .element-icon-large {
+    --mdc-icon-size: 40px;
+    color: var(--secondary-text-color);
+  }
+
+  .element-type-select {
+    min-width: 150px;
+  }
+
+  .config-panel {
+    padding-top: 16px;
   }
 
   .element-info-header {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px;
+    padding: 8px 12px;
     background: var(--primary-background-color);
-    border: 1px solid var(--divider-color);
-    border-radius: 8px;
+    border: 1px solid transparent;
+    border-radius: 4px;
     margin-bottom: 16px;
+    position: relative;
   }
 
-  .element-info-header ha-icon {
+  .element-info-header-main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .element-info-display {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .element-info-chip {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    outline: none;
+    border-radius: 4px;
+    min-width: 0;
+    padding: 4px 8px;
+  }
+
+  .element-info-chip:focus-visible {
+    box-shadow: 0 0 0 2px var(--primary-color);
+  }
+
+  .element-info-id-chip {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .element-info-type-chip {
+    padding: 0;
+  }
+
+  .editable-icon {
     color: var(--primary-color);
-    --mdc-icon-size: 32px;
+    pointer-events: none;
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+    transition: opacity 0.2s ease, width 0.2s ease, margin 0.2s ease;
+    display: inline-flex;
   }
 
-  .element-title {
-    font-weight: 500;
-    font-size: 16px;
-    color: var(--primary-text-color);
+  .element-info-id-icon,
+  .element-info-type-icon {
+    --mdc-icon-size: 18px;
   }
 
-  .element-subtitle {
-    font-size: 12px;
-    color: var(--secondary-text-color);
-    margin-top: 2px;
+  .element-info-id-chip:hover .element-info-id-icon,
+  .element-info-id-chip:focus-visible .element-info-id-icon {
+    opacity: 1;
+    width: 20px;
+    margin-left: 4px;
+  }
+
+  .element-info-type-chip:hover .element-info-type-icon,
+  .element-info-type-chip:focus-visible .element-info-type-icon {
+    opacity: 1;
+    width: 20px;
+    margin-right: 4px;
+  }
+
+  .element-info-id-chip:hover .element-id,
+  .element-info-id-chip:focus-visible .element-id,
+  .element-info-type-chip:hover .element-type,
+  .element-info-type-chip:focus-visible .element-type {
+    color: var(--primary-color);
+  }
+
+  .element-info-chip .element-id,
+  .element-info-chip .element-type {
+    flex: 0 0 auto;
+  }
+
+  .element-info-id-editing,
+  .element-info-type-editing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .element-info-id-editing {
+    flex: 1;
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+
+  .element-info-type-editing {
+    flex-wrap: wrap;
+  }
+
+  .element-info-edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  .element-info-id-input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .element-info-header .element-action-button-small {
+    --mdc-icon-button-size: 28px;
+    --mdc-icon-size: 24px;
+    display: flex;
+  }
+
+  .element-info-header .element-action-button-small ha-icon {
+    --mdc-icon-size: 24px;
+    display: flex;
   }
 
   .config-section {
@@ -363,11 +537,73 @@ export const editorStyles = css`
     border-bottom: 1px solid var(--divider-color);
   }
 
+  /* Collapsible Config Sections */
+  .collapsible-config-section {
+    margin-bottom: 8px;
+    background: var(--card-background-color);
+    border: 1px solid var(--divider-color);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+  }
+
+  .collapsible-config-section.expanded {
+    border-color: var(--primary-color);
+  }
+
+  .collapsible-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--primary-background-color);
+    transition: background-color 0.2s ease;
+  }
+
+  .collapsible-section-header:hover {
+    background: var(--secondary-background-color);
+  }
+
+  .collapsible-section-header .collapse-icon {
+    --mdc-icon-size: 20px;
+    color: var(--secondary-text-color);
+    transition: transform 0.2s ease;
+  }
+
+  .collapsible-section-header .section-icon {
+    --mdc-icon-size: 20px;
+    color: var(--primary-color);
+  }
+
+  .collapsible-section-header .section-title {
+    flex: 1;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--primary-text-color);
+  }
+
+  .collapsible-section-content {
+    padding: 12px;
+    background: var(--card-background-color);
+    animation: slideDown 0.2s ease;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      max-height: 0;
+    }
+    to {
+      opacity: 1;
+      max-height: 2000px;
+    }
+  }
+
   .config-subsection {
     margin-top: 16px;
     margin-bottom: 12px;
-    padding-left: 12px;
-    border-left: 2px solid var(--divider-color);
   }
 
   .config-subsection-header {
@@ -379,6 +615,106 @@ export const editorStyles = css`
 
   .config-row {
     margin-bottom: 16px;
+  }
+
+  .anchor-section-title {
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--primary-text-color);
+  }
+
+  .config-row--split {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .config-row--split .config-field {
+    flex: 1 1 calc(50% - 8px);
+    max-width: calc(50% - 8px);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .config-row--split .config-field ha-select,
+  .config-row--split .config-field ha-textfield {
+    width: 100%;
+  }
+
+  @media (max-width: 720px) {
+    .config-row--split {
+      flex-direction: column;
+    }
+
+    .config-row--split .config-field {
+      max-width: 100%;
+      flex-basis: 100%;
+    }
+  }
+
+  .entity-config-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .entity-config-row__input {
+    flex: 1;
+  }
+
+  .entity-config-row__remove {
+    align-self: center;
+    --mdc-icon-button-size: 40px;
+    --mdc-icon-size: 22px;
+  }
+
+  .entity-config-row__remove ha-icon {
+    --mdc-icon-size: 22px;
+  }
+
+  .entity-config-subrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .entity-config-subrow__field {
+    flex: 1 1 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .entity-config-subrow__field ha-entity-attribute-picker,
+  .entity-config-subrow__field ha-textfield,
+  .entity-config-subrow__field ha-color-picker {
+    width: 100%;
+  }
+
+  .add-entity-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    color: var(--primary-text-color);
+    border-radius: 4px;
+    padding: 4px 8px 4px 4px;
+  }
+
+  .add-entity-row:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  .add-entity-row__icon {
+    --mdc-icon-button-size: 32px;
+    --mdc-icon-size: 18px;
+  }
+
+  .add-entity-row__label {
+    font-weight: 500;
   }
 
   .config-row:last-child {
@@ -408,6 +744,36 @@ export const editorStyles = css`
 
     .title {
       font-size: 20px;
+    }
+
+    .config-panel {
+      padding: 8px;
+    }
+
+    .collapsible-section-header {
+      padding: 10px;
+      font-size: 13px;
+    }
+
+    .collapsible-section-content {
+      padding: 8px;
+    }
+
+    .config-row {
+      margin-bottom: 12px;
+    }
+
+    .element-info-header {
+      padding: 8px;
+    }
+
+    .helper-text {
+      font-size: 11px;
+    }
+
+    /* Make config sections more compact on mobile */
+    .collapsible-config-section {
+      margin-bottom: 6px;
     }
   }
     

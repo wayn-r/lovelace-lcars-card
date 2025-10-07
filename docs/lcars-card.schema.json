@@ -314,10 +314,74 @@
                                       "type": "string"
                                     },
                                     "element_point": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "enum": [
+                                        "top-left",
+                                        "top-center",
+                                        "top-right",
+                                        "center-left",
+                                        "center",
+                                        "center-right",
+                                        "bottom-left",
+                                        "bottom-center",
+                                        "bottom-right"
+                                      ]
                                     },
                                     "target_point": {
+                                      "type": "string",
+                                      "enum": [
+                                        "top-left",
+                                        "top-center",
+                                        "top-right",
+                                        "center-left",
+                                        "center",
+                                        "center-right",
+                                        "bottom-left",
+                                        "bottom-center",
+                                        "bottom-right"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "to",
+                                    "element_point",
+                                    "target_point"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "secondary_anchor": {
+                                  "type": "object",
+                                  "properties": {
+                                    "to": {
                                       "type": "string"
+                                    },
+                                    "element_point": {
+                                      "type": "string",
+                                      "enum": [
+                                        "top-left",
+                                        "top-center",
+                                        "top-right",
+                                        "center-left",
+                                        "center",
+                                        "center-right",
+                                        "bottom-left",
+                                        "bottom-center",
+                                        "bottom-right"
+                                      ]
+                                    },
+                                    "target_point": {
+                                      "type": "string",
+                                      "enum": [
+                                        "top-left",
+                                        "top-center",
+                                        "top-right",
+                                        "center-left",
+                                        "center",
+                                        "center-right",
+                                        "bottom-left",
+                                        "bottom-center",
+                                        "bottom-right"
+                                      ]
                                     }
                                   },
                                   "required": [

@@ -5,205 +5,58 @@ export class WidgetConfigRenderer {
   static render(
     element: any,
     basePath: string,
-    onValueChanged: (ev: CustomEvent) => void
+    onValueChanged: (ev: CustomEvent) => void,
+    onCheckboxChanged?: (ev: Event) => void
   ): TemplateResult | string {
     if (!this._isWidget(element.type)) {
       return '';
     }
 
-    const text = element.text || {};
-    const textPath = `${basePath}.text`;
-
     return html`
-      <div class="config-section">
-        <div class="config-section-header">Widget-Specific Properties</div>
-        
-        ${this._renderEntityTextWidgetConfig(element, text, textPath, onValueChanged)}
-        ${this._renderEntityMetricWidgetConfig(element, text, textPath, onValueChanged)}
-      </div>
+      ${this._renderGraphWidgetInfo(element)}
+      ${this._renderVerticalSliderInfo(element)}
     `;
   }
 
   private static _isWidget(type: string): boolean {
-    return ['entity-text-widget', 'entity-metric-widget', 'graph-widget', 'vertical-slider'].includes(type);
+    return ['entity-text-widget', 'entity-metric-widget', 'graph-widget', 'vertical-slider', 'weather-icon', 'logger-widget'].includes(type);
   }
 
-  private static _renderEntityTextWidgetConfig(
-    element: any,
-    text: any,
-    textPath: string,
-    onValueChanged: (ev: CustomEvent) => void
-  ): TemplateResult | string {
-    if (element.type !== 'entity-text-widget') {
+  private static _renderGraphWidgetInfo(element: any): TemplateResult | string {
+    if (element.type !== 'graph-widget') {
       return '';
     }
 
     return html`
-      <div class="config-subsection">
-        <div class="config-subsection-header">Label Configuration</div>
-        
-        <div class="config-row">
-          <ha-textfield
-            label="Label Content"
-            .value=${text.label?.content || ''}
-            .configValue=${`${textPath}.label.content`}
-            @input=${onValueChanged}
-          ></ha-textfield>
-          <div class="helper-text">Custom label text</div>
-        </div>
-
-        <div class="config-row">
-          <ha-textfield
-            label="Label Width"
-            type="number"
-            .value=${text.label?.width?.toString() || ''}
-            .configValue=${`${textPath}.label.width`}
-            @input=${onValueChanged}
-          ></ha-textfield>
-          <div class="helper-text">Label width in pixels</div>
-        </div>
-
-        <div class="config-row">
-          <ha-textfield
-            label="Label Font Family"
-            .value=${text.label?.font_family || ''}
-            .configValue=${`${textPath}.label.font_family`}
-            @input=${onValueChanged}
-          ></ha-textfield>
-          <div class="helper-text">Font family for label</div>
-        </div>
-      </div>
-
-      <div class="config-subsection">
-        <div class="config-subsection-header">Value Configuration</div>
-        
-        <div class="config-row">
-          <ha-textfield
-            label="Value Width"
-            type="number"
-            .value=${text.value?.width?.toString() || ''}
-            .configValue=${`${textPath}.value.width`}
-            @input=${onValueChanged}
-          ></ha-textfield>
-          <div class="helper-text">Value width in pixels</div>
-        </div>
-
-        <div class="config-row">
-          <ha-textfield
-            label="Value Font Family"
-            .value=${text.value?.font_family || ''}
-            .configValue=${`${textPath}.value.font_family`}
-            @input=${onValueChanged}
-          ></ha-textfield>
-          <div class="helper-text">Font family for value</div>
+      <div class="info-box">
+        <ha-icon icon="mdi:information-outline"></ha-icon>
+        <div class="info-content">
+          <p>Graph widget options are organized by their schema structure:</p>
+          <ul>
+            <li><strong>Appearance section:</strong> Min/max values, grid configuration (num_lines, fill, label_fill)</li>
+            <li><strong>Entity section:</strong> Entity selection</li>
+          </ul>
+          <p>Advanced options like multi-entity configuration, entity colors, toggleable graphs, and animations are not yet supported in the visual editor. Please use YAML mode to configure these options.</p>
         </div>
       </div>
     `;
   }
 
-  private static _renderEntityMetricWidgetConfig(
-    element: any,
-    text: any,
-    textPath: string,
-    onValueChanged: (ev: CustomEvent) => void
-  ): TemplateResult | string {
-    if (element.type !== 'entity-metric-widget') {
+  private static _renderVerticalSliderInfo(element: any): TemplateResult | string {
+    if (element.type !== 'vertical-slider') {
       return '';
     }
 
     return html`
-      <div class="config-subsection">
-        <div class="config-subsection-header">Label Configuration</div>
-        
-        <div class="config-row">
-          <ha-textfield
-            label="Label Content"
-            .value=${text.label?.content || ''}
-            .configValue=${`${textPath}.label.content`}
-            @input=${onValueChanged}
-          ></ha-textfield>
-          <div class="helper-text">Custom label text</div>
-        </div>
-
-        <div class="config-row">
-          <ha-textfield
-            label="Label Width"
-            type="number"
-            .value=${text.label?.width?.toString() || ''}
-            .configValue=${`${textPath}.label.width`}
-            @input=${onValueChanged}
-          ></ha-textfield>
-          <div class="helper-text">Label width in pixels</div>
-        </div>
-
-        <div class="config-row">
-          <ha-textfield
-            label="Label Font Family"
-            .value=${text.label?.font_family || ''}
-            .configValue=${`${textPath}.label.font_family`}
-            @input=${onValueChanged}
-          ></ha-textfield>
-          <div class="helper-text">Font family for label</div>
-        </div>
-      </div>
-
-      <div class="config-subsection">
-        <div class="config-subsection-header">Value Configuration</div>
-        
-        <div class="config-row">
-          <ha-textfield
-            label="Value Width"
-            type="number"
-            .value=${text.value?.width?.toString() || ''}
-            .configValue=${`${textPath}.value.width`}
-            @input=${onValueChanged}
-          ></ha-textfield>
-          <div class="helper-text">Value width in pixels</div>
-        </div>
-
-        <div class="config-row">
-          <ha-textfield
-            label="Value Font Family"
-            .value=${text.value?.font_family || ''}
-            .configValue=${`${textPath}.value.font_family`}
-            @input=${onValueChanged}
-          ></ha-textfield>
-          <div class="helper-text">Font family for value</div>
-        </div>
-      </div>
-
-      <div class="config-subsection">
-        <div class="config-subsection-header">Unit Configuration</div>
-        
-        <div class="config-row">
-          <ha-textfield
-            label="Unit Content"
-            .value=${text.unit?.content || ''}
-            .configValue=${`${textPath}.unit.content`}
-            @input=${onValueChanged}
-          ></ha-textfield>
-          <div class="helper-text">Custom unit text (e.g., "°F", "kWh")</div>
-        </div>
-
-        <div class="config-row">
-          <ha-textfield
-            label="Unit Width"
-            type="number"
-            .value=${text.unit?.width?.toString() || ''}
-            .configValue=${`${textPath}.unit.width`}
-            @input=${onValueChanged}
-          ></ha-textfield>
-          <div class="helper-text">Unit width in pixels</div>
-        </div>
-
-        <div class="config-row">
-          <ha-textfield
-            label="Unit Font Family"
-            .value=${text.unit?.font_family || ''}
-            .configValue=${`${textPath}.unit.font_family`}
-            @input=${onValueChanged}
-          ></ha-textfield>
-          <div class="helper-text">Font family for unit</div>
+      <div class="info-box">
+        <ha-icon icon="mdi:information-outline"></ha-icon>
+        <div class="info-content">
+          <p>Vertical slider options are organized by their schema structure:</p>
+          <ul>
+            <li><strong>Appearance section:</strong> Min/max values, spacing, top_padding, label_height, use_floats</li>
+            <li><strong>Entity section:</strong> Entity selection</li>
+          </ul>
+          <p>Advanced options like multi-entity configuration and entity-specific min/max values are not yet supported in the visual editor. Please use YAML mode to configure these options.</p>
         </div>
       </div>
     `;

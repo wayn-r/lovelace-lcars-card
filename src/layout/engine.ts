@@ -88,6 +88,12 @@ export interface LayoutConfigOptions {
     targetAnchorPoint: string;
   };
 
+  secondaryAnchor?: {
+    anchorTo: string;
+    anchorPoint: string;
+    targetAnchorPoint: string;
+  };
+
   stretch?: {
     stretchTo1?: string;
     targetStretchAnchorPoint1?: string;
@@ -305,6 +311,15 @@ export class LayoutEngine {
         const anchorTo = element.layoutConfig.anchor.anchorTo;
         if (!this.elements.has(anchorTo)) {
           issues.push(`Element '${elementId}' anchor target '${anchorTo}' does not exist`);
+        }
+      }
+
+      if (element.layoutConfig.secondaryAnchor?.anchorTo &&
+          element.layoutConfig.secondaryAnchor.anchorTo !== 'container') {
+
+        const secondaryAnchorTo = element.layoutConfig.secondaryAnchor.anchorTo;
+        if (!this.elements.has(secondaryAnchorTo)) {
+          issues.push(`Element '${elementId}' secondary anchor target '${secondaryAnchorTo}' does not exist`);
         }
       }
       

@@ -10,6 +10,7 @@ export class ElementMetadata {
     'entity-metric-widget': 'mdi:counter',
     'vertical-slider': 'mdi:tune-vertical',
     'weather-icon': 'mdi:weather-partly-cloudy',
+    'logger-widget': 'mdi:text-box-outline',
   };
 
   private static readonly ENTITY_REQUIRED_TYPES = new Set([
@@ -70,7 +71,8 @@ export class ElementMetadata {
       'entity-text-widget',
       'entity-metric-widget',
       'vertical-slider',
-      'weather-icon'
+      'weather-icon',
+      'logger-widget'
     ];
   }
 }

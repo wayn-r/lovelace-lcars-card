@@ -421,22 +421,28 @@ export class LcarsCard extends LitElement {
         if (!elementConfig.layout) continue;
         
         const height = this._parseSize(elementConfig.layout.height, containerHeight);
-        const anchor = elementConfig.layout.anchor;
-        
-        if (anchor?.to === 'container' && 
-            anchor.element_point === 'center' && 
-            anchor.target_point === 'center') {
-          requiredHeight = Math.max(requiredHeight, height);
-        }
-        
-        if (anchor?.to === 'container' && 
-            anchor.target_point?.includes('bottom')) {
-          requiredHeight = Math.max(requiredHeight, height);
-        }
-        
-        if (anchor?.to === 'container' && 
-            anchor.target_point?.includes('top')) {
-          requiredHeight = Math.max(requiredHeight, height);
+        const anchors = [elementConfig.layout.anchor, elementConfig.layout.secondary_anchor].filter(Boolean) as Array<{
+          to?: string;
+          element_point?: string;
+          target_point?: string;
+        }>;
+
+        for (const anchor of anchors) {
+          if (anchor.to === 'container' && 
+              anchor.element_point === 'center' && 
+              anchor.target_point === 'center') {
+            requiredHeight = Math.max(requiredHeight, height);
+          }
+
+          if (anchor.to === 'container' && 
+              anchor.target_point?.includes('bottom')) {
+            requiredHeight = Math.max(requiredHeight, height);
+          }
+
+          if (anchor.to === 'container' && 
+              anchor.target_point?.includes('top')) {
+            requiredHeight = Math.max(requiredHeight, height);
+          }
         }
       }
     }

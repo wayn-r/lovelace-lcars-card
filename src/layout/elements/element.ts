@@ -11,6 +11,8 @@ import { ComputedElementColors, ColorResolutionDefaults } from '../../types.js';
 import { OffsetCalculator } from '../../utils/offset-calculator.js';
 import { Diagnostics, ScopedLogger } from '../../utils/diagnostics.js';
 
+type LayoutAnchorConfig = NonNullable<LayoutConfigOptions['anchor']>;
+
 export abstract class LayoutElement {
     id: string;
     props: LayoutElementProps;
@@ -69,9 +71,11 @@ export abstract class LayoutElement {
     public getDependencies(): string[] {
         const dependencies: string[] = [];
 
-        const anchorTo = this.layoutConfig.anchor?.anchorTo;
-        if (anchorTo && anchorTo !== 'container') {
-            dependencies.push(anchorTo);
+        for (const anchor of this.getAnchors()) {
+            const anchorTo = anchor.anchorTo;
+            if (anchorTo && anchorTo !== 'container') {
+                dependencies.push(anchorTo);
+            }
         }
 
         const stretch = this.layoutConfig.stretch;
@@ -239,21 +243,61 @@ export abstract class LayoutElement {
         return anchorReady && stretchReady && specialReady;
     }
 
-    private checkAnchorDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
-        const anchorTo = this.layoutConfig.anchor?.anchorTo;
-        if (!anchorTo || anchorTo === 'container') return true;
-        if (dependencies.includes(anchorTo)) return false;
+    private getAnchors(): LayoutAnchorConfig[] {
+        const anchors: LayoutAnchorConfig[] = [];
+        if (this.layoutConfig.anchor) {
+            anchors.push(this.layoutConfig.anchor);
+        }
+        if (this.layoutConfig.secondaryAnchor) {
+            anchors.push(this.layoutConfig.secondaryAnchor);
+        }
+        return anchors;
+    }
 
-        const anchorTarget = elementsMap.get(anchorTo);
-        if (!anchorTarget) {
-            this.logger.warn(`Element '${this.id}' anchor target '${anchorTo}' not found in elements map`);
-            dependencies.push(anchorTo);
-            return false;
+    private getAnchorForAxis(isHorizontal: boolean): LayoutAnchorConfig | undefined {
+        const anchors = this.getAnchors();
+        if (!anchors.length) {
+            return undefined;
         }
 
-        if (!anchorTarget.layout.calculated) {
-            dependencies.push(anchorTo);
-            return false;
+        if (isHorizontal) {
+            return anchors[0];
+        }
+
+        if (anchors.length > 1) {
+            return anchors[1];
+        }
+
+        return anchors[0];
+    }
+
+    private checkAnchorDependencies(elementsMap: Map<string, LayoutElement>, dependencies: string[] = []): boolean {
+        const anchors = this.getAnchors();
+        if (!anchors.length) {
+            return true;
+        }
+
+        for (const anchor of anchors) {
+            const anchorTo = anchor.anchorTo;
+            if (!anchorTo || anchorTo === 'container') {
+                continue;
+            }
+
+            if (dependencies.includes(anchorTo)) {
+                return false;
+            }
+
+            const anchorTarget = elementsMap.get(anchorTo);
+            if (!anchorTarget) {
+                this.logger.warn(`Element '${this.id}' anchor target '${anchorTo}' not found in elements map`);
+                dependencies.push(anchorTo);
+                return false;
+            }
+
+            if (!anchorTarget.layout.calculated) {
+                dependencies.push(anchorTo);
+                return false;
+            }
         }
 
         return true;
@@ -344,16 +388,70 @@ export abstract class LayoutElement {
         elementWidth: number,
         elementHeight: number
     ): { x: number, y: number } {
-        const anchorConfig = this.layoutConfig.anchor;
-        const anchorTo = anchorConfig?.anchorTo;
-        const anchorPoint = anchorConfig?.anchorPoint || 'top-left';
-        const targetAnchorPoint = anchorConfig?.targetAnchorPoint || 'top-left';
+        const anchors = this.getAnchors();
 
-        let x = 0;
-        let y = 0;
+        if (!anchors.length) {
+            const xOffset = this.calculateAnchorAwareOffsetX(this.layoutConfig.offsetX, 'top-left', containerWidth);
+            const yOffset = this.parseLayoutOffset(this.layoutConfig.offsetY, containerHeight);
+            return { x: xOffset, y: yOffset };
+        }
+
+        const primaryAnchor = anchors[0];
+        const primaryPosition = this.resolveAnchorPosition(
+            primaryAnchor,
+            elementsMap,
+            containerWidth,
+            containerHeight,
+            elementWidth,
+            elementHeight
+        );
+
+        let x = primaryPosition?.x ?? 0;
+        let y = primaryPosition?.y ?? 0;
+
+        let horizontalAnchorPoint = primaryAnchor.anchorPoint || 'top-left';
+
+        if (anchors.length > 1) {
+            const secondaryAnchor = anchors[1];
+            const secondaryPosition = this.resolveAnchorPosition(
+                secondaryAnchor,
+                elementsMap,
+                containerWidth,
+                containerHeight,
+                elementWidth,
+                elementHeight
+            );
+
+            if (secondaryPosition) {
+                y = secondaryPosition.y;
+
+                if (!primaryPosition) {
+                    x = secondaryPosition.x;
+                    horizontalAnchorPoint = secondaryAnchor.anchorPoint || horizontalAnchorPoint;
+                }
+            }
+        }
+
+        x += this.calculateAnchorAwareOffsetX(this.layoutConfig.offsetX, horizontalAnchorPoint, containerWidth);
+        y += this.parseLayoutOffset(this.layoutConfig.offsetY, containerHeight);
+
+        return { x, y };
+    }
+
+    private resolveAnchorPosition(
+        anchorConfig: LayoutAnchorConfig,
+        elementsMap: Map<string, LayoutElement>,
+        containerWidth: number,
+        containerHeight: number,
+        elementWidth: number,
+        elementHeight: number
+    ): { x: number; y: number } | null {
+        const anchorPoint = anchorConfig.anchorPoint || 'top-left';
+        const targetAnchorPoint = anchorConfig.targetAnchorPoint || 'top-left';
+        const anchorTo = anchorConfig.anchorTo;
 
         if (!anchorTo || anchorTo === 'container') {
-            const { x: elementX, y: elementY } = this.anchorToContainer(
+            return this.anchorToContainer(
                 anchorPoint,
                 targetAnchorPoint,
                 elementWidth,
@@ -361,32 +459,23 @@ export abstract class LayoutElement {
                 containerWidth,
                 containerHeight
             );
-            x = elementX;
-            y = elementY;
-        } else {
-            const result = this.anchorToElement(
-                anchorTo,
-                anchorPoint,
-                targetAnchorPoint,
-                elementWidth,
-                elementHeight,
-                elementsMap
-            );
-
-            if (!result) {
-                this.logger.warn(`Anchor target '${anchorTo}' not found or not calculated yet.`);
-                x = 0;
-                y = 0;
-            } else {
-                x = result.x;
-                y = result.y;
-            }
         }
 
-        x += this.calculateAnchorAwareOffsetX(this.layoutConfig.offsetX, anchorPoint, containerWidth);
-        y += this.parseLayoutOffset(this.layoutConfig.offsetY, containerHeight);
+        const result = this.anchorToElement(
+            anchorTo,
+            anchorPoint,
+            targetAnchorPoint,
+            elementWidth,
+            elementHeight,
+            elementsMap
+        );
 
-        return { x, y };
+        if (!result) {
+            this.logger.warn(`Anchor target '${anchorTo}' not found or not calculated yet.`);
+            return null;
+        }
+
+        return result;
     }
 
     private calculateAnchorAwareOffsetX(
@@ -712,7 +801,7 @@ export abstract class LayoutElement {
         targetCoord: number, 
         isHorizontal: boolean
     ): string {
-        const anchorConfig = this.layoutConfig.anchor;
+        const anchorConfig = this.getAnchorForAxis(isHorizontal);
         
         if (anchorConfig?.anchorTo && anchorConfig.anchorTo !== 'container') {
             const anchorPoint = anchorConfig.anchorPoint || 'top-left';

@@ -10,22 +10,18 @@ export class ButtonConfigRenderer {
     const buttonPath = `${basePath}.button`;
 
     return html`
-      <div class="config-section">
-        <div class="config-section-header">Button & Interaction</div>
-        
-        <div class="config-row">
-          <ha-formfield label="Enable Button">
-            <ha-checkbox
-              .checked=${button.enabled || false}
-              .configValue=${`${buttonPath}.enabled`}
-              @change=${onCheckboxChanged}
-            ></ha-checkbox>
-          </ha-formfield>
-          <div class="helper-text">Make this element clickable</div>
-        </div>
-
-        ${this._renderActionsInfoBox(button)}
+      <div class="config-row">
+        <ha-formfield label="Enable Button">
+          <ha-checkbox
+            .checked=${button.enabled || false}
+            .configValue=${`${buttonPath}.enabled`}
+            @change=${onCheckboxChanged}
+          ></ha-checkbox>
+        </ha-formfield>
+        <div class="helper-text">Make this element clickable</div>
       </div>
+
+      ${this._renderActionsInfoBox(button)}
     `;
   }
 
