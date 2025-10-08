@@ -543,7 +543,6 @@ export const editorStyles = css`
     background: var(--card-background-color);
     border: 1px solid var(--divider-color);
     border-radius: 8px;
-    overflow: hidden;
     transition: all 0.2s ease;
   }
 
