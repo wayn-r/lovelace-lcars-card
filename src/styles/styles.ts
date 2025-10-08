@@ -108,6 +108,44 @@ export const editorStyles = css`
     padding: 8px;
   }
 
+  .drag-placeholder {
+    width: 100%;
+    box-sizing: border-box;
+    border: 2px dashed var(--divider-color);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    transition: background 0.2s ease;
+    pointer-events: none;
+  }
+
+  .group-placeholder {
+    margin: 4px 0;
+  }
+
+  .element-placeholder {
+    margin: 4px 0;
+  }
+
+  .drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    color: var(--secondary-text-color);
+  }
+
+  .drag-handle:hover {
+    color: var(--primary-text-color);
+  }
+
+  .group-header .drag-handle {
+    --mdc-icon-size: 20px;
+  }
+
+  .element-drag-handle {
+    --mdc-icon-size: 18px;
+  }
+
   .element-item {
     display: flex;
     align-items: center;
@@ -127,6 +165,15 @@ export const editorStyles = css`
   .element-item ha-icon {
     color: var(--secondary-text-color);
     --mdc-icon-size: 24px;
+  }
+
+  .group-item.dragging,
+  .element-item.dragging {
+    cursor: grabbing;
+  }
+
+  .dragging .drag-handle {
+    cursor: grabbing;
   }
 
   .element-id {

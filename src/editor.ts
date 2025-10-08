@@ -1,7 +1,7 @@
 import { LitElement, html, TemplateResult, CSSResultGroup, PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardEditor, fireEvent } from 'custom-card-helpers';
-import { LcarsCardConfig } from './types';
+import { LcarsCardConfig, ElementConfig } from './types';
 import { editorStyles } from './styles/styles';
 import { ConfigUpdater } from './editor/config-updater.js';
 import { ElementMetadata } from './editor/element-metadata.js';
@@ -12,6 +12,10 @@ import { TextConfigRenderer } from './editor/section-renderers/text-config-rende
 import { EntityConfigRenderer } from './editor/section-renderers/entity-config-renderer.js';
 import { ButtonConfigRenderer } from './editor/section-renderers/button-config-renderer.js';
 import { AdvancedLayoutRenderer } from './editor/section-renderers/advanced-layout-renderer.js';
+import { gsap } from 'gsap';
+import Draggable from 'gsap/Draggable';
+
+gsap.registerPlugin(Draggable);
 
 interface SelectedElement {
   groupIndex: number;
@@ -34,6 +38,25 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
   @state() private _editingElementIdValue: string = '';
   @state() private _editingElementType?: boolean;
   @state() private _editingElementTypeValue: string = '';
+  private _groupDraggables: Draggable[] = [];
+  private _elementDraggables: Map<number, Draggable[]> = new Map();
+  private _groupDragContext?: {
+    initialIndex: number;
+    placeholder: HTMLElement;
+    container: HTMLElement;
+    containerOriginalPosition: string;
+  };
+  private _elementDragContext?: {
+    groupIndex: number;
+    initialIndex: number;
+    placeholder: HTMLElement;
+    sourceList: HTMLElement;
+    currentGroupIndex: number;
+    currentInsertionIndex: number;
+    temporaryLists: Set<HTMLElement>;
+    sourceListOriginalPosition: string;
+  };
+  private _isDragging: boolean = false;
 
   protected async firstUpdated(changedProperties: PropertyValues): Promise<void> {
     super.firstUpdated(changedProperties);
@@ -49,6 +72,19 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
 
   public setConfig(config: LcarsCardConfig): void {
     this._config = config;
+  }
+
+  protected updated(changedProperties: PropertyValues): void {
+    super.updated(changedProperties);
+    if (this._isDragging) {
+      return;
+    }
+    this._initializeDragAndDrop();
+  }
+
+  disconnectedCallback(): void {
+    this._destroyDragAndDrop();
+    super.disconnectedCallback();
   }
 
   private _valueChanged(ev: CustomEvent): void {
@@ -126,6 +162,813 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
     const filter = this._filterText.toLowerCase();
     return elementId.toLowerCase().includes(filter) || 
            elementType.toLowerCase().includes(filter);
+  }
+
+  private _initializeDragAndDrop(): void {
+    if (!this.isConnected) return;
+    this._setupGroupDraggables();
+    this._setupElementDraggables();
+  }
+
+  private _destroyDragAndDrop(): void {
+    this._groupDraggables.forEach(draggable => draggable.kill());
+    this._groupDraggables = [];
+
+    this._elementDraggables.forEach(draggables => draggables.forEach(draggable => draggable.kill()));
+    this._elementDraggables.clear();
+  }
+
+  private _setupGroupDraggables(): void {
+    this._groupDraggables.forEach(draggable => draggable.kill());
+    this._groupDraggables = [];
+
+    if (!this._config?.groups || this._config.groups.length < 2) return;
+    if (this._filterText) return;
+
+    const container = this.renderRoot.querySelector('.groups-tree') as HTMLElement | null;
+    if (!container) return;
+
+    const items = Array.from(container.querySelectorAll<HTMLElement>('.group-item'));
+    if (items.length < 2) return;
+
+    items.forEach(item => {
+      const handle = item.querySelector<HTMLElement>('.group-drag-handle');
+      if (!handle) return;
+
+      const draggable = Draggable.create(item, {
+        type: 'y',
+        trigger: handle,
+        onPress: () => this._onGroupDragStart(item),
+        onDrag: () => this._onGroupDragMove(item),
+        onDragEnd: () => this._onGroupDragEnd(item)
+      })[0];
+
+      if (draggable) {
+        this._groupDraggables.push(draggable);
+      }
+    });
+  }
+
+  private _setupElementDraggables(): void {
+    this._elementDraggables.forEach(draggables => draggables.forEach(draggable => draggable.kill()));
+    this._elementDraggables.clear();
+
+    if (!this._config?.groups || this._filterText) return;
+
+    const groupItems = Array.from(this.renderRoot.querySelectorAll<HTMLElement>('.group-item'));
+    
+    groupItems.forEach(groupItem => {
+      const groupIndexAttr = groupItem.getAttribute('data-group-index');
+      if (groupIndexAttr === null) return;
+      const groupIndex = Number(groupIndexAttr);
+      if (Number.isNaN(groupIndex)) return;
+
+      const list = groupItem.querySelector<HTMLElement>('.elements-list');
+      if (!list) return;
+
+      const allItems = Array.from(list.querySelectorAll<HTMLElement>('.element-item'));
+      if (allItems.length < 2) return;
+
+      const draggables: Draggable[] = [];
+
+      allItems.forEach(item => {
+        const handle = item.querySelector<HTMLElement>('.element-drag-handle');
+        if (!handle) return;
+
+        const draggable = Draggable.create(item, {
+          type: 'y',
+          trigger: handle,
+          onPress: () => this._onElementDragStart(groupIndex, item),
+          onDrag: () => this._onElementDragMove(item),
+          onDragEnd: () => this._onElementDragEnd(item)
+        })[0];
+
+        if (draggable) {
+          draggables.push(draggable);
+        }
+      });
+
+      if (draggables.length > 0) {
+        this._elementDraggables.set(groupIndex, draggables);
+      }
+    });
+  }
+
+  private _onGroupDragStart(element: HTMLElement): void {
+    const dataIndex = Number(element.getAttribute('data-group-index'));
+    if (Number.isNaN(dataIndex)) return;
+
+    const container = element.parentElement as HTMLElement | null;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+
+    const placeholder = this._createPlaceholder(elementRect.height, 'group');
+    container.insertBefore(placeholder, element);
+
+    const originalPosition = container.style.position;
+    if (getComputedStyle(container).position === 'static') {
+      container.style.position = 'relative';
+    }
+
+    gsap.set(element, {
+      position: 'absolute',
+      width: `${elementRect.width}px`,
+      left: `${elementRect.left - containerRect.left}px`,
+      top: `${elementRect.top - containerRect.top}px`,
+      pointerEvents: 'none',
+      margin: 0
+    });
+
+    this._groupDragContext = {
+      initialIndex: dataIndex,
+      placeholder,
+      container,
+      containerOriginalPosition: originalPosition
+    };
+
+    this._isDragging = true;
+    element.classList.add('dragging');
+    gsap.set(element, { zIndex: 1000 });
+    gsap.to(element, { duration: 0.12, scale: 1.03, boxShadow: '0px 12px 24px rgba(0,0,0,0.3)' });
+  }
+
+  private _onGroupDragMove(element: HTMLElement): void {
+    const context = this._groupDragContext;
+    if (!context) return;
+
+    const { container, placeholder } = context;
+    const containerRect = container.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+    const currentCenter = elementRect.top - containerRect.top + elementRect.height / 2;
+
+    const siblings = Array.from(container.children).filter((child): child is HTMLElement => child !== element);
+
+    let insertBeforeNode: ChildNode | null = null;
+    for (const sibling of siblings) {
+      if (sibling === placeholder) continue;
+      const siblingRect = sibling.getBoundingClientRect();
+      const siblingCenter = siblingRect.top - containerRect.top + siblingRect.height / 2;
+      if (currentCenter < siblingCenter) {
+        insertBeforeNode = sibling;
+        break;
+      }
+    }
+
+    if (insertBeforeNode) {
+      if (insertBeforeNode !== placeholder) {
+        container.insertBefore(placeholder, insertBeforeNode);
+      }
+    } else if (placeholder.nextSibling !== null || placeholder.parentElement !== container) {
+      container.appendChild(placeholder);
+    }
+  }
+
+  private _onGroupDragEnd(element: HTMLElement): void {
+    const context = this._groupDragContext;
+    if (!context) {
+      this._resetDraggingStyles(element, { animate: false });
+      this._clearDragInlineStyles(element);
+      this._isDragging = false;
+      return;
+    }
+
+    const { initialIndex, placeholder, container, containerOriginalPosition } = context;
+    const targetIndex = this._getGroupIndexFromPlaceholder(container, placeholder, element);
+
+    // Restore group to its original position before config update
+    // This ensures Lit's reconciliation works correctly during re-render
+    const childrenArray = Array.from(container.children);
+    let referenceNode: Element | null = null;
+    let count = 0;
+    for (const child of childrenArray) {
+      if (child === element || child === placeholder) continue;
+      if ((child as HTMLElement).classList?.contains('group-item')) {
+        if (count === initialIndex) {
+          referenceNode = child;
+          break;
+        }
+        count++;
+      }
+    }
+    
+    // Insert group back at its original position
+    if (referenceNode) {
+      container.insertBefore(element, referenceNode);
+    } else {
+      container.appendChild(element);
+    }
+
+    this._resetDraggingStyles(element, { animate: false });
+    this._clearDragInlineStyles(element);
+
+    placeholder.remove();
+    container.style.position = containerOriginalPosition;
+
+    this._groupDragContext = undefined;
+    this._isDragging = false;
+
+    if (targetIndex === initialIndex) {
+      return;
+    }
+    this._reorderGroup(initialIndex, targetIndex);
+  }
+
+  private _onElementDragStart(groupIndex: number, element: HTMLElement): void {
+    const dataIndex = Number(element.getAttribute('data-element-index'));
+    if (Number.isNaN(dataIndex)) return;
+
+    const sourceList = element.closest('.elements-list') as HTMLElement | null;
+    if (!sourceList) return;
+
+    const listRect = sourceList.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+
+    const placeholder = this._createPlaceholder(elementRect.height, 'element');
+    sourceList.insertBefore(placeholder, element);
+
+    const originalPosition = sourceList.style.position;
+    if (getComputedStyle(sourceList).position === 'static') {
+      sourceList.style.position = 'relative';
+    }
+
+    gsap.set(element, {
+      position: 'absolute',
+      width: `${elementRect.width}px`,
+      left: `${elementRect.left - listRect.left}px`,
+      top: `${elementRect.top - listRect.top}px`,
+      pointerEvents: 'none',
+      margin: 0
+    });
+
+    this._elementDragContext = {
+      groupIndex,
+      initialIndex: dataIndex,
+      placeholder,
+      sourceList,
+      currentGroupIndex: groupIndex,
+      currentInsertionIndex: dataIndex,
+      temporaryLists: new Set<HTMLElement>(),
+      sourceListOriginalPosition: originalPosition
+    };
+
+    this._isDragging = true;
+    element.classList.add('dragging');
+    gsap.set(element, { zIndex: 1000 });
+    gsap.to(element, { duration: 0.12, scale: 1.02, boxShadow: '0px 8px 16px rgba(0,0,0,0.25)' });
+  }
+
+  private _onElementDragMove(element: HTMLElement): void {
+    const context = this._elementDragContext;
+    if (!context) return;
+
+    const dropTarget = this._determineElementDropTarget(element);
+    if (!dropTarget) return;
+
+    const { groupIndex, insertionIndex } = dropTarget;
+    const groupItem = this.renderRoot.querySelector<HTMLElement>(`.group-item[data-group-index="${groupIndex}"]`);
+    if (!groupItem) return;
+
+    let list = groupItem.querySelector<HTMLElement>('.elements-list');
+    if (!list) {
+      list = groupItem.querySelector<HTMLElement>('.drag-temp-list') as HTMLElement;
+      if (!list) {
+        list = document.createElement('div');
+        list.classList.add('elements-list', 'drag-temp-list');
+        list.setAttribute('data-drag-temp', 'true');
+        groupItem.appendChild(list);
+        context.temporaryLists.add(list);
+      }
+    }
+
+    if (getComputedStyle(list).position === 'static') {
+      list.style.position = 'relative';
+    }
+
+    const existingItems = Array.from(list.children).filter(
+      (child): child is HTMLElement =>
+        child !== element && child !== context.placeholder && child.classList.contains('element-item')
+    );
+
+    const referenceNode = existingItems[insertionIndex] ?? null;
+    if (referenceNode) {
+      list.insertBefore(context.placeholder, referenceNode);
+    } else if (context.placeholder.parentElement !== list) {
+      list.appendChild(context.placeholder);
+    }
+
+    context.currentGroupIndex = groupIndex;
+    context.currentInsertionIndex = insertionIndex;
+  }
+
+  private _onElementDragEnd(element: HTMLElement): void {
+    const context = this._elementDragContext;
+    if (!context) {
+      this._resetDraggingStyles(element, { animate: false });
+      this._clearDragInlineStyles(element);
+      this._isDragging = false;
+      return;
+    }
+
+    const {
+      groupIndex: sourceGroupIndex,
+      initialIndex,
+      placeholder,
+      sourceList,
+      sourceListOriginalPosition,
+      currentGroupIndex,
+      currentInsertionIndex,
+      temporaryLists
+    } = context;
+
+    let targetGroupIndex = currentGroupIndex;
+    let targetElementIndex = currentInsertionIndex;
+
+    const placeholderList = placeholder.parentElement as HTMLElement | null;
+    if (placeholderList) {
+      const listHasTempFlag = placeholderList.getAttribute('data-drag-temp') === 'true';
+
+      const groupItem = placeholderList.closest<HTMLElement>('.group-item');
+      const groupIndexAttr = groupItem?.getAttribute('data-group-index');
+      if (groupIndexAttr !== null && groupIndexAttr !== undefined) {
+        targetGroupIndex = Number(groupIndexAttr);
+      }
+      targetElementIndex = this._getElementIndexFromPlaceholder(placeholderList, placeholder, element);
+
+      // Remove temporary list if it exists
+      if (listHasTempFlag) {
+        placeholderList.remove();
+      }
+    }
+    
+    // Restore element to its original position in the source list
+    // This ensures Lit's reconciliation works correctly during re-render
+    const childrenArray = Array.from(sourceList.children);
+    const currentElementIndex = childrenArray.indexOf(element);
+    
+    // Find the correct reference node for the original position
+    let referenceNode: Element | null = null;
+    let count = 0;
+    for (const child of childrenArray) {
+      if (child === element || child === placeholder) continue;
+      if ((child as HTMLElement).classList?.contains('element-item')) {
+        if (count === initialIndex) {
+          referenceNode = child;
+          break;
+        }
+        count++;
+      }
+    }
+    
+    // Insert element back at its original position
+    if (referenceNode) {
+      sourceList.insertBefore(element, referenceNode);
+    } else {
+      sourceList.appendChild(element);
+    }
+
+    this._resetDraggingStyles(element, { animate: false });
+
+    placeholder.remove();
+    this._clearDragInlineStyles(element);
+
+    sourceList.style.position = sourceListOriginalPosition;
+
+    temporaryLists.forEach(tempList => {
+      if (!tempList.querySelector('.element-item')) {
+        tempList.remove();
+      }
+    });
+
+    this._elementDragContext = undefined;
+    this._isDragging = false;
+
+    if (Number.isNaN(targetGroupIndex)) {
+      return;
+    }
+
+    if (targetGroupIndex === sourceGroupIndex && targetElementIndex === initialIndex) {
+      return;
+    }
+
+    this._moveElementToGroup(sourceGroupIndex, targetGroupIndex, initialIndex, targetElementIndex);
+  }
+
+  private _createPlaceholder(height: number, type: 'group' | 'element'): HTMLElement {
+    const placeholder = document.createElement('div');
+    placeholder.classList.add('drag-placeholder');
+    placeholder.classList.add(type === 'group' ? 'group-placeholder' : 'element-placeholder');
+    placeholder.style.height = `${height}px`;
+    return placeholder;
+  }
+
+  private _getGroupIndexFromPlaceholder(
+    container: HTMLElement,
+    placeholder: HTMLElement,
+    draggedElement?: HTMLElement
+  ): number {
+    let index = 0;
+    for (const child of Array.from(container.children)) {
+      if (child === placeholder) {
+        return index;
+      }
+      if (draggedElement && child === draggedElement) {
+        continue;
+      }
+      if ((child as HTMLElement).classList?.contains('group-item')) {
+        index++;
+      }
+    }
+    return index;
+  }
+
+  private _getElementIndexFromPlaceholder(
+    list: HTMLElement | null,
+    placeholder: HTMLElement,
+    draggedElement?: HTMLElement
+  ): number {
+    if (!list) return 0;
+    let index = 0;
+    for (const child of Array.from(list.children)) {
+      if (child === placeholder) {
+        break;
+      }
+      if (draggedElement && child === draggedElement) {
+        continue;
+      }
+      if ((child as HTMLElement).classList?.contains('element-item')) {
+        index++;
+      }
+    }
+    return index;
+  }
+
+  private _clearDragInlineStyles(element: HTMLElement): void {
+    element.style.position = '';
+    element.style.width = '';
+    element.style.left = '';
+    element.style.top = '';
+    element.style.margin = '';
+    element.style.pointerEvents = '';
+  }
+
+  private _resetDraggingStyles(element: HTMLElement, options: { animate?: boolean } = {}): void {
+    const { animate = false } = options;
+    element.classList.remove('dragging');
+    gsap.killTweensOf(element);
+
+    if (animate) {
+      gsap.to(element, {
+        duration: 0.18,
+        y: 0,
+        scale: 1,
+        boxShadow: '0px 0px 0px rgba(0,0,0,0)',
+        onComplete: () => {
+          gsap.set(element, { clearProps: 'transform,boxShadow,zIndex' });
+        }
+      });
+      return;
+    }
+
+    gsap.set(element, { clearProps: 'transform,boxShadow,zIndex' });
+  }
+
+  private _reorderGroup(fromIndex: number, toIndex: number): void {
+    if (!this._config?.groups) return;
+
+    const groupCount = this._config.groups.length;
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= groupCount || toIndex >= groupCount) return;
+
+    if (fromIndex === toIndex) return;
+
+    const newConfig = JSON.parse(JSON.stringify(this._config)) as LcarsCardConfig;
+    const previousGroups = this._config.groups;
+
+    const [movedGroup] = newConfig.groups.splice(fromIndex, 1);
+    newConfig.groups.splice(toIndex, 0, movedGroup);
+
+    this._config = newConfig;
+    this._updateStateAfterGroupMove(fromIndex, toIndex, previousGroups, newConfig.groups);
+
+    fireEvent(this, 'config-changed', { config: newConfig });
+  }
+
+  private _updateStateAfterGroupMove(
+    fromIndex: number,
+    toIndex: number,
+    previousGroups: LcarsCardConfig['groups'],
+    nextGroups: LcarsCardConfig['groups']
+  ): void {
+    if (!previousGroups || !nextGroups) return;
+
+    const collapsedIds = new Set(
+      [...this._collapsedGroups]
+        .map(index => previousGroups[index]?.group_id)
+        .filter((id): id is string => typeof id === 'string')
+    );
+
+    const updatedCollapsed = new Set<number>();
+    nextGroups.forEach((group, index) => {
+      if (group && collapsedIds.has(group.group_id)) {
+        updatedCollapsed.add(index);
+      }
+    });
+    this._collapsedGroups = updatedCollapsed;
+
+    if (this._selectedElement) {
+      const newGroupIndex = this._computeIndexAfterMove(this._selectedElement.groupIndex, fromIndex, toIndex);
+      this._selectedElement = {
+        groupIndex: newGroupIndex,
+        elementIndex: this._selectedElement.elementIndex
+      };
+    }
+
+    if (this._editingGroupIndex !== undefined) {
+      this._editingGroupIndex = this._computeIndexAfterMove(this._editingGroupIndex, fromIndex, toIndex);
+    }
+
+    if (this._editingElementId) {
+      const newGroupIndex = this._computeIndexAfterMove(this._editingElementId.groupIndex, fromIndex, toIndex);
+      this._editingElementId = {
+        groupIndex: newGroupIndex,
+        elementIndex: this._editingElementId.elementIndex
+      };
+    }
+  }
+
+  private _computeIndexAfterMove(index: number, fromIndex: number, toIndex: number): number {
+    if (index === fromIndex) {
+      return toIndex;
+    }
+
+    if (fromIndex < toIndex && index > fromIndex && index <= toIndex) {
+      return index - 1;
+    }
+
+    if (toIndex < fromIndex && index >= toIndex && index < fromIndex) {
+      return index + 1;
+    }
+
+    return index;
+  }
+
+  private _reorderElement(groupIndex: number, fromIndex: number, toIndex: number): void {
+    if (!this._config?.groups) return;
+    const group = this._config.groups[groupIndex];
+    if (!group || !group.elements) return;
+
+    const elementCount = group.elements.length;
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= elementCount || toIndex >= elementCount) return;
+    if (fromIndex === toIndex) return;
+
+    const newConfig = JSON.parse(JSON.stringify(this._config)) as LcarsCardConfig;
+    const newGroup = newConfig.groups[groupIndex];
+    if (!newGroup?.elements) return;
+
+    const [movedElement] = newGroup.elements.splice(fromIndex, 1);
+    newGroup.elements.splice(toIndex, 0, movedElement);
+
+    this._config = newConfig;
+    this._updateStateAfterElementMove(groupIndex, fromIndex, toIndex);
+
+    fireEvent(this, 'config-changed', { config: newConfig });
+  }
+
+  private _applyReferenceReplacements(
+    config: LcarsCardConfig,
+    replacements: Array<{ from: string; to: string }>
+  ): void {
+    const sanitized = replacements.filter(
+      (replacement) => replacement.from && replacement.to && replacement.from !== replacement.to
+    );
+    if (!sanitized.length) {
+      return;
+    }
+
+    const traverse = (value: unknown): unknown => {
+      if (Array.isArray(value)) {
+        for (let i = 0; i < value.length; i++) {
+          value[i] = traverse(value[i]);
+        }
+        return value;
+      }
+
+      if (value && typeof value === 'object') {
+        const record = value as Record<string, unknown>;
+        Object.keys(record).forEach((key) => {
+          record[key] = traverse(record[key]);
+        });
+        return record;
+      }
+
+      if (typeof value === 'string') {
+        for (const replacement of sanitized) {
+          if (value === replacement.from) {
+            return replacement.to;
+          }
+        }
+        return value;
+      }
+
+      return value;
+    };
+
+    traverse(config as unknown as Record<string, unknown>);
+  }
+
+  private _moveElementToGroup(
+    fromGroupIndex: number,
+    toGroupIndex: number,
+    fromIndex: number,
+    toIndex: number
+  ): void {
+    if (!this._config?.groups) return;
+
+    const sourceGroupId = this._config.groups[fromGroupIndex]?.group_id;
+    const destinationGroupId = this._config.groups[toGroupIndex]?.group_id;
+    const movingElementId = this._config.groups[fromGroupIndex]?.elements?.[fromIndex]?.id;
+
+    if (fromGroupIndex === toGroupIndex) {
+      this._reorderElement(fromGroupIndex, fromIndex, toIndex);
+      return;
+    }
+
+    const newConfig = JSON.parse(JSON.stringify(this._config)) as LcarsCardConfig;
+    const sourceGroup = newConfig.groups[fromGroupIndex];
+    const destinationGroup = newConfig.groups[toGroupIndex];
+
+    if (!sourceGroup?.elements || !destinationGroup) return;
+
+    const [movedElement] = sourceGroup.elements.splice(fromIndex, 1);
+    if (!movedElement) return;
+
+    if (!destinationGroup.elements) {
+      destinationGroup.elements = [];
+    }
+
+    const insertionIndex = Math.max(0, Math.min(toIndex, destinationGroup.elements.length));
+    destinationGroup.elements.splice(insertionIndex, 0, movedElement);
+
+    if (sourceGroupId && destinationGroupId && movingElementId) {
+      this._applyReferenceReplacements(newConfig, [
+        {
+          from: `${sourceGroupId}.${movingElementId}`,
+          to: `${destinationGroupId}.${movingElementId}`
+        }
+      ]);
+    }
+
+    this._config = newConfig;
+    this._updateStateAfterElementTransfer(fromGroupIndex, toGroupIndex, fromIndex, insertionIndex);
+
+    if (this._collapsedGroups.has(toGroupIndex)) {
+      const updatedCollapsed = new Set(this._collapsedGroups);
+      updatedCollapsed.delete(toGroupIndex);
+      this._collapsedGroups = updatedCollapsed;
+    }
+
+    fireEvent(this, 'config-changed', { config: newConfig });
+  }
+
+  private _updateStateAfterElementMove(groupIndex: number, fromIndex: number, toIndex: number): void {
+    if (this._selectedElement?.groupIndex === groupIndex) {
+      const newElementIndex = this._computeIndexAfterMove(this._selectedElement.elementIndex, fromIndex, toIndex);
+      this._selectedElement = {
+        groupIndex,
+        elementIndex: newElementIndex
+      };
+    }
+
+    if (this._editingElementId?.groupIndex === groupIndex) {
+      const newEditingIndex = this._computeIndexAfterMove(this._editingElementId.elementIndex, fromIndex, toIndex);
+      this._editingElementId = {
+        groupIndex,
+        elementIndex: newEditingIndex
+      };
+    }
+  }
+
+  private _updateStateAfterElementTransfer(
+    fromGroupIndex: number,
+    toGroupIndex: number,
+    fromIndex: number,
+    toIndex: number
+  ): void {
+    if (this._selectedElement) {
+      if (this._selectedElement.groupIndex === fromGroupIndex) {
+        if (this._selectedElement.elementIndex === fromIndex) {
+          this._selectedElement = { groupIndex: toGroupIndex, elementIndex: toIndex };
+        } else if (this._selectedElement.elementIndex > fromIndex) {
+          this._selectedElement = {
+            groupIndex: fromGroupIndex,
+            elementIndex: this._selectedElement.elementIndex - 1
+          };
+        }
+      } else if (
+        this._selectedElement.groupIndex === toGroupIndex &&
+        this._selectedElement.elementIndex >= toIndex
+      ) {
+        this._selectedElement = {
+          groupIndex: toGroupIndex,
+          elementIndex: this._selectedElement.elementIndex + 1
+        };
+      }
+    }
+
+    if (this._editingElementId) {
+      if (this._editingElementId.groupIndex === fromGroupIndex) {
+        if (this._editingElementId.elementIndex === fromIndex) {
+          this._editingElementId = { groupIndex: toGroupIndex, elementIndex: toIndex };
+        } else if (this._editingElementId.elementIndex > fromIndex) {
+          this._editingElementId = {
+            groupIndex: fromGroupIndex,
+            elementIndex: this._editingElementId.elementIndex - 1
+          };
+        }
+      } else if (
+        this._editingElementId.groupIndex === toGroupIndex &&
+        this._editingElementId.elementIndex >= toIndex
+      ) {
+        this._editingElementId = {
+          groupIndex: toGroupIndex,
+          elementIndex: this._editingElementId.elementIndex + 1
+        };
+      }
+    }
+  }
+
+  private _determineElementDropTarget(element: HTMLElement): { groupIndex: number; insertionIndex: number } | undefined {
+    const rect = element.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    const groupItems = Array.from(this.renderRoot.querySelectorAll<HTMLElement>('.group-item'));
+    let bestMatch: { groupIndex: number; groupItem: HTMLElement; distance: number } | undefined;
+
+    for (const groupItem of groupItems) {
+      const indexAttr = groupItem.getAttribute('data-group-index');
+      if (indexAttr === null) continue;
+      const groupIndex = Number(indexAttr);
+      if (Number.isNaN(groupIndex)) continue;
+
+      const groupRect = groupItem.getBoundingClientRect();
+      if (centerX < groupRect.left || centerX > groupRect.right) continue;
+
+      let distance = 0;
+      if (centerY < groupRect.top) {
+        distance = groupRect.top - centerY;
+      } else if (centerY > groupRect.bottom) {
+        distance = centerY - groupRect.bottom;
+      }
+
+      if (!bestMatch || distance < bestMatch.distance) {
+        bestMatch = { groupIndex, groupItem, distance };
+        if (distance === 0) {
+          break;
+        }
+      }
+    }
+
+    if (!bestMatch) return undefined;
+
+    const { groupIndex, groupItem } = bestMatch;
+    const list = groupItem.querySelector<HTMLElement>('.elements-list');
+
+    if (!list) {
+      const elementsLength = this._config?.groups?.[groupIndex]?.elements?.length ?? 0;
+      return { groupIndex, insertionIndex: elementsLength };
+    }
+
+    const siblingItems = Array.from(list.querySelectorAll<HTMLElement>('.element-item')).filter(
+      item => item !== element
+    );
+    const insertionIndex = this._calculateInsertionIndex(centerY, siblingItems);
+    return { groupIndex, insertionIndex };
+  }
+
+  private _calculateInsertionIndex(positionY: number, items: HTMLElement[]): number {
+    if (items.length === 0) {
+      return 0;
+    }
+
+    let index = 0;
+    for (const item of items) {
+      const rect = item.getBoundingClientRect();
+      const center = rect.top + rect.height / 2;
+      if (positionY > center) {
+        index++;
+      } else {
+        break;
+      }
+    }
+
+    return index;
+  }
+
+  private _preventHandleInteraction(ev: Event): void {
+    ev.preventDefault();
+    ev.stopPropagation();
   }
 
   protected render(): TemplateResult {
@@ -248,7 +1091,7 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
           }
 
           return html`
-            <div class="group-item">
+            <div class="group-item" data-group-index=${groupIndex}>
               <div class="group-header ${isEditing ? 'editing' : 'clickable'}">
                 ${isEditing ? html`
                   <ha-icon icon="mdi:folder-edit"></ha-icon>
@@ -281,6 +1124,12 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                     <ha-icon icon="mdi:delete"></ha-icon>
                   </ha-icon-button>
                 ` : html`
+                  <ha-icon
+                    icon="mdi:drag-vertical"
+                    class="drag-handle group-drag-handle"
+                    title="Drag group to reorder"
+                    @click=${this._preventHandleInteraction}
+                  ></ha-icon>
                   <ha-icon 
                     icon=${isCollapsed ? 'mdi:chevron-right' : 'mdi:chevron-down'}
                     class="collapse-icon"
@@ -323,6 +1172,8 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                     return html`
                       <div
                         class="element-item ${isSelected ? 'selected' : ''}"
+                        data-group-index=${groupIndex}
+                        data-element-index=${elementIndex}
                         @click=${() => this._selectElement(groupIndex, elementIndex)}
                       >
                         ${isEditingId ? html`
@@ -363,6 +1214,12 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
                             <ha-icon icon="mdi:delete"></ha-icon>
                           </ha-icon-button>
                         ` : html`
+                          <ha-icon
+                            icon="mdi:drag-vertical"
+                            class="drag-handle element-drag-handle"
+                            title="Drag element to reorder"
+                            @click=${this._preventHandleInteraction}
+                          ></ha-icon>
                           <ha-icon icon=${this._getElementIcon(element.type)}></ha-icon>
                           <span class="element-id">${element.id}</span>
                           <span class="element-type">${element.type}</span>
@@ -669,9 +1526,22 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       return;
     }
 
+    const oldGroupId = this._config.groups[this._editingGroupIndex].group_id;
     const newConfig = JSON.parse(JSON.stringify(this._config));
-    newConfig.groups[this._editingGroupIndex].group_id = newName;
-    
+    const targetGroup = newConfig.groups[this._editingGroupIndex];
+    targetGroup.group_id = newName;
+
+    const replacements: Array<{ from: string; to: string }> = [{ from: oldGroupId, to: newName }];
+    (targetGroup.elements || []).forEach((element: ElementConfig) => {
+      replacements.push({
+        from: `${oldGroupId}.${element.id}`,
+        to: `${newName}.${element.id}`
+      });
+    });
+
+    this._applyReferenceReplacements(newConfig, replacements);
+
+    this._config = newConfig;
     fireEvent(this, 'config-changed', { config: newConfig });
     this._cancelEditingGroupName();
   }
@@ -858,9 +1728,19 @@ export class LcarsCardEditor extends LitElement implements LovelaceCardEditor {
       return;
     }
 
+    const oldId = this._config.groups[groupIndex].elements[elementIndex].id;
+    const groupId = this._config.groups[groupIndex].group_id;
     const newConfig = JSON.parse(JSON.stringify(this._config));
     newConfig.groups[groupIndex].elements[elementIndex].id = newId;
-    
+
+    this._applyReferenceReplacements(newConfig, [
+      {
+        from: `${groupId}.${oldId}`,
+        to: `${groupId}.${newId}`
+      }
+    ]);
+
+    this._config = newConfig;
     fireEvent(this, 'config-changed', { config: newConfig });
     this._cancelEditingElementId();
   }
